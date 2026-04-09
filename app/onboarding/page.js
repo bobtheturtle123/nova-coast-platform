@@ -38,7 +38,8 @@ export default function OnboardingPage() {
     setSaving(true);
     setError("");
     try {
-      const token = await user.getIdToken();
+      // Force-refresh so custom claims (tenantId) are included
+      const token = await user.getIdToken(true);
       const res = await fetch("/api/tenants/update", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -57,7 +58,7 @@ export default function OnboardingPage() {
     setSaving(true);
     setError("");
     try {
-      const token = await user.getIdToken();
+      const token = await user.getIdToken(true);
       await fetch("/api/tenants/update", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
