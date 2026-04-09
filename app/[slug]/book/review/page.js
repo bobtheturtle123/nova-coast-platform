@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
-import { calculateTenantPrice } from "@/lib/catalogUtils";
+import { calculateTenantPrice, getSqftTier } from "@/lib/catalogUtils";
 import StepProgress from "@/components/booking/StepProgress";
 
 export default function TenantReviewPage() {
@@ -15,35 +15,43 @@ export default function TenantReviewPage() {
     squareFootage, propertyType, notes, travelFee, setTravelFee, setPricing, pricing,
   } = store;
 
-  const sqft = squareFootage;
-
-  const fullAddress = `${address}, ${city}, ${state} ${zip}`;
+  const [catalog,  setCatalog]  = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const fullAddress = [address, city, state, zip].filter(Boolean).join(", ");
+  const tier = getSqftTier(Number(squareFootage) || 0);
 
   useEffect(() => {
-    // Calculate travel fee if we have an address and tenant info
-    if (address && zip && store.tenantId) {
-      fetch(`/api/${params.slug}/travel-fee`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: fullAddress }),
-      })
-        .then((r) => r.json())
-        .then((data) => {
-          const fee = data.travelFee ?? 0;
-          setTravelFee(fee);
-          // Fetch catalog again to recalculate pricing
-          fetch(`/api/tenant-public/${params.slug}/catalog`)
-            .then((r) => r.json())
-            .then((catalog) => {
-              const p = calculateTenantPrice(packageId, serviceIds, addonIds, fee, catalog, sqft);
-              setPricing(p);
-            });
-        })
-        .catch(() => {});
+    async function loadAndPrice() {
+      try {
+        // Fetch catalog + optional travel fee in parallel
+        const [catalogRes, travelRes] = await Promise.all([
+          fetch(`/api/tenant-public/${params.slug}/catalog`).then((r) => r.json()),
+          address && zip && store.tenantId
+            ? fetch(`/api/${params.slug}/travel-fee`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ address: fullAddress }),
+              }).then((r) => r.json()).catch(() => ({ travelFee: 0 }))
+            : Promise.resolve({ travelFee: 0 }),
+        ]);
+        setCatalog(catalogRes);
+        const fee = travelRes?.travelFee ?? 0;
+        setTravelFee(fee);
+        const p = calculateTenantPrice(packageId, serviceIds, addonIds, fee, catalogRes, Number(squareFootage) || 0);
+        setPricing(p);
+      } finally {
+        setLoading(false);
+      }
     }
+    loadAndPrice();
   }, []);
 
-  if (!pricing) {
+  // Build readable line items from catalog
+  const pkgItem  = catalog?.packages?.find((p) => p.id === packageId);
+  const svcItems = (serviceIds || []).map((id) => catalog?.services?.find((s) => s.id === id)).filter(Boolean);
+  const adnItems = (addonIds   || []).map((id) => catalog?.addons?.find((a) => a.id === id)).filter(Boolean);
+
+  if (loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
         <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
@@ -63,51 +71,137 @@ export default function TenantReviewPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
+
+            {/* Property card */}
             <div className="card">
-              <p className="section-label mb-3">Property</p>
-              <p className="font-body text-charcoal">{fullAddress}</p>
-              <p className="text-sm text-gray-500 mt-1 capitalize">{propertyType}{squareFootage ? ` · ${squareFootage} sq ft` : ""}</p>
-              {notes && <p className="text-sm text-gray-500 mt-1 italic">"{notes}"</p>}
+              <div className="flex items-center justify-between mb-3">
+                <p className="section-label">Property</p>
+                <button onClick={() => router.push(`/${params.slug}/book/property`)}
+                  className="text-xs text-navy hover:underline">Edit</button>
+              </div>
+              <p className="font-medium text-charcoal">{fullAddress}</p>
+              <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
+                <span className="capitalize">{propertyType || "Residential"}</span>
+                {squareFootage && (
+                  <>
+                    <span className="text-gray-300">·</span>
+                    <span>{Number(squareFootage).toLocaleString()} sq ft</span>
+                    <span className="text-gray-300">·</span>
+                    <span className="text-navy font-medium">{tier} tier</span>
+                  </>
+                )}
+              </div>
+              {notes && (
+                <p className="text-sm text-gray-400 mt-2 italic border-t border-gray-100 pt-2">
+                  "{notes}"
+                </p>
+              )}
             </div>
 
+            {/* Services card */}
             <div className="card">
-              <p className="section-label mb-3">Services</p>
-              <div className="space-y-1 text-sm text-charcoal">
-                {packageId && <p>Package: <span className="font-medium capitalize">{packageId}</span></p>}
-                {serviceIds.length > 0 && <p>Services: {serviceIds.join(", ")}</p>}
-                {addonIds.length > 0 && <p>Add-ons: {addonIds.join(", ")}</p>}
+              <div className="flex items-center justify-between mb-3">
+                <p className="section-label">Services</p>
+                <button onClick={() => router.push(`/${params.slug}/book`)}
+                  className="text-xs text-navy hover:underline">Edit</button>
+              </div>
+              <div className="space-y-2">
+                {pkgItem && (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-charcoal">{pkgItem.name}</p>
+                      {pkgItem.description && (
+                        <p className="text-xs text-gray-400 mt-0.5">{pkgItem.description}</p>
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold text-navy flex-shrink-0 ml-4">
+                      ${pricing?.base?.toLocaleString()}
+                    </p>
+                  </div>
+                )}
+                {svcItems.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-charcoal">{s.name}</p>
+                      {s.description && <p className="text-xs text-gray-400 mt-0.5">{s.description}</p>}
+                    </div>
+                    <p className="text-sm font-semibold text-navy flex-shrink-0 ml-4">
+                      ${pricing?.base?.toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+                {adnItems.length > 0 && (
+                  <div className="border-t border-dashed border-gray-100 pt-2 mt-2 space-y-1.5">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Add-ons</p>
+                    {adnItems.map((a) => (
+                      <div key={a.id} className="flex items-center justify-between">
+                        <p className="text-sm text-charcoal">{a.name}</p>
+                        <p className="text-sm text-navy font-medium flex-shrink-0 ml-4">
+                          +${(a.price || 0).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
+          {/* Price summary */}
           <div className="lg:col-span-1">
-            <div className="card">
-              <p className="section-label mb-4">Price Summary</p>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-gray-500">Base</span><span>${pricing.base}</span></div>
-                {pricing.addonTotal > 0 && (
-                  <div className="flex justify-between"><span className="text-gray-500">Add-ons</span><span>${pricing.addonTotal}</span></div>
+            {pricing && (
+              <div className="card sticky top-6">
+                <p className="section-label mb-4">Price Summary</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Services</span>
+                    <span className="font-medium">${pricing.base?.toLocaleString()}</span>
+                  </div>
+                  {pricing.addonTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Add-ons</span>
+                      <span className="font-medium">${pricing.addonTotal?.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {pricing.travelFee > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Travel fee</span>
+                      <span className="font-medium">${pricing.travelFee?.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-semibold border-t border-gray-100 pt-2">
+                    <span>Total</span>
+                    <span className="text-navy">${pricing.subtotal?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-gold-dark font-semibold">
+                    <span>Deposit (50%)</span>
+                    <span>${pricing.deposit?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-400">
+                    <span>Due at delivery</span>
+                    <span>${pricing.balance?.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {squareFootage && (
+                  <div className="mt-4 bg-navy/4 rounded-sm p-3 text-xs text-gray-500">
+                    Pricing based on <span className="font-medium text-navy">{tier} tier</span>
+                    {" "}({Number(squareFootage).toLocaleString()} sq ft)
+                  </div>
                 )}
-                {pricing.travelFee > 0 && (
-                  <div className="flex justify-between"><span className="text-gray-500">Travel fee</span><span>${pricing.travelFee}</span></div>
-                )}
-                <div className="flex justify-between font-semibold border-t border-gray-100 pt-2">
-                  <span>Total</span><span className="text-navy">${pricing.subtotal}</span>
-                </div>
-                <div className="flex justify-between text-gold-dark font-medium">
-                  <span>Deposit (50%)</span><span>${pricing.deposit}</span>
-                </div>
-                <div className="flex justify-between text-gray-400">
-                  <span>Due at delivery</span><span>${pricing.balance}</span>
-                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
         <div className="flex justify-between mt-8">
           <button onClick={() => router.push(`/${params.slug}/book/property`)} className="btn-outline">← Back</button>
-          <button onClick={() => router.push(`/${params.slug}/book/schedule`)} className="btn-primary px-12">Continue →</button>
+          <button
+            onClick={() => router.push(`/${params.slug}/book/schedule`)}
+            className="btn-primary px-12"
+          >
+            Continue →
+          </button>
         </div>
       </div>
     </>

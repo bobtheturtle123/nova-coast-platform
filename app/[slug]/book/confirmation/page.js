@@ -1,69 +1,135 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
-import Link from "next/link";
 
-export default function TenantConfirmationPage() {
+function ConfirmationContent() {
   const params       = useParams();
-  const searchParams = useSearchParams();
   const router       = useRouter();
-  const { bookingId, clientName, address, preferredDate, pricing, resetBooking } = useBookingStore();
+  const searchParams = useSearchParams();
+
+  const { bookingId, clientName, clientEmail, address, city, state, zip,
+          preferredDate, pricing, packageId, serviceIds, addonIds, resetBooking } = useBookingStore();
 
   const bId = searchParams.get("bookingId") || bookingId;
 
-  const date = preferredDate
-    ? new Date(preferredDate).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
+  const formattedDate = preferredDate
+    ? new Date(preferredDate + "T12:00:00").toLocaleDateString("en-US", {
+        weekday: "long", month: "long", day: "numeric",
+      })
     : "To be confirmed";
 
-  return (
-    <div className="step-container py-16 text-center">
-      <div className="max-w-md mx-auto">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">
-          ✓
-        </div>
-        <h1 className="font-display text-4xl text-navy mb-3">Booking received.</h1>
-        <p className="text-gray-500 mb-8">
-          You'll receive an email confirmation shortly. We'll reach out within 24 hours to confirm your shoot.
-        </p>
+  const fullAddress = [address, city, state, zip].filter(Boolean).join(", ");
+  const selectionCount = (packageId ? 1 : serviceIds?.length || 0) + (addonIds?.length || 0);
 
-        <div className="card text-left space-y-3 mb-8">
+  return (
+    <div className="step-container py-16">
+      <div className="max-w-lg mx-auto">
+        {/* Success icon */}
+        <div className="flex flex-col items-center text-center mb-10">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-5">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 className="font-display text-4xl text-navy mb-3">Booking received.</h1>
+          <p className="text-gray-500 max-w-sm">
+            {clientEmail
+              ? <>A confirmation has been sent to <span className="font-medium text-charcoal">{clientEmail}</span>.</>
+              : "You'll receive an email confirmation shortly."
+            }
+            {" "}We'll reach out within 24 hours to confirm your shoot.
+          </p>
+        </div>
+
+        {/* Booking details card */}
+        <div className="card space-y-3 mb-6">
+          <p className="font-semibold text-charcoal text-sm uppercase tracking-wider border-b border-gray-100 pb-3">
+            Booking Details
+          </p>
+
           {clientName && (
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Name</span>
-              <span className="font-medium">{clientName}</span>
+              <span className="font-medium text-charcoal">{clientName}</span>
             </div>
           )}
-          {address && (
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Property</span>
-              <span className="font-medium text-right">{address}</span>
+          {fullAddress && (
+            <div className="flex justify-between text-sm gap-4">
+              <span className="text-gray-400 flex-shrink-0">Property</span>
+              <span className="font-medium text-charcoal text-right">{fullAddress}</span>
             </div>
           )}
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Requested date</span>
-            <span className="font-medium">{date}</span>
+            <span className="font-medium text-charcoal">{formattedDate}</span>
           </div>
-          {pricing?.deposit && (
-            <div className="flex justify-between text-sm border-t border-gray-100 pt-3">
-              <span className="text-gray-400">Deposit paid</span>
-              <span className="font-semibold text-green-600">${pricing.deposit}</span>
+          {bId && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Booking ID</span>
+              <span className="font-mono text-xs text-gray-500">{bId.slice(0, 8).toUpperCase()}</span>
             </div>
           )}
-          {pricing?.balance && (
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Balance due at delivery</span>
-              <span className="font-medium">${pricing.balance}</span>
+
+          {/* Payment summary */}
+          {pricing?.deposit > 0 && (
+            <div className="border-t border-gray-100 pt-3 space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Deposit paid</span>
+                <span className="font-semibold text-green-600">${pricing.deposit?.toLocaleString()}</span>
+              </div>
+              {pricing.balance > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Balance due at delivery</span>
+                  <span className="font-medium text-charcoal">${pricing.balance?.toLocaleString()}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        <button onClick={() => { resetBooking(); router.push(`/${params.slug}/book`); }}
-          className="btn-outline px-8 py-3 text-sm">
-          Book another shoot
-        </button>
+        {/* What's next */}
+        <div className="bg-navy/4 rounded-sm p-5 mb-8 space-y-3">
+          <p className="font-semibold text-navy text-sm">What happens next?</p>
+          <ol className="space-y-2 text-sm text-gray-600">
+            {[
+              "We'll review your booking and confirm availability.",
+              "You'll receive a confirmation email with your scheduled shoot time.",
+              "Your photographer will arrive and capture the property.",
+              "Media will be delivered to your gallery link — balance due upon delivery.",
+            ].map((step, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="w-5 h-5 rounded-full bg-navy/10 text-navy text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                  {i + 1}
+                </span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <div className="flex gap-3 justify-center">
+          <button
+            onClick={() => { resetBooking(); router.push(`/${params.slug}/book`); }}
+            className="btn-outline px-8 py-3 text-sm"
+          >
+            Book another shoot
+          </button>
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function TenantConfirmationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+      </div>
+    }>
+      <ConfirmationContent />
+    </Suspense>
   );
 }
