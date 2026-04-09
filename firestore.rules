@@ -1,0 +1,50 @@
+// firestore.rules
+// Deploy with: firebase deploy --only firestore:rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Admin helper ────────────────────────────────────────────
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    // ── Bookings ────────────────────────────────────────────────
+    // Anyone can CREATE (public booking form)
+    // Only admins can READ / UPDATE / DELETE
+    match /bookings/{bookingId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ── Galleries ───────────────────────────────────────────────
+    // Anyone with the token can read (gallery page fetches server-side anyway)
+    // Only admins can write
+    match /galleries/{galleryId} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Photographers ───────────────────────────────────────────
+    // Only admins
+    match /photographers/{photographerId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── Packages / Services / Addons ────────────────────────────
+    // Public read (needed for booking form), admin write
+    match /packages/{id} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+    match /services/{id} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+    match /addons/{id} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+  }
+}

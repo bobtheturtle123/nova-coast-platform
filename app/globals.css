@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Gloock&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: "DM Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-cream text-charcoal;
+  }
+
+  h1, h2, h3 {
+    font-family: "Gloock", Georgia, serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-navy text-white font-body font-medium px-8 py-3 rounded-sm 
+           hover:bg-navy-light transition-colors duration-200 
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-outline {
+    @apply border border-navy text-navy font-body font-medium px-8 py-3 rounded-sm
+           hover:bg-navy hover:text-white transition-colors duration-200;
+  }
+
+  .btn-gold {
+    @apply bg-gold text-navy font-body font-semibold px-8 py-3 rounded-sm
+           hover:bg-gold-dark transition-colors duration-200
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .input-field {
+    @apply w-full border border-gray-200 bg-white px-4 py-3 rounded-sm
+           font-body text-charcoal placeholder-gray-400
+           focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy
+           transition-colors duration-150;
+  }
+
+  .card {
+    @apply bg-white border border-gray-100 rounded-sm p-6;
+  }
+
+  .step-container {
+    @apply max-w-3xl mx-auto px-4 py-12 animate-fade-up;
+  }
+
+  .section-label {
+    @apply text-xs font-body font-medium tracking-[0.15em] uppercase text-gold;
+  }
+
+  .price-display {
+    @apply font-display text-3xl text-navy;
+  }
+}
