@@ -1,50 +1,73 @@
-// firestore.rules
-// Deploy with: firebase deploy --only firestore:rules
+// firestore.rules — Multi-tenant ShootFlow
+// Deploy: firebase deploy --only firestore:rules
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Admin helper ────────────────────────────────────────────
-    function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
+    // ── Auth helpers ──────────────────────────────────────────────────────────
+
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // ── Bookings ────────────────────────────────────────────────
-    // Anyone can CREATE (public booking form)
-    // Only admins can READ / UPDATE / DELETE
-    match /bookings/{bookingId} {
-      allow create: if true;
-      allow read, update, delete: if isAdmin();
+    function isSuperAdmin() {
+      return isSignedIn() && request.auth.token.role == 'superadmin';
     }
 
-    // ── Galleries ───────────────────────────────────────────────
-    // Anyone with the token can read (gallery page fetches server-side anyway)
-    // Only admins can write
-    match /galleries/{galleryId} {
-      allow read:  if true;
-      allow write: if isAdmin();
+    function isTenantOwner(tenantId) {
+      return isSignedIn()
+        && request.auth.token.role == 'owner'
+        && request.auth.token.tenantId == tenantId;
     }
 
-    // ── Photographers ───────────────────────────────────────────
-    // Only admins
-    match /photographers/{photographerId} {
-      allow read, write: if isAdmin();
+    function isTenantMember(tenantId) {
+      return isSignedIn()
+        && request.auth.token.tenantId == tenantId;
     }
 
-    // ── Packages / Services / Addons ────────────────────────────
-    // Public read (needed for booking form), admin write
-    match /packages/{id} {
-      allow read:  if true;
-      allow write: if isAdmin();
-    }
-    match /services/{id} {
-      allow read:  if true;
-      allow write: if isAdmin();
-    }
-    match /addons/{id} {
-      allow read:  if true;
-      allow write: if isAdmin();
+    // ── Platform-level collections ────────────────────────────────────────────
+
+    // Tenants: owners can read/update their own; superadmin full access
+    match /tenants/{tenantId} {
+      allow read:   if isTenantOwner(tenantId) || isSuperAdmin();
+      allow create: if isSuperAdmin(); // created server-side via Admin SDK
+      allow update: if isTenantOwner(tenantId) || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+
+      // ── Tenant sub-collections ──────────────────────────────────────────
+
+      // Bookings: public create (booking form), tenant members read/update
+      match /bookings/{bookingId} {
+        allow create: if true;
+        allow read, update: if isTenantMember(tenantId) || isSuperAdmin();
+        allow delete: if isTenantOwner(tenantId) || isSuperAdmin();
+      }
+
+      // Galleries: public read (token-based server-side anyway), tenant write
+      match /galleries/{galleryId} {
+        allow read:  if true;
+        allow write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      // Photographers (team members)
+      match /photographers/{photographerId} {
+        allow read, write: if isTenantMember(tenantId) || isSuperAdmin();
+      }
+
+      // Catalog: public read so booking form can load; tenant owner write
+      match /packages/{id} {
+        allow read:  if true;
+        allow write: if isTenantOwner(tenantId) || isSuperAdmin();
+      }
+      match /services/{id} {
+        allow read:  if true;
+        allow write: if isTenantOwner(tenantId) || isSuperAdmin();
+      }
+      match /addons/{id} {
+        allow read:  if true;
+        allow write: if isTenantOwner(tenantId) || isSuperAdmin();
+      }
     }
   }
 }

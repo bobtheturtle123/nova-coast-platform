@@ -2,12 +2,17 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
 const INITIAL_STATE = {
+  // Tenant context
+  tenantSlug:   null,
+  tenantId:     null,
+  tenantName:   null,
+
   // Step 1
-  packageId:  null,     // "core" | "growth" | "signature" | null
-  serviceIds: [],       // ["photography", "drone", ...]
+  packageId:  null,
+  serviceIds: [],
 
   // Step 2
-  addonIds: [],         // ["twilight", "reels", ...]
+  addonIds: [],
 
   // Step 3 — Property
   address:       "",
@@ -20,20 +25,20 @@ const INITIAL_STATE = {
 
   // Step 4 — Pricing
   travelFee:  0,
-  pricing:    null,     // { base, addonTotal, travelFee, subtotal, deposit, balance }
+  pricing:    null,
 
   // Step 5 — Schedule
-  preferredDate: "",    // ISO date string
-  preferredTime: "morning", // "morning" | "afternoon"
-  photographerId: null, // assigned in Phase 2
+  preferredDate: "",
+  preferredTime: "morning",
+  photographerId: null,
 
   // Step 6 — Client info
   clientName:  "",
   clientEmail: "",
   clientPhone: "",
 
-  // Step 7 — Post-payment
-  bookingId: null,
+  // Post-payment
+  bookingId:   null,
   depositPaid: false,
 };
 
@@ -42,13 +47,17 @@ export const useBookingStore = create(
     (set, get) => ({
       ...INITIAL_STATE,
 
+      // ─── Tenant ──────────────────────────────────────────────────
+      setTenant: (tenantSlug, tenantId, tenantName) =>
+        set({ tenantSlug, tenantId, tenantName }),
+
       // ─── Setters ──────────────────────────────────────────────
       setPackage: (packageId) =>
         set({ packageId, serviceIds: [] }),
 
       toggleService: (serviceId) =>
         set((state) => ({
-          packageId: null, // deselect package if picking custom
+          packageId: null,
           serviceIds: state.serviceIds.includes(serviceId)
             ? state.serviceIds.filter((id) => id !== serviceId)
             : [...state.serviceIds, serviceId],
@@ -62,17 +71,14 @@ export const useBookingStore = create(
         })),
 
       setProperty: (fields) => set(fields),
-
-      setPricing: (pricing) => set({ pricing }),
-      setTravelFee: (travelFee) => set({ travelFee }),
-
+      setPricing:  (pricing) => set({ pricing }),
+      setTravelFee:(travelFee) => set({ travelFee }),
       setSchedule: (fields) => set(fields),
-      setClientInfo: (fields) => set(fields),
+      setClientInfo:(fields) => set(fields),
 
       setBookingResult: (bookingId) =>
         set({ bookingId, depositPaid: true }),
 
-      // ─── Reset ────────────────────────────────────────────────
       resetBooking: () => set(INITIAL_STATE),
 
       // ─── Computed helpers ─────────────────────────────────────
@@ -80,15 +86,30 @@ export const useBookingStore = create(
         const { address, city, state, zip } = get();
         return [address, city, state, zip].filter(Boolean).join(", ");
       },
-
       hasSelections: () => {
         const { packageId, serviceIds } = get();
         return !!packageId || serviceIds.length > 0;
       },
+
+      // Helper: base URL for this tenant's booking flow
+      bookPath: (path = "") => {
+        const { tenantSlug } = get();
+        return `/${tenantSlug}/book${path}`;
+      },
+
+      // Helper: API base for this tenant
+      apiPath: (path) => {
+        const { tenantSlug } = get();
+        return `/api/${tenantSlug}${path}`;
+      },
     }),
     {
-      name: "nova-coast-booking",
-      storage: createJSONStorage(() => sessionStorage), // cleared when tab closes
+      name: "shootflow-booking",
+      storage: createJSONStorage(() =>
+        typeof window !== "undefined" ? sessionStorage : {
+          getItem: () => null, setItem: () => {}, removeItem: () => {},
+        }
+      ),
     }
   )
 );

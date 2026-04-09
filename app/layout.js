@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Book a Shoot — Nova Coast Media",
-  description: "Professional real estate photography, video, and drone services in San Diego.",
+  title: "ShootFlow — Real Estate Photography Platform",
+  description: "The all-in-one booking, payment, and gallery platform for real estate photographers.",
 };
 
 export default function RootLayout({ children }) {

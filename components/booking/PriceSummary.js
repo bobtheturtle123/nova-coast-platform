@@ -3,12 +3,17 @@
 import { useBookingStore } from "@/store/bookingStore";
 import { PACKAGES, SERVICES, ADDONS, formatPrice } from "@/lib/pricing";
 
-export default function PriceSummary({ showDeposit = false }) {
+// catalog prop overrides the static defaults (used in multi-tenant [slug]/book pages)
+export default function PriceSummary({ showDeposit = false, catalog = null }) {
   const { packageId, serviceIds, addonIds, pricing, travelFee } = useBookingStore();
 
-  const selectedPkg = PACKAGES.find((p) => p.id === packageId);
-  const selectedSvcs = SERVICES.filter((s) => serviceIds.includes(s.id));
-  const selectedAddons = ADDONS.filter((a) => addonIds.includes(a.id));
+  const packages = catalog?.packages || PACKAGES;
+  const services = catalog?.services || SERVICES;
+  const addons   = catalog?.addons   || ADDONS;
+
+  const selectedPkg    = packages.find((p) => p.id === packageId);
+  const selectedSvcs   = services.filter((s) => serviceIds.includes(s.id));
+  const selectedAddons = addons.filter((a) => addonIds.includes(a.id));
 
   if (!pricing && !packageId && serviceIds.length === 0) return null;
 
@@ -21,7 +26,6 @@ export default function PriceSummary({ showDeposit = false }) {
       <p className="section-label mb-4">Order Summary</p>
 
       <div className="space-y-2 text-sm font-body">
-        {/* Package */}
         {selectedPkg && (
           <div className="flex justify-between">
             <span className="text-charcoal font-medium">{selectedPkg.name} Package</span>
@@ -29,7 +33,6 @@ export default function PriceSummary({ showDeposit = false }) {
           </div>
         )}
 
-        {/* À-carte services */}
         {selectedSvcs.map((s) => (
           <div key={s.id} className="flex justify-between">
             <span className="text-charcoal">{s.name}</span>
@@ -37,7 +40,6 @@ export default function PriceSummary({ showDeposit = false }) {
           </div>
         ))}
 
-        {/* Add-ons */}
         {selectedAddons.length > 0 && (
           <>
             <div className="border-t border-gray-100 pt-2 mt-2" />
@@ -50,7 +52,6 @@ export default function PriceSummary({ showDeposit = false }) {
           </>
         )}
 
-        {/* Travel fee */}
         {travelFee > 0 && (
           <div className="flex justify-between text-gray-500">
             <span>Travel fee</span>
@@ -58,7 +59,6 @@ export default function PriceSummary({ showDeposit = false }) {
           </div>
         )}
 
-        {/* Total */}
         <div className="border-t border-gray-200 pt-3 mt-3">
           <div className="flex justify-between font-semibold text-base">
             <span>Total</span>
@@ -66,7 +66,6 @@ export default function PriceSummary({ showDeposit = false }) {
           </div>
         </div>
 
-        {/* Deposit breakdown */}
         {showDeposit && subtotal > 0 && (
           <div className="bg-cream rounded-sm p-3 mt-2 space-y-1">
             <div className="flex justify-between text-gold-dark font-medium">

@@ -8,7 +8,8 @@ export async function POST(req) {
       return Response.json({ error: "Address required" }, { status: 400 });
     }
 
-    const fee = await getTravelFee(address);
+    const fromZip = process.env.NEXT_PUBLIC_FROM_ZIP || "92108";
+    const fee = await getTravelFee(fromZip, address);
     return Response.json({ fee });
   } catch (err) {
     console.error("Travel fee error:", err);

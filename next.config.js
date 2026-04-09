@@ -1,7 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ["pub-placeholder.r2.dev"], // replace with your R2 public domain
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.r2.dev",
+      },
+      {
+        protocol: "https",
+        hostname: "**.cloudflare.com",
+      },
+    ],
   },
   // Required to use Firebase Admin in API routes
   serverExternalPackages: ["firebase-admin"],

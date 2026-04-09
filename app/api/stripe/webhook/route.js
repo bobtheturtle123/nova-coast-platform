@@ -1,90 +1,98 @@
 import { stripe } from "@/lib/stripe";
 import { adminDb } from "@/lib/firebase-admin";
-import { sendBookingConfirmation, sendGalleryDelivery } from "@/lib/email";
+import { getTenantById } from "@/lib/tenants";
+import { sendBookingConfirmation } from "@/lib/email";
 
-// Required: tell Next.js NOT to parse the body (Stripe needs raw bytes)
-export const config = {
-  api: { bodyParser: false },
-};
+export const dynamic = "force-dynamic";
 
 export async function POST(req) {
-  const sig       = req.headers.get("stripe-signature");
-  const rawBody   = await req.text();
-  const secret    = process.env.STRIPE_WEBHOOK_SECRET;
+  const sig     = req.headers.get("stripe-signature");
+  const rawBody = await req.text();
 
   let event;
   try {
-    event = stripe.webhooks.constructEvent(rawBody, sig, secret);
+    event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
     console.error("Webhook signature error:", err.message);
     return new Response(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
-  // ── Handle events ────────────────────────────────────────────────────────
   try {
     switch (event.type) {
 
-      // ── Deposit paid ────────────────────────────────────────────────────
       case "payment_intent.succeeded": {
-        const intent     = event.data.object;
-        const { bookingId, type } = intent.metadata;
-        if (!bookingId) break;
+        const pi = event.data.object;
+        const { bookingId, type, tenantId } = pi.metadata;
+        if (!bookingId || !tenantId) break;
 
-        const ref = adminDb.collection("bookings").doc(bookingId);
+        const bookingRef = adminDb
+          .collection("tenants").doc(tenantId)
+          .collection("bookings").doc(bookingId);
 
-        if (type === "deposit") {
-          await ref.update({
-            depositPaid:           true,
-            status:                "requested",
-            stripeDepositIntentId: intent.id,
-          });
+        const bookingDoc = await bookingRef.get();
+        if (!bookingDoc.exists) break;
+        const booking = bookingDoc.data();
 
-          // Fetch booking to send confirmation email
-          const snap    = await ref.get();
-          const booking = snap.data();
-
-          await sendBookingConfirmation({ booking });
+        if (type === "deposit" && !booking.depositPaid) {
+          await bookingRef.update({ depositPaid: true, status: "requested", stripeDepositIntentId: pi.id });
+          try {
+            const tenant = await getTenantById(tenantId);
+            if (tenant) await sendBookingConfirmation({ booking: { ...booking, depositPaid: true }, tenant });
+          } catch (e) { console.error("Confirmation email failed:", e); }
         }
 
-        if (type === "balance") {
-          await ref.update({
-            balancePaid:      true,
-            status:           "completed",
-            galleryUnlocked:  true,
-          });
-
-          // Unlock gallery
-          const snap    = await ref.get();
-          const booking = snap.data();
-
+        if (type === "balance" && !booking.balancePaid) {
+          await bookingRef.update({ balancePaid: true, status: "completed" });
           if (booking.galleryId) {
-            await adminDb.collection("galleries").doc(booking.galleryId).update({
-              unlocked: true,
-            });
+            await adminDb
+              .collection("tenants").doc(tenantId)
+              .collection("galleries").doc(booking.galleryId)
+              .update({ unlocked: true });
           }
         }
         break;
       }
 
-      // ── Payment failed ──────────────────────────────────────────────────
       case "payment_intent.payment_failed": {
-        const intent    = event.data.object;
-        const { bookingId } = intent.metadata;
-        if (!bookingId) break;
+        const pi = event.data.object;
+        const { bookingId, tenantId } = pi.metadata;
+        if (!bookingId || !tenantId) break;
+        await adminDb
+          .collection("tenants").doc(tenantId)
+          .collection("bookings").doc(bookingId)
+          .update({ status: "payment_failed" });
+        break;
+      }
 
-        await adminDb.collection("bookings").doc(bookingId).update({
-          status: "payment_failed",
+      // Subscription events
+      case "customer.subscription.created":
+      case "customer.subscription.updated": {
+        const sub = event.data.object;
+        const tenantId = sub.metadata?.tenantId;
+        if (!tenantId) break;
+        await adminDb.collection("tenants").doc(tenantId).update({
+          stripeSubscriptionId: sub.id,
+          subscriptionStatus:   sub.status,
+          subscriptionPlan:     sub.metadata?.plan || "starter",
+        });
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const sub = event.data.object;
+        const tenantId = sub.metadata?.tenantId;
+        if (!tenantId) break;
+        await adminDb.collection("tenants").doc(tenantId).update({
+          subscriptionStatus: "canceled",
         });
         break;
       }
 
       default:
-        // Unhandled event — safe to ignore
         break;
     }
   } catch (err) {
     console.error("Webhook handler error:", err);
-    // Return 200 so Stripe doesn't retry — we'll investigate manually
   }
 
   return new Response("OK", { status: 200 });
