@@ -13,7 +13,7 @@ const nextConfig = {
     ],
   },
   // Required to use Firebase Admin in API routes
-  serverExternalPackages: ["firebase-admin"],
+  serverExternalPackages: ["firebase-admin", "sharp"],
 };
 
 module.exports = nextConfig;

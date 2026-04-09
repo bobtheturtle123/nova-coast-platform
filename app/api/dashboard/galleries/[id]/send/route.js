@@ -16,11 +16,14 @@ export async function POST(req, { params }) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const galleryDoc = await adminDb
-    .collection("tenants").doc(ctx.tenantId)
-    .collection("galleries").doc(params.id)
-    .get();
+  const body = await req.json().catch(() => ({}));
+  const { subject, note } = body;
 
+  const galleryRef = adminDb
+    .collection("tenants").doc(ctx.tenantId)
+    .collection("galleries").doc(params.id);
+
+  const galleryDoc = await galleryRef.get();
   if (!galleryDoc.exists) return Response.json({ error: "Not found" }, { status: 404 });
   const gallery = galleryDoc.data();
 
@@ -33,6 +36,7 @@ export async function POST(req, { params }) {
   const booking = bookingDoc.data();
   const tenant  = await getTenantById(ctx.tenantId);
 
-  await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken, tenant });
+  await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken, tenant, subject, note });
+  await galleryRef.update({ delivered: true, deliveredAt: new Date() });
   return Response.json({ ok: true });
 }

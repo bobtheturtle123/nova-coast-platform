@@ -15,13 +15,13 @@ export async function POST(req, { params }) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { publicUrl, fileName, fileType } = await req.json();
+  const { publicUrl, fileName, fileType, key } = await req.json();
 
   await adminDb
     .collection("tenants").doc(ctx.tenantId)
     .collection("galleries").doc(params.id)
     .update({
-      media: FieldValue.arrayUnion({ url: publicUrl, fileName, fileType, uploadedAt: new Date().toISOString() }),
+      media: FieldValue.arrayUnion({ url: publicUrl, key: key || "", fileName, fileType, uploadedAt: new Date().toISOString() }),
     });
 
   return Response.json({ ok: true });
