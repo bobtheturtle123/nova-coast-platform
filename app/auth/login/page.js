@@ -44,7 +44,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-cream flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="font-display text-navy text-2xl tracking-wide">ShootFlow</Link>
+          <Link href="/" className="font-display text-navy text-2xl tracking-wide">NovaOS</Link>
           <p className="text-gray-500 text-sm mt-2">Sign in to your account</p>
         </div>
 

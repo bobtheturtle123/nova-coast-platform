@@ -110,7 +110,7 @@ export default function OnboardingPage() {
       {/* Header */}
       <header className="bg-white border-b border-gray-100 py-4 px-6">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <span className="font-display text-navy text-lg tracking-wide">ShootFlow</span>
+          <span className="font-display text-navy text-lg tracking-wide">NovaOS</span>
           <span className="text-xs text-gray-400">Setup ({step + 1} of {STEPS.length})</span>
         </div>
       </header>

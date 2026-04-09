@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "ShootFlow — The all-in-one platform for real estate photographers",
+  title: "NovaOS — The all-in-one platform for real estate photographers",
   description:
     "Booking, payments, and gallery delivery built for real estate photographers. Replace Aryeo in minutes.",
 };
@@ -12,7 +12,7 @@ export default function MarketingPage() {
       {/* NAV */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="font-display text-navy text-xl tracking-wide">ShootFlow</span>
+          <span className="font-display text-navy text-xl tracking-wide">NovaOS</span>
           <nav className="hidden md:flex items-center gap-8 text-sm text-gray-600">
             <a href="#features" className="hover:text-navy transition-colors">Features</a>
             <a href="#pricing" className="hover:text-navy transition-colors">Pricing</a>
@@ -167,7 +167,7 @@ export default function MarketingPage() {
         <div className="max-w-2xl mx-auto">
           <h2 className="font-display text-4xl text-white mb-4">Ready to replace Aryeo?</h2>
           <p className="text-white/60 mb-8">
-            Set up your branded booking page in minutes. Starts at $49/mo after your free trial.
+            Set up your branded booking page in minutes. Starts at $39/mo after your free trial.
           </p>
           <Link href="/auth/register"
             className="inline-block bg-gold text-navy font-semibold px-10 py-4 rounded-sm hover:bg-gold/90 transition-colors">
@@ -179,11 +179,11 @@ export default function MarketingPage() {
       {/* FOOTER */}
       <footer className="bg-navy border-t border-white/10 py-8 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-white/40 text-xs">
-          <span>© {new Date().getFullYear()} ShootFlow. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} NovaOS. All rights reserved.</span>
           <div className="flex gap-6">
             <a href="#" className="hover:text-white/70 transition-colors">Privacy</a>
             <a href="#" className="hover:text-white/70 transition-colors">Terms</a>
-            <a href="mailto:hello@shootflow.com" className="hover:text-white/70 transition-colors">Support</a>
+            <a href="mailto:hello@nova-os.app" className="hover:text-white/70 transition-colors">Support</a>
           </div>
         </div>
       </footer>
@@ -208,17 +208,17 @@ const STEPS = [
 
 const PLANS = [
   {
-    name: "Starter", price: 49, featured: false,
+    name: "Starter", price: 39, featured: false,
     desc: "Perfect for solo photographers just getting started.",
     features: ["Up to 30 bookings/month", "1 team member", "Branded booking page", "Stripe Connect payouts", "Media galleries", "Email notifications"],
   },
   {
-    name: "Professional", price: 99, featured: true,
+    name: "Pro", price: 79, featured: true,
     desc: "For growing photographers who need more capacity.",
     features: ["Up to 150 bookings/month", "5 team members", "Branded booking page", "Stripe Connect payouts", "Media galleries", "Priority email support", "Custom domain"],
   },
   {
-    name: "Agency", price: 199, featured: false,
+    name: "Studio", price: 149, featured: false,
     desc: "Multi-photographer studios with unlimited volume.",
     features: ["Unlimited bookings", "25 team members", "Branded booking page", "Stripe Connect payouts", "Media galleries", "Priority support", "Custom domain", "White-label emails"],
   },

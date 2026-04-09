@@ -42,6 +42,10 @@ export default function SettingsPage() {
   const [newFieldLabel, setNewFieldLabel] = useState("");
   const [newFieldType,  setNewFieldType]  = useState("text");
 
+  // Terms of service state
+  const [termsText,    setTermsText]    = useState("");
+  const [savingTerms,  setSavingTerms]  = useState(false);
+
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
       const res = await fetch("/api/dashboard/tenant", {
@@ -74,6 +78,7 @@ export default function SettingsPage() {
           }
           if (bc.timeSlots?.length) setTimeSlots(bc.timeSlots);
           if (bc.customFields?.length) setCustomFields(bc.customFields);
+          if (bc.terms) setTermsText(bc.terms);
         }
       }
       setLoading(false);
@@ -178,6 +183,15 @@ export default function SettingsPage() {
     setCustomFields((prev) => prev.map((f) => f.id === id ? { ...f, required: !f.required } : f));
   }
 
+  function buildBookingConfig() {
+    return {
+      deposit:      { type: depositType, value: Number(depositValue) || 0 },
+      timeSlots,
+      customFields,
+      terms:        termsText,
+    };
+  }
+
   async function saveBookingConfig() {
     setSavingBooking(true);
     try {
@@ -185,18 +199,27 @@ export default function SettingsPage() {
       const res = await fetch("/api/tenants/update", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          bookingConfig: {
-            deposit:      { type: depositType, value: Number(depositValue) || 0 },
-            timeSlots,
-            customFields,
-          },
-        }),
+        body: JSON.stringify({ bookingConfig: buildBookingConfig() }),
       });
       if (res.ok) showMsg("Booking settings saved.");
       else showMsg("Failed to save.", "error");
     } catch { showMsg("Something went wrong.", "error"); }
     setSavingBooking(false);
+  }
+
+  async function saveTerms() {
+    setSavingTerms(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/tenants/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ bookingConfig: buildBookingConfig() }),
+      });
+      if (res.ok) showMsg("Terms saved.");
+      else showMsg("Failed to save.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    setSavingTerms(false);
   }
 
   if (loading) return (
@@ -513,6 +536,33 @@ export default function SettingsPage() {
           <button onClick={saveBookingConfig} disabled={savingBooking} className="btn-primary px-8 py-3">
             {savingBooking ? "Saving…" : "Save Booking Settings"}
           </button>
+        </div>
+      </div>
+
+      {/* ─── Terms of Service ─────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-sm border border-gray-200 p-6 mt-8">
+        <h2 className="font-display text-navy text-base mb-1">Terms of Service</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Clients must agree to these terms before completing a booking. Leave blank to disable the checkbox.
+          Your terms are shown at <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">/{tenant?.slug}/terms</code>.
+        </p>
+        <textarea
+          value={termsText}
+          onChange={(e) => setTermsText(e.target.value)}
+          rows={18}
+          placeholder="Paste your Terms of Service here…"
+          className="input-field w-full text-sm font-mono leading-relaxed resize-y"
+        />
+        <div className="mt-4 flex items-center gap-4">
+          <button onClick={saveTerms} disabled={savingTerms} className="btn-primary px-8 py-3">
+            {savingTerms ? "Saving…" : "Save Terms"}
+          </button>
+          {tenant?.slug && (
+            <a href={`/${tenant.slug}/terms`} target="_blank" rel="noopener noreferrer"
+              className="text-sm text-navy underline underline-offset-2 hover:opacity-70">
+              Preview public terms page →
+            </a>
+          )}
         </div>
       </div>
     </div>

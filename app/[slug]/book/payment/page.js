@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -198,6 +198,8 @@ export default function TenantPaymentPage() {
   const [payFull,      setPayFull]       = useState(false);
   const [tip,          setTip]           = useState(0);
   const [customTip,    setCustomTip]     = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const initLoadingRef = useRef(false);
 
   const depositConfig = catalog?.bookingConfig?.deposit;
   const noDeposit     = depositConfig?.type === "none";
@@ -245,7 +247,13 @@ export default function TenantPaymentPage() {
   }
 
   async function initPayment() {
-    if (!validate() || clientSecret || initLoading) return; // guard against double-submit
+    const hasTerms = !!catalog?.bookingConfig?.terms;
+    const valid = validate();
+    if (hasTerms && !agreedToTerms) {
+      setFieldErrors((e) => ({ ...e, terms: "You must agree to the Terms of Service to continue." }));
+    }
+    if (!valid || (hasTerms && !agreedToTerms) || clientSecret || initLoadingRef.current) return;
+    initLoadingRef.current = true;
     setInitLoading(true);
     setInitError(null);
     try {
@@ -271,6 +279,7 @@ export default function TenantPaymentPage() {
     } catch (err) {
       setInitError(err.message);
     } finally {
+      initLoadingRef.current = false;
       setInitLoading(false);
     }
   }
@@ -415,6 +424,38 @@ export default function TenantPaymentPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Terms agreement checkbox */}
+                  {catalog?.bookingConfig?.terms && (
+                    <div className="space-y-1">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={agreedToTerms}
+                          onChange={(e) => {
+                            setAgreedToTerms(e.target.checked);
+                            if (e.target.checked) setFieldErrors((err) => { const n = { ...err }; delete n.terms; return n; });
+                          }}
+                          className="mt-0.5 flex-shrink-0 w-4 h-4 rounded border-gray-300 text-navy focus:ring-navy"
+                        />
+                        <span className="text-sm text-gray-600">
+                          I agree to the{" "}
+                          <a href={`/${params.slug}/terms`} target="_blank" rel="noopener noreferrer"
+                            className="text-navy underline underline-offset-2 hover:opacity-70">
+                            Terms of Service
+                          </a>
+                          {" "}and{" "}
+                          <a href="https://nova-os.app/legal/privacy" target="_blank" rel="noopener noreferrer"
+                            className="text-navy underline underline-offset-2 hover:opacity-70">
+                            Privacy Policy
+                          </a>.
+                        </span>
+                      </label>
+                      {fieldErrors.terms && (
+                        <p className="text-xs text-red-500 ml-7">{fieldErrors.terms}</p>
+                      )}
+                    </div>
+                  )}
 
                   <button onClick={initPayment} disabled={initLoading} className="btn-primary w-full mt-2">
                     {initLoading

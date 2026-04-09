@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 
-const PLAN_NAMES = { starter: "Starter", pro: "Professional", agency: "Agency" };
-const PLAN_PRICES = { starter: 49, pro: 99, agency: 199 };
+const PLAN_NAMES  = { starter: "Starter", pro: "Pro", studio: "Studio", agency: "Studio" };
+const PLAN_PRICES = { starter: 39, pro: 79, studio: 149, agency: 149 };
 
 export default function BillingPage() {
   const [tenant,  setTenant]  = useState(null);
@@ -137,9 +137,9 @@ export default function BillingPage() {
         <div className="space-y-3 mb-6">
           <h2 className="font-display text-navy text-base">Choose a Plan</h2>
           {[
-            { id: "starter", name: "Starter", price: 49, desc: "Up to 30 bookings/month · 1 team member" },
-            { id: "pro",     name: "Professional", price: 99, desc: "Up to 150 bookings/month · 5 team members · Custom domain" },
-            { id: "agency",  name: "Agency", price: 199, desc: "Unlimited bookings · 25 team members · White-label" },
+            { id: "starter", name: "Starter", price: 39,  desc: "Up to 30 bookings/month · 1 team member" },
+            { id: "pro",     name: "Pro",     price: 79,  desc: "Up to 150 bookings/month · 5 team members · Custom domain" },
+            { id: "studio",  name: "Studio",  price: 149, desc: "Unlimited bookings · 25 team members · White-label" },
           ].map((p) => (
             <div key={p.id} className={`flex items-center justify-between p-4 rounded-sm border
               ${plan === p.id ? "border-navy bg-navy/5" : "border-gray-200 bg-white"}`}>

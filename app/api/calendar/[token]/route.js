@@ -42,8 +42,8 @@ export async function GET(req, { params }) {
     // Also get tenant name for calendar title
     const tenantDoc = await adminDb.collection("tenants").doc(tenantId).get();
     const tenantName = tenantDoc.exists
-      ? (tenantDoc.data().businessName || "ShootFlow")
-      : "ShootFlow";
+      ? (tenantDoc.data().businessName || "NovaOS")
+      : "NovaOS";
 
     const ical = buildICal(member, bookings, tenantName);
 
@@ -67,16 +67,16 @@ function buildICal(member, bookings, tenantName) {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    `PRODID:-//ShootFlow//ShootFlow//EN`,
+    `PRODID:-//NovaOS//NovaOS//EN`,
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${escIcal(member.name)} — ${escIcal(tenantName)}`,
-    "X-WR-CALDESC:Shoot schedule from ShootFlow",
+    "X-WR-CALDESC:Shoot schedule from NovaOS",
     "X-WR-TIMEZONE:America/Chicago",
   ];
 
   for (const b of bookings) {
-    const uid = `booking-${b.id}@shootflow.com`;
+    const uid = `booking-${b.id}@nova-os.app`;
 
     // Build start/end datetimes
     let dtStart, dtEnd;

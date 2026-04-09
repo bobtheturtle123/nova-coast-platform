@@ -110,7 +110,7 @@ export const useBookingStore = create(
       },
     }),
     {
-      name: "shootflow-booking",
+      name: "novaos-booking",
       storage: createJSONStorage(() =>
         typeof window !== "undefined" ? sessionStorage : {
           getItem: () => null, setItem: () => {}, removeItem: () => {},
