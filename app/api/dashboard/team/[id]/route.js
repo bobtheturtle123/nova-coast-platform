@@ -1,4 +1,5 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { v4 as uuidv4 } from "uuid";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -30,10 +31,34 @@ export async function PATCH(req, { params }) {
     active: body.active !== false,
   };
 
-  await adminDb
-    .collection("tenants").doc(ctx.tenantId)
-    .collection("team").doc(params.id)
-    .update(update);
+  const memberRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(params.id);
+  const memberDoc = await memberRef.get();
+
+  let newCalToken = null;
+
+  // Generate token if member doesn't have one yet
+  if (memberDoc.exists && !memberDoc.data().calendarToken) {
+    newCalToken          = uuidv4().replace(/-/g, "");
+    update.calendarToken = newCalToken;
+    update.tenantId      = ctx.tenantId;
+  }
+
+  // Regenerate on explicit request
+  if (body.regenerateCalendarToken) {
+    newCalToken          = uuidv4().replace(/-/g, "");
+    update.calendarToken = newCalToken;
+    update.tenantId      = ctx.tenantId;
+  }
+
+  const batch = adminDb.batch();
+  batch.update(memberRef, update);
+  if (newCalToken) {
+    batch.set(
+      adminDb.collection("calendarTokens").doc(newCalToken),
+      { tenantId: ctx.tenantId, memberId: params.id }
+    );
+  }
+  await batch.commit();
 
   return Response.json({ ok: true });
 }

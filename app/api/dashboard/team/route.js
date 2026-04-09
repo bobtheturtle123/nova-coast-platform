@@ -37,20 +37,30 @@ export async function POST(req) {
 
   const body  = await req.json();
   const id    = uuidv4().replace(/-/g, "").slice(0, 16);
+  const calendarToken = uuidv4().replace(/-/g, "");
   const member = {
     id,
-    name:   (body.name || "").slice(0, 80),
-    email:  (body.email || "").toLowerCase(),
-    phone:  body.phone || "",
-    skills: Array.isArray(body.skills) ? body.skills.filter((s) => ALL_SKILLS.includes(s)) : [],
-    color:  body.color || "#0b2a55",
-    active: body.active !== false,
+    name:          (body.name || "").slice(0, 80),
+    email:         (body.email || "").toLowerCase(),
+    phone:         body.phone || "",
+    skills:        Array.isArray(body.skills) ? body.skills.filter((s) => ALL_SKILLS.includes(s)) : [],
+    color:         body.color || "#0b2a55",
+    active:        body.active !== false,
+    calendarToken, // used to authenticate iCal feed URL
+    tenantId:      ctx.tenantId,
   };
 
-  await adminDb
-    .collection("tenants").doc(ctx.tenantId)
-    .collection("team").doc(id)
-    .set(member);
+  const batch = adminDb.batch();
+  batch.set(
+    adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(id),
+    member
+  );
+  // Top-level lookup so the iCal endpoint can find tenantId without collectionGroup query
+  batch.set(
+    adminDb.collection("calendarTokens").doc(calendarToken),
+    { tenantId: ctx.tenantId, memberId: id }
+  );
+  await batch.commit();
 
   return Response.json({ member });
 }

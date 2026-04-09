@@ -146,14 +146,127 @@ function MemberForm({ member, onSave, onDelete, onClose }) {
   );
 }
 
+// ─── Calendar sync modal ─────────────────────────────────────────────────────
+function CalendarSyncModal({ member, onClose, onRegenerate }) {
+  const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
+  const feedUrl = member.calendarToken
+    ? `${APP_URL}/api/calendar/${member.calendarToken}`
+    : null;
+
+  const webcalUrl  = feedUrl ? feedUrl.replace(/^https?:\/\//, "webcal://") : null;
+  const gcalUrl    = feedUrl
+    ? `https://calendar.google.com/calendar/r/settings/addbyurl?url=${encodeURIComponent(feedUrl)}`
+    : null;
+
+  const [copied, setCopied] = useState(false);
+
+  function copyLink() {
+    if (!feedUrl) return;
+    navigator.clipboard.writeText(feedUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-sm shadow-xl w-full max-w-md">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="font-display text-navy text-lg">Calendar Sync — {member.name}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          <p className="text-sm text-gray-500">
+            Subscribe to this calendar feed to see {member.name}&apos;s shoots in any calendar app.
+            The feed updates automatically as new bookings are confirmed.
+          </p>
+
+          {feedUrl ? (
+            <>
+              {/* Feed URL */}
+              <div>
+                <label className="label-field">Subscribe URL</label>
+                <div className="flex gap-2 items-center">
+                  <code className="text-xs bg-gray-50 border border-gray-200 rounded px-3 py-2 flex-1 truncate text-gray-700">
+                    {feedUrl}
+                  </code>
+                  <button onClick={copyLink}
+                    className="text-xs text-navy border border-navy/20 px-3 py-2 rounded hover:bg-navy/5 flex-shrink-0">
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick subscribe buttons */}
+              <div className="space-y-2">
+                <label className="label-field">Quick Subscribe</label>
+                <a href={gcalUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-3 w-full border border-gray-200 rounded px-4 py-3 hover:bg-gray-50 transition-colors text-left">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <rect width="24" height="24" rx="2" fill="#4285F4"/>
+                    <path d="M18 12c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6 6-2.69 6-6z" fill="white"/>
+                    <path d="M14.5 12c0-1.38-1.12-2.5-2.5-2.5S9.5 10.62 9.5 12s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z" fill="#4285F4"/>
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-charcoal">Google Calendar</p>
+                    <p className="text-xs text-gray-400">Opens Google Calendar to add the feed</p>
+                  </div>
+                </a>
+
+                <a href={webcalUrl}
+                  className="flex items-center gap-3 w-full border border-gray-200 rounded px-4 py-3 hover:bg-gray-50 transition-colors text-left">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <rect width="24" height="24" rx="2" fill="#1c1c1e"/>
+                    <rect x="4" y="5" width="16" height="15" rx="1.5" fill="white"/>
+                    <rect x="4" y="5" width="16" height="4" rx="1.5" fill="#F44336"/>
+                    <path d="M8 13h2v2H8v-2zm3 0h2v2h-2v-2zm3 0h2v2h-2v-2zM8 16h2v2H8v-2zm3 0h2v2h-2v-2z" fill="#1c1c1e"/>
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-charcoal">Apple Calendar</p>
+                    <p className="text-xs text-gray-400">Opens Calendar app via webcal:// link</p>
+                  </div>
+                </a>
+
+                <div className="text-xs text-gray-400 bg-gray-50 rounded px-3 py-2">
+                  <strong>Other apps (Outlook, Fantastical, etc.):</strong> Copy the URL above and paste it into &ldquo;Subscribe to calendar&rdquo; in your app.
+                </div>
+              </div>
+
+              {/* Regenerate */}
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-xs text-gray-400 mb-2">
+                  Regenerating the link will break any existing subscriptions.
+                </p>
+                <button onClick={onRegenerate}
+                  className="text-xs text-red-400 hover:text-red-600 border border-red-200 px-3 py-1.5 rounded">
+                  Regenerate link
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="text-sm text-gray-500 bg-amber-50 border border-amber-200 rounded px-4 py-3">
+              No calendar token found. Edit and save this team member to generate one.
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+          <button onClick={onClose} className="btn-outline px-5 py-2 text-sm">Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function TeamPage() {
-  const [members,    setMembers]    = useState([]);
-  const [bookings,   setBookings]   = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [editing,    setEditing]    = useState(null);   // null | member | "new"
-  const [anchor,     setAnchor]     = useState(new Date());
-  const [filterMember, setFilterMember] = useState("all");
+  const [members,       setMembers]       = useState([]);
+  const [bookings,      setBookings]      = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [editing,       setEditing]       = useState(null);   // null | member | "new"
+  const [anchor,        setAnchor]        = useState(new Date());
+  const [filterMember,  setFilterMember]  = useState("all");
+  const [calModal,      setCalModal]      = useState(null);   // member | null
 
   const getToken = () => auth.currentUser?.getIdToken();
 
@@ -256,17 +369,28 @@ export default function TeamPage() {
       {members.length > 0 && (
         <div className="flex gap-3 flex-wrap mb-6">
           {members.map((m) => (
-            <button key={m.id} onClick={() => setEditing(m)}
-              className="flex items-center gap-3 bg-white border border-gray-200 rounded-sm px-4 py-3 hover:shadow-sm transition-shadow text-left">
+            <div key={m.id} className="flex items-center gap-3 bg-white border border-gray-200 rounded-sm px-4 py-3 hover:shadow-sm transition-shadow">
               <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
                 style={{ background: m.color || "#0b2a55" }}>
                 {m.name?.[0]?.toUpperCase() || "?"}
               </div>
-              <div>
+              <button onClick={() => setEditing(m)} className="text-left">
                 <p className="text-sm font-medium text-charcoal">{m.name}</p>
                 <p className="text-xs text-gray-400">{m.skills?.length || 0} skills</p>
-              </div>
-            </button>
+              </button>
+              <button
+                onClick={() => setCalModal(m)}
+                title="Calendar sync"
+                className="ml-2 text-gray-300 hover:text-navy transition-colors"
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -444,6 +568,29 @@ export default function TeamPage() {
           onSave={saveMember}
           onDelete={deleteMember}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {/* Calendar sync modal */}
+      {calModal && (
+        <CalendarSyncModal
+          member={calModal}
+          onClose={() => setCalModal(null)}
+          onRegenerate={async () => {
+            if (!window.confirm("Regenerate the calendar link? Any existing subscriptions will stop working.")) return;
+            const token = await getToken();
+            await fetch(`/api/dashboard/team/${calModal.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ regenerateCalendarToken: true }),
+            });
+            // Reload the member to get the new token
+            const res   = await fetch("/api/dashboard/team", { headers: { Authorization: `Bearer ${token}` } });
+            const data  = await res.json();
+            const updated = (data.members || []).find((m) => m.id === calModal.id);
+            setMembers(data.members || []);
+            if (updated) setCalModal(updated);
+          }}
         />
       )}
     </div>

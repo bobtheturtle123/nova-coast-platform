@@ -5,8 +5,11 @@ import { useParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 
-// ─── Tiny image with loading + error states ───────────────────────────────────
-function MediaThumb({ src, alt, isFirst, isDragging, onDragStart, onDragOver, onDrop, onDragEnd, index }) {
+const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
+
+// ─── Image thumbnail with loading/error ───────────────────────────────────────
+function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
+  onDragStart, onDragOver, onDrop, onDragEnd, index, onAssignCategory }) {
   const [loaded,  setLoaded]  = useState(false);
   const [errored, setErrored] = useState(false);
 
@@ -17,52 +20,48 @@ function MediaThumb({ src, alt, isFirst, isDragging, onDragStart, onDragOver, on
       onDragOver={onDragOver}
       onDrop={onDrop}
       onDragEnd={onDragEnd}
-      className={`
-        aspect-square rounded-sm overflow-hidden bg-gray-100 relative group cursor-grab active:cursor-grabbing
-        ${isDragging ? "opacity-40 scale-95" : ""}
-        transition-all duration-150
-      `}
+      className={`aspect-square rounded-sm overflow-hidden bg-gray-100 relative group cursor-grab active:cursor-grabbing
+        ${isDragging ? "opacity-40 scale-95" : ""} transition-all duration-150`}
     >
-      {/* Loading skeleton */}
-      {!loaded && !errored && (
-        <div className="absolute inset-0 bg-gray-200 animate-pulse" />
-      )}
-
-      {/* Error state */}
+      {!loaded && !errored && <div className="absolute inset-0 bg-gray-200 animate-pulse" />}
       {errored && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 text-gray-400">
-          <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <span className="text-xs mt-1">Not loaded</span>
+          <span className="text-xs mt-1">No preview</span>
         </div>
       )}
-
-      <img
-        src={src}
-        alt={alt}
-        onLoad={() => setLoaded(true)}
-        onError={() => setErrored(true)}
+      <img src={src} alt={alt} onLoad={() => setLoaded(true)} onError={() => setErrored(true)}
         className={`w-full h-full object-cover transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
-        crossOrigin="anonymous"
-      />
+        crossOrigin="anonymous" />
 
       {/* Hover overlay */}
-      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 pointer-events-none">
-        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-        <span className="text-white text-xs">Drag to reorder</span>
+      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-end justify-end gap-1 p-1.5">
+        {/* Category picker */}
+        {categories.length > 0 && (
+          <select
+            value={category || ""}
+            onChange={(e) => onAssignCategory(e.target.value || null)}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs bg-white/90 text-charcoal rounded px-1.5 py-0.5 w-full cursor-pointer"
+          >
+            <option value="">No category</option>
+            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
       </div>
 
-      {/* Cover badge */}
       {isFirst && (
         <div className="absolute top-1.5 left-1.5">
           <span className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-navy text-white">Cover</span>
         </div>
       )}
-
-      {/* Position number */}
+      {category && (
+        <div className="absolute top-1.5 right-1.5">
+          <span className="text-xs font-medium px-1.5 py-0.5 rounded-sm bg-black/60 text-white truncate max-w-[80px]">{category}</span>
+        </div>
+      )}
       <div className="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-full bg-black/50 text-white text-xs flex items-center justify-center font-bold">
         {index + 1}
       </div>
@@ -73,17 +72,11 @@ function MediaThumb({ src, alt, isFirst, isDragging, onDragStart, onDragOver, on
 // ─── Email tag input ──────────────────────────────────────────────────────────
 function EmailTagInput({ label, value, onChange, placeholder }) {
   const [input, setInput] = useState("");
-
   function addEmail(raw) {
     const emails = raw.split(/[,;\s]+/).map((e) => e.trim()).filter((e) => e.includes("@"));
     if (emails.length) onChange([...value, ...emails]);
     setInput("");
   }
-
-  function removeEmail(i) {
-    onChange(value.filter((_, idx) => idx !== i));
-  }
-
   return (
     <div>
       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{label}</label>
@@ -92,21 +85,14 @@ function EmailTagInput({ label, value, onChange, placeholder }) {
         {value.map((email, i) => (
           <span key={i} className="inline-flex items-center gap-1 bg-navy/10 text-navy text-xs px-2 py-0.5 rounded-sm">
             {email}
-            <button onClick={() => removeEmail(i)} className="hover:text-red-500 leading-none text-base">&times;</button>
+            <button onClick={() => onChange(value.filter((_, idx) => idx !== i))} className="hover:text-red-500 leading-none text-base">&times;</button>
           </span>
         ))}
-        <input
-          type="email"
-          value={input}
+        <input type="email" value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            if (["Enter", "Tab", ",", ";"].includes(e.key)) {
-              e.preventDefault();
-              if (input.trim()) addEmail(input);
-            }
-            if (e.key === "Backspace" && !input && value.length) {
-              onChange(value.slice(0, -1));
-            }
+            if (["Enter","Tab",",",";"].includes(e.key)) { e.preventDefault(); if (input.trim()) addEmail(input); }
+            if (e.key === "Backspace" && !input && value.length) onChange(value.slice(0,-1));
           }}
           onBlur={() => { if (input.trim()) addEmail(input); }}
           placeholder={value.length === 0 ? placeholder : ""}
@@ -118,7 +104,111 @@ function EmailTagInput({ label, value, onChange, placeholder }) {
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Rich text email editor ───────────────────────────────────────────────────
+function RichTextEditor({ value, onChange, placeholder }) {
+  const editorRef = useRef(null);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [showLink, setShowLink] = useState(false);
+
+  // Sync external value only on mount
+  useEffect(() => {
+    if (editorRef.current && value === "") {
+      editorRef.current.innerHTML = "";
+    }
+  }, []);
+
+  function exec(cmd, val = null) {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false, val);
+    handleInput();
+  }
+
+  function handleInput() {
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+  }
+
+  function insertLink() {
+    if (!linkUrl) return;
+    const url = linkUrl.startsWith("http") ? linkUrl : `https://${linkUrl}`;
+    exec("createLink", url);
+    setShowLink(false);
+    setLinkUrl("");
+  }
+
+  const ToolBtn = ({ cmd, val, title, children, onClick }) => (
+    <button type="button" title={title}
+      onMouseDown={(e) => { e.preventDefault(); onClick ? onClick() : exec(cmd, val); }}
+      className="p-1.5 rounded hover:bg-gray-200 text-charcoal transition-colors text-sm font-medium w-7 h-7 flex items-center justify-center">
+      {children}
+    </button>
+  );
+
+  return (
+    <div className="border border-gray-200 rounded-sm overflow-hidden">
+      {/* Toolbar */}
+      <div className="flex items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200 flex-wrap">
+        <ToolBtn cmd="bold"   title="Bold">   <strong>B</strong></ToolBtn>
+        <ToolBtn cmd="italic" title="Italic"> <em>I</em></ToolBtn>
+        <ToolBtn cmd="strikeThrough" title="Strikethrough">
+          <span style={{textDecoration:"line-through"}}>S</span>
+        </ToolBtn>
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <ToolBtn cmd="insertUnorderedList" title="Bullet list">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          </svg>
+        </ToolBtn>
+        <ToolBtn cmd="insertOrderedList" title="Numbered list">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7m2 4H7m2 4H7m2 4H7M5 5v14" />
+          </svg>
+        </ToolBtn>
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <ToolBtn title="Link" onClick={() => setShowLink((v) => !v)}>
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+        </ToolBtn>
+        <ToolBtn cmd="removeFormat" title="Clear formatting">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </ToolBtn>
+      </div>
+
+      {/* Link input */}
+      {showLink && (
+        <div className="flex items-center gap-2 px-2 py-1.5 bg-blue-50 border-b border-blue-100">
+          <input type="url" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && insertLink()}
+            placeholder="https://example.com"
+            className="flex-1 text-sm bg-white border border-blue-200 rounded px-2 py-1 outline-none focus:border-blue-400" />
+          <button type="button" onClick={insertLink}
+            className="text-xs text-white bg-blue-500 hover:bg-blue-600 px-2.5 py-1 rounded">
+            Insert
+          </button>
+          <button type="button" onClick={() => setShowLink(false)} className="text-xs text-gray-500 hover:text-gray-700">
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Editable area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        data-placeholder={placeholder}
+        className="min-h-[80px] px-3 py-2.5 text-sm text-charcoal outline-none prose prose-sm max-w-none
+          [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-gray-400 [&:empty]:before:pointer-events-none"
+        style={{ lineHeight: "1.6" }}
+      />
+    </div>
+  );
+}
+
+// ─── Main gallery page ────────────────────────────────────────────────────────
 export default function GalleryDetailPage() {
   const { id } = useParams();
   const [gallery,      setGallery]      = useState(null);
@@ -128,16 +218,23 @@ export default function GalleryDetailPage() {
   const [msg,          setMsg]          = useState({ text: "", type: "" });
   const [showDeliver,  setShowDeliver]  = useState(false);
   const [delivering,   setDelivering]   = useState(false);
-  const [activeTab,    setActiveTab]    = useState("images");
+  const [activeTab,    setActiveTab]    = useState("all");
   const [dragIdx,      setDragIdx]      = useState(null);
   const [savingOrder,  setSavingOrder]  = useState(false);
   const fileRef = useRef(null);
 
   // Email state
-  const [emailSubject,  setEmailSubject]  = useState("");
-  const [emailTo,       setEmailTo]       = useState([]);
-  const [emailCc,       setEmailCc]       = useState([]);
-  const [emailNote,     setEmailNote]     = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailTo,      setEmailTo]      = useState([]);
+  const [emailCc,      setEmailCc]      = useState([]);
+  const [emailNote,    setEmailNote]    = useState(""); // HTML string
+
+  // Category state
+  const [showCatPanel,  setShowCatPanel]  = useState(false);
+  const [newCatName,    setNewCatName]    = useState("");
+  // categories: { catName: [mediaKey, ...] }
+  const [categories,    setCategories]    = useState({});
+  const [savingCats,    setSavingCats]    = useState(false);
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
@@ -147,6 +244,7 @@ export default function GalleryDetailPage() {
       if (res.ok) {
         const data = await res.json();
         setGallery(data.gallery);
+        setCategories(data.gallery.categories || {});
         setEmailSubject(`Your listing media is ready — ${data.gallery.bookingAddress || ""}`);
         if (data.gallery.clientEmail) setEmailTo([data.gallery.clientEmail]);
       }
@@ -154,14 +252,11 @@ export default function GalleryDetailPage() {
     });
   }, [id]);
 
+  // ─── Upload ──────────────────────────────────────────────────────────────
   async function uploadFiles(files) {
-    setUploading(true);
-    setProgress(0);
-    setMsg({ text: "", type: "" });
+    setUploading(true); setProgress(0); setMsg({ text: "", type: "" });
     const token = await auth.currentUser.getIdToken();
-    const total = files.length;
-    let done = 0;
-
+    const total = files.length; let done = 0;
     for (const file of files) {
       try {
         const { uploadUrl, publicUrl, key } = await fetch("/api/gallery/upload-url", {
@@ -169,61 +264,35 @@ export default function GalleryDetailPage() {
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ fileName: file.name, fileType: file.type, galleryId: id }),
         }).then((r) => r.json());
-
         await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
-
         await fetch(`/api/dashboard/galleries/${id}/media`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ publicUrl, key, fileName: file.name, fileType: file.type }),
         });
-
         done++;
         setProgress(Math.round((done / total) * 100));
-        setGallery((g) => ({
-          ...g,
-          media: [...(g.media || []), { url: publicUrl, key, fileName: file.name, fileType: file.type }],
-        }));
-      } catch {
-        setMsg({ text: `Failed to upload ${file.name}.`, type: "error" });
-      }
+        setGallery((g) => ({ ...g, media: [...(g.media || []), { url: publicUrl, key, fileName: file.name, fileType: file.type }] }));
+      } catch { setMsg({ text: `Failed to upload ${file.name}.`, type: "error" }); }
     }
     setUploading(false);
     setMsg({ text: `${done} file${done !== 1 ? "s" : ""} uploaded.`, type: "success" });
   }
 
-  // ─── Drag-to-reorder ───────────────────────────────────────────────────────
-  const handleDragStart = useCallback((e, idx) => {
-    setDragIdx(idx);
-    e.dataTransfer.effectAllowed = "move";
-  }, []);
-
-  const handleDragOver = useCallback((e, idx) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const handleDrop = useCallback(async (e, toIdx) => {
+  // ─── Drag reorder ─────────────────────────────────────────────────────────
+  const handleDragStart = useCallback((e, idx) => { setDragIdx(idx); e.dataTransfer.effectAllowed = "move"; }, []);
+  const handleDragOver  = useCallback((e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }, []);
+  const handleDrop      = useCallback(async (e, toIdx) => {
     e.preventDefault();
     if (dragIdx === null || dragIdx === toIdx) { setDragIdx(null); return; }
-
     setGallery((g) => {
-      const isImages = activeTab === "images";
-      const allMedia  = g.media || [];
-      const images    = allMedia.filter((m) => !m.fileType?.startsWith("video/"));
-      const videos    = allMedia.filter((m) =>  m.fileType?.startsWith("video/"));
-      const list      = isImages ? [...images] : [...videos];
-
+      const list = [...(g.media || [])];
       const [moved] = list.splice(dragIdx, 1);
       list.splice(toIdx, 0, moved);
-
-      const newMedia = isImages ? [...list, ...videos] : [...images, ...list];
-      return { ...g, media: newMedia };
+      return { ...g, media: list };
     });
-
     setDragIdx(null);
-  }, [dragIdx, activeTab]);
-
+  }, [dragIdx]);
   const handleDragEnd = useCallback(() => setDragIdx(null), []);
 
   async function saveOrder() {
@@ -238,13 +307,63 @@ export default function GalleryDetailPage() {
     setMsg({ text: "Order saved.", type: "success" });
   }
 
+  // ─── Category helpers ─────────────────────────────────────────────────────
+  function getMediaCategory(key) {
+    for (const [cat, keys] of Object.entries(categories)) {
+      if (keys.includes(key)) return cat;
+    }
+    return null;
+  }
+
+  function assignCategory(mediaKey, catName) {
+    setCategories((prev) => {
+      const next = {};
+      // Remove from any existing category
+      for (const [cat, keys] of Object.entries(prev)) {
+        next[cat] = keys.filter((k) => k !== mediaKey);
+      }
+      // Add to new category
+      if (catName && next[catName] !== undefined) {
+        next[catName] = [...next[catName], mediaKey];
+      } else if (catName) {
+        next[catName] = [mediaKey];
+      }
+      return next;
+    });
+  }
+
+  function addCategory() {
+    const name = newCatName.trim();
+    if (!name || categories[name]) return;
+    setCategories((prev) => ({ ...prev, [name]: [] }));
+    setNewCatName("");
+  }
+
+  function deleteCategory(cat) {
+    setCategories((prev) => {
+      const next = { ...prev };
+      delete next[cat];
+      return next;
+    });
+  }
+
+  async function saveCategories() {
+    setSavingCats(true);
+    const token = await auth.currentUser.getIdToken();
+    await fetch(`/api/dashboard/galleries/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ categories }),
+    });
+    setSavingCats(false);
+    setGallery((g) => ({ ...g, categories }));
+    setMsg({ text: "Categories saved.", type: "success" });
+    setShowCatPanel(false);
+  }
+
   // ─── Deliver ──────────────────────────────────────────────────────────────
   async function deliverGallery() {
-    if (emailTo.length === 0) {
-      setMsg({ text: "Add at least one recipient email.", type: "error" });
-      setShowDeliver(false);
-      return;
-    }
+    if (emailTo.length === 0) { setMsg({ text: "Add at least one recipient.", type: "error" }); setShowDeliver(false); return; }
     setDelivering(true);
     const token = await auth.currentUser.getIdToken();
     const res = await fetch(`/api/dashboard/galleries/${id}/send`, {
@@ -252,14 +371,9 @@ export default function GalleryDetailPage() {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ subject: emailSubject, note: emailNote, to: emailTo, cc: emailCc }),
     });
-    setDelivering(false);
-    setShowDeliver(false);
-    if (res.ok) {
-      setMsg({ text: "Gallery delivered.", type: "success" });
-      setGallery((g) => ({ ...g, delivered: true }));
-    } else {
-      setMsg({ text: "Failed to send email.", type: "error" });
-    }
+    setDelivering(false); setShowDeliver(false);
+    if (res.ok) { setMsg({ text: "Gallery delivered.", type: "success" }); setGallery((g) => ({ ...g, delivered: true })); }
+    else setMsg({ text: "Failed to send email.", type: "error" });
   }
 
   async function toggleUnlock() {
@@ -280,20 +394,27 @@ export default function GalleryDetailPage() {
   );
   if (!gallery) return <div className="p-8 text-gray-500">Gallery not found.</div>;
 
-  const allMedia = gallery.media || [];
-  const images   = allMedia.filter((m) => !m.fileType?.startsWith("video/"));
-  const videos   = allMedia.filter((m) =>  m.fileType?.startsWith("video/"));
-  const coverImg = images[0]?.url || null;
+  const allMedia   = gallery.media || [];
+  const images     = allMedia.filter((m) => !m.fileType?.startsWith("video/"));
+  const videos     = allMedia.filter((m) =>  m.fileType?.startsWith("video/"));
+  const coverImg   = images[0]?.url || null;
+  const catNames   = Object.keys(categories);
+  const galleryUrl = gallery.accessToken
+    ? `${APP_URL}/${gallery.tenantSlug || ""}/gallery/${gallery.accessToken}`
+    : null;
+
+  // Determine what images to show in current tab
+  let displayImages = images;
+  if (activeTab !== "all" && activeTab !== "videos") {
+    const catKeys = categories[activeTab] || [];
+    displayImages = images.filter((m) => catKeys.includes(m.key));
+  }
 
   return (
     <div>
       {/* Hero */}
       <div className="relative h-44 bg-gray-900 overflow-hidden">
-        {coverImg && (
-          <img src={coverImg} alt={gallery.bookingAddress}
-            className="absolute inset-0 w-full h-full object-cover opacity-60"
-            crossOrigin="anonymous" />
-        )}
+        {coverImg && <img src={coverImg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" crossOrigin="anonymous" />}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
         <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
           <div>
@@ -302,8 +423,7 @@ export default function GalleryDetailPage() {
           </div>
           <span className={`text-xs px-3 py-1 rounded-full font-medium ${
             gallery.delivered ? "bg-green-500 text-white" :
-            gallery.unlocked  ? "bg-blue-500 text-white" :
-            "bg-amber-400 text-white"
+            gallery.unlocked  ? "bg-blue-500 text-white" : "bg-amber-400 text-white"
           }`}>
             {gallery.delivered ? "Delivered" : gallery.unlocked ? "Unlocked" : "Draft"}
           </span>
@@ -312,12 +432,13 @@ export default function GalleryDetailPage() {
 
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <Link href="/dashboard/galleries" className="text-sm text-gray-400 hover:text-navy flex items-center gap-1">
-            ← All galleries
-          </Link>
+          <Link href="/dashboard/galleries" className="text-sm text-gray-400 hover:text-navy">← All galleries</Link>
           <div className="flex items-center gap-2">
+            <button onClick={() => setShowCatPanel(true)} className="btn-outline text-xs px-3 py-1.5">
+              📁 Categories ({catNames.length})
+            </button>
             <button onClick={toggleUnlock} className="btn-outline text-xs px-3 py-1.5">
-              {gallery.unlocked ? "Lock gallery" : "Unlock gallery"}
+              {gallery.unlocked ? "Lock" : "Unlock"}
             </button>
             <button onClick={() => setShowDeliver(true)} className="btn-primary text-sm px-5 py-2">
               Deliver to Client
@@ -327,27 +448,20 @@ export default function GalleryDetailPage() {
 
         {msg.text && (
           <div className={`text-sm px-4 py-2.5 rounded-sm mb-4 ${
-            msg.type === "success"
-              ? "bg-green-50 border border-green-200 text-green-700"
-              : "bg-red-50 border border-red-200 text-red-700"
-          }`}>
-            {msg.text}
-          </div>
+            msg.type === "success" ? "bg-green-50 border border-green-200 text-green-700"
+            : "bg-red-50 border border-red-200 text-red-700"
+          }`}>{msg.text}</div>
         )}
 
         {/* Upload zone */}
-        <div
-          className="border-2 border-dashed border-gray-200 rounded-sm p-6 mb-6 text-center cursor-pointer hover:border-navy/40 hover:bg-gray-50 transition-colors"
+        <div className="border-2 border-dashed border-gray-200 rounded-sm p-6 mb-6 text-center cursor-pointer hover:border-navy/40 hover:bg-gray-50 transition-colors"
           onClick={() => !uploading && fileRef.current?.click()}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
-            const files = Array.from(e.dataTransfer.files).filter(
-              (f) => f.type.startsWith("image/") || f.type.startsWith("video/")
-            );
+            const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/") || f.type.startsWith("video/"));
             if (files.length) uploadFiles(files);
-          }}
-        >
+          }}>
           <input ref={fileRef} type="file" multiple accept="image/*,video/*" className="hidden"
             onChange={(e) => e.target.files?.length && uploadFiles(Array.from(e.target.files))} />
           {uploading ? (
@@ -360,57 +474,54 @@ export default function GalleryDetailPage() {
           ) : (
             <>
               <p className="text-2xl mb-1">☁️</p>
-              <p className="text-sm text-gray-500">Drop files here or <span className="text-navy font-medium">click to upload</span></p>
-              <p className="text-xs text-gray-400 mt-1">Full-res photos and videos — agents download in Web or Print quality</p>
+              <p className="text-sm text-gray-500">Drop files or <span className="text-navy font-medium">click to upload</span></p>
+              <p className="text-xs text-gray-400 mt-1">Full-res photos and videos</p>
             </>
           )}
         </div>
 
-        {/* Media tabs + reorder hint */}
+        {/* Tabs */}
         {allMedia.length > 0 && (
           <>
             <div className="flex items-center justify-between mb-3">
-              <div className="flex gap-1 border-b border-gray-200">
+              <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
                 {[
-                  { id: "images", label: `Images (${images.length})` },
+                  { id: "all",    label: `All (${images.length})` },
+                  ...catNames.map((c) => ({ id: c, label: `${c} (${(categories[c] || []).length})` })),
                   ...(videos.length > 0 ? [{ id: "videos", label: `Videos (${videos.length})` }] : []),
                 ].map((t) => (
                   <button key={t.id} onClick={() => setActiveTab(t.id)}
-                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                      activeTab === t.id
-                        ? "border-navy text-navy"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
+                    className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+                      activeTab === t.id ? "border-navy text-navy" : "border-transparent text-gray-500 hover:text-gray-700"
                     }`}>
                     {t.label}
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-gray-400">Drag to reorder · first photo is the cover</p>
-                <button
-                  onClick={saveOrder}
-                  disabled={savingOrder}
-                  className="text-xs btn-outline px-3 py-1"
-                >
+              <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                <p className="text-xs text-gray-400 hidden md:block">Drag to reorder · first = cover</p>
+                <button onClick={saveOrder} disabled={savingOrder} className="text-xs btn-outline px-3 py-1">
                   {savingOrder ? "Saving…" : "Save Order"}
                 </button>
               </div>
             </div>
 
-            {activeTab === "images" && (
+            {activeTab !== "videos" && (
               <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
-                {images.map((m, i) => (
+                {displayImages.map((m, i) => (
                   <MediaThumb
                     key={m.key || i}
-                    src={m.url}
-                    alt={m.fileName || `Photo ${i + 1}`}
-                    isFirst={i === 0}
+                    src={m.url} alt={m.fileName || `Photo ${i+1}`}
+                    isFirst={i === 0 && activeTab === "all"}
                     index={i}
                     isDragging={dragIdx === i}
+                    category={getMediaCategory(m.key)}
+                    categories={catNames}
                     onDragStart={(e) => handleDragStart(e, i)}
-                    onDragOver={(e) => handleDragOver(e, i)}
+                    onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, i)}
                     onDragEnd={handleDragEnd}
+                    onAssignCategory={(cat) => assignCategory(m.key, cat)}
                   />
                 ))}
               </div>
@@ -419,9 +530,9 @@ export default function GalleryDetailPage() {
             {activeTab === "videos" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {videos.map((v, i) => (
-                  <div key={v.key || i} className="space-y-1">
+                  <div key={v.key || i}>
                     <video src={v.url} controls className="w-full rounded-sm" />
-                    <p className="text-xs text-gray-400 truncate">{v.fileName}</p>
+                    <p className="text-xs text-gray-400 truncate mt-1">{v.fileName}</p>
                   </div>
                 ))}
               </div>
@@ -430,71 +541,95 @@ export default function GalleryDetailPage() {
         )}
       </div>
 
+      {/* Category panel */}
+      {showCatPanel && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-sm shadow-xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="font-display text-navy text-lg">Manage Categories</h2>
+              <button onClick={() => setShowCatPanel(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-500">Create folders to organize photos. Assign photos to categories from the gallery grid.</p>
+              <div className="flex gap-2">
+                <input type="text" value={newCatName} onChange={(e) => setNewCatName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addCategory()}
+                  placeholder="Category name (e.g. Exterior)" className="input-field flex-1" />
+                <button onClick={addCategory} className="btn-primary px-4 py-2.5 text-sm whitespace-nowrap">Add</button>
+              </div>
+              {catNames.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">No categories yet.</p>
+              ) : (
+                <div className="space-y-1">
+                  {catNames.map((cat) => (
+                    <div key={cat} className="flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-sm">
+                      <div>
+                        <p className="text-sm font-medium text-charcoal">{cat}</p>
+                        <p className="text-xs text-gray-400">{(categories[cat] || []).length} photos</p>
+                      </div>
+                      <button onClick={() => deleteCategory(cat)} className="text-xs text-red-500 hover:text-red-700">Remove</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+              <button onClick={() => setShowCatPanel(false)} className="btn-outline px-4 py-2 text-sm">Cancel</button>
+              <button onClick={saveCategories} disabled={savingCats} className="btn-primary px-6 py-2 text-sm">
+                {savingCats ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Deliver modal */}
       {showDeliver && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[92vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
               <h2 className="font-display text-navy text-lg">Deliver Gallery</h2>
               <button onClick={() => setShowDeliver(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
             </div>
-
             <div className="p-6 space-y-4">
-              {/* To field */}
-              <EmailTagInput
-                label="To"
-                value={emailTo}
-                onChange={setEmailTo}
-                placeholder={gallery.clientEmail || "client@example.com"}
-              />
-
-              {/* CC field */}
-              <EmailTagInput
-                label="CC (optional)"
-                value={emailCc}
-                onChange={setEmailCc}
-                placeholder="Add CC recipients…"
-              />
-
-              {/* Subject */}
+              <EmailTagInput label="To" value={emailTo} onChange={setEmailTo}
+                placeholder={gallery.clientEmail || "client@example.com"} />
+              <EmailTagInput label="CC (optional)" value={emailCc} onChange={setEmailCc} placeholder="Add CC recipients…" />
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                  Email Subject
-                </label>
-                <input type="text" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)}
-                  className="input-field w-full" />
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Subject</label>
+                <input type="text" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} className="input-field w-full" />
               </div>
-
-              {/* Note */}
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
                   Personal Note (optional)
                 </label>
-                <textarea
-                  value={emailNote}
-                  onChange={(e) => setEmailNote(e.target.value)}
-                  rows={3}
-                  placeholder="e.g. Great shoot today! Let me know if anything needs adjusting."
-                  className="input-field w-full resize-none"
-                />
+                <RichTextEditor value={emailNote} onChange={setEmailNote}
+                  placeholder="Great shoot today! Let me know if you need anything adjusted." />
               </div>
 
-              {/* Preview */}
-              <div className="bg-gray-50 rounded-sm p-4 text-sm text-gray-600 space-y-2">
-                <p className="font-medium text-gray-700 text-xs uppercase tracking-wide">Email preview</p>
-                <p>Hi {gallery.clientName || "there"},</p>
-                {emailNote && <p className="italic">{emailNote}</p>}
-                <p>Your media for <strong>{gallery.bookingAddress}</strong> is ready.</p>
-                <p className="text-navy font-medium underline">[ View Gallery ]</p>
-                <p className="text-gray-400 text-xs">— {gallery.tenantName || "Your photographer"}</p>
+              {/* Email preview */}
+              <div className="bg-gray-50 border border-gray-200 rounded-sm p-4 text-sm text-gray-600 space-y-2">
+                <p className="font-medium text-xs text-gray-400 uppercase tracking-wide mb-3">Email preview</p>
+                <p>Hi <strong>{gallery.clientName || "there"}</strong>,</p>
+                {emailNote && (
+                  <div className="text-gray-600" dangerouslySetInnerHTML={{ __html: emailNote }} />
+                )}
+                <p>Your media for <strong>{gallery.bookingAddress}</strong> is ready to view and download.</p>
+                {galleryUrl ? (
+                  <a href={galleryUrl} target="_blank" rel="noopener noreferrer"
+                    className="inline-block text-navy font-semibold underline hover:text-navy-light">
+                    [ View Gallery → ]
+                  </a>
+                ) : (
+                  <p className="text-navy font-semibold">[ View Gallery ]</p>
+                )}
+                <p className="text-gray-400 text-xs mt-3">— {gallery.tenantName || "Your photographer"}</p>
               </div>
             </div>
-
             <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 sticky bottom-0 bg-white">
               <button onClick={() => setShowDeliver(false)} className="btn-outline px-4 py-2 text-sm">Cancel</button>
-              <button onClick={deliverGallery} disabled={delivering || emailTo.length === 0}
-                className="btn-primary px-6 py-2 text-sm">
-                {delivering ? "Sending…" : `Deliver to ${emailTo.length + emailCc.length} recipient${emailTo.length + emailCc.length !== 1 ? "s" : ""} →`}
+              <button onClick={deliverGallery} disabled={delivering || emailTo.length === 0} className="btn-primary px-6 py-2 text-sm">
+                {delivering ? "Sending…" : `Deliver to ${emailTo.length + emailCc.length} →`}
               </button>
             </div>
           </div>

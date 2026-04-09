@@ -16,7 +16,7 @@ export async function PATCH(req) {
     const body = await req.json();
 
     // Whitelist updatable fields
-    const allowed = ["businessName", "phone", "fromZip", "branding"];
+    const allowed = ["businessName", "phone", "fromZip", "branding", "pricingConfig"];
     const update = {};
     for (const key of allowed) {
       if (body[key] !== undefined) update[key] = body[key];

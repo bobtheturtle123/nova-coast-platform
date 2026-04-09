@@ -30,6 +30,10 @@ export async function POST(req, { params }) {
   const galleryId    = uuidv4();
   const accessToken  = uuidv4().replace(/-/g, "");
 
+  // Fetch tenant slug so gallery preview links can be constructed
+  const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
+  const tenantSlug = tenantDoc.exists ? tenantDoc.data().slug : "";
+
   await adminDb
     .collection("tenants").doc(ctx.tenantId)
     .collection("galleries").doc(galleryId)
@@ -37,10 +41,14 @@ export async function POST(req, { params }) {
       id:             galleryId,
       bookingId:      params.id,
       bookingAddress: booking.fullAddress || booking.address,
+      clientName:     booking.clientName  || "",
+      clientEmail:    booking.clientEmail || "",
       tenantId:       ctx.tenantId,
+      tenantSlug,
       accessToken,
       unlocked:       false,
       media:          [],
+      categories:     {},
       createdAt:      new Date(),
     });
 

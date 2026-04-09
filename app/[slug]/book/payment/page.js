@@ -162,6 +162,7 @@ export default function TenantPaymentPage() {
 
   const [clientSecret, setClientSecret] = useState(null);
   const [bookingId,    setBookingId]     = useState(null);
+  const [initLoading,  setInitLoading]   = useState(false); // prevents double-submit race condition
   const [initError,    setInitError]     = useState(null);
   const [lookupState,  setLookupState]   = useState(null); // null | "found" | "new"
   const [catalog,      setCatalog]       = useState(null);
@@ -208,7 +209,8 @@ export default function TenantPaymentPage() {
   }
 
   async function initPayment() {
-    if (!validate() || clientSecret) return;
+    if (!validate() || clientSecret || initLoading) return; // guard against double-submit
+    setInitLoading(true);
     setInitError(null);
     try {
       const res = await fetch(`/api/${params.slug}/bookings/create`, {
@@ -228,6 +230,8 @@ export default function TenantPaymentPage() {
       setClientSecret(data.clientSecret);
     } catch (err) {
       setInitError(err.message);
+    } finally {
+      setInitLoading(false);
     }
   }
 
@@ -313,8 +317,13 @@ export default function TenantPaymentPage() {
               </div>
 
               {!clientSecret && (
-                <button onClick={initPayment} className="btn-primary w-full mt-2">
-                  Proceed to Payment →
+                <button onClick={initPayment} disabled={initLoading} className="btn-primary w-full mt-2">
+                  {initLoading
+                    ? <span className="flex items-center justify-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Creating booking…
+                      </span>
+                    : "Proceed to Payment →"}
                 </button>
               )}
               {initError && (
