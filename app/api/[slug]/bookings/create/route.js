@@ -1,5 +1,6 @@
 import { adminDb } from "@/lib/firebase-admin";
-import { getTenantBySlug, calculateTenantPrice, getTenantCatalog } from "@/lib/tenants";
+import { getTenantBySlug, getTenantCatalog } from "@/lib/tenants";
+import { calculateTenantPrice } from "@/lib/catalogUtils";
 import { createConnectedPaymentIntent } from "@/lib/stripe";
 import { sendBookingConfirmation } from "@/lib/email";
 import { v4 as uuidv4 } from "uuid";
@@ -27,9 +28,9 @@ export async function POST(req, { params }) {
       return Response.json({ error: "Missing client information" }, { status: 400 });
     }
 
-    // Re-calculate server-side to prevent tampering
+    // Re-calculate server-side to prevent tampering (pass squareFootage for tier pricing)
     const catalog = await getTenantCatalog(tenant.id);
-    const pricing = calculateTenantPrice(packageId, serviceIds, addonIds, travelFee || 0, catalog);
+    const pricing = calculateTenantPrice(packageId, serviceIds, addonIds, travelFee || 0, catalog, squareFootage || 0);
 
     if (!pricing.deposit) {
       return Response.json({ error: "Invalid pricing data" }, { status: 400 });
@@ -101,6 +102,32 @@ export async function POST(req, { params }) {
         galleryId:      null,
         galleryUnlocked: false,
       });
+
+    // Upsert agent record (keyed by email so repeat clients accumulate history)
+    const agentId = Buffer.from(clientEmail.toLowerCase()).toString("base64").replace(/[^a-zA-Z0-9]/g, "").slice(0, 32);
+    const agentRef = adminDb.collection("tenants").doc(tenant.id).collection("agents").doc(agentId);
+    const agentDoc = await agentRef.get();
+    if (agentDoc.exists) {
+      await agentRef.update({
+        totalOrders: (agentDoc.data().totalOrders || 0) + 1,
+        totalSpent:  (agentDoc.data().totalSpent  || 0) + pricing.subtotal,
+        lastOrderAt: new Date(),
+        // Update name/phone if changed
+        name:  clientName,
+        phone: clientPhone,
+      });
+    } else {
+      await agentRef.set({
+        id:          agentId,
+        name:        clientName,
+        email:       clientEmail,
+        phone:       clientPhone,
+        totalOrders: 1,
+        totalSpent:  pricing.subtotal,
+        firstOrderAt: new Date(),
+        lastOrderAt:  new Date(),
+      });
+    }
 
     return Response.json({ bookingId, clientSecret: paymentIntent.client_secret });
   } catch (err) {
