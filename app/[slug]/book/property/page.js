@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
 import StepProgress from "@/components/booking/StepProgress";
@@ -16,14 +17,35 @@ const PROPERTY_TYPES = [
 export default function TenantPropertyPage() {
   const params = useParams();
   const router = useRouter();
-  const { address, city, state, zip, squareFootage, propertyType, notes, setProperty } =
+  const { address, city, state, zip, squareFootage, propertyType, notes, setProperty, customFields, setCustomFields } =
     useBookingStore();
+  const [configFields, setConfigFields] = useState([]); // admin-defined custom fields
+  const [fieldValues, setFieldValues] = useState(customFields || {});
+
+  useEffect(() => {
+    fetch(`/api/tenant-public/${params.slug}/catalog`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.bookingConfig?.customFields?.length) {
+          setConfigFields(data.bookingConfig.customFields);
+        }
+      })
+      .catch(() => {});
+  }, [params.slug]);
 
   function handleChange(e) {
     setProperty({ [e.target.name]: e.target.value });
   }
 
-  const isValid = address.trim() && city.trim() && zip.trim();
+  function handleCustomField(id, value) {
+    const updated = { ...fieldValues, [id]: value };
+    setFieldValues(updated);
+    if (setCustomFields) setCustomFields(updated);
+  }
+
+  const requiredCustom = configFields.filter((f) => f.required);
+  const allRequiredFilled = requiredCustom.every((f) => (fieldValues[f.id] || "").trim());
+  const isValid = address.trim() && city.trim() && zip.trim() && allRequiredFilled;
 
   return (
     <>
@@ -81,6 +103,27 @@ export default function TenantPropertyPage() {
                 <input name="squareFootage" value={squareFootage} onChange={handleChange}
                   placeholder="2,400" type="number" className="input-field" />
               </div>
+              {/* Admin-configured custom fields */}
+              {configFields.map((field) => (
+                <div key={field.id}>
+                  <label className="block text-sm font-medium text-charcoal mb-1.5">
+                    {field.label}
+                    {field.required
+                      ? <span className="text-red-400 ml-1">*</span>
+                      : <span className="text-gray-400 font-normal ml-1">(optional)</span>}
+                  </label>
+                  {field.type === "textarea" ? (
+                    <textarea value={fieldValues[field.id] || ""} rows={2}
+                      onChange={(e) => handleCustomField(field.id, e.target.value)}
+                      className="input-field resize-none" />
+                  ) : (
+                    <input type={field.type || "text"} value={fieldValues[field.id] || ""}
+                      onChange={(e) => handleCustomField(field.id, e.target.value)}
+                      className="input-field" />
+                  )}
+                </div>
+              ))}
+
               <div>
                 <label className="block text-sm font-medium text-charcoal mb-1.5">
                   Notes for the Photographer <span className="text-gray-400 font-normal ml-1">(optional)</span>

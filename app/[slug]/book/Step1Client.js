@@ -38,14 +38,25 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
     setPackage, toggleService, hasSelections, setTenant, setSquareFootage,
   } = useBookingStore();
 
+  const pricingConfig = catalog.pricingConfig || {};
+  const pricingMode   = pricingConfig.mode || "sqft";
+  // Skip the gate if flat pricing (no tier variable)
+  const usesGate      = pricingMode !== "flat";
+  const gateLabel     = pricingMode === "photos" ? "Number of Photos" : "Interior Square Footage";
+  const gateQuestion  = pricingMode === "photos" ? "How many photos do you need?" : "What's the square footage?";
+  const gateSubtext   = pricingMode === "photos"
+    ? "Tell us how many photos you need so we can show you exact pricing."
+    : "Enter the interior square footage of the home so we can show you exact pricing.";
+
   const [sqftInput, setSqftInput] = useState(squareFootage || "");
-  const [confirmed, setConfirmed] = useState(!!squareFootage);
+  const [confirmed, setConfirmed] = useState(!usesGate || !!squareFootage);
 
   useEffect(() => {
     setTenant(slug, tenantId, tenantName);
-  }, [slug, tenantId, tenantName, setTenant]);
+    if (!usesGate) { setSquareFootage(""); setConfirmed(true); }
+  }, [slug, tenantId, tenantName, setTenant, usesGate, setSquareFootage]);
 
-  const tier = getSqftTier(sqftInput);
+  const tier = getSqftTier(sqftInput, pricingConfig);
   const { packages = [], services = [] } = catalog;
 
   function confirmSqft() {
@@ -54,58 +65,49 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
   }
 
   function displayPrice(item) {
+    if (!usesGate) return item.price ? `$${item.price.toLocaleString()}` : "";
     return `$${getItemPrice(item, tier).toLocaleString()}`;
   }
 
-  // ── Sqft gate ──────────────────────────────────────────────────────────────
-  if (!confirmed) {
+  // ── Pricing gate (sqft / photo count) ─────────────────────────────────────
+  if (usesGate && !confirmed) {
+    const canConfirm = pricingMode === "photos" ? !!sqftInput : !!tier;
     return (
       <>
         <StepProgress current={1} />
         <div className="step-container">
           <div className="max-w-lg mx-auto text-center">
             <p className="section-label mb-3">Step 1 of 6</p>
-            <h1 className="font-display text-4xl text-navy mb-3">
-              What's the square footage?
-            </h1>
-            <p className="font-body text-gray-500 mb-10">
-              Enter the interior square footage of the home so we can show you exact pricing.
-            </p>
+            <h1 className="font-display text-4xl text-navy mb-3">{gateQuestion}</h1>
+            <p className="font-body text-gray-500 mb-10">{gateSubtext}</p>
 
             <div className="bg-white border border-gray-200 rounded-sm p-8 shadow-sm">
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                Interior Square Footage
+                {gateLabel}
               </label>
               <input
                 type="number"
                 inputMode="numeric"
                 min="0"
                 autoFocus
-                placeholder="e.g. 2,400"
+                placeholder={pricingMode === "photos" ? "e.g. 30" : "e.g. 2,400"}
                 value={sqftInput}
                 onChange={(e) => setSqftInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && tier && confirmSqft()}
+                onKeyDown={(e) => e.key === "Enter" && canConfirm && confirmSqft()}
                 className="input-field w-full font-display text-4xl text-navy text-center mb-4"
               />
-              {tier ? (
+              {tier && pricingMode !== "photos" ? (
                 <p className="text-sm font-bold text-gold uppercase tracking-widest mb-6">
                   {TIER_LABELS[tier]}
                 </p>
               ) : (
                 <p className="text-sm text-gray-400 mb-6">
-                  Enter square footage above
+                  {sqftInput ? `${sqftInput} ${pricingMode === "photos" ? "photos" : "sqft"}` : `Enter ${gateLabel.toLowerCase()} above`}
                 </p>
               )}
-              <button
-                onClick={confirmSqft}
-                disabled={!tier}
-                className="btn-primary w-full py-4 text-base"
-              >
+              <button onClick={confirmSqft} disabled={!canConfirm} className="btn-primary w-full py-4 text-base">
                 Show Pricing →
               </button>
-              <p className="text-xs text-gray-400 mt-4">
-                Not sure? Call or text us at (818) 934-1277
-              </p>
             </div>
           </div>
         </div>
@@ -124,12 +126,14 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
             <h1 className="font-display text-4xl text-navy mb-1">Choose your package.</h1>
             <p className="font-body text-gray-500">Select a package below, or scroll down to build your own.</p>
           </div>
-          <button
-            onClick={() => setConfirmed(false)}
-            className="text-xs text-gray-400 hover:text-navy underline underline-offset-2 whitespace-nowrap pb-1"
-          >
-            {sqftInput} sqft · {TIER_LABELS[tier]} ✎
-          </button>
+          {usesGate && (
+            <button
+              onClick={() => setConfirmed(false)}
+              className="text-xs text-gray-400 hover:text-navy underline underline-offset-2 whitespace-nowrap pb-1"
+            >
+              {sqftInput} {pricingMode === "photos" ? "photos" : "sqft"}{tier && pricingMode !== "photos" ? ` · ${TIER_LABELS[tier]}` : ""} ✎
+            </button>
+          )}
         </div>
 
         {/* Packages */}

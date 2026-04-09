@@ -19,9 +19,9 @@ export async function POST(req, { params }) {
     const {
       packageId, serviceIds, addonIds,
       address, city, state, zip, squareFootage, propertyType, notes,
-      preferredDate, preferredTime,
+      preferredDate, preferredTime, preferredTimeSpecific,
       clientName, clientEmail, clientPhone,
-      travelFee, pricing: clientPricing,
+      travelFee, tipAmount: rawTip, payFull, customFields,
     } = body;
 
     if (!clientName || !clientEmail || !clientPhone) {
@@ -31,36 +31,45 @@ export async function POST(req, { params }) {
     // Re-calculate server-side to prevent tampering (pass squareFootage for tier pricing)
     const catalog = await getTenantCatalog(tenant.id);
     const pricing = calculateTenantPrice(packageId, serviceIds, addonIds, travelFee || 0, catalog, squareFootage || 0);
+    const tip = Math.max(0, Number(rawTip) || 0);
 
-    if (!pricing.deposit) {
+    // Determine payment type and amount
+    const isFullPayment = payFull || pricing.deposit === 0;
+    const chargeAmount  = isFullPayment
+      ? pricing.subtotal + tip
+      : pricing.deposit + tip;
+    const paymentType   = isFullPayment ? "full" : "deposit";
+
+    if (chargeAmount <= 0) {
       return Response.json({ error: "Invalid pricing data" }, { status: 400 });
     }
 
-    const bookingId     = uuidv4();
-    const depositCents  = Math.round(pricing.deposit * 100);
-    const fullAddress   = `${address}, ${city}, ${state} ${zip}`;
+    const bookingId    = uuidv4();
+    const chargeCents  = Math.round(chargeAmount * 100);
+    const fullAddress  = `${address}, ${city}, ${state} ${zip}`;
 
     // Create payment intent — routed to tenant's Connect account (if onboarded)
     let paymentIntent;
     if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
       paymentIntent = await createConnectedPaymentIntent({
-        amountCents:        depositCents,
+        amountCents:        chargeCents,
         connectedAccountId: tenant.stripeConnectAccountId,
-        metadata: { bookingId, type: "deposit", tenantId: tenant.id, clientName, clientEmail },
-        description: `${tenant.businessName} deposit — ${address}, ${city}`,
+        metadata: { bookingId, type: paymentType, tenantId: tenant.id, clientName, clientEmail },
+        description: `${tenant.businessName} ${paymentType === "full" ? "full payment" : "deposit"} — ${address}, ${city}`,
         receiptEmail: clientEmail,
       });
     } else {
-      // Fallback: platform collects (Stripe Connect not yet set up)
       const { stripe } = await import("@/lib/stripe");
       paymentIntent = await stripe.paymentIntents.create({
-        amount:   depositCents,
+        amount:   chargeCents,
         currency: "usd",
-        metadata: { bookingId, type: "deposit", tenantId: tenant.id, clientName, clientEmail },
-        description: `${tenant.businessName} deposit — ${address}, ${city}`,
+        metadata: { bookingId, type: paymentType, tenantId: tenant.id, clientName, clientEmail },
+        description: `${tenant.businessName} ${paymentType === "full" ? "full payment" : "deposit"} — ${address}, ${city}`,
         receipt_email: clientEmail,
       });
     }
+
+    const remainingBalance = isFullPayment ? 0 : pricing.balance;
 
     // Save booking to tenant subcollection
     await adminDb
@@ -87,20 +96,24 @@ export async function POST(req, { params }) {
         basePrice:        pricing.base,
         addonPrice:       pricing.addonTotal,
         travelFee:        travelFee || 0,
+        tipAmount:        tip,
         totalPrice:       pricing.subtotal,
-        depositAmount:    pricing.deposit,
-        remainingBalance: pricing.balance,
+        depositAmount:    isFullPayment ? pricing.subtotal : pricing.deposit,
+        remainingBalance,
         depositPaid:      false,
-        balancePaid:      false,
+        balancePaid:      isFullPayment ? false : false, // set true by webhook
+        paidInFull:       false, // set true by webhook
 
         stripePaymentIntentId: paymentIntent.id,
 
-        preferredDate: preferredDate || null,
-        preferredTime: preferredTime || "morning",
-        photographerId: null,
-        shootDate:      null,
-        galleryId:      null,
-        galleryUnlocked: false,
+        preferredDate:         preferredDate || null,
+        preferredTime:         preferredTime || "morning",
+        preferredTimeSpecific: preferredTimeSpecific || null,
+        customFields:          customFields || {},
+        photographerId:        null,
+        shootDate:             null,
+        galleryId:             null,
+        galleryUnlocked:       false,
       });
 
     // Upsert agent record (keyed by email so repeat clients accumulate history)

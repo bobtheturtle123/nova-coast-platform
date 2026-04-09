@@ -6,11 +6,12 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useBookingStore } from "@/store/bookingStore";
 import StepProgress from "@/components/booking/StepProgress";
+import { depositLabel } from "@/lib/catalogUtils";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
 // ─── Stripe payment form ──────────────────────────────────────────────────────
-function PaymentForm({ deposit, onSuccess }) {
+function PaymentForm({ chargeAmount, payLabel, onSuccess }) {
   const stripe   = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -53,7 +54,7 @@ function PaymentForm({ deposit, onSuccess }) {
               <span className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
               Processing…
             </span>
-          : `Pay deposit — $${deposit?.toLocaleString()}`}
+          : `${payLabel} — $${chargeAmount?.toLocaleString()}`}
       </button>
       <p className="text-xs text-gray-400 text-center">
         Secured by Stripe · Your card details are never stored on our servers.
@@ -71,8 +72,10 @@ function formatPhone(raw) {
 }
 
 // ─── Order summary line items ─────────────────────────────────────────────────
-function OrderSummary({ pricing, catalog, packageId, serviceIds, addonIds, address, city }) {
+function OrderSummary({ pricing, catalog, packageId, serviceIds, addonIds, address, city, payFull, tip }) {
   if (!pricing || !catalog) return null;
+  const depLabel = depositLabel(catalog?.bookingConfig?.deposit);
+  const totalCharge = (payFull ? pricing.subtotal : pricing.deposit) + (tip || 0);
 
   const pkgItem = packageId && catalog.packages?.find((p) => p.id === packageId);
   const services = (serviceIds || [])
@@ -122,25 +125,50 @@ function OrderSummary({ pricing, catalog, packageId, serviceIds, addonIds, addre
         )}
       </div>
 
+      {/* Tip */}
+      {tip > 0 && (
+        <div className="flex justify-between gap-2 text-gray-500 text-sm">
+          <span className="flex-1">Tip</span>
+          <span>${tip.toLocaleString()}</span>
+        </div>
+      )}
+
       {/* Totals */}
       <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
         <div className="flex justify-between font-semibold">
           <span>Total</span>
           <span className="text-navy">${pricing.subtotal?.toLocaleString()}</span>
         </div>
-        <div className="flex justify-between text-gold-dark font-medium">
-          <span>Deposit today (50%)</span>
-          <span>${pricing.deposit?.toLocaleString()}</span>
-        </div>
-        <div className="flex justify-between text-gray-400">
-          <span>Due at delivery</span>
-          <span>${pricing.balance?.toLocaleString()}</span>
-        </div>
+        {!payFull && pricing.deposit > 0 && (
+          <>
+            <div className="flex justify-between text-gold-dark font-medium">
+              <span>{depLabel} today</span>
+              <span>${pricing.deposit?.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-gray-400">
+              <span>Due at delivery</span>
+              <span>${pricing.balance?.toLocaleString()}</span>
+            </div>
+          </>
+        )}
+        {payFull && (
+          <div className="flex justify-between text-green-700 font-medium">
+            <span>Paying in full</span>
+            <span>${pricing.subtotal?.toLocaleString()}</span>
+          </div>
+        )}
+        {tip > 0 && (
+          <div className="flex justify-between font-bold text-navy border-t border-gray-100 pt-1.5">
+            <span>Charged today</span>
+            <span>${totalCharge?.toLocaleString()}</span>
+          </div>
+        )}
       </div>
 
       <div className="bg-cream rounded-sm p-3 text-xs text-gray-500 leading-relaxed">
-        Booking shows as <span className="font-semibold text-navy">Requested</span> until confirmed.
-        Remaining balance is due when media is delivered.
+        {payFull
+          ? "Paid in full — media will be available for immediate download."
+          : "Booking shows as Requested until confirmed. Remaining balance is due when media is delivered."}
       </div>
     </div>
   );
@@ -155,20 +183,28 @@ export default function TenantPaymentPage() {
   const {
     pricing, packageId, serviceIds, addonIds,
     address, city, state, zip, squareFootage, propertyType, notes,
-    preferredDate, preferredTime, travelFee,
-    clientName, clientEmail, clientPhone,
+    preferredDate, preferredTime, preferredTimeSpecific, travelFee,
+    clientName, clientEmail, clientPhone, customFields,
     setClientInfo, setBookingResult,
   } = store;
 
   const [clientSecret, setClientSecret] = useState(null);
   const [bookingId,    setBookingId]     = useState(null);
-  const [initLoading,  setInitLoading]   = useState(false); // prevents double-submit race condition
+  const [initLoading,  setInitLoading]   = useState(false);
   const [initError,    setInitError]     = useState(null);
-  const [lookupState,  setLookupState]   = useState(null); // null | "found" | "new"
+  const [lookupState,  setLookupState]   = useState(null);
   const [catalog,      setCatalog]       = useState(null);
   const [fieldErrors,  setFieldErrors]   = useState({});
+  const [payFull,      setPayFull]       = useState(false);
+  const [tip,          setTip]           = useState(0);
+  const [customTip,    setCustomTip]     = useState("");
 
-  const deposit = pricing?.deposit ?? 0;
+  const depositConfig = catalog?.bookingConfig?.deposit;
+  const noDeposit     = depositConfig?.type === "none";
+  // If no deposit configured, force pay-in-full
+  const effectivePayFull = payFull || noDeposit;
+  const deposit      = pricing?.deposit ?? 0;
+  const chargeAmount = (effectivePayFull ? (pricing?.subtotal ?? 0) : deposit) + tip;
 
   // Load catalog for order summary
   useEffect(() => {
@@ -222,6 +258,10 @@ export default function TenantPaymentPage() {
           preferredDate, preferredTime,
           clientName, clientEmail, clientPhone,
           travelFee, pricing,
+          payFull: effectivePayFull,
+          tipAmount: tip,
+          preferredTimeSpecific,
+          customFields: customFields || {},
         }),
       });
       const data = await res.json();
@@ -250,7 +290,7 @@ export default function TenantPaymentPage() {
             <div>
               <p className="section-label mb-2">Step 6 of 6</p>
               <h1 className="font-display text-4xl text-navy mb-3">Almost there.</h1>
-              <p className="font-body text-gray-500">Enter your contact info, then pay your 50% deposit to confirm.</p>
+              <p className="font-body text-gray-500">Enter your contact info to confirm your booking.</p>
             </div>
 
             {/* Contact info card */}
@@ -317,14 +357,74 @@ export default function TenantPaymentPage() {
               </div>
 
               {!clientSecret && (
-                <button onClick={initPayment} disabled={initLoading} className="btn-primary w-full mt-2">
-                  {initLoading
-                    ? <span className="flex items-center justify-center gap-2">
-                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Creating booking…
-                      </span>
-                    : "Proceed to Payment →"}
-                </button>
+                <>
+                  {/* Pay in full toggle — only shown when deposit is configured */}
+                  {!noDeposit && deposit > 0 && deposit < (pricing?.subtotal ?? 0) && (
+                    <div className="border border-gray-200 rounded-sm p-3 space-y-2">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment option</p>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => setPayFull(false)}
+                          className={`flex-1 py-2.5 px-3 border rounded-sm text-sm font-medium transition-colors ${
+                            !payFull ? "border-navy bg-navy/5 text-navy" : "border-gray-200 text-gray-500 hover:border-gray-300"
+                          }`}>
+                          {depositLabel(depositConfig)} — ${deposit?.toLocaleString()}
+                        </button>
+                        <button type="button" onClick={() => setPayFull(true)}
+                          className={`flex-1 py-2.5 px-3 border rounded-sm text-sm font-medium transition-colors ${
+                            payFull ? "border-navy bg-navy/5 text-navy" : "border-gray-200 text-gray-500 hover:border-gray-300"
+                          }`}>
+                          Pay in full — ${pricing?.subtotal?.toLocaleString()}
+                        </button>
+                      </div>
+                      {payFull && (
+                        <p className="text-xs text-green-700">
+                          Paying in full means your media will be available for download immediately.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tip selector */}
+                  <div className="border border-gray-200 rounded-sm p-3 space-y-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Add a tip <span className="font-normal text-gray-400">(optional)</span>
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      {[0, 25, 50, 100].map((amt) => (
+                        <button key={amt} type="button" onClick={() => { setTip(amt); setCustomTip(""); }}
+                          className={`px-3 py-1.5 border rounded-sm text-sm transition-colors ${
+                            tip === amt && customTip === ""
+                              ? "border-navy bg-navy/5 text-navy font-medium"
+                              : "border-gray-200 text-gray-600 hover:border-gray-300"
+                          }`}>
+                          {amt === 0 ? "None" : `$${amt}`}
+                        </button>
+                      ))}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm text-gray-400">$</span>
+                        <input
+                          type="number" min="1" placeholder="Custom"
+                          value={customTip}
+                          onChange={(e) => {
+                            setCustomTip(e.target.value);
+                            const v = Number(e.target.value) || 0;
+                            setTip(v);
+                          }}
+                          className="input-field py-1.5 w-20 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <button onClick={initPayment} disabled={initLoading} className="btn-primary w-full mt-2">
+                    {initLoading
+                      ? <span className="flex items-center justify-center gap-2">
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Creating booking…
+                        </span>
+                      : `Proceed to Payment — $${chargeAmount.toLocaleString()} →`}
+                  </button>
+                </>
               )}
               {initError && (
                 <div className="bg-red-50 border border-red-200 rounded-sm p-3">
@@ -349,7 +449,11 @@ export default function TenantPaymentPage() {
                     },
                   },
                 }}>
-                  <PaymentForm deposit={deposit} onSuccess={handleSuccess} />
+                  <PaymentForm
+                    chargeAmount={chargeAmount}
+                    payLabel={effectivePayFull ? "Pay in full" : depositLabel(depositConfig)}
+                    onSuccess={handleSuccess}
+                  />
                 </Elements>
               </div>
             )}
@@ -365,6 +469,8 @@ export default function TenantPaymentPage() {
               addonIds={addonIds}
               address={address}
               city={city}
+              payFull={effectivePayFull}
+              tip={tip}
             />
           </div>
         </div>

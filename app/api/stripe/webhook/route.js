@@ -41,8 +41,30 @@ export async function POST(req) {
           } catch (e) { console.error("Confirmation email failed:", e); }
         }
 
+        // Full payment at booking time — unlock gallery immediately if it exists
+        if (type === "full" && !booking.paidInFull) {
+          await bookingRef.update({
+            depositPaid: true,
+            balancePaid: true,
+            paidInFull:  true,
+            remainingBalance: 0,
+            status: "requested",
+            stripeDepositIntentId: pi.id,
+          });
+          if (booking.galleryId) {
+            await adminDb
+              .collection("tenants").doc(tenantId)
+              .collection("galleries").doc(booking.galleryId)
+              .update({ unlocked: true });
+          }
+          try {
+            const tenant = await getTenantById(tenantId);
+            if (tenant) await sendBookingConfirmation({ booking: { ...booking, depositPaid: true }, tenant });
+          } catch (e) { console.error("Confirmation email failed:", e); }
+        }
+
         if (type === "balance" && !booking.balancePaid) {
-          await bookingRef.update({ balancePaid: true, status: "completed" });
+          await bookingRef.update({ balancePaid: true, remainingBalance: 0, status: "completed" });
           if (booking.galleryId) {
             await adminDb
               .collection("tenants").doc(tenantId)

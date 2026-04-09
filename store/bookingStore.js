@@ -28,9 +28,13 @@ const INITIAL_STATE = {
   pricing:    null,
 
   // Step 5 — Schedule
-  preferredDate: "",
-  preferredTime: "morning",
-  photographerId: null,
+  preferredDate:         "",
+  preferredTime:         "morning",
+  preferredTimeSpecific: null,
+  photographerId:        null,
+
+  // Custom fields (from admin config)
+  customFields: {},
 
   // Step 6 — Client info
   clientName:  "",
@@ -71,11 +75,12 @@ export const useBookingStore = create(
         })),
 
       setSquareFootage: (squareFootage) => set({ squareFootage }),
-      setProperty: (fields) => set(fields),
-      setPricing:  (pricing) => set({ pricing }),
-      setTravelFee:(travelFee) => set({ travelFee }),
-      setSchedule: (fields) => set(fields),
-      setClientInfo:(fields) => set(fields),
+      setProperty:      (fields) => set(fields),
+      setPricing:       (pricing) => set({ pricing }),
+      setTravelFee:     (travelFee) => set({ travelFee }),
+      setSchedule:      (fields) => set(fields),
+      setClientInfo:    (fields) => set(fields),
+      setCustomFields:  (customFields) => set({ customFields }),
 
       setBookingResult: (bookingId) =>
         set({ bookingId, depositPaid: true }),

@@ -28,6 +28,20 @@ export default function SettingsPage() {
   const [tiers,        setTiers]        = useState(DEFAULT_TIERS);
   const [savingTiers,  setSavingTiers]  = useState(false);
 
+  // Booking config state
+  const [depositType,   setDepositType]   = useState("percent"); // "percent" | "fixed" | "none"
+  const [depositValue,  setDepositValue]  = useState(50);
+  const [timeSlots,     setTimeSlots]     = useState([
+    { value: "morning",   label: "Morning",   desc: "8am – 12pm",     enabled: true },
+    { value: "afternoon", label: "Afternoon", desc: "12pm – 5pm",     enabled: true },
+    { value: "flexible",  label: "Flexible",  desc: "Any time works", enabled: true },
+    { value: "specific",  label: "Specific Time", desc: "Agent enters exact time", enabled: false },
+  ]);
+  const [customFields,  setCustomFields]  = useState([]); // [{ id, label, type, required }]
+  const [savingBooking, setSavingBooking] = useState(false);
+  const [newFieldLabel, setNewFieldLabel] = useState("");
+  const [newFieldType,  setNewFieldType]  = useState("text");
+
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
       const res = await fetch("/api/dashboard/tenant", {
@@ -50,6 +64,16 @@ export default function SettingsPage() {
           if (data.tenant.pricingConfig.tiers?.length) {
             setTiers(data.tenant.pricingConfig.tiers);
           }
+        }
+        // Load booking config
+        if (data.tenant.bookingConfig) {
+          const bc = data.tenant.bookingConfig;
+          if (bc.deposit) {
+            setDepositType(bc.deposit.type || "percent");
+            setDepositValue(bc.deposit.value ?? 50);
+          }
+          if (bc.timeSlots?.length) setTimeSlots(bc.timeSlots);
+          if (bc.customFields?.length) setCustomFields(bc.customFields);
         }
       }
       setLoading(false);
@@ -127,6 +151,52 @@ export default function SettingsPage() {
   function resetTiers() {
     setTiers(DEFAULT_TIERS);
     setPricingMode("sqft");
+  }
+
+  // ─── Booking config helpers ───────────────────────────────────────────────
+  function toggleTimeSlot(value) {
+    setTimeSlots((prev) => prev.map((s) => s.value === value ? { ...s, enabled: !s.enabled } : s));
+  }
+
+  function updateTimeSlot(value, field, val) {
+    setTimeSlots((prev) => prev.map((s) => s.value === value ? { ...s, [field]: val } : s));
+  }
+
+  function addCustomField() {
+    const label = newFieldLabel.trim();
+    if (!label) return;
+    const id = label.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 32) + "_" + Date.now().toString(36);
+    setCustomFields((prev) => [...prev, { id, label, type: newFieldType, required: false }]);
+    setNewFieldLabel(""); setNewFieldType("text");
+  }
+
+  function removeCustomField(id) {
+    setCustomFields((prev) => prev.filter((f) => f.id !== id));
+  }
+
+  function toggleFieldRequired(id) {
+    setCustomFields((prev) => prev.map((f) => f.id === id ? { ...f, required: !f.required } : f));
+  }
+
+  async function saveBookingConfig() {
+    setSavingBooking(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/tenants/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          bookingConfig: {
+            deposit:      { type: depositType, value: Number(depositValue) || 0 },
+            timeSlots,
+            customFields,
+          },
+        }),
+      });
+      if (res.ok) showMsg("Booking settings saved.");
+      else showMsg("Failed to save.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    setSavingBooking(false);
   }
 
   if (loading) return (
@@ -316,6 +386,132 @@ export default function SettingsPage() {
         <div className="mt-5 pt-4 border-t border-gray-100">
           <button onClick={savePricingConfig} disabled={savingTiers} className="btn-primary px-8 py-3">
             {savingTiers ? "Saving…" : "Save Pricing Config"}
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Booking Config ──────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-sm border border-gray-200 p-6 mt-8 space-y-8">
+        <div>
+          <h2 className="font-display text-navy text-base mb-1">Booking Settings</h2>
+          <p className="text-sm text-gray-500">Configure deposit requirements, time slots, and custom form fields.</p>
+        </div>
+
+        {/* Deposit config */}
+        <div>
+          <h3 className="text-sm font-semibold text-charcoal mb-3">Deposit / Payment</h3>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {[
+              { value: "percent", label: "% of total",  desc: "e.g. 50% deposit" },
+              { value: "fixed",   label: "Fixed amount", desc: "e.g. $200 flat deposit" },
+              { value: "none",    label: "No deposit",   desc: "Clients pay in full" },
+            ].map((m) => (
+              <button key={m.value} type="button" onClick={() => setDepositType(m.value)}
+                className={`p-3 border rounded-sm text-left transition-colors ${
+                  depositType === m.value ? "border-navy bg-navy/5" : "border-gray-200 hover:border-navy/30"
+                }`}>
+                <p className={`text-sm font-semibold ${depositType === m.value ? "text-navy" : "text-charcoal"}`}>{m.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{m.desc}</p>
+              </button>
+            ))}
+          </div>
+
+          {depositType !== "none" && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-500">
+                {depositType === "percent" ? "Percentage:" : "Amount: $"}
+              </span>
+              <input
+                type="number" value={depositValue}
+                onChange={(e) => setDepositValue(e.target.value)}
+                min="0" max={depositType === "percent" ? 100 : undefined}
+                className="input-field w-28 text-sm"
+              />
+              {depositType === "percent" && <span className="text-sm text-gray-400">%</span>}
+              <span className="text-xs text-gray-400 ml-2">
+                {depositType === "percent"
+                  ? `On a $1,000 order, deposit = $${Math.round(1000 * (depositValue / 100))}`
+                  : `Fixed deposit regardless of order size`}
+              </span>
+            </div>
+          )}
+          {depositType === "none" && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+              Clients will be required to pay the full amount upfront at booking.
+            </p>
+          )}
+        </div>
+
+        {/* Time slots */}
+        <div>
+          <h3 className="text-sm font-semibold text-charcoal mb-1">Preferred Time Slots</h3>
+          <p className="text-xs text-gray-400 mb-3">Control which time options clients see when scheduling. You can rename them.</p>
+          <div className="space-y-2">
+            {timeSlots.map((slot) => (
+              <div key={slot.value} className={`border rounded-sm px-3 py-2.5 flex items-center gap-3 ${slot.enabled ? "border-gray-200 bg-white" : "border-dashed border-gray-200 bg-gray-50 opacity-60"}`}>
+                <div
+                  onClick={() => toggleTimeSlot(slot.value)}
+                  className={`relative w-9 h-5 rounded-full flex-shrink-0 cursor-pointer transition-colors ${slot.enabled ? "bg-navy" : "bg-gray-300"}`}>
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${slot.enabled ? "translate-x-4" : "translate-x-0.5"}`} />
+                </div>
+                <div className="flex-1 grid grid-cols-2 gap-2">
+                  <input type="text" value={slot.label} disabled={!slot.enabled}
+                    onChange={(e) => updateTimeSlot(slot.value, "label", e.target.value)}
+                    className="input-field py-1.5 text-sm" placeholder="Label" />
+                  <input type="text" value={slot.desc} disabled={!slot.enabled}
+                    onChange={(e) => updateTimeSlot(slot.value, "desc", e.target.value)}
+                    className="input-field py-1.5 text-sm text-gray-500" placeholder="Description" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom form fields */}
+        <div>
+          <h3 className="text-sm font-semibold text-charcoal mb-1">Custom Booking Form Fields</h3>
+          <p className="text-xs text-gray-400 mb-3">Add extra fields to the property step of your booking form (e.g. Gate Code, Planned Live Date).</p>
+
+          {customFields.length > 0 && (
+            <div className="space-y-2 mb-3">
+              {customFields.map((f) => (
+                <div key={f.id} className="flex items-center gap-3 border border-gray-200 rounded-sm px-3 py-2.5 bg-gray-50">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-charcoal truncate">{f.label}</p>
+                    <p className="text-xs text-gray-400">{f.type}{f.required ? " · required" : " · optional"}</p>
+                  </div>
+                  <button
+                    onClick={() => toggleFieldRequired(f.id)}
+                    className={`text-xs px-2 py-1 rounded border transition-colors ${
+                      f.required ? "bg-navy/10 border-navy/20 text-navy" : "border-gray-200 text-gray-400 hover:border-navy/30"
+                    }`}
+                  >
+                    {f.required ? "Required" : "Optional"}
+                  </button>
+                  <button onClick={() => removeCustomField(f.id)} className="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <input type="text" value={newFieldLabel}
+              onChange={(e) => setNewFieldLabel(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addCustomField()}
+              placeholder="Field label (e.g. Gate Code)" className="input-field flex-1 text-sm" />
+            <select value={newFieldType} onChange={(e) => setNewFieldType(e.target.value)} className="input-field text-sm w-32">
+              <option value="text">Text</option>
+              <option value="date">Date</option>
+              <option value="textarea">Long text</option>
+            </select>
+            <button onClick={addCustomField} disabled={!newFieldLabel.trim()}
+              className="btn-primary px-4 py-2 text-sm">Add</button>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-gray-100">
+          <button onClick={saveBookingConfig} disabled={savingBooking} className="btn-primary px-8 py-3">
+            {savingBooking ? "Saving…" : "Save Booking Settings"}
           </button>
         </div>
       </div>

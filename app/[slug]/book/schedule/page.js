@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
 import StepProgress from "@/components/booking/StepProgress";
@@ -8,10 +8,11 @@ import StepProgress from "@/components/booking/StepProgress";
 const DAYS    = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MONTHS  = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-const TIME_SLOTS = [
-  { value: "morning",   label: "Morning",   desc: "8 am – 12 pm" },
-  { value: "afternoon", label: "Afternoon", desc: "12 pm – 5 pm" },
-  { value: "flexible",  label: "Flexible",  desc: "Any time works" },
+const DEFAULT_TIME_SLOTS = [
+  { value: "morning",   label: "Morning",   desc: "8 am – 12 pm",     enabled: true },
+  { value: "afternoon", label: "Afternoon", desc: "12 pm – 5 pm",     enabled: true },
+  { value: "flexible",  label: "Flexible",  desc: "Any time works",   enabled: true },
+  { value: "specific",  label: "Specific Time", desc: "Enter exact time", enabled: false },
 ];
 
 function buildCalendar(year, month) {
@@ -27,6 +28,19 @@ export default function TenantSchedulePage() {
   const params = useParams();
   const router = useRouter();
   const { preferredDate, preferredTime, setSchedule } = useBookingStore();
+  const [timeSlots,      setTimeSlots]      = useState(DEFAULT_TIME_SLOTS);
+  const [specificTime,   setSpecificTime]   = useState("");
+
+  useEffect(() => {
+    fetch(`/api/tenant-public/${params.slug}/catalog`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.bookingConfig?.timeSlots?.length) {
+          setTimeSlots(data.bookingConfig.timeSlots);
+        }
+      })
+      .catch(() => {});
+  }, [params.slug]);
 
   const today     = new Date();
   today.setHours(0,0,0,0);
@@ -164,7 +178,7 @@ export default function TenantSchedulePage() {
           {/* Time preference */}
           <div className="space-y-3">
             <p className="font-semibold text-charcoal text-sm uppercase tracking-wider">Preferred Time</p>
-            {TIME_SLOTS.map((t) => (
+            {timeSlots.filter((t) => t.enabled).map((t) => (
               <button
                 key={t.value}
                 type="button"
@@ -181,9 +195,6 @@ export default function TenantSchedulePage() {
                       {t.label}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">{t.desc}</p>
-                    {t.note && (
-                      <p className="text-xs text-gold-dark mt-0.5 font-medium">{t.note}</p>
-                    )}
                   </div>
                   {preferredTime === t.value && (
                     <div className="w-4 h-4 rounded-full bg-navy flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -196,6 +207,22 @@ export default function TenantSchedulePage() {
               </button>
             ))}
 
+            {/* Specific time input — shown when "specific" slot is selected */}
+            {preferredTime === "specific" && (
+              <div className="mt-1">
+                <label className="block text-sm font-medium text-charcoal mb-1.5">Enter your preferred time</label>
+                <input
+                  type="time"
+                  value={specificTime}
+                  onChange={(e) => {
+                    setSpecificTime(e.target.value);
+                    setSchedule({ preferredTimeSpecific: e.target.value });
+                  }}
+                  className="input-field"
+                />
+              </div>
+            )}
+
             <p className="text-xs text-gray-400 pt-1">
               Exact shoot time will be confirmed via email after booking.
             </p>
@@ -206,7 +233,7 @@ export default function TenantSchedulePage() {
           <button onClick={() => router.push(`/${params.slug}/book/review`)} className="btn-outline">← Back</button>
           <button
             onClick={() => router.push(`/${params.slug}/book/payment`)}
-            disabled={!preferredDate}
+            disabled={!preferredDate || (preferredTime === "specific" && !specificTime)}
             className="btn-primary px-12"
           >
             Continue →

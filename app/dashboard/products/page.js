@@ -271,11 +271,18 @@ function ProductRow({ item, type, onEdit, onToggleActive }) {
         <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${item.active !== false ? "translate-x-4" : "translate-x-0.5"}`} />
       </div>
 
-      {/* Edit */}
-      <button onClick={() => onEdit(item)}
-        className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded-sm hover:bg-navy/5 flex-shrink-0">
-        Edit
-      </button>
+      {/* Actions */}
+      <div className="flex gap-1.5 flex-shrink-0">
+        <button onClick={() => onDuplicate(item)}
+          title="Duplicate"
+          className="text-xs text-gray-400 border border-gray-200 px-2.5 py-1.5 rounded-sm hover:bg-gray-50">
+          Copy
+        </button>
+        <button onClick={() => onEdit(item)}
+          className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded-sm hover:bg-navy/5">
+          Edit
+        </button>
+      </div>
     </div>
   );
 }
@@ -350,6 +357,21 @@ export default function ProductsPage() {
     setItems((prev) => ({ ...prev, [type]: prev[type].filter((i) => i.id !== item.id) }));
     setEditing(null);
     setMsg("Product deleted.");
+    setTimeout(() => setMsg(""), 3000);
+  }
+
+  async function duplicateItem(item, type) {
+    const token = await getToken();
+    const { id: _id, ...rest } = item;
+    const copy = { ...rest, name: `${item.name} (copy)` };
+    const res  = await fetch(`/api/dashboard/products?type=${type}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(copy),
+    });
+    const data = await res.json();
+    setItems((prev) => ({ ...prev, [type]: [...prev[type], data.item] }));
+    setMsg("Product duplicated.");
     setTimeout(() => setMsg(""), 3000);
   }
 
@@ -432,6 +454,7 @@ export default function ProductsPage() {
             <ProductRow key={item.id} item={item} type={activeType}
               onEdit={(i) => setEditing({ item: i, type: activeType })}
               onToggleActive={(i) => toggleActive(i, activeType)}
+              onDuplicate={(i) => duplicateItem(i, activeType)}
             />
           ))
         )}
