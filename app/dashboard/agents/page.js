@@ -38,9 +38,9 @@ export default function AgentsPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-display text-2xl text-navy">Agents</h1>
+          <h1 className="font-display text-2xl text-navy">Customers</h1>
           <p className="text-gray-400 text-sm mt-0.5">
-            {agents.length} agent{agents.length !== 1 ? "s" : ""} · ${totalRevenue.toLocaleString()} total revenue
+            {agents.length} customer{agents.length !== 1 ? "s" : ""} · ${totalRevenue.toLocaleString()} total revenue
           </p>
         </div>
       </div>
@@ -49,7 +49,7 @@ export default function AgentsPage() {
       {agents.length > 0 && (
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-sm border border-gray-200 p-4">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Agents</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Customers</p>
             <p className="text-2xl font-bold font-display text-navy">{agents.length}</p>
           </div>
           <div className="bg-white rounded-sm border border-gray-200 p-4">
@@ -57,7 +57,7 @@ export default function AgentsPage() {
             <p className="text-2xl font-bold font-display text-navy">${totalRevenue.toLocaleString()}</p>
           </div>
           <div className="bg-white rounded-sm border border-gray-200 p-4">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Top Agent</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Top Customer</p>
             <p className="text-base font-bold text-navy truncate">{topAgent?.name || "—"}</p>
             {topAgent && <p className="text-xs text-gray-400">{topAgent.totalOrders} orders</p>}
           </div>
@@ -68,7 +68,7 @@ export default function AgentsPage() {
       <div className="mb-4">
         <input
           type="text"
-          placeholder="Search by name or email…"
+          placeholder="Search customers by name or email…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="input-field w-full max-w-sm"
@@ -82,18 +82,18 @@ export default function AgentsPage() {
       ) : agents.length === 0 ? (
         <div className="bg-white rounded-sm border border-gray-200 p-16 text-center text-gray-400">
           <p className="text-3xl mb-3">👤</p>
-          <p className="font-medium text-gray-500">No agents yet</p>
-          <p className="text-sm mt-1">Agents are automatically added when a client books through your booking page.</p>
+          <p className="font-medium text-gray-500">No customers yet</p>
+          <p className="text-sm mt-1">Customers are automatically added when a client books through your booking page.</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-sm border border-gray-200 p-8 text-center text-gray-400 text-sm">
-          No agents match your search.
+          No customers match your search.
         </div>
       ) : (
         <div className="bg-white rounded-sm border border-gray-200 divide-y divide-gray-50">
           {/* Header */}
           <div className="grid grid-cols-12 px-4 py-2 text-xs text-gray-400 uppercase tracking-wide font-medium">
-            <div className="col-span-4">Agent</div>
+            <div className="col-span-4">Customer</div>
             <div className="col-span-3">Contact</div>
             <div className="col-span-2 text-right">Orders</div>
             <div className="col-span-2 text-right">Total Spent</div>

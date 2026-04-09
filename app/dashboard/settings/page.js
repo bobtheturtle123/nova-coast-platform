@@ -42,6 +42,15 @@ export default function SettingsPage() {
   const [newFieldLabel, setNewFieldLabel] = useState("");
   const [newFieldType,  setNewFieldType]  = useState("text");
 
+  // Availability state
+  const [availMode,        setAvailMode]        = useState("slots"); // "slots" | "real"
+  const [availStart,       setAvailStart]       = useState("08:00");
+  const [availEnd,         setAvailEnd]         = useState("18:00");
+  const [availInterval,    setAvailInterval]    = useState(30);
+  const [availDuration,    setAvailDuration]    = useState(120);
+  const [availBuffer,      setAvailBuffer]      = useState(30);
+  const [savingAvail,      setSavingAvail]      = useState(false);
+
   // Terms of service state
   const [termsText,    setTermsText]    = useState("");
   const [savingTerms,  setSavingTerms]  = useState(false);
@@ -79,6 +88,15 @@ export default function SettingsPage() {
           if (bc.timeSlots?.length) setTimeSlots(bc.timeSlots);
           if (bc.customFields?.length) setCustomFields(bc.customFields);
           if (bc.terms) setTermsText(bc.terms);
+          if (bc.availability) {
+            const av = bc.availability;
+            if (av.mode)             setAvailMode(av.mode);
+            if (av.businessHours?.start) setAvailStart(av.businessHours.start);
+            if (av.businessHours?.end)   setAvailEnd(av.businessHours.end);
+            if (av.intervalMinutes)  setAvailInterval(av.intervalMinutes);
+            if (av.defaultDuration)  setAvailDuration(av.defaultDuration);
+            if (av.bufferMinutes)    setAvailBuffer(av.bufferMinutes);
+          }
         }
       }
       setLoading(false);
@@ -189,7 +207,29 @@ export default function SettingsPage() {
       timeSlots,
       customFields,
       terms:        termsText,
+      availability: {
+        mode:           availMode,
+        businessHours:  { start: availStart, end: availEnd },
+        intervalMinutes: Number(availInterval) || 30,
+        defaultDuration: Number(availDuration) || 120,
+        bufferMinutes:   Number(availBuffer)   || 30,
+      },
     };
+  }
+
+  async function saveAvailability() {
+    setSavingAvail(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/tenants/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ bookingConfig: buildBookingConfig() }),
+      });
+      if (res.ok) showMsg("Availability settings saved.");
+      else showMsg("Failed to save.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    setSavingAvail(false);
   }
 
   async function saveBookingConfig() {
@@ -535,6 +575,87 @@ export default function SettingsPage() {
         <div className="pt-4 border-t border-gray-100">
           <button onClick={saveBookingConfig} disabled={savingBooking} className="btn-primary px-8 py-3">
             {savingBooking ? "Saving…" : "Save Booking Settings"}
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Availability ────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-sm border border-gray-200 p-6 mt-8">
+        <h2 className="font-display text-navy text-base mb-1">Availability & Scheduling</h2>
+        <p className="text-sm text-gray-500 mb-6">
+          Control how time slots are offered to clients on the booking schedule step.
+        </p>
+
+        {/* Mode toggle */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-charcoal mb-3">Availability Mode</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { value: "slots", label: "Generic Time Slots", desc: "Show fixed 30-min intervals within business hours. No conflict checking." },
+              { value: "real",  label: "Real Availability",  desc: "Block out times that are already booked (plus buffer). Only show truly open slots." },
+            ].map((m) => (
+              <button key={m.value} type="button" onClick={() => setAvailMode(m.value)}
+                className={`p-3 border rounded-sm text-left transition-colors ${
+                  availMode === m.value ? "border-navy bg-navy/5" : "border-gray-200 hover:border-navy/30"
+                }`}>
+                <p className={`text-sm font-semibold ${availMode === m.value ? "text-navy" : "text-charcoal"}`}>{m.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5 leading-snug">{m.desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Business hours */}
+        <div className="mb-5">
+          <h3 className="text-sm font-semibold text-charcoal mb-3">Business Hours</h3>
+          <div className="flex items-center gap-4">
+            <div>
+              <label className="label-field">Start time</label>
+              <input type="time" value={availStart} onChange={(e) => setAvailStart(e.target.value)}
+                className="input-field text-sm" />
+            </div>
+            <span className="text-gray-400 mt-5">to</span>
+            <div>
+              <label className="label-field">End time</label>
+              <input type="time" value={availEnd} onChange={(e) => setAvailEnd(e.target.value)}
+                className="input-field text-sm" />
+            </div>
+          </div>
+        </div>
+
+        {/* Slot interval */}
+        <div className="mb-5">
+          <h3 className="text-sm font-semibold text-charcoal mb-3">Slot Interval & Durations</h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="label-field">Slot interval (min)</label>
+              <select value={availInterval} onChange={(e) => setAvailInterval(e.target.value)} className="input-field w-full text-sm">
+                <option value={15}>15 min</option>
+                <option value={30}>30 min</option>
+                <option value={60}>60 min</option>
+              </select>
+              <p className="text-xs text-gray-400 mt-1">How often slots appear (e.g. 8:00, 8:30, 9:00…)</p>
+            </div>
+            <div>
+              <label className="label-field">Default shoot duration (min)</label>
+              <input type="number" value={availDuration} min={30} step={15}
+                onChange={(e) => setAvailDuration(e.target.value)}
+                className="input-field w-full text-sm" />
+              <p className="text-xs text-gray-400 mt-1">How long a typical shoot lasts</p>
+            </div>
+            <div>
+              <label className="label-field">Buffer between shoots (min)</label>
+              <input type="number" value={availBuffer} min={0} step={15}
+                onChange={(e) => setAvailBuffer(e.target.value)}
+                className="input-field w-full text-sm" />
+              <p className="text-xs text-gray-400 mt-1">Travel/reset time after each shoot</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-gray-100">
+          <button onClick={saveAvailability} disabled={savingAvail} className="btn-primary px-8 py-3">
+            {savingAvail ? "Saving…" : "Save Availability Settings"}
           </button>
         </div>
       </div>

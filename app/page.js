@@ -33,15 +33,14 @@ export default function MarketingPage() {
       <section className="bg-navy text-white pt-24 pb-32 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-gold text-xs tracking-[0.2em] uppercase font-body mb-4">
-            Built for real estate photographers
+            Built for photographers who want to scale
           </p>
           <h1 className="font-display text-5xl md:text-6xl leading-tight mb-6">
-            The Aryeo alternative<br />you've been waiting for.
+            Increase your revenue<br />on every shoot.
           </h1>
           <p className="text-white/70 text-lg max-w-2xl mx-auto mb-10">
-            Your own branded booking page, automatic deposit collection, gallery
-            delivery, and balance payments — all in one platform for{" "}
-            <span className="text-gold font-medium">a fraction of the cost</span>.
+            Turn your booking flow into a revenue engine with built-in upsells,
+            deposits, and payment unlocks — all in one platform.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth/register"
@@ -68,8 +67,22 @@ export default function MarketingPage() {
         </div>
       </div>
 
+      {/* REVENUE PITCH */}
+      <section className="py-20 px-6 bg-white">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="font-display text-4xl text-navy mb-6">Make more on every booking.</h2>
+          <p className="text-gray-500 text-lg max-w-2xl mx-auto leading-relaxed">
+            Most platforms just manage your business. NovaOS helps you grow it.
+          </p>
+          <p className="text-gray-500 text-lg max-w-2xl mx-auto leading-relaxed mt-3">
+            Clients select services and add-ons through a guided booking flow designed to
+            increase order value automatically.
+          </p>
+        </div>
+      </section>
+
       {/* FEATURES */}
-      <section id="features" className="py-24 px-6">
+      <section id="features" className="py-24 px-6 bg-cream">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-display text-4xl text-navy mb-4">
@@ -117,7 +130,8 @@ export default function MarketingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-display text-4xl text-navy mb-4">Simple, transparent pricing</h2>
-            <p className="text-gray-500">All plans include a 14-day free trial. No credit card required to start.</p>
+            <p className="text-gray-500 mb-2">All plans include a 14-day free trial. No credit card required to start.</p>
+            <p className="text-gold font-medium text-sm">Most photographers cover their subscription with a single booking.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {PLANS.map((plan) => (
@@ -165,9 +179,9 @@ export default function MarketingPage() {
       {/* CTA */}
       <section className="bg-navy py-20 px-6 text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="font-display text-4xl text-white mb-4">Ready to replace Aryeo?</h2>
+          <h2 className="font-display text-4xl text-white mb-4">Start increasing your revenue per shoot.</h2>
           <p className="text-white/60 mb-8">
-            Set up your branded booking page in minutes. Starts at $39/mo after your free trial.
+            Set up your booking page in minutes. Starts at $39/mo after your free trial.
           </p>
           <Link href="/auth/register"
             className="inline-block bg-gold text-navy font-semibold px-10 py-4 rounded-sm hover:bg-gold/90 transition-colors">
@@ -192,9 +206,9 @@ export default function MarketingPage() {
 }
 
 const FEATURES = [
-  { icon: "📅", title: "Branded Booking Pages", desc: "Each photographer gets their own booking URL with their logo, colors, and services. Share it with agents and clients." },
-  { icon: "💳", title: "Automatic Deposit Collection", desc: "Collect a 50% deposit the moment a client books. Funds go directly to your connected Stripe account." },
-  { icon: "🖼️", title: "Secure Media Galleries", desc: "Upload finished photos and videos to a private gallery. Clients pay the balance to unlock full-resolution downloads." },
+  { icon: "📅", title: "Booking that increases order value", desc: "Clients move through a guided flow — package, add-ons, property details, and payment — designed to maximize what they spend." },
+  { icon: "💳", title: "Get paid upfront, every time", desc: "Collect a deposit the moment a client books. Configurable per shoot type. Funds go directly to your Stripe account." },
+  { icon: "🖼️", title: "Get paid before clients download", desc: "Media stays locked until the balance is paid. One click to deliver and collect — no chasing invoices." },
   { icon: "✉️", title: "Automated Email Workflows", desc: "Booking confirmations, shoot approvals, gallery delivery, and payment reminders — all sent automatically." },
   { icon: "📊", title: "Booking Dashboard", desc: "Track every shoot from requested → confirmed → delivered. Know exactly what's outstanding at a glance." },
   { icon: "⚡", title: "Fast Payouts via Stripe", desc: "Stripe Connect routes client payments straight to your bank. No manual invoicing. No waiting." },
