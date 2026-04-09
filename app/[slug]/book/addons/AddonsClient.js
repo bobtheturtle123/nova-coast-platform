@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
-import { calculateTenantPrice } from "@/lib/tenants";
+import { calculateTenantPrice } from "@/lib/catalogUtils";
 import StepProgress from "@/components/booking/StepProgress";
 import PriceSummary from "@/components/booking/PriceSummary";
 import clsx from "clsx";

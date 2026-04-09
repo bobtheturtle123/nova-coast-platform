@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
-import { calculateTenantPrice } from "@/lib/tenants";
+import { calculateTenantPrice } from "@/lib/catalogUtils";
 import StepProgress from "@/components/booking/StepProgress";
 
 export default function TenantReviewPage() {
