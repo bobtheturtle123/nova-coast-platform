@@ -445,7 +445,7 @@ export default function TenantPaymentPage() {
                             Terms of Service
                           </a>
                           {" "}and{" "}
-                          <a href="https://nova-os.app/legal/privacy" target="_blank" rel="noopener noreferrer"
+                          <a href={`/${params.slug}/privacy`} target="_blank" rel="noopener noreferrer"
                             className="text-navy underline underline-offset-2 hover:opacity-70">
                             Privacy Policy
                           </a>.

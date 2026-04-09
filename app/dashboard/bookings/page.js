@@ -18,6 +18,8 @@ const EMPTY_FORM = {
   address: "", city: "", state: "CA", zip: "",
   preferredDate: "", preferredTime: "",
   notes: "", totalPrice: "", depositPaid: false, status: "confirmed",
+  selectedPackage: "", selectedServices: [], selectedAddons: [],
+  customLineItems: [], // [{ label, price }]
 };
 
 export default function BookingsPage() {
@@ -28,10 +30,27 @@ export default function BookingsPage() {
   const [form,        setForm]        = useState(EMPTY_FORM);
   const [saving,      setSaving]      = useState(false);
   const [createError, setCreateError] = useState("");
+  const [catalog,     setCatalog]     = useState(null);
+  const [newLineLabel, setNewLineLabel] = useState("");
+  const [newLinePrice, setNewLinePrice] = useState("");
 
   useEffect(() => {
     loadBookings();
+    loadCatalog();
   }, []);
+
+  async function loadCatalog() {
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) return;
+    // Get the tenant's slug first, then load catalog
+    const tenantRes = await fetch("/api/dashboard/tenant", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!tenantRes.ok) return;
+    const { tenant } = await tenantRes.json();
+    const catRes = await fetch(`/api/tenant-public/${tenant.slug}/catalog`);
+    if (catRes.ok) setCatalog(await catRes.json());
+  }
 
   async function loadBookings() {
     const token = await auth.currentUser?.getIdToken();
@@ -50,6 +69,59 @@ export default function BookingsPage() {
     return (e) => setForm((prev) => ({ ...prev, [f]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
   }
 
+  function toggleService(id) {
+    setForm((prev) => ({
+      ...prev,
+      selectedPackage: "",
+      selectedServices: prev.selectedServices.includes(id)
+        ? prev.selectedServices.filter((s) => s !== id)
+        : [...prev.selectedServices, id],
+    }));
+  }
+
+  function toggleAddon(id) {
+    setForm((prev) => ({
+      ...prev,
+      selectedAddons: prev.selectedAddons.includes(id)
+        ? prev.selectedAddons.filter((a) => a !== id)
+        : [...prev.selectedAddons, id],
+    }));
+  }
+
+  function addCustomLine() {
+    const label = newLineLabel.trim();
+    const price = Number(newLinePrice) || 0;
+    if (!label) return;
+    setForm((prev) => ({ ...prev, customLineItems: [...prev.customLineItems, { label, price }] }));
+    setNewLineLabel(""); setNewLinePrice("");
+  }
+
+  function removeCustomLine(i) {
+    setForm((prev) => ({ ...prev, customLineItems: prev.customLineItems.filter((_, idx) => idx !== i) }));
+  }
+
+  function calcAutoPrice() {
+    if (!catalog) return 0;
+    let base = 0;
+    if (form.selectedPackage) {
+      const pkg = catalog.packages?.find((p) => p.id === form.selectedPackage);
+      base = pkg?.price || 0;
+    } else {
+      base = form.selectedServices.reduce((sum, id) => {
+        const svc = catalog.services?.find((s) => s.id === id);
+        return sum + (svc?.price || 0);
+      }, 0);
+    }
+    const addons = form.selectedAddons.reduce((sum, id) => {
+      const a = catalog.addons?.find((x) => x.id === id);
+      return sum + (a?.price || 0);
+    }, 0);
+    const custom = form.customLineItems.reduce((sum, l) => sum + (l.price || 0), 0);
+    return base + addons + custom;
+  }
+
+  const autoPrice = calcAutoPrice();
+
   async function createBooking(e) {
     e.preventDefault();
     if (!form.clientName || !form.clientEmail || !form.address) {
@@ -60,13 +132,18 @@ export default function BookingsPage() {
     setCreateError("");
     try {
       const token = await auth.currentUser.getIdToken();
+      const finalPrice = form.totalPrice !== "" ? Number(form.totalPrice) : autoPrice;
       const res = await fetch("/api/dashboard/bookings/create", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           ...form,
-          totalPrice:  Number(form.totalPrice) || 0,
-          source:      "manual",
+          totalPrice:      finalPrice,
+          packageId:       form.selectedPackage || null,
+          serviceIds:      form.selectedServices,
+          addonIds:        form.selectedAddons,
+          customLineItems: form.customLineItems,
+          source:          "manual",
         }),
       });
       const data = await res.json();
@@ -241,14 +318,95 @@ export default function BookingsPage() {
                 </div>
               </div>
 
+              {/* Services */}
+              {catalog && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Services</p>
+
+                  {/* Packages */}
+                  {catalog.packages?.length > 0 && (
+                    <div className="mb-3">
+                      <label className="label-field">Package</label>
+                      <select value={form.selectedPackage}
+                        onChange={(e) => setForm((p) => ({ ...p, selectedPackage: e.target.value, selectedServices: [] }))}
+                        className="input-field w-full text-sm">
+                        <option value="">— None (build custom) —</option>
+                        {catalog.packages.map((pkg) => (
+                          <option key={pkg.id} value={pkg.id}>{pkg.name} — ${pkg.price?.toLocaleString()}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Individual services (when no package selected) */}
+                  {!form.selectedPackage && catalog.services?.length > 0 && (
+                    <div className="mb-3">
+                      <label className="label-field">Services</label>
+                      <div className="space-y-1 max-h-36 overflow-y-auto border border-gray-200 rounded-sm p-2">
+                        {catalog.services.map((svc) => (
+                          <label key={svc.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded text-sm">
+                            <input type="checkbox" checked={form.selectedServices.includes(svc.id)}
+                              onChange={() => toggleService(svc.id)} className="rounded" />
+                            <span className="flex-1 text-charcoal">{svc.name}</span>
+                            <span className="text-gray-400 text-xs">${svc.price?.toLocaleString()}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Add-ons */}
+                  {catalog.addons?.length > 0 && (
+                    <div className="mb-3">
+                      <label className="label-field">Add-ons</label>
+                      <div className="space-y-1 max-h-28 overflow-y-auto border border-gray-200 rounded-sm p-2">
+                        {catalog.addons.map((a) => (
+                          <label key={a.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded text-sm">
+                            <input type="checkbox" checked={form.selectedAddons.includes(a.id)}
+                              onChange={() => toggleAddon(a.id)} className="rounded" />
+                            <span className="flex-1 text-charcoal">{a.name}</span>
+                            <span className="text-gray-400 text-xs">${a.price?.toLocaleString()}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Custom line items */}
+                  <div>
+                    <label className="label-field">Custom Line Items</label>
+                    {form.customLineItems.map((line, i) => (
+                      <div key={i} className="flex items-center gap-2 mb-1">
+                        <span className="text-sm flex-1 text-charcoal">{line.label}</span>
+                        <span className="text-sm text-navy">${(line.price || 0).toLocaleString()}</span>
+                        <button onClick={() => removeCustomLine(i)} className="text-red-400 hover:text-red-600 text-lg">×</button>
+                      </div>
+                    ))}
+                    <div className="flex gap-2 mt-1">
+                      <input type="text" value={newLineLabel} onChange={(e) => setNewLineLabel(e.target.value)}
+                        placeholder="Description" className="input-field flex-1 text-sm" />
+                      <input type="number" value={newLinePrice} onChange={(e) => setNewLinePrice(e.target.value)}
+                        placeholder="$" className="input-field w-20 text-sm" min="0" />
+                      <button type="button" onClick={addCustomLine}
+                        className="btn-outline px-3 py-2 text-sm">+ Add</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Pricing & status */}
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Pricing & Status</p>
+                {autoPrice > 0 && (
+                  <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-1.5 mb-3">
+                    Auto-calculated total: <strong>${autoPrice.toLocaleString()}</strong> — leave price blank to use this
+                  </p>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="label-field">Total Price ($)</label>
+                    <label className="label-field">Total Price ($) <span className="font-normal text-gray-400">— override auto</span></label>
                     <input type="number" value={form.totalPrice} onChange={setField("totalPrice")}
-                      className="input-field w-full" placeholder="0" min="0" />
+                      className="input-field w-full" placeholder={autoPrice > 0 ? `Auto: $${autoPrice}` : "0"} min="0" />
                   </div>
                   <div>
                     <label className="label-field">Status</label>

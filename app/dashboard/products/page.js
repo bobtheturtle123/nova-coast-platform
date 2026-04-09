@@ -230,7 +230,7 @@ function ProductForm({ item, type, allServices, onSave, onDelete, onClose }) {
 }
 
 // ─── Product row ──────────────────────────────────────────────────────────────
-function ProductRow({ item, type, onEdit, onToggleActive }) {
+function ProductRow({ item, type, onEdit, onToggleActive, onDuplicate }) {
   const fromPrice = item.priceTiers
     ? `From $${Math.min(...Object.values(item.priceTiers).filter(v => v > 0), item.price || 0).toLocaleString()}`
     : `$${(item.price || 0).toLocaleString()}`;

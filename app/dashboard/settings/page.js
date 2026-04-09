@@ -55,6 +55,10 @@ export default function SettingsPage() {
   const [termsText,    setTermsText]    = useState("");
   const [savingTerms,  setSavingTerms]  = useState(false);
 
+  // Privacy policy state
+  const [privacyText,   setPrivacyText]   = useState("");
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
       const res = await fetch("/api/dashboard/tenant", {
@@ -87,7 +91,8 @@ export default function SettingsPage() {
           }
           if (bc.timeSlots?.length) setTimeSlots(bc.timeSlots);
           if (bc.customFields?.length) setCustomFields(bc.customFields);
-          if (bc.terms) setTermsText(bc.terms);
+          if (bc.terms)   setTermsText(bc.terms);
+          if (bc.privacy) setPrivacyText(bc.privacy);
           if (bc.availability) {
             const av = bc.availability;
             if (av.mode)             setAvailMode(av.mode);
@@ -207,6 +212,7 @@ export default function SettingsPage() {
       timeSlots,
       customFields,
       terms:        termsText,
+      privacy:      privacyText,
       availability: {
         mode:           availMode,
         businessHours:  { start: availStart, end: availEnd },
@@ -245,6 +251,21 @@ export default function SettingsPage() {
       else showMsg("Failed to save.", "error");
     } catch { showMsg("Something went wrong.", "error"); }
     setSavingBooking(false);
+  }
+
+  async function savePrivacy() {
+    setSavingPrivacy(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/tenants/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ bookingConfig: buildBookingConfig() }),
+      });
+      if (res.ok) showMsg("Privacy policy saved.");
+      else showMsg("Failed to save.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    setSavingPrivacy(false);
   }
 
   async function saveTerms() {
@@ -384,8 +405,9 @@ export default function SettingsPage() {
           <label className="label-field">Pricing mode</label>
           <div className="grid grid-cols-3 gap-2">
             {[
-              { value: "sqft",   label: "By Square Footage", desc: "Client enters sq ft at booking" },
-              { value: "photos", label: "By Photo Count",    desc: "Client enters # of photos needed" },
+              { value: "sqft",   label: "By Square Footage", desc: "Client enters sq ft — pricing adjusts by tier" },
+              { value: "photos", label: "By Photo Count",    desc: "Client enters # of photos — pricing adjusts by tier" },
+              { value: "flat",   label: "Flat Pricing",      desc: "No gate question — every item uses its base price" },
               { value: "custom", label: "Custom Value",      desc: "You define what the tiers mean" },
             ].map((m) => (
               <button key={m.value} type="button" onClick={() => setPricingMode(m.value)}
@@ -399,8 +421,13 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Tier table */}
-        <div className="space-y-2 mb-4">
+        {/* Tier table — hidden for flat pricing */}
+        {pricingMode === "flat" && (
+          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
+            Flat pricing is active. Clients will not be asked for square footage — every product uses its base price.
+          </p>
+        )}
+        <div className={`space-y-2 mb-4 ${pricingMode === "flat" ? "opacity-40 pointer-events-none" : ""}`}>
           <div className="grid grid-cols-12 text-xs text-gray-400 uppercase tracking-wide font-medium px-1 mb-1">
             <div className="col-span-3">Tier name</div>
             <div className="col-span-5">Label (shown to client)</div>
@@ -682,6 +709,32 @@ export default function SettingsPage() {
             <a href={`/${tenant.slug}/terms`} target="_blank" rel="noopener noreferrer"
               className="text-sm text-navy underline underline-offset-2 hover:opacity-70">
               Preview public terms page →
+            </a>
+          )}
+        </div>
+      </div>
+      {/* ─── Privacy Policy ──────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-sm border border-gray-200 p-6 mt-8">
+        <h2 className="font-display text-navy text-base mb-1">Privacy Policy</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Shown at <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">/{tenant?.slug}/privacy</code>.
+          Linked from the checkout terms checkbox. Leave blank to disable.
+        </p>
+        <textarea
+          value={privacyText}
+          onChange={(e) => setPrivacyText(e.target.value)}
+          rows={14}
+          placeholder="Paste your Privacy Policy here…"
+          className="input-field w-full text-sm font-mono leading-relaxed resize-y"
+        />
+        <div className="mt-4 flex items-center gap-4">
+          <button onClick={savePrivacy} disabled={savingPrivacy} className="btn-primary px-8 py-3">
+            {savingPrivacy ? "Saving…" : "Save Privacy Policy"}
+          </button>
+          {tenant?.slug && (
+            <a href={`/${tenant.slug}/privacy`} target="_blank" rel="noopener noreferrer"
+              className="text-sm text-navy underline underline-offset-2 hover:opacity-70">
+              Preview public privacy page →
             </a>
           )}
         </div>

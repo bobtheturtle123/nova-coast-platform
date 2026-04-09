@@ -59,7 +59,7 @@ export default function MarketingPage() {
       {/* SOCIAL PROOF BAR */}
       <div className="bg-cream border-y border-gray-100 py-6 px-6">
         <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-8 text-center text-sm text-gray-500">
-          {["Branded booking pages", "50% deposit auto-collection", "Secure media galleries", "Balance payment on delivery", "Stripe Connect payouts"].map((f) => (
+          {["Branded booking pages", "Deposits accepted at booking", "Secure media galleries", "Balance payment on delivery", "Stripe Connect payouts"].map((f) => (
             <span key={f} className="flex items-center gap-2">
               <span className="text-gold">✓</span> {f}
             </span>

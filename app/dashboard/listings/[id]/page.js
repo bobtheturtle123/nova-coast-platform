@@ -235,8 +235,14 @@ export default function ListingDetailPage() {
                 {gallery?.delivered && (
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-sm bg-green-500 text-white">Listing Delivered</span>
                 )}
-                {booking.balancePaid && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-sm bg-emerald-500 text-white">Paid</span>
+                {booking.paidInFull && (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-sm bg-emerald-500 text-white">Paid in Full</span>
+                )}
+                {!booking.paidInFull && booking.balancePaid && (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-sm bg-emerald-500 text-white">Fully Paid</span>
+                )}
+                {!booking.paidInFull && !booking.balancePaid && booking.depositPaid && (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-sm bg-blue-500 text-white">Deposit Paid</span>
                 )}
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${STATUS_COLORS[booking.status] || "bg-gray-100 text-gray-600"}`}>
                   {STATUS_OPTIONS.find((s) => s.value === booking.status)?.label || booking.status}
@@ -447,15 +453,22 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Gallery actions */}
-            {gallery && images.length > 0 && (
+            {gallery && (
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-gray-500">{images.length} photos · {videos.length} videos</p>
+                <p className="text-sm text-gray-500">
+                  {images.length} photos · {videos.length} videos
+                  {gallery.delivered && <span className="ml-2 text-xs text-green-600 font-medium">· Delivered</span>}
+                </p>
                 <div className="flex gap-2">
+                  <Link href={`/dashboard/galleries/${gallery.id}`}
+                    className="btn-outline text-xs px-3 py-1.5">
+                    Manage in Gallery Editor →
+                  </Link>
                   <button onClick={toggleUnlock} className="btn-outline text-xs px-3 py-1.5">
-                    {gallery.unlocked ? "Lock gallery" : "Unlock gallery"}
+                    {gallery.unlocked ? "Lock" : "Unlock"}
                   </button>
                   <button onClick={() => setShowDeliver(true)} className="btn-primary text-xs px-4 py-1.5">
-                    Deliver to Client
+                    Deliver →
                   </button>
                 </div>
               </div>
@@ -501,22 +514,39 @@ export default function ListingDetailPage() {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Total</span>
-                  <span className="font-semibold">${booking.totalPrice?.toLocaleString()}</span>
+                  <span className="font-semibold">${(booking.totalPrice || 0).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Deposit (50%)</span>
-                  <span className={booking.depositPaid ? "text-green-600 font-medium" : "text-gray-400"}>
-                    ${booking.depositAmount?.toLocaleString()}
-                    {booking.depositPaid ? " ✓ Paid" : " — Unpaid"}
-                  </span>
-                </div>
-                <div className="flex justify-between border-t border-gray-100 pt-3">
-                  <span className="text-gray-500">Balance</span>
-                  <span className={booking.balancePaid ? "text-green-600 font-medium" : "text-amber-600 font-medium"}>
-                    ${booking.remainingBalance?.toLocaleString()}
-                    {booking.balancePaid ? " ✓ Paid" : " — Due at delivery"}
-                  </span>
-                </div>
+
+                {booking.paidInFull ? (
+                  <div className="flex justify-between text-green-700 font-medium">
+                    <span>Paid in full</span>
+                    <span>${(booking.totalPrice || 0).toLocaleString()} ✓</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Deposit</span>
+                      <span className={booking.depositPaid ? "text-green-600 font-medium" : "text-gray-400"}>
+                        ${(booking.depositAmount || 0).toLocaleString()}
+                        {booking.depositPaid ? " ✓ Paid" : " — Unpaid"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-t border-gray-100 pt-3">
+                      <span className="text-gray-500">Balance due</span>
+                      <span className={booking.balancePaid ? "text-green-600 font-medium" : "text-amber-600 font-medium"}>
+                        ${(booking.remainingBalance || 0).toLocaleString()}
+                        {booking.balancePaid ? " ✓ Paid" : " — Due at delivery"}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {booking.tipAmount > 0 && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>Tip</span>
+                    <span className="text-green-600 font-medium">+${booking.tipAmount.toLocaleString()}</span>
+                  </div>
+                )}
               </div>
             </div>
 
