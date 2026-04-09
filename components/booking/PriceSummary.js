@@ -2,10 +2,12 @@
 
 import { useBookingStore } from "@/store/bookingStore";
 import { PACKAGES, SERVICES, ADDONS, formatPrice } from "@/lib/pricing";
+import { getSqftTier, getItemPrice } from "@/lib/catalogUtils";
 
 // catalog prop overrides the static defaults (used in multi-tenant [slug]/book pages)
 export default function PriceSummary({ showDeposit = false, catalog = null }) {
-  const { packageId, serviceIds, addonIds, pricing, travelFee } = useBookingStore();
+  const { packageId, serviceIds, addonIds, pricing, travelFee, squareFootage } = useBookingStore();
+  const tier = getSqftTier(squareFootage);
 
   const packages = catalog?.packages || PACKAGES;
   const services = catalog?.services || SERVICES;
@@ -29,14 +31,14 @@ export default function PriceSummary({ showDeposit = false, catalog = null }) {
         {selectedPkg && (
           <div className="flex justify-between">
             <span className="text-charcoal font-medium">{selectedPkg.name} Package</span>
-            <span>{formatPrice(selectedPkg.price)}</span>
+            <span>{formatPrice(getItemPrice(selectedPkg, tier))}</span>
           </div>
         )}
 
         {selectedSvcs.map((s) => (
           <div key={s.id} className="flex justify-between">
             <span className="text-charcoal">{s.name}</span>
-            <span>{formatPrice(s.price)}</span>
+            <span>{formatPrice(getItemPrice(s, tier))}</span>
           </div>
         ))}
 
@@ -46,7 +48,7 @@ export default function PriceSummary({ showDeposit = false, catalog = null }) {
             {selectedAddons.map((a) => (
               <div key={a.id} className="flex justify-between">
                 <span className="text-charcoal">{a.name}</span>
-                <span>{formatPrice(a.price)}</span>
+                <span>{formatPrice(getItemPrice(a, tier))}</span>
               </div>
             ))}
           </>

@@ -15,6 +15,8 @@ export default function TenantReviewPage() {
     squareFootage, propertyType, notes, travelFee, setTravelFee, setPricing, pricing,
   } = store;
 
+  const sqft = squareFootage;
+
   const fullAddress = `${address}, ${city}, ${state} ${zip}`;
 
   useEffect(() => {
@@ -33,7 +35,7 @@ export default function TenantReviewPage() {
           fetch(`/api/tenant-public/${params.slug}/catalog`)
             .then((r) => r.json())
             .then((catalog) => {
-              const p = calculateTenantPrice(packageId, serviceIds, addonIds, fee, catalog);
+              const p = calculateTenantPrice(packageId, serviceIds, addonIds, fee, catalog, sqft);
               setPricing(p);
             });
         })

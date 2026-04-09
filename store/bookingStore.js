@@ -70,6 +70,7 @@ export const useBookingStore = create(
             : [...state.addonIds, addonId],
         })),
 
+      setSquareFootage: (squareFootage) => set({ squareFootage }),
       setProperty: (fields) => set(fields),
       setPricing:  (pricing) => set({ pricing }),
       setTravelFee:(travelFee) => set({ travelFee }),

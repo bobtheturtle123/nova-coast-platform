@@ -2,18 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
-import { calculateTenantPrice } from "@/lib/catalogUtils";
+import { calculateTenantPrice, getItemPrice, getSqftTier } from "@/lib/catalogUtils";
 import StepProgress from "@/components/booking/StepProgress";
 import PriceSummary from "@/components/booking/PriceSummary";
 import clsx from "clsx";
 
 export default function TenantAddonsClient({ slug, addons = [], catalog }) {
   const router = useRouter();
-  const { packageId, serviceIds, addonIds, toggleAddon, setPricing, travelFee } =
+  const { packageId, serviceIds, addonIds, squareFootage, toggleAddon, setPricing, travelFee } =
     useBookingStore();
 
   function handleContinue() {
-    const pricing = calculateTenantPrice(packageId, serviceIds, addonIds, travelFee, catalog);
+    const pricing = calculateTenantPrice(packageId, serviceIds, addonIds, travelFee, catalog, squareFootage);
     setPricing(pricing);
     router.push(`/${slug}/book/property`);
   }
@@ -47,7 +47,7 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
                     </div>
                     <div className="flex items-center gap-4 flex-shrink-0">
                       <span className={clsx("font-display text-xl", selected ? "text-navy" : "text-charcoal")}>
-                        +${addon.price}
+                        +${getItemPrice(addon, getSqftTier(squareFootage)).toLocaleString()}
                       </span>
                       <div className={clsx("w-12 h-6 rounded-full transition-colors duration-200 relative flex-shrink-0",
                         selected ? "bg-navy" : "bg-gray-200")}>
