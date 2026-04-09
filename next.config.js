@@ -13,7 +13,9 @@ const nextConfig = {
     ],
   },
   // Required to use Firebase Admin in API routes
-  serverExternalPackages: ["firebase-admin"],
+  experimental: {
+    serverExternalPackages: ["firebase-admin"],
+  },
 };
 
 module.exports = nextConfig;
