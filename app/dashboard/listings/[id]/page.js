@@ -40,6 +40,12 @@ export default function ListingDetailPage() {
   const [emailNote,    setEmailNote]   = useState("");
   const [shootDate, setShootDate] = useState("");
 
+  // Property website state
+  const [propSite,      setPropSite]      = useState({});
+  const [savingPropSite, setSavingPropSite] = useState(false);
+  const [propSiteMsg,   setPropSiteMsg]   = useState({ text: "", type: "" });
+  const [tenantSlug,    setTenantSlug]    = useState("");
+
   useEffect(() => {
     load();
   }, [id]);
@@ -48,16 +54,23 @@ export default function ListingDetailPage() {
     const token = await auth.currentUser?.getIdToken(true);
     if (!token) return;
 
-    const [bRes, gRes] = await Promise.all([
+    const [bRes, gRes, tRes] = await Promise.all([
       fetch(`/api/dashboard/bookings/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
       fetch(`/api/dashboard/listings/${id}/gallery`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } }),
     ]);
+    if (tRes.ok) {
+      const { tenant } = await tRes.json();
+      if (tenant?.slug) setTenantSlug(tenant.slug);
+    }
 
     if (bRes.ok) {
       const { booking: b } = await bRes.json();
       setBooking(b);
       setShootDate(b.shootDate?.split?.("T")?.[0] || b.preferredDate?.split?.("T")?.[0] || "");
       setEmailSubject(`Your listing media is ready | ${b.fullAddress || b.address || ""}`);
+      if (b.propertyWebsite) setPropSite(b.propertyWebsite);
+      else setPropSite({ address: b.fullAddress || b.address || "" });
     }
     if (gRes.ok) {
       const { gallery: g } = await gRes.json();
@@ -192,6 +205,30 @@ export default function ListingDetailPage() {
     setGallery((g) => ({ ...g, unlocked: newVal }));
   }
 
+  async function savePropSite() {
+    setSavingPropSite(true);
+    setPropSiteMsg({ text: "", type: "" });
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/bookings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ propertyWebsite: propSite }),
+      });
+      if (res.ok) {
+        setBooking((b) => ({ ...b, propertyWebsite: propSite }));
+        setPropSiteMsg({ text: "Property website saved.", type: "success" });
+      } else {
+        setPropSiteMsg({ text: "Failed to save.", type: "error" });
+      }
+    } catch { setPropSiteMsg({ text: "Something went wrong.", type: "error" }); }
+    finally { setSavingPropSite(false); }
+  }
+
+  function setPropField(field, value) {
+    setPropSite((p) => ({ ...p, [field]: value }));
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-6 h-6 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
@@ -276,9 +313,10 @@ export default function ListingDetailPage() {
       <div className="bg-white border-b border-gray-200 px-6">
         <div className="flex gap-0">
           {[
-            { id: "overview", label: "Overview" },
-            { id: "media",    label: `Media${gallery?.media?.length ? ` (${gallery.media.length})` : ""}` },
-            { id: "orders",   label: "Orders" },
+            { id: "overview",  label: "Overview" },
+            { id: "media",     label: `Media${gallery?.media?.length ? ` (${gallery.media.length})` : ""}` },
+            { id: "orders",    label: "Orders" },
+            { id: "property",  label: "Property Site" },
           ].map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`px-4 py-3.5 text-sm font-medium border-b-2 transition-colors ${
@@ -465,7 +503,7 @@ export default function ListingDetailPage() {
                     Manage in Gallery Editor →
                   </Link>
                   <button onClick={toggleUnlock} className="btn-outline text-xs px-3 py-1.5">
-                    {gallery.unlocked ? "Lock" : "Unlock"}
+                    {gallery.unlocked ? "🔓 Unlocked" : "🔒 Locked"}
                   </button>
                   <button onClick={() => setShowDeliver(true)} className="btn-primary text-xs px-4 py-1.5">
                     Deliver →
@@ -558,6 +596,172 @@ export default function ListingDetailPage() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── PROPERTY SITE TAB ────────────────────────────────────────────── */}
+        {tab === "property" && (
+          <div className="max-w-2xl space-y-6">
+            {/* Publish status */}
+            <div className="flex items-center justify-between bg-white rounded-sm border border-gray-200 p-4">
+              <div>
+                <p className="text-sm font-semibold text-charcoal">
+                  {propSite.published ? "🟢 Website is live" : "⚫ Website is draft (not public)"}
+                </p>
+                {propSite.published && (
+                  <a
+                    href={`/${tenantSlug || ""}/property/${id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-navy underline underline-offset-2 hover:opacity-70"
+                  >
+                    View public website →
+                  </a>
+                )}
+              </div>
+              <button
+                onClick={() => setPropField("published", !propSite.published)}
+                className={`px-4 py-2 text-sm font-semibold rounded-sm transition-colors ${
+                  propSite.published
+                    ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    : "bg-green-500 text-white hover:bg-green-600"
+                }`}
+              >
+                {propSite.published ? "Unpublish" : "Publish"}
+              </button>
+            </div>
+
+            {propSiteMsg.text && (
+              <div className={`text-sm px-4 py-2.5 rounded-sm ${
+                propSiteMsg.type === "success"
+                  ? "bg-green-50 border border-green-200 text-green-700"
+                  : "bg-red-50 border border-red-200 text-red-700"
+              }`}>{propSiteMsg.text}</div>
+            )}
+
+            {/* Property details */}
+            <div className="bg-white rounded-sm border border-gray-200 p-6">
+              <h3 className="font-display text-navy text-base mb-5">Property Details</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="label-field">Address / Title</label>
+                  <input type="text" value={propSite.address || ""}
+                    onChange={(e) => setPropField("address", e.target.value)}
+                    className="input-field w-full" placeholder={booking?.fullAddress || booking?.address} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label-field">Listing Price</label>
+                    <input type="text" value={propSite.price || ""}
+                      onChange={(e) => setPropField("price", e.target.value)}
+                      className="input-field w-full" placeholder="e.g. $450,000" />
+                  </div>
+                  <div>
+                    <label className="label-field">Property Type</label>
+                    <input type="text" value={propSite.type || ""}
+                      onChange={(e) => setPropField("type", e.target.value)}
+                      className="input-field w-full" placeholder="e.g. Single Family" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="label-field">Beds</label>
+                    <input type="text" value={propSite.beds || ""}
+                      onChange={(e) => setPropField("beds", e.target.value)}
+                      className="input-field w-full" placeholder="4" />
+                  </div>
+                  <div>
+                    <label className="label-field">Baths</label>
+                    <input type="text" value={propSite.baths || ""}
+                      onChange={(e) => setPropField("baths", e.target.value)}
+                      className="input-field w-full" placeholder="2.5" />
+                  </div>
+                  <div>
+                    <label className="label-field">Sq Ft</label>
+                    <input type="text" value={propSite.sqft || ""}
+                      onChange={(e) => setPropField("sqft", e.target.value)}
+                      className="input-field w-full" placeholder="2,200" />
+                  </div>
+                </div>
+                <div>
+                  <label className="label-field">Year Built</label>
+                  <input type="text" value={propSite.yearBuilt || ""}
+                    onChange={(e) => setPropField("yearBuilt", e.target.value)}
+                    className="input-field w-48" placeholder="2005" />
+                </div>
+                <div>
+                  <label className="label-field">Description</label>
+                  <textarea
+                    value={propSite.description || ""}
+                    onChange={(e) => setPropField("description", e.target.value)}
+                    rows={5}
+                    placeholder="Describe the property — highlights, neighborhood, recent upgrades…"
+                    className="input-field w-full resize-y"
+                  />
+                </div>
+                <div>
+                  <label className="label-field">Features (one per line)</label>
+                  <textarea
+                    value={(propSite.features || []).join("\n")}
+                    onChange={(e) => setPropField("features", e.target.value.split("\n").filter((f) => f.trim()))}
+                    rows={4}
+                    placeholder={"Hardwood floors\nGranite countertops\nAttached 2-car garage"}
+                    className="input-field w-full resize-y text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Agent info */}
+            <div className="bg-white rounded-sm border border-gray-200 p-6">
+              <h3 className="font-display text-navy text-base mb-5">Listing Agent</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label-field">Agent Name</label>
+                    <input type="text" value={propSite.agentName || ""}
+                      onChange={(e) => setPropField("agentName", e.target.value)}
+                      className="input-field w-full" placeholder={booking?.clientName} />
+                  </div>
+                  <div>
+                    <label className="label-field">Brokerage</label>
+                    <input type="text" value={propSite.agentBrokerage || ""}
+                      onChange={(e) => setPropField("agentBrokerage", e.target.value)}
+                      className="input-field w-full" placeholder="RE/MAX" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label-field">Phone</label>
+                    <input type="tel" value={propSite.agentPhone || ""}
+                      onChange={(e) => setPropField("agentPhone", e.target.value)}
+                      className="input-field w-full" placeholder={booking?.clientPhone} />
+                  </div>
+                  <div>
+                    <label className="label-field">Email</label>
+                    <input type="email" value={propSite.agentEmail || ""}
+                      onChange={(e) => setPropField("agentEmail", e.target.value)}
+                      className="input-field w-full" placeholder={booking?.clientEmail} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <button onClick={savePropSite} disabled={savingPropSite} className="btn-primary px-8 py-3">
+                {savingPropSite ? "Saving…" : "Save Property Website"}
+              </button>
+              {propSite.published && (
+                <a
+                  href={`/${tenantSlug || ""}/property/${id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-navy underline underline-offset-2 hover:opacity-70"
+                >
+                  Preview website →
+                </a>
+              )}
+            </div>
           </div>
         )}
       </div>

@@ -9,7 +9,8 @@ const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
 
 // ─── Image thumbnail with loading/error ───────────────────────────────────────
 function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
-  onDragStart, onDragOver, onDrop, onDragEnd, index, onAssignCategory }) {
+  onDragStart, onDragOver, onDrop, onDragEnd, index, onAssignCategory,
+  selected, onSelect }) {
   const [loaded,  setLoaded]  = useState(false);
   const [errored, setErrored] = useState(false);
 
@@ -21,7 +22,9 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
       onDrop={onDrop}
       onDragEnd={onDragEnd}
       className={`aspect-square rounded-sm overflow-hidden bg-gray-100 relative group cursor-grab active:cursor-grabbing
-        ${isDragging ? "opacity-40 scale-95" : ""} transition-all duration-150`}
+        ${isDragging ? "opacity-40 scale-95" : ""}
+        ${selected ? "ring-2 ring-gold ring-offset-1" : ""}
+        transition-all duration-150`}
     >
       {!loaded && !errored && <div className="absolute inset-0 bg-gray-200 animate-pulse" />}
       {errored && (
@@ -35,6 +38,17 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
       <img src={src} alt={alt} onLoad={() => setLoaded(true)} onError={() => setErrored(true)}
         className={`w-full h-full object-cover transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
         crossOrigin="anonymous" />
+
+      {/* Selection checkbox */}
+      <div
+        className={`absolute top-1.5 left-1.5 z-10 transition-opacity ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+        onClick={(e) => { e.stopPropagation(); onSelect?.(); }}
+      >
+        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer
+          ${selected ? "bg-gold border-gold" : "bg-white/80 border-white/60 hover:border-gold"}`}>
+          {selected && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#0b2a55" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+        </div>
+      </div>
 
       {/* Hover overlay */}
       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-end justify-end gap-1 p-1.5">
@@ -52,13 +66,13 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
         )}
       </div>
 
-      {isFirst && (
-        <div className="absolute top-1.5 left-1.5">
+      {isFirst && !selected && (
+        <div className="absolute top-1.5 right-1.5">
           <span className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-navy text-white">Cover</span>
         </div>
       )}
       {category && (
-        <div className="absolute top-1.5 right-1.5">
+        <div className="absolute bottom-6 right-1.5">
           <span className="text-xs font-medium px-1.5 py-0.5 rounded-sm bg-black/60 text-white truncate max-w-[80px]">{category}</span>
         </div>
       )}
@@ -236,16 +250,36 @@ export default function GalleryDetailPage() {
   const [categories,    setCategories]    = useState({});
   const [savingCats,    setSavingCats]    = useState(false);
 
+  // Bulk selection state
+  const [selectedKeys,    setSelectedKeys]    = useState(new Set());
+  const [bulkCatTarget,   setBulkCatTarget]   = useState("");
+
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
-      const res = await fetch(`/api/dashboard/galleries/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const [galleryRes, tenantRes] = await Promise.all([
+        fetch(`/api/dashboard/galleries/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/tenant",           { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (galleryRes.ok) {
+        const data = await galleryRes.json();
         setGallery(data.gallery);
         setCategories(data.gallery.categories || {});
-        setEmailSubject(`Your listing media is ready — ${data.gallery.bookingAddress || ""}`);
+
+        // Pre-populate email from template if available, fall back to default subject
+        let defaultSubject = `Your listing media is ready — ${data.gallery.bookingAddress || ""}`;
+        let defaultNote = "";
+        if (tenantRes.ok) {
+          const tData = await tenantRes.json();
+          const tpl = tData.tenant?.emailTemplate;
+          if (tpl?.subject) {
+            defaultSubject = tpl.subject.replace("{{address}}", data.gallery.bookingAddress || "");
+          }
+          if (tpl?.body) {
+            defaultNote = tpl.body.replace("{{clientName}}", data.gallery.clientName || "");
+          }
+        }
+        setEmailSubject(defaultSubject);
+        if (defaultNote) setEmailNote(defaultNote);
         if (data.gallery.clientEmail) setEmailTo([data.gallery.clientEmail]);
       }
       setLoading(false);
@@ -259,17 +293,21 @@ export default function GalleryDetailPage() {
     const total = files.length; let done = 0;
     for (const file of files) {
       try {
-        const { uploadUrl, publicUrl, key } = await fetch("/api/gallery/upload-url", {
+        const urlRes = await fetch("/api/gallery/upload-url", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ fileName: file.name, fileType: file.type, galleryId: id }),
-        }).then((r) => r.json());
-        await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
-        await fetch(`/api/dashboard/galleries/${id}/media`, {
+        });
+        if (!urlRes.ok) { setMsg({ text: `Failed to get upload URL for ${file.name}.`, type: "error" }); continue; }
+        const { uploadUrl, publicUrl, key } = await urlRes.json();
+        const r2Res = await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+        if (!r2Res.ok) { setMsg({ text: `Failed to upload ${file.name} to storage.`, type: "error" }); continue; }
+        const saveRes = await fetch(`/api/dashboard/galleries/${id}/media`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ publicUrl, key, fileName: file.name, fileType: file.type }),
         });
+        if (!saveRes.ok) { setMsg({ text: `Failed to save ${file.name} to gallery. Check auth.`, type: "error" }); continue; }
         done++;
         setProgress(Math.round((done / total) * 100));
         setGallery((g) => ({ ...g, media: [...(g.media || []), { url: publicUrl, key, fileName: file.name, fileType: file.type }] }));
@@ -330,6 +368,39 @@ export default function GalleryDetailPage() {
       }
       return next;
     });
+  }
+
+  // ─── Bulk selection helpers ───────────────────────────────────────────────
+  function toggleSelect(key) {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    setSelectedKeys(new Set(displayImages.map((m) => m.key).filter(Boolean)));
+  }
+
+  function clearSelection() {
+    setSelectedKeys(new Set());
+    setBulkCatTarget("");
+  }
+
+  function applyBulkCategory() {
+    if (!bulkCatTarget) return;
+    setCategories((prev) => {
+      const next = {};
+      for (const [cat, keys] of Object.entries(prev)) {
+        next[cat] = keys.filter((k) => !selectedKeys.has(k));
+      }
+      next[bulkCatTarget] = [...(next[bulkCatTarget] || []), ...Array.from(selectedKeys)];
+      return next;
+    });
+    clearSelection();
+    setMsg({ text: `Assigned ${selectedKeys.size} photos to "${bulkCatTarget}".`, type: "success" });
   }
 
   function addCategory() {
@@ -438,7 +509,7 @@ export default function GalleryDetailPage() {
               📁 Categories ({catNames.length})
             </button>
             <button onClick={toggleUnlock} className="btn-outline text-xs px-3 py-1.5">
-              {gallery.unlocked ? "Lock" : "Unlock"}
+              {gallery.unlocked ? "🔓 Unlocked" : "🔒 Locked"}
             </button>
             <button onClick={() => setShowDeliver(true)} className="btn-primary text-sm px-5 py-2">
               Deliver to Client
@@ -507,24 +578,60 @@ export default function GalleryDetailPage() {
             </div>
 
             {activeTab !== "videos" && (
-              <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
-                {displayImages.map((m, i) => (
-                  <MediaThumb
-                    key={m.key || i}
-                    src={m.url} alt={m.fileName || `Photo ${i+1}`}
-                    isFirst={i === 0 && activeTab === "all"}
-                    index={i}
-                    isDragging={dragIdx === i}
-                    category={getMediaCategory(m.key)}
-                    categories={catNames}
-                    onDragStart={(e) => handleDragStart(e, i)}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, i)}
-                    onDragEnd={handleDragEnd}
-                    onAssignCategory={(cat) => assignCategory(m.key, cat)}
-                  />
-                ))}
-              </div>
+              <>
+                {/* Bulk selection toolbar */}
+                {selectedKeys.size > 0 && (
+                  <div className="flex items-center gap-3 bg-navy/5 border border-navy/20 rounded-sm px-3 py-2 mb-3">
+                    <span className="text-sm font-semibold text-navy">{selectedKeys.size} selected</span>
+                    {catNames.length > 0 && (
+                      <>
+                        <select
+                          value={bulkCatTarget}
+                          onChange={(e) => setBulkCatTarget(e.target.value)}
+                          className="text-xs input-field py-1 flex-1 max-w-xs"
+                        >
+                          <option value="">Assign to category…</option>
+                          {catNames.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <button
+                          onClick={applyBulkCategory}
+                          disabled={!bulkCatTarget}
+                          className="btn-primary text-xs px-3 py-1.5 disabled:opacity-40"
+                        >
+                          Apply
+                        </button>
+                      </>
+                    )}
+                    <button onClick={selectAll} className="text-xs text-navy border border-navy/20 px-2 py-1 rounded hover:bg-navy/5">
+                      Select all
+                    </button>
+                    <button onClick={clearSelection} className="text-xs text-gray-500 hover:text-red-500 ml-auto">
+                      Clear
+                    </button>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
+                  {displayImages.map((m, i) => (
+                    <MediaThumb
+                      key={m.key || i}
+                      src={m.url} alt={m.fileName || `Photo ${i+1}`}
+                      isFirst={i === 0 && activeTab === "all"}
+                      index={i}
+                      isDragging={dragIdx === i}
+                      category={getMediaCategory(m.key)}
+                      categories={catNames}
+                      onDragStart={(e) => handleDragStart(e, i)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, i)}
+                      onDragEnd={handleDragEnd}
+                      onAssignCategory={(cat) => assignCategory(m.key, cat)}
+                      selected={selectedKeys.has(m.key)}
+                      onSelect={() => m.key && toggleSelect(m.key)}
+                    />
+                  ))}
+                </div>
+              </>
             )}
 
             {activeTab === "videos" && (

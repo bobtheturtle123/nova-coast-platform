@@ -106,8 +106,9 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           </span>
           {unlocked && images.length > 0 && (
             <a
-              href={downloadUrl(images[0].key, "web", "all")}
+              href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web`}
               className="flex items-center gap-2 px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider text-white border border-white/60 hover:bg-white/10 transition-colors"
+              download
             >
               ↓ Download All
             </a>
@@ -175,21 +176,38 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             {images.length === 0 ? (
               <div className="text-center py-16 text-gray-400">
                 <p className="text-4xl mb-3">📷</p>
-                <p>Media is being processed. Check back soon.</p>
+                <p>Your gallery is being prepared. Check back soon.</p>
               </div>
             ) : (
               <>
-                {/* Download quality legend */}
+                {/* Download all buttons */}
                 {unlocked && (
-                  <div className="flex items-center gap-4 mb-4 text-xs text-gray-500">
-                    <span className="flex items-center gap-1.5">
-                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-navy" />
-                      Print Quality — full resolution original
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-gold" />
-                      Web / MLS — 2048px, optimized for MLS upload
-                    </span>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5 p-4 bg-white rounded-sm border border-gray-200">
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-800">Download All Photos</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        <span className="mr-3">● Print — full resolution originals</span>
+                        <span>● Web / MLS — 2048px, optimized for MLS upload</span>
+                      </p>
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <a
+                        href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=print`}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider text-white"
+                        style={{ background: "#0b2a55" }}
+                        download
+                      >
+                        ↓ Print Quality
+                      </a>
+                      <a
+                        href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web`}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider text-white"
+                        style={{ background: "#c4974a" }}
+                        download
+                      >
+                        ↓ Web / MLS
+                      </a>
+                    </div>
                   </div>
                 )}
 

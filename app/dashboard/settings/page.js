@@ -59,6 +59,11 @@ export default function SettingsPage() {
   const [privacyText,   setPrivacyText]   = useState("");
   const [savingPrivacy, setSavingPrivacy] = useState(false);
 
+  // Email template state
+  const [emailTplSubject, setEmailTplSubject] = useState("Your listing media is ready — {{address}}");
+  const [emailTplBody,    setEmailTplBody]    = useState("");
+  const [savingTemplate,  setSavingTemplate]  = useState(false);
+
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
       const res = await fetch("/api/dashboard/tenant", {
@@ -102,6 +107,10 @@ export default function SettingsPage() {
             if (av.defaultDuration)  setAvailDuration(av.defaultDuration);
             if (av.bufferMinutes)    setAvailBuffer(av.bufferMinutes);
           }
+        }
+        if (data.tenant.emailTemplate) {
+          if (data.tenant.emailTemplate.subject) setEmailTplSubject(data.tenant.emailTemplate.subject);
+          if (data.tenant.emailTemplate.body)    setEmailTplBody(data.tenant.emailTemplate.body);
         }
       }
       setLoading(false);
@@ -281,6 +290,21 @@ export default function SettingsPage() {
       else showMsg("Failed to save.", "error");
     } catch { showMsg("Something went wrong.", "error"); }
     setSavingTerms(false);
+  }
+
+  async function saveEmailTemplate() {
+    setSavingTemplate(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/tenants/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ emailTemplate: { subject: emailTplSubject, body: emailTplBody } }),
+      });
+      if (res.ok) showMsg("Email template saved.");
+      else showMsg("Failed to save.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    setSavingTemplate(false);
   }
 
   if (loading) return (
@@ -737,6 +761,53 @@ export default function SettingsPage() {
               Preview public privacy page →
             </a>
           )}
+        </div>
+      </div>
+
+      {/* ─── Email Template ──────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-sm border border-gray-200 p-6 mt-8">
+        <h2 className="font-display text-navy text-base mb-1">Gallery Delivery Email Template</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Default email content used when delivering a gallery to a client. You can override
+          per-delivery in the gallery editor. Use <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{address}}"}</code> and{" "}
+          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{clientName}}"}</code> as placeholders.
+        </p>
+
+        <div className="bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-5 text-xs text-amber-700">
+          <strong>Email setup required:</strong> Emails are sent via Resend. You must set{" "}
+          <code className="font-mono">RESEND_API_KEY</code> in your Vercel environment variables{" "}
+          and verify your domain (<code className="font-mono">nova-os.app</code>) in the Resend dashboard.
+          Without this, no emails will be delivered.
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="label-field">Default Subject Line</label>
+            <input
+              type="text"
+              value={emailTplSubject}
+              onChange={(e) => setEmailTplSubject(e.target.value)}
+              className="input-field w-full"
+              placeholder="Your listing media is ready — {{address}}"
+            />
+          </div>
+          <div>
+            <label className="label-field">Default Message Body</label>
+            <textarea
+              value={emailTplBody}
+              onChange={(e) => setEmailTplBody(e.target.value)}
+              rows={8}
+              placeholder={"Hi {{clientName}},\n\nGreat working on this shoot! Your media is ready to view and download.\n\nLet me know if you need any adjustments.\n\nBest,\n" + (tenant?.businessName || "Your Photographer")}
+              className="input-field w-full text-sm leading-relaxed resize-y"
+            />
+            <p className="text-xs text-gray-400 mt-1">Plain text. This appears before the gallery button in the email.</p>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <button onClick={saveEmailTemplate} disabled={savingTemplate} className="btn-primary px-8 py-3">
+            {savingTemplate ? "Saving…" : "Save Email Template"}
+          </button>
         </div>
       </div>
     </div>
