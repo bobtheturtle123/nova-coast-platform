@@ -28,7 +28,7 @@ export async function PATCH(req, { params }) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const allowed = ["unlocked"];
+  const allowed = ["unlocked", "media"]; // "media" allows saving reordered array
   const update = {};
   for (const k of allowed) {
     if (body[k] !== undefined) update[k] = body[k];

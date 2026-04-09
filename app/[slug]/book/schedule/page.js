@@ -11,7 +11,6 @@ const MONTHS  = ["January","February","March","April","May","June","July","Augus
 const TIME_SLOTS = [
   { value: "morning",   label: "Morning",   desc: "8 am – 12 pm" },
   { value: "afternoon", label: "Afternoon", desc: "12 pm – 5 pm" },
-  { value: "evening",   label: "Evening",   desc: "5 pm – 8 pm",  note: "Ideal for twilight shoots" },
   { value: "flexible",  label: "Flexible",  desc: "Any time works" },
 ];
 

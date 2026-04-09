@@ -17,7 +17,7 @@ export async function POST(req, { params }) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const { subject, note } = body;
+  const { subject, note, to, cc } = body;
 
   const galleryRef = adminDb
     .collection("tenants").doc(ctx.tenantId)
@@ -36,7 +36,7 @@ export async function POST(req, { params }) {
   const booking = bookingDoc.data();
   const tenant  = await getTenantById(ctx.tenantId);
 
-  await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken, tenant, subject, note });
+  await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken, tenant, subject, note, to, cc });
   await galleryRef.update({ delivered: true, deliveredAt: new Date() });
   return Response.json({ ok: true });
 }

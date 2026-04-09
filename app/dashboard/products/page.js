@@ -1,0 +1,457 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { auth } from "@/lib/firebase";
+
+const SQFT_TIERS = ["Tiny", "Small", "Medium", "Large", "XL", "XXL"];
+const TIER_LABELS = {
+  Tiny:   "0–800 sqft",
+  Small:  "801–2,500",
+  Medium: "2,501–4,000",
+  Large:  "4,001–6,000",
+  XL:     "6,001–8,500",
+  XXL:    "8,500+",
+};
+
+const TYPE_META = {
+  packages: { label: "Packages",   singular: "Package",     color: "bg-blue-50 text-blue-700 border-blue-200" },
+  services: { label: "Services",   singular: "Service",     color: "bg-purple-50 text-purple-700 border-purple-200" },
+  addons:   { label: "Add-ons",    singular: "Add-on",      color: "bg-amber-50 text-amber-700 border-amber-200" },
+};
+
+// ─── Product edit form ────────────────────────────────────────────────────────
+function ProductForm({ item, type, allServices, onSave, onDelete, onClose }) {
+  const [form,    setForm]    = useState(() => ({
+    name:         item?.name         || "",
+    description:  item?.description  || "",
+    thumbnailUrl: item?.thumbnailUrl || "",
+    price:        item?.price        || 0,
+    tagline:      item?.tagline      || "",
+    deliverables: item?.deliverables || "",
+    active:       item?.active !== false,
+    featured:     item?.featured     || false,
+    tiered:       !!(item?.priceTiers),
+    priceTiers:   item?.priceTiers || { Tiny: 0, Small: 0, Medium: 0, Large: 0, XL: 0, XXL: 0 },
+    includes:     item?.includes || [],
+  }));
+  const [saving,  setSaving]  = useState(false);
+  const [deleting,setDeleting]= useState(false);
+
+  function field(key) {
+    return (e) => setForm((f) => ({ ...f, [key]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
+  }
+
+  function tierField(tier) {
+    return (e) => setForm((f) => ({
+      ...f,
+      priceTiers: { ...f.priceTiers, [tier]: Number(e.target.value) || 0 },
+    }));
+  }
+
+  function toggleService(svcId) {
+    setForm((f) => ({
+      ...f,
+      includes: f.includes.includes(svcId)
+        ? f.includes.filter((id) => id !== svcId)
+        : [...f.includes, svcId],
+    }));
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    const payload = {
+      name:        form.name,
+      description: form.description,
+      thumbnailUrl: form.thumbnailUrl,
+      price:       Number(form.price),
+      active:      form.active,
+      ...(form.tiered ? { priceTiers: form.priceTiers } : {}),
+      ...(type === "packages" ? { tagline: form.tagline, deliverables: form.deliverables, featured: form.featured, includes: form.includes } : {}),
+    };
+    await onSave(payload);
+    setSaving(false);
+  }
+
+  async function handleDelete() {
+    if (!window.confirm("Delete this product? This cannot be undone.")) return;
+    setDeleting(true);
+    await onDelete();
+    setDeleting(false);
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
+          <h2 className="font-display text-navy text-lg">
+            {item ? `Edit ${TYPE_META[type].singular}` : `New ${TYPE_META[type].singular}`}
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Preview */}
+          <div className="flex gap-4 p-4 bg-gray-50 rounded-sm border border-gray-200">
+            <div className="w-20 h-20 rounded-sm bg-gray-200 overflow-hidden flex-shrink-0">
+              {form.thumbnailUrl
+                ? <img src={form.thumbnailUrl} alt="" className="w-full h-full object-cover" crossOrigin="anonymous" />
+                : <div className="w-full h-full flex items-center justify-center text-2xl opacity-30">🏠</div>
+              }
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-navy truncate">{form.name || "Product Name"}</p>
+              {form.tagline && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{form.tagline}</p>}
+              {!form.tagline && form.description && (
+                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{form.description}</p>
+              )}
+              <p className="text-sm font-semibold text-navy mt-1">
+                {form.tiered ? `From $${Math.min(...Object.values(form.priceTiers).filter(v => v > 0), form.price || 0).toLocaleString()}` : `$${Number(form.price).toLocaleString()}`}
+              </p>
+            </div>
+          </div>
+
+          {/* Core fields */}
+          <div>
+            <label className="label-field">Title</label>
+            <input type="text" value={form.name} onChange={field("name")} className="input-field w-full" placeholder="Product name" />
+          </div>
+
+          <div>
+            <label className="label-field">Description</label>
+            <textarea value={form.description} onChange={field("description")} rows={3}
+              className="input-field w-full resize-none" placeholder="Describe what this includes…" />
+          </div>
+
+          <div>
+            <label className="label-field">Thumbnail Image URL</label>
+            <input type="url" value={form.thumbnailUrl} onChange={field("thumbnailUrl")}
+              className="input-field w-full" placeholder="https://…" />
+            <p className="text-xs text-gray-400 mt-1">Paste a URL (use your existing listing photos or upload to R2)</p>
+          </div>
+
+          {/* Package-specific: tagline, deliverables, featured */}
+          {type === "packages" && (
+            <>
+              <div>
+                <label className="label-field">Tagline</label>
+                <input type="text" value={form.tagline} onChange={field("tagline")}
+                  className="input-field w-full" placeholder="One-line selling point" />
+              </div>
+              <div>
+                <label className="label-field">Deliverables</label>
+                <input type="text" value={form.deliverables} onChange={field("deliverables")}
+                  className="input-field w-full" placeholder="Photos within 24 hrs · Video within 72 hrs" />
+              </div>
+              <div>
+                <label className="label-field">Included Services</label>
+                <div className="border border-gray-200 rounded-sm divide-y divide-gray-100">
+                  {allServices.map((svc) => (
+                    <label key={svc.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
+                      <input type="checkbox" checked={form.includes.includes(svc.id)}
+                        onChange={() => toggleService(svc.id)} className="rounded" />
+                      <span className="text-sm text-charcoal">{svc.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <input type="checkbox" id="featured" checked={form.featured} onChange={field("featured")} className="rounded" />
+                <label htmlFor="featured" className="text-sm font-medium text-charcoal cursor-pointer">
+                  Mark as featured / Most Popular
+                </label>
+              </div>
+            </>
+          )}
+
+          {/* Pricing */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="label-field mb-0">Pricing</label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <span className="text-xs text-gray-500">Sq. ft. tier pricing</span>
+                <div
+                  onClick={() => setForm((f) => ({ ...f, tiered: !f.tiered }))}
+                  className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${form.tiered ? "bg-navy" : "bg-gray-300"}`}
+                >
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.tiered ? "translate-x-4" : "translate-x-0.5"}`} />
+                </div>
+              </label>
+            </div>
+
+            {!form.tiered ? (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400">$</span>
+                <input type="number" value={form.price} onChange={field("price")} min="0" step="1"
+                  className="input-field w-40" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {SQFT_TIERS.map((tier) => (
+                  <div key={tier}>
+                    <label className="block text-xs text-gray-500 mb-1">{tier} <span className="text-gray-400">({TIER_LABELS[tier]})</span></label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-400 text-sm">$</span>
+                      <input type="number" value={form.priceTiers[tier] || ""} onChange={tierField(tier)}
+                        min="0" step="1" className="input-field py-1.5 text-sm w-full" placeholder="0" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Active toggle */}
+          <div className="flex items-center gap-3 pt-1">
+            <input type="checkbox" id="active" checked={form.active} onChange={field("active")} className="rounded" />
+            <label htmlFor="active" className="text-sm text-charcoal cursor-pointer">
+              Active — show on booking page
+            </label>
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between sticky bottom-0 bg-white">
+          {item ? (
+            <button onClick={handleDelete} disabled={deleting}
+              className="text-sm text-red-500 hover:text-red-700 disabled:opacity-50">
+              {deleting ? "Deleting…" : "Delete product"}
+            </button>
+          ) : <div />}
+          <div className="flex gap-3">
+            <button onClick={onClose} className="btn-outline px-4 py-2 text-sm">Cancel</button>
+            <button onClick={handleSave} disabled={saving || !form.name.trim()}
+              className="btn-primary px-6 py-2 text-sm">
+              {saving ? "Saving…" : "Save →"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Product row ──────────────────────────────────────────────────────────────
+function ProductRow({ item, type, onEdit, onToggleActive }) {
+  const fromPrice = item.priceTiers
+    ? `From $${Math.min(...Object.values(item.priceTiers).filter(v => v > 0), item.price || 0).toLocaleString()}`
+    : `$${(item.price || 0).toLocaleString()}`;
+
+  return (
+    <div className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors">
+      {/* Thumb */}
+      <div className="w-12 h-12 rounded-sm bg-gray-100 overflow-hidden flex-shrink-0">
+        {item.thumbnailUrl
+          ? <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover" crossOrigin="anonymous" />
+          : <div className="w-full h-full flex items-center justify-center text-lg opacity-20">🏠</div>
+        }
+      </div>
+
+      {/* Name */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-charcoal truncate">{item.name}</p>
+          {type === "packages" && item.featured && (
+            <span className="text-xs px-1.5 py-0.5 bg-gold/20 text-gold-dark rounded-sm font-medium flex-shrink-0">
+              Featured
+            </span>
+          )}
+        </div>
+        {item.description && (
+          <p className="text-xs text-gray-400 truncate mt-0.5">{item.description}</p>
+        )}
+      </div>
+
+      {/* Price */}
+      <p className="text-sm font-semibold text-navy flex-shrink-0 w-28 text-right">{fromPrice}</p>
+
+      {/* Active toggle */}
+      <div
+        onClick={() => onToggleActive(item)}
+        className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0 ${item.active !== false ? "bg-navy" : "bg-gray-300"}`}
+      >
+        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${item.active !== false ? "translate-x-4" : "translate-x-0.5"}`} />
+      </div>
+
+      {/* Edit */}
+      <button onClick={() => onEdit(item)}
+        className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded-sm hover:bg-navy/5 flex-shrink-0">
+        Edit
+      </button>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+export default function ProductsPage() {
+  const [activeType, setActiveType] = useState("packages");
+  const [items,      setItems]      = useState({ packages: [], services: [], addons: [] });
+  const [loading,    setLoading]    = useState(true);
+  const [editing,    setEditing]    = useState(null);    // null | { item, type } — item=null means new
+  const [msg,        setMsg]        = useState("");
+
+  const getToken = () => auth.currentUser?.getIdToken();
+
+  useEffect(() => {
+    async function load() {
+      const token = await getToken();
+      const [pkgRes, svcRes, adnRes] = await Promise.all([
+        fetch("/api/dashboard/products?type=packages", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/products?type=services", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/products?type=addons",   { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const [pkgData, svcData, adnData] = await Promise.all([pkgRes.json(), svcRes.json(), adnRes.json()]);
+      setItems({
+        packages: pkgData.items || [],
+        services: svcData.items || [],
+        addons:   adnData.items || [],
+      });
+      setLoading(false);
+    }
+    auth.currentUser?.getIdToken().then(() => load());
+  }, []);
+
+  async function saveItem(payload) {
+    const token = await getToken();
+    const { item, type } = editing;
+
+    if (item) {
+      // update
+      await fetch(`/api/dashboard/products/${item.id}?type=${type}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      setItems((prev) => ({
+        ...prev,
+        [type]: prev[type].map((i) => (i.id === item.id ? { ...i, ...payload, id: item.id } : i)),
+      }));
+    } else {
+      // create
+      const res  = await fetch(`/api/dashboard/products?type=${type}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      setItems((prev) => ({ ...prev, [type]: [...prev[type], data.item] }));
+    }
+
+    setEditing(null);
+    setMsg("Saved successfully.");
+    setTimeout(() => setMsg(""), 3000);
+  }
+
+  async function deleteItem() {
+    const token = await getToken();
+    const { item, type } = editing;
+    await fetch(`/api/dashboard/products/${item.id}?type=${type}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setItems((prev) => ({ ...prev, [type]: prev[type].filter((i) => i.id !== item.id) }));
+    setEditing(null);
+    setMsg("Product deleted.");
+    setTimeout(() => setMsg(""), 3000);
+  }
+
+  async function toggleActive(item, type) {
+    const token = await getToken();
+    const newActive = item.active === false ? true : false;
+    await fetch(`/api/dashboard/products/${item.id}?type=${type}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ ...item, active: newActive }),
+    });
+    setItems((prev) => ({
+      ...prev,
+      [type]: prev[type].map((i) => (i.id === item.id ? { ...i, active: newActive } : i)),
+    }));
+  }
+
+  if (loading) return (
+    <div className="p-8 flex justify-center h-64 items-center">
+      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+    </div>
+  );
+
+  const current = items[activeType] || [];
+
+  return (
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="font-display text-2xl text-navy">Products</h1>
+          <p className="text-gray-400 text-sm mt-0.5">Customize the services that appear on your booking page</p>
+        </div>
+        <button
+          onClick={() => setEditing({ item: null, type: activeType })}
+          className="btn-primary text-sm px-5 py-2 flex items-center gap-2"
+        >
+          <span className="text-lg leading-none">+</span>
+          New {TYPE_META[activeType].singular}
+        </button>
+      </div>
+
+      {msg && (
+        <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-2 rounded-sm mb-4">
+          {msg}
+        </div>
+      )}
+
+      {/* Type tabs */}
+      <div className="flex gap-1 mb-6 border-b border-gray-200">
+        {Object.entries(TYPE_META).map(([type, meta]) => (
+          <button key={type} onClick={() => setActiveType(type)}
+            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeType === type ? "border-navy text-navy" : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}>
+            {meta.label}
+            <span className="ml-1.5 text-xs text-gray-400">({items[type].length})</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Product list */}
+      <div className="bg-white border border-gray-200 rounded-sm divide-y divide-gray-50">
+        {/* Header */}
+        <div className="grid grid-cols-12 px-4 py-2 text-xs text-gray-400 uppercase tracking-wide font-medium">
+          <div className="col-span-1" />
+          <div className="col-span-5">Product</div>
+          <div className="col-span-2 text-right">Price</div>
+          <div className="col-span-2 text-center">Active</div>
+          <div className="col-span-2 text-right">Actions</div>
+        </div>
+
+        {current.length === 0 ? (
+          <div className="p-12 text-center text-gray-400">
+            <p className="text-3xl mb-2">📦</p>
+            <p className="font-medium text-gray-500">No {TYPE_META[activeType].label.toLowerCase()} yet</p>
+            <p className="text-sm mt-1">Click "New {TYPE_META[activeType].singular}" to add one.</p>
+          </div>
+        ) : (
+          current.map((item) => (
+            <ProductRow key={item.id} item={item} type={activeType}
+              onEdit={(i) => setEditing({ item: i, type: activeType })}
+              onToggleActive={(i) => toggleActive(i, activeType)}
+            />
+          ))
+        )}
+      </div>
+
+      <p className="text-xs text-gray-400 mt-4">
+        Changes take effect immediately on your booking page. Active products are visible to clients.
+      </p>
+
+      {/* Edit / create modal */}
+      {editing && (
+        <ProductForm
+          item={editing.item}
+          type={editing.type}
+          allServices={items.services}
+          onSave={saveItem}
+          onDelete={deleteItem}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </div>
+  );
+}
