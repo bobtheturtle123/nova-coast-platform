@@ -9,7 +9,6 @@
     font-family: "DM Sans", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: "kern" 1, "liga" 1;
     letter-spacing: -0.01em;
   }
 
@@ -33,33 +32,30 @@
     @apply inline-flex items-center justify-center gap-2
            bg-navy text-white font-body font-medium
            px-7 py-3 rounded-sm text-sm tracking-wide
-           hover:bg-navy-light active:scale-[0.99]
-           transition-all duration-150
-           disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none;
+           hover:bg-navy-light transition-all duration-150
+           disabled:opacity-40 disabled:cursor-not-allowed;
   }
 
   .btn-outline {
     @apply inline-flex items-center justify-center gap-2
-           border border-navy/30 text-navy bg-transparent font-body font-medium
+           border border-navy text-navy bg-transparent font-body font-medium
            px-7 py-3 rounded-sm text-sm tracking-wide
-           hover:border-navy hover:bg-navy/4
-           active:scale-[0.99] transition-all duration-150;
+           hover:bg-navy hover:text-white transition-all duration-150;
   }
 
   .btn-gold {
     @apply inline-flex items-center justify-center gap-2
            bg-gold text-navy font-body font-semibold
            px-7 py-3 rounded-sm text-sm tracking-wide
-           hover:bg-gold-dark active:scale-[0.99]
-           transition-all duration-150
-           disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none;
+           hover:bg-gold-dark transition-all duration-150
+           disabled:opacity-40 disabled:cursor-not-allowed;
   }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2
            text-gray-500 hover:text-navy font-body font-medium
            px-4 py-2 rounded-sm text-sm
-           hover:bg-navy/5 transition-all duration-150;
+           hover:bg-gray-100 transition-all duration-150;
   }
 
   /* ── Inputs ───────────────────────────────────────────────────────────── */
@@ -67,7 +63,7 @@
     @apply w-full border border-gray-200 bg-white
            px-4 py-2.5 rounded-sm
            font-body text-sm text-charcoal placeholder-gray-300
-           focus:outline-none focus:border-navy/50 focus:ring-0
+           focus:outline-none focus:border-navy
            transition-colors duration-150;
   }
 
@@ -90,7 +86,7 @@
   }
 
   .section-label {
-    @apply text-xs font-body font-semibold tracking-[0.18em] uppercase text-gold;
+    @apply text-xs font-body font-semibold tracking-widest uppercase text-gold;
   }
 
   .price-display {

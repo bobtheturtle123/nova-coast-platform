@@ -3,6 +3,64 @@
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 
+const DEFAULT_TERMS = `TERMS OF SERVICE — REAL ESTATE MEDIA SERVICES
+
+Last updated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+
+1. BOOKING & SCHEDULING
+By submitting a booking request, you agree to the terms outlined below. All bookings are subject to availability and confirmed only after receipt of the required deposit or full payment. We reserve the right to decline any booking at our discretion.
+
+2. PAYMENT
+A deposit (as indicated at checkout) is required to hold your booking date. The remaining balance is due upon delivery of final media. Failure to pay the remaining balance may result in media being withheld until payment is received in full.
+
+3. CANCELLATIONS & RESCHEDULING
+Cancellations made more than 48 hours before the scheduled shoot will receive a full refund of the deposit. Cancellations within 48 hours of the shoot are non-refundable. Rescheduling requests made more than 24 hours in advance will be accommodated at no charge, subject to availability.
+
+4. PROPERTY ACCESS
+The client is responsible for ensuring the property is ready and accessible at the scheduled shoot time. This includes: unlocking all doors and rooms, staging and decluttering, ensuring pets are secured, and arranging for adequate lighting. A trip fee may be charged if the photographer arrives and the property is not accessible or shoot-ready.
+
+5. DELIVERY TIMELINE
+Standard delivery is within 24–48 hours for photography and 48–72 hours for video, unless otherwise agreed in writing. Rush delivery options are available for an additional fee.
+
+6. LICENSING & USAGE
+Upon receipt of full payment, the client receives a non-exclusive, non-transferable license to use the delivered media for real estate marketing purposes, including MLS listings, social media, and print materials. The media may not be resold, sublicensed, or used for purposes other than marketing the specific property without prior written consent.
+
+7. COPYRIGHT
+All media remains the copyright of the photographer/company. We reserve the right to use any images for portfolio, marketing, and promotional purposes unless the client requests otherwise in writing at the time of booking.
+
+8. WEATHER & FORCE MAJEURE
+In the event of inclement weather that affects the quality of the shoot, we reserve the right to reschedule at no penalty to either party. We are not liable for delays or cancellations caused by circumstances beyond our control.
+
+9. LIMITATION OF LIABILITY
+Our liability is limited to the amount paid for the specific service. We are not responsible for indirect, incidental, or consequential damages arising from the use of our services.
+
+10. GOVERNING LAW
+These terms shall be governed by the laws of the state in which services are rendered.
+
+By proceeding with a booking, you acknowledge that you have read, understood, and agreed to these Terms of Service.`;
+
+const DEFAULT_PRIVACY = `PRIVACY POLICY
+
+Last updated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+
+1. INFORMATION WE COLLECT
+We collect the following information when you submit a booking: your name, email address, phone number, and property address. We may also collect billing information processed securely through our payment provider (Stripe).
+
+2. HOW WE USE YOUR INFORMATION
+Your information is used solely to process your booking, communicate with you about your shoot, and deliver your media. We do not sell or share your personal information with third parties except as necessary to process payment or deliver services.
+
+3. DATA RETENTION
+We retain your booking and contact information for up to 3 years for record-keeping purposes. You may request deletion of your data at any time by contacting us.
+
+4. COOKIES
+Our booking platform may use cookies to maintain session state. No personally identifiable information is stored in cookies.
+
+5. THIRD-PARTY SERVICES
+We use Stripe for payment processing and Resend for email delivery. These services have their own privacy policies and we encourage you to review them.
+
+6. CONTACT
+For privacy-related questions or requests, please contact us directly through your booking confirmation email.`;
+
 const DEFAULT_TIERS = [
   { name: "Tiny",   label: "Studio / Under 800 sqft",  max: 800 },
   { name: "Small",  label: "801 – 2,500 sqft",         max: 2500 },
@@ -714,10 +772,20 @@ export default function SettingsPage() {
       {/* ─── Terms of Service ─────────────────────────────────────────────────── */}
       <div className="bg-white rounded-sm border border-gray-200 p-6 mt-8">
         <h2 className="font-display text-navy text-base mb-1">Terms of Service</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Clients must agree to these terms before completing a booking. Leave blank to disable the checkbox.
-          Your terms are shown at <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">/{tenant?.slug}/terms</code>.
-        </p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-gray-500">
+            Clients must agree to these terms before completing a booking. Leave blank to disable the checkbox.
+            Shown at <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">/{tenant?.slug}/terms</code>.
+          </p>
+        </div>
+        {!termsText && (
+          <div className="mb-3">
+            <button type="button" onClick={() => setTermsText(DEFAULT_TERMS)}
+              className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5 transition-colors">
+              Use default template
+            </button>
+          </div>
+        )}
         <textarea
           value={termsText}
           onChange={(e) => setTermsText(e.target.value)}
@@ -725,10 +793,16 @@ export default function SettingsPage() {
           placeholder="Paste your Terms of Service here…"
           className="input-field w-full text-sm font-mono leading-relaxed resize-y"
         />
-        <div className="mt-4 flex items-center gap-4">
+        <div className="mt-4 flex items-center gap-4 flex-wrap">
           <button onClick={saveTerms} disabled={savingTerms} className="btn-primary px-8 py-3">
             {savingTerms ? "Saving…" : "Save Terms"}
           </button>
+          {termsText && (
+            <button type="button" onClick={() => setTermsText("")}
+              className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+              Clear
+            </button>
+          )}
           {tenant?.slug && (
             <a href={`/${tenant.slug}/terms`} target="_blank" rel="noopener noreferrer"
               className="text-sm text-navy underline underline-offset-2 hover:opacity-70">
@@ -744,6 +818,14 @@ export default function SettingsPage() {
           Shown at <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">/{tenant?.slug}/privacy</code>.
           Linked from the checkout terms checkbox. Leave blank to disable.
         </p>
+        {!privacyText && (
+          <div className="mb-3">
+            <button type="button" onClick={() => setPrivacyText(DEFAULT_PRIVACY)}
+              className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5 transition-colors">
+              Use default template
+            </button>
+          </div>
+        )}
         <textarea
           value={privacyText}
           onChange={(e) => setPrivacyText(e.target.value)}
@@ -751,10 +833,16 @@ export default function SettingsPage() {
           placeholder="Paste your Privacy Policy here…"
           className="input-field w-full text-sm font-mono leading-relaxed resize-y"
         />
-        <div className="mt-4 flex items-center gap-4">
+        <div className="mt-4 flex items-center gap-4 flex-wrap">
           <button onClick={savePrivacy} disabled={savingPrivacy} className="btn-primary px-8 py-3">
             {savingPrivacy ? "Saving…" : "Save Privacy Policy"}
           </button>
+          {privacyText && (
+            <button type="button" onClick={() => setPrivacyText("")}
+              className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+              Clear
+            </button>
+          )}
           {tenant?.slug && (
             <a href={`/${tenant.slug}/privacy`} target="_blank" rel="noopener noreferrer"
               className="text-sm text-navy underline underline-offset-2 hover:opacity-70">
