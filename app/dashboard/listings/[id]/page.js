@@ -192,13 +192,13 @@ export default function ListingDetailPage() {
   return (
     <div>
       {/* Hero */}
-      <div className="relative h-56 bg-gray-900 overflow-hidden">
+      <div className="relative h-52 bg-navy overflow-hidden">
         {coverUrl ? (
-          <img src={coverUrl} alt={address} className="absolute inset-0 w-full h-full object-cover opacity-60" />
+          <img src={coverUrl} alt={address} className="absolute inset-0 w-full h-full object-cover opacity-45" />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-navy to-navy/70" />
+          <div className="absolute inset-0 bg-gradient-to-br from-navy-dark to-navy" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         <div className="absolute bottom-4 left-6 right-6">
           <div className="flex items-end justify-between">
             <div>

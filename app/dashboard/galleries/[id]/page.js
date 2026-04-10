@@ -254,6 +254,19 @@ export default function GalleryDetailPage() {
   const [selectedKeys,    setSelectedKeys]    = useState(new Set());
   const [bulkCatTarget,   setBulkCatTarget]   = useState("");
 
+  // 3D / floor plans / files state
+  const [matterportUrl,   setMatterportUrl]   = useState("");
+  const [virtualLinks,    setVirtualLinks]    = useState([]); // [{label, url}]
+  const [floorPlans,      setFloorPlans]      = useState([]); // [{url, key, fileName}]
+  const [attachedFiles,   setAttachedFiles]   = useState([]); // [{url, key, fileName, fileType}]
+  const [savingExtras,    setSavingExtras]    = useState(false);
+  const [uploadingFloor,  setUploadingFloor]  = useState(false);
+  const [uploadingFile,   setUploadingFile]   = useState(false);
+  const [newLinkLabel,    setNewLinkLabel]    = useState("");
+  const [newLinkUrl,      setNewLinkUrl]      = useState("");
+  const floorRef = useRef(null);
+  const fileAttachRef = useRef(null);
+
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
       const [galleryRes, tenantRes] = await Promise.all([
@@ -281,6 +294,12 @@ export default function GalleryDetailPage() {
         setEmailSubject(defaultSubject);
         if (defaultNote) setEmailNote(defaultNote);
         if (data.gallery.clientEmail) setEmailTo([data.gallery.clientEmail]);
+
+        // Load extras
+        if (data.gallery.matterportUrl) setMatterportUrl(data.gallery.matterportUrl);
+        if (data.gallery.virtualLinks)  setVirtualLinks(data.gallery.virtualLinks);
+        if (data.gallery.floorPlans)    setFloorPlans(data.gallery.floorPlans);
+        if (data.gallery.attachedFiles) setAttachedFiles(data.gallery.attachedFiles);
       }
       setLoading(false);
     });
@@ -290,31 +309,73 @@ export default function GalleryDetailPage() {
   async function uploadFiles(files) {
     setUploading(true); setProgress(0); setMsg({ text: "", type: "" });
     const token = await auth.currentUser.getIdToken();
-    const total = files.length; let done = 0;
+    const total = files.length;
+    let done = 0;
+    const errors = [];
+
     for (const file of files) {
       try {
+        // Step 1 — get presigned URL
         const urlRes = await fetch("/api/gallery/upload-url", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ fileName: file.name, fileType: file.type, galleryId: id }),
         });
-        if (!urlRes.ok) { setMsg({ text: `Failed to get upload URL for ${file.name}.`, type: "error" }); continue; }
-        const { uploadUrl, publicUrl, key } = await urlRes.json();
-        const r2Res = await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
-        if (!r2Res.ok) { setMsg({ text: `Failed to upload ${file.name} to storage.`, type: "error" }); continue; }
+        if (!urlRes.ok) {
+          const errData = await urlRes.json().catch(() => ({}));
+          const msg = errData.error || `HTTP ${urlRes.status}`;
+          errors.push(`${file.name}: ${msg}`);
+          continue;
+        }
+        const { uploadUrl, publicUrl, key, error: urlError } = await urlRes.json();
+        if (urlError || !uploadUrl) {
+          errors.push(`${file.name}: ${urlError || "No upload URL returned"}`);
+          continue;
+        }
+
+        // Step 2 — PUT to R2 (no Content-Type header — avoids signing mismatch)
+        const putHeaders = {};
+        if (file.type) putHeaders["Content-Type"] = file.type;
+        const r2Res = await fetch(uploadUrl, { method: "PUT", body: file, headers: putHeaders });
+        if (!r2Res.ok) {
+          const r2Body = await r2Res.text().catch(() => "");
+          errors.push(`${file.name}: R2 storage error ${r2Res.status}${r2Body ? ` — ${r2Body.slice(0, 120)}` : ""}`);
+          continue;
+        }
+
+        // Step 3 — save to Firestore
         const saveRes = await fetch(`/api/dashboard/galleries/${id}/media`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ publicUrl, key, fileName: file.name, fileType: file.type }),
         });
-        if (!saveRes.ok) { setMsg({ text: `Failed to save ${file.name} to gallery. Check auth.`, type: "error" }); continue; }
+        if (!saveRes.ok) {
+          const saveData = await saveRes.json().catch(() => ({}));
+          errors.push(`${file.name}: Save failed (${saveRes.status}) — ${saveData.error || "check auth"}`);
+          continue;
+        }
+
         done++;
         setProgress(Math.round((done / total) * 100));
-        setGallery((g) => ({ ...g, media: [...(g.media || []), { url: publicUrl, key, fileName: file.name, fileType: file.type }] }));
-      } catch { setMsg({ text: `Failed to upload ${file.name}.`, type: "error" }); }
+        setGallery((g) => ({
+          ...g,
+          media: [...(g.media || []), { url: publicUrl, key, fileName: file.name, fileType: file.type }],
+        }));
+      } catch (err) {
+        errors.push(`${file.name}: ${err.message || "Network error"}`);
+      }
     }
+
     setUploading(false);
-    setMsg({ text: `${done} file${done !== 1 ? "s" : ""} uploaded.`, type: "success" });
+
+    if (done > 0 && errors.length === 0) {
+      setMsg({ text: `${done} file${done !== 1 ? "s" : ""} uploaded.`, type: "success" });
+    } else if (done > 0 && errors.length > 0) {
+      setMsg({ text: `${done} uploaded, ${errors.length} failed: ${errors[0]}`, type: "error" });
+    } else {
+      // All failed — show the first error clearly
+      setMsg({ text: errors[0] || "Upload failed. Check R2 env vars in Vercel.", type: "error" });
+    }
   }
 
   // ─── Drag reorder ─────────────────────────────────────────────────────────
@@ -456,6 +517,89 @@ export default function GalleryDetailPage() {
       body: JSON.stringify({ unlocked: newVal }),
     });
     setGallery((g) => ({ ...g, unlocked: newVal }));
+  }
+
+  async function saveExtras() {
+    setSavingExtras(true);
+    const token = await auth.currentUser.getIdToken();
+    await fetch(`/api/dashboard/galleries/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ matterportUrl, virtualLinks, floorPlans, attachedFiles }),
+    });
+    setSavingExtras(false);
+    setMsg({ text: "Saved.", type: "success" });
+  }
+
+  async function uploadToR2(file, subfolder) {
+    const token = await auth.currentUser.getIdToken();
+    const urlRes = await fetch("/api/gallery/upload-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ fileName: `${subfolder}/${file.name}`, fileType: file.type, galleryId: id }),
+    });
+    if (!urlRes.ok) { const d = await urlRes.json(); throw new Error(d.error || "Failed to get upload URL"); }
+    const { uploadUrl, publicUrl, key } = await urlRes.json();
+    const putHeaders = {};
+    if (file.type) putHeaders["Content-Type"] = file.type;
+    const r2Res = await fetch(uploadUrl, { method: "PUT", body: file, headers: putHeaders });
+    if (!r2Res.ok) throw new Error(`R2 upload failed: ${r2Res.status}`);
+    return { publicUrl, key, fileName: file.name, fileType: file.type };
+  }
+
+  async function uploadFloorPlans(files) {
+    setUploadingFloor(true);
+    const results = [];
+    for (const file of files) {
+      try {
+        const result = await uploadToR2(file, "floorplans");
+        results.push(result);
+      } catch (err) {
+        setMsg({ text: `Floor plan upload failed: ${err.message}`, type: "error" });
+      }
+    }
+    const updated = [...floorPlans, ...results];
+    setFloorPlans(updated);
+    setUploadingFloor(false);
+    // Auto-save
+    const token = await auth.currentUser.getIdToken();
+    await fetch(`/api/dashboard/galleries/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ floorPlans: updated }),
+    });
+    if (results.length) setMsg({ text: `${results.length} floor plan${results.length !== 1 ? "s" : ""} added.`, type: "success" });
+  }
+
+  async function uploadAttachedFile(files) {
+    setUploadingFile(true);
+    const results = [];
+    for (const file of files) {
+      try {
+        const result = await uploadToR2(file, "attachments");
+        results.push(result);
+      } catch (err) {
+        setMsg({ text: `File upload failed: ${err.message}`, type: "error" });
+      }
+    }
+    const updated = [...attachedFiles, ...results];
+    setAttachedFiles(updated);
+    setUploadingFile(false);
+    const token = await auth.currentUser.getIdToken();
+    await fetch(`/api/dashboard/galleries/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ attachedFiles: updated }),
+    });
+    if (results.length) setMsg({ text: `${results.length} file${results.length !== 1 ? "s" : ""} attached.`, type: "success" });
+  }
+
+  function addVirtualLink() {
+    if (!newLinkUrl) return;
+    const label = newLinkLabel.trim() || "Virtual Tour";
+    const url   = newLinkUrl.startsWith("http") ? newLinkUrl : `https://${newLinkUrl}`;
+    setVirtualLinks((prev) => [...prev, { label, url }]);
+    setNewLinkLabel(""); setNewLinkUrl("");
   }
 
   if (loading) return (
@@ -646,6 +790,156 @@ export default function GalleryDetailPage() {
             )}
           </>
         )}
+      </div>
+
+      {/* ── Extras: 3D / Floor Plans / Files ─────────────────────────────── */}
+      <div className="px-6 pb-8 space-y-5 max-w-3xl">
+        <div className="border-t border-gray-100 pt-6">
+          <h2 className="font-display text-navy text-base mb-1">Property Extras</h2>
+          <p className="text-xs text-gray-400 mb-5">Add 3D tours, floor plans, and documents — all delivered alongside photos in the client gallery.</p>
+
+          {/* 3D / Matterport */}
+          <div className="bg-white border border-gray-100 rounded-sm p-5 shadow-sm mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-sm bg-navy/8 flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-charcoal">3D Interactive Tour</p>
+                <p className="text-xs text-gray-400">Matterport, iGuide, Zillow 3D, or any iframe URL</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={matterportUrl}
+                onChange={(e) => setMatterportUrl(e.target.value)}
+                placeholder="https://my.matterport.com/show/?m=..."
+                className="input-field flex-1 text-sm"
+              />
+              <button onClick={saveExtras} disabled={savingExtras} className="btn-primary px-4 py-2 text-xs whitespace-nowrap">
+                {savingExtras ? "…" : "Save"}
+              </button>
+            </div>
+
+            {/* Additional virtual links */}
+            <div className="mt-3 space-y-2">
+              {virtualLinks.map((l, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm bg-gray-50 rounded-sm px-3 py-2">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-navy flex-shrink-0">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                  <span className="font-medium text-navy flex-shrink-0">{l.label}</span>
+                  <span className="text-gray-400 text-xs truncate flex-1">{l.url}</span>
+                  <button onClick={() => { setVirtualLinks((p) => p.filter((_, idx) => idx !== i)); }} className="text-gray-300 hover:text-red-400 flex-shrink-0 text-base leading-none">×</button>
+                </div>
+              ))}
+              <div className="flex gap-2 pt-1">
+                <input type="text" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)}
+                  placeholder="Label (e.g. Video Walkthrough)" className="input-field text-xs py-2 w-44 flex-shrink-0" />
+                <input type="url" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addVirtualLink()}
+                  placeholder="URL" className="input-field text-xs py-2 flex-1" />
+                <button onClick={addVirtualLink} disabled={!newLinkUrl} className="btn-outline px-3 py-2 text-xs whitespace-nowrap disabled:opacity-40">
+                  + Add
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Floor Plans */}
+          <div className="bg-white border border-gray-100 rounded-sm p-5 shadow-sm mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-sm bg-navy/8 flex items-center justify-center flex-shrink-0">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-charcoal">2D Floor Plans</p>
+                  <p className="text-xs text-gray-400">PNG, JPG, or PDF</p>
+                </div>
+              </div>
+              <button onClick={() => floorRef.current?.click()} disabled={uploadingFloor}
+                className="btn-outline text-xs px-3 py-1.5">
+                {uploadingFloor ? "Uploading…" : "+ Upload"}
+              </button>
+              <input ref={floorRef} type="file" multiple accept="image/*,.pdf" className="hidden"
+                onChange={(e) => e.target.files?.length && uploadFloorPlans(Array.from(e.target.files))} />
+            </div>
+            {floorPlans.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">No floor plans uploaded yet.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {floorPlans.map((fp, i) => (
+                  <div key={fp.key || i} className="relative group rounded-sm overflow-hidden border border-gray-100 bg-gray-50">
+                    {fp.fileType?.includes("pdf") ? (
+                      <a href={fp.url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-3 text-xs text-navy font-medium hover:bg-gray-100 transition-colors">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        <span className="truncate">{fp.fileName}</span>
+                      </a>
+                    ) : (
+                      <img src={fp.url} alt={fp.fileName} className="w-full aspect-[4/3] object-cover" />
+                    )}
+                    <button onClick={() => setFloorPlans((p) => p.filter((_, idx) => idx !== i))}
+                      className="absolute top-1 right-1 w-5 h-5 bg-black/60 text-white rounded-full text-xs leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Attached files / documents */}
+          <div className="bg-white border border-gray-100 rounded-sm p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-sm bg-navy/8 flex items-center justify-center flex-shrink-0">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-charcoal">Documents & Files</p>
+                  <p className="text-xs text-gray-400">PDF, Word, ZIP, or any other file</p>
+                </div>
+              </div>
+              <button onClick={() => fileAttachRef.current?.click()} disabled={uploadingFile}
+                className="btn-outline text-xs px-3 py-1.5">
+                {uploadingFile ? "Uploading…" : "+ Attach"}
+              </button>
+              <input ref={fileAttachRef} type="file" multiple className="hidden"
+                onChange={(e) => e.target.files?.length && uploadAttachedFile(Array.from(e.target.files))} />
+            </div>
+            {attachedFiles.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">No files attached.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {attachedFiles.map((f, i) => (
+                  <div key={f.key || i} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-sm group">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 flex-shrink-0">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    <a href={f.url} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-navy hover:underline truncate flex-1">{f.fileName}</a>
+                    <span className="text-[10px] text-gray-300 flex-shrink-0">{f.fileType?.split("/")[1]?.toUpperCase() || "FILE"}</span>
+                    <button onClick={() => setAttachedFiles((p) => p.filter((_, idx) => idx !== i))}
+                      className="text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-base leading-none ml-1">
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Category panel */}

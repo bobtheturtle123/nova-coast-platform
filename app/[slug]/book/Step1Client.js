@@ -76,36 +76,32 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
       <>
         <StepProgress current={1} />
         <div className="step-container">
-          <div className="max-w-lg mx-auto text-center">
-            <p className="section-label mb-3">Step 1 of 6</p>
-            <h1 className="font-display text-4xl text-navy mb-3">{gateQuestion}</h1>
-            <p className="font-body text-gray-500 mb-10">{gateSubtext}</p>
+          <div className="max-w-md mx-auto text-center">
+            <p className="section-label mb-4">Step 1 of 6</p>
+            <h1 className="font-display text-4xl text-navy mb-3 leading-tight">{gateQuestion}</h1>
+            <p className="font-body text-gray-400 mb-10 leading-relaxed">{gateSubtext}</p>
 
-            <div className="bg-white border border-gray-200 rounded-sm p-8 shadow-sm">
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                {gateLabel}
-              </label>
+            <div className="bg-white border border-gray-100 rounded-sm p-8 shadow-sm">
               <input
                 type="number"
                 inputMode="numeric"
                 min="0"
                 autoFocus
-                placeholder={pricingMode === "photos" ? "e.g. 30" : "e.g. 2,400"}
+                placeholder={pricingMode === "photos" ? "30" : "2400"}
                 value={sqftInput}
                 onChange={(e) => setSqftInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && canConfirm && confirmSqft()}
-                className="input-field w-full font-display text-4xl text-navy text-center mb-4"
+                className="w-full bg-transparent border-0 border-b border-gray-200 focus:border-navy focus:ring-0 outline-none font-display text-5xl text-navy text-center pb-3 mb-2 transition-colors"
               />
-              {tier && pricingMode !== "photos" ? (
-                <p className="text-sm font-bold text-gold uppercase tracking-widest mb-6">
-                  {TIER_LABELS[tier]}
-                </p>
-              ) : (
-                <p className="text-sm text-gray-400 mb-6">
-                  {sqftInput ? `${sqftInput} ${pricingMode === "photos" ? "photos" : "sqft"}` : `Enter ${gateLabel.toLowerCase()} above`}
-                </p>
-              )}
-              <button onClick={confirmSqft} disabled={!canConfirm} className="btn-primary w-full py-4 text-base">
+              <p className="text-xs text-gray-400 mb-7 tracking-widest uppercase">
+                {tier && pricingMode !== "photos"
+                  ? <span className="text-gold font-semibold">{TIER_LABELS[tier]}</span>
+                  : sqftInput
+                    ? `${Number(sqftInput).toLocaleString()} ${pricingMode === "photos" ? "photos" : "sq ft"}`
+                    : gateLabel
+                }
+              </p>
+              <button onClick={confirmSqft} disabled={!canConfirm} className="btn-primary w-full py-3.5">
                 Show Pricing →
               </button>
             </div>

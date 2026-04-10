@@ -85,9 +85,19 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
     setPayMsg("Payment successful! Downloads unlocked.");
   }
 
+  const matterportUrl  = gallery.matterportUrl || null;
+  const virtualLinks   = gallery.virtualLinks  || [];
+  const floorPlans     = gallery.floorPlans    || [];
+  const attachedFiles  = gallery.attachedFiles || [];
+  const has3D          = matterportUrl || virtualLinks.length > 0;
+  const hasExtras      = has3D || floorPlans.length > 0 || attachedFiles.length > 0;
+
   const tabs = [
-    { id: "images", label: `Images (${images.length})` },
-    ...(videos.length > 0 ? [{ id: "videos", label: `Videos (${videos.length})` }] : []),
+    { id: "images", label: `Photos (${images.length})` },
+    ...(videos.length   > 0 ? [{ id: "videos",     label: `Videos (${videos.length})`       }] : []),
+    ...(floorPlans.length > 0 ? [{ id: "floorplans", label: `Floor Plans (${floorPlans.length})` }] : []),
+    ...(has3D            ? [{ id: "3d",          label: "3D Tour"                         }] : []),
+    ...(attachedFiles.length > 0 ? [{ id: "files", label: `Files (${attachedFiles.length})` }] : []),
   ];
 
   return (
@@ -276,7 +286,126 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             ))}
           </div>
         )}
+
+        {/* 3D Tour tab */}
+        {activeTab === "3d" && (
+          <div className="space-y-5">
+            {matterportUrl && (
+              <div className="rounded-sm overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
+                <iframe
+                  src={matterportUrl}
+                  title="3D Interactive Tour"
+                  allow="xr-spatial-tracking"
+                  allowFullScreen
+                  className="w-full h-full"
+                  style={{ minHeight: 400 }}
+                />
+              </div>
+            )}
+            {virtualLinks.map((l, i) => (
+              <a key={i} href={l.url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-sm hover:border-gray-300 hover:shadow-sm transition-all group">
+                <div className="w-9 h-9 rounded-sm flex items-center justify-center flex-shrink-0"
+                  style={{ background: primary + "15" }}>
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" style={{ color: primary }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                  </svg>
+                </div>
+                <span className="font-medium text-sm" style={{ color: primary }}>{l.label}</span>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="ml-auto text-gray-300 group-hover:text-gray-500 transition-colors">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* Floor Plans tab */}
+        {activeTab === "floorplans" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {floorPlans.map((fp, i) => (
+              <div key={i} className="bg-white border border-gray-100 rounded-sm overflow-hidden">
+                {fp.fileType?.includes("pdf") ? (
+                  <a href={fp.url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-5 hover:bg-gray-50 transition-colors">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-red-400 flex-shrink-0">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-sm font-medium text-charcoal">{fp.fileName}</span>
+                    <span className="ml-auto text-xs text-gray-400">View PDF →</span>
+                  </a>
+                ) : (
+                  <>
+                    <img src={fp.url} alt={fp.fileName} className="w-full object-contain max-h-96 bg-white" />
+                    <div className="px-4 py-3 flex items-center justify-between border-t border-gray-50">
+                      <span className="text-xs text-gray-500">{fp.fileName}</span>
+                      <a href={fp.url} download={fp.fileName}
+                        className="text-xs font-semibold" style={{ color: primary }}>
+                        Download
+                      </a>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Files tab */}
+        {activeTab === "files" && (
+          <div className="space-y-2 max-w-lg">
+            {attachedFiles.map((f, i) => (
+              <a key={i} href={f.url} target="_blank" rel="noopener noreferrer"
+                download={f.fileName}
+                className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-sm hover:border-gray-300 hover:shadow-sm transition-all group">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 flex-shrink-0">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <span className="text-sm font-medium text-charcoal flex-1">{f.fileName}</span>
+                <span className="text-[10px] text-gray-300 font-mono uppercase">{f.fileType?.split("/")[1] || "file"}</span>
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* ── AI-powered callout ────────────────────────────────────────────── */}
+        <div className="mt-12 rounded-sm overflow-hidden border border-gray-100" style={{ background: "linear-gradient(135deg, #0b2a55 0%, #1a4080 100%)" }}>
+          <div className="px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="w-9 h-9 rounded-sm bg-white/10 flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .03 2.798-1.332 2.798H4.13c-1.362 0-2.333-1.798-1.332-2.798L4.2 15.3" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-white font-semibold text-sm leading-tight">Powered by Claude AI</p>
+                <p className="text-white/50 text-xs">by Anthropic</p>
+              </div>
+            </div>
+            <div className="flex-1">
+              <p className="text-white/80 text-xs leading-relaxed">
+                This gallery platform is built with Claude — the same AI that powers some of the world's most advanced tools.
+                Your photographer uses AI to deliver a smarter, faster experience from booking to delivery.
+              </p>
+            </div>
+            <a href="https://claude.ai" target="_blank" rel="noopener noreferrer"
+              className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-sm bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors whitespace-nowrap">
+              Learn more →
+            </a>
+          </div>
+        </div>
+
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-100 py-6 text-center">
+        <p className="text-xs text-gray-400">
+          Delivered by <span className="font-medium" style={{ color: primary }}>{name}</span>
+        </p>
+      </footer>
     </div>
   );
 }

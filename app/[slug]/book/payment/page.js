@@ -284,8 +284,20 @@ export default function TenantPaymentPage() {
     }
   }
 
-  function handleSuccess() {
-    setBookingResult(bookingId, effectivePayFull);
+  async function handleSuccess(paymentIntentId) {
+    let paidInFull = effectivePayFull;
+    try {
+      const res = await fetch("/api/bookings/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, paymentIntentId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        paidInFull = data.paidInFull ?? effectivePayFull;
+      }
+    } catch { /* webhook will still catch up */ }
+    setBookingResult(bookingId, paidInFull);
     router.push(`/${params.slug}/book/confirmation?bookingId=${bookingId}`);
   }
 

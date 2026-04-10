@@ -57,19 +57,19 @@ export default function DashboardHome() {
   );
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-6xl">
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="font-display text-2xl text-navy">
-            {tenant ? `Welcome, ${tenant.businessName}` : "Dashboard"}
+          <p className="section-label mb-2">Dashboard</p>
+          <h1 className="font-display text-3xl text-navy leading-tight">
+            {tenant?.businessName || "Welcome back."}
           </h1>
-          <p className="text-gray-400 text-sm mt-0.5">Here's what's happening.</p>
         </div>
         {bookingUrl && (
           <a href={bookingUrl} target="_blank" rel="noopener noreferrer"
-            className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            className="btn-outline text-xs px-4 py-2 flex items-center gap-1.5">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
             Booking Page
@@ -79,44 +79,51 @@ export default function DashboardHome() {
 
       {/* Connect Stripe banner */}
       {tenant && !tenant.stripeConnectOnboarded && (
-        <div className="bg-amber-50 border border-amber-200 rounded-sm p-4 mb-6 flex items-center justify-between">
+        <div className="bg-white border border-amber-200 rounded-sm px-5 py-4 mb-6 flex items-center justify-between shadow-sm">
           <div>
             <p className="text-navy font-medium text-sm">Connect Stripe to accept payments</p>
-            <p className="text-gray-500 text-xs mt-0.5">You won't collect deposits until Stripe Connect is active.</p>
+            <p className="text-gray-400 text-xs mt-0.5">Deposits won't be collected until Stripe Connect is active.</p>
           </div>
-          <Link href="/dashboard/billing" className="text-xs font-semibold text-navy underline">Connect →</Link>
+          <Link href="/dashboard/billing" className="text-xs font-semibold text-navy border border-navy/20 px-4 py-2 rounded-sm hover:bg-navy hover:text-white transition-colors">
+            Connect Stripe →
+          </Link>
         </div>
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         {[
-          { label: "Total Listings",    value: stats.total,     sub: "all time" },
-          { label: "Pending Review",    value: stats.pending,   sub: "need action", highlight: stats.pending > 0 },
-          { label: "Active Shoots",     value: stats.confirmed, sub: "confirmed" },
-          { label: "Revenue",           value: `$${stats.revenue.toLocaleString()}`, sub: "collected" },
+          { label: "Total Listings",  value: stats.total,     sub: "all time" },
+          { label: "Pending Review",  value: stats.pending,   sub: "need action", alert: stats.pending > 0 },
+          { label: "Active Shoots",   value: stats.confirmed, sub: "confirmed" },
+          { label: "Revenue",         value: `$${stats.revenue.toLocaleString()}`, sub: "collected" },
         ].map((s) => (
-          <div key={s.label} className={`rounded-sm border p-5 ${s.highlight ? "bg-amber-50 border-amber-200" : "bg-white border-gray-200"}`}>
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{s.label}</p>
-            <p className={`text-2xl font-bold font-display ${s.highlight ? "text-amber-700" : "text-navy"}`}>{s.value}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>
+          <div key={s.label} className={`bg-white rounded-sm border p-5 shadow-sm ${s.alert ? "border-amber-200" : "border-gray-100"}`}>
+            <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-3">{s.label}</p>
+            <p className={`font-display text-3xl leading-none mb-1 ${s.alert ? "text-amber-600" : "text-navy"}`}>{s.value}</p>
+            <p className="text-[11px] text-gray-400">{s.sub}</p>
           </div>
         ))}
       </div>
 
-      {/* Recent listings grid */}
+      {/* Recent listings */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-display text-navy text-base">Recent Listings</h2>
-        <Link href="/dashboard/listings" className="text-xs text-navy hover:underline">View all →</Link>
+        <h2 className="font-display text-navy text-lg">Recent Listings</h2>
+        <Link href="/dashboard/listings" className="text-xs text-gray-400 hover:text-navy transition-colors">View all →</Link>
       </div>
 
       {listings.length === 0 ? (
-        <div className="bg-white rounded-sm border border-gray-200 p-12 text-center text-gray-400 text-sm">
-          <p className="text-3xl mb-2">📭</p>
-          <p>No listings yet. Share your booking page to get started.</p>
+        <div className="bg-white rounded-sm border border-gray-100 p-16 text-center shadow-sm">
+          <div className="w-12 h-12 bg-navy/5 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-navy/40">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </div>
+          <p className="font-medium text-gray-700 mb-1">No listings yet</p>
+          <p className="text-sm text-gray-400 mb-5">Share your booking page to start receiving orders.</p>
           {bookingUrl && (
-            <div className="mt-4 bg-gray-50 rounded-sm px-4 py-2 inline-block">
-              <code className="text-xs text-gray-600">{bookingUrl}</code>
+            <div className="bg-gray-50 rounded-sm px-4 py-2.5 inline-flex items-center gap-2">
+              <code className="text-xs text-gray-500">{bookingUrl}</code>
             </div>
           )}
         </div>
@@ -124,29 +131,39 @@ export default function DashboardHome() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {recent.map((listing) => {
             const coverUrl = listing.gallery?.coverUrl;
+            const paid = listing.paidInFull || listing.balancePaid;
+            const depositOnly = !paid && listing.depositPaid;
             return (
               <Link key={listing.id} href={`/dashboard/listings/${listing.id}`}
-                className="bg-white rounded-sm border border-gray-200 overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                <div className="relative h-32 bg-gray-100">
+                className="group bg-white rounded-sm border border-gray-100 overflow-hidden hover:shadow-md hover:border-gray-200 hover:-translate-y-0.5 transition-all duration-200">
+                <div className="relative h-32 bg-gray-50">
                   {coverUrl ? (
-                    <img src={coverUrl} alt="" className="w-full h-full object-cover" />
+                    <img src={coverUrl} alt="" className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" />
                   ) : (
-                    <div className="w-full h-full bg-navy/5 flex items-center justify-center text-3xl opacity-20">🏠</div>
+                    <div className="w-full h-full flex items-center justify-center">
+                      <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1" className="text-gray-200">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                    </div>
                   )}
                   {listing.gallery?.delivered && (
                     <div className="absolute top-2 left-2">
-                      <span className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-green-600 text-white">Delivered</span>
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm bg-green-600 text-white tracking-wide">Delivered</span>
                     </div>
                   )}
                 </div>
                 <div className="p-3">
-                  <p className="text-xs font-semibold text-navy truncate leading-tight">{listing.address}</p>
-                  <p className="text-xs text-gray-400 truncate">{listing.clientName}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className={`text-xs px-1.5 py-0.5 rounded-sm font-medium ${STATUS_COLORS[listing.status] || "bg-gray-100 text-gray-600"}`}>
-                      {STATUS_LABELS[listing.status] || listing.status}
+                  <p className="text-xs font-semibold text-navy truncate leading-tight mb-0.5">{listing.address}</p>
+                  <p className="text-[11px] text-gray-400 truncate mb-2.5">{listing.clientName}</p>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-sm font-semibold tracking-wide uppercase ${
+                      paid ? "bg-emerald-50 text-emerald-700" :
+                      depositOnly ? "bg-blue-50 text-blue-700" :
+                      STATUS_COLORS[listing.status] || "bg-gray-50 text-gray-500"
+                    }`}>
+                      {paid ? "Paid" : depositOnly ? "Deposit" : STATUS_LABELS[listing.status] || listing.status}
                     </span>
-                    <span className="text-xs font-semibold text-navy">${listing.totalPrice?.toLocaleString()}</span>
+                    <span className="text-xs font-bold text-navy">${listing.totalPrice?.toLocaleString()}</span>
                   </div>
                 </div>
               </Link>

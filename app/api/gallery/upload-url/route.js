@@ -13,7 +13,6 @@ const s3 = new S3Client({
 
 export async function POST(req) {
   try {
-    // Verify authenticated tenant member
     const authHeader = req.headers.get("Authorization")?.replace("Bearer ", "");
     if (!authHeader) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -25,13 +24,19 @@ export async function POST(req) {
       return Response.json({ error: "fileName and galleryId required" }, { status: 400 });
     }
 
+    if (!process.env.R2_ENDPOINT || !process.env.R2_ACCESS_KEY || !process.env.R2_BUCKET) {
+      console.error("R2 not configured");
+      return Response.json({ error: "Storage not configured. Add R2_ENDPOINT, R2_ACCESS_KEY, R2_SECRET_KEY, R2_BUCKET to Vercel env vars." }, { status: 500 });
+    }
+
     const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
     const key  = `galleries/${decoded.tenantId}/${galleryId}/${Date.now()}_${safe}`;
 
+    // No ContentType in the command — avoids Content-Type signing mismatch
+    // when the browser PUT omits or differs in Content-Type header.
     const command = new PutObjectCommand({
-      Bucket:      process.env.R2_BUCKET,
-      Key:         key,
-      ContentType: fileType || "application/octet-stream",
+      Bucket: process.env.R2_BUCKET,
+      Key:    key,
     });
 
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
@@ -40,6 +45,6 @@ export async function POST(req) {
     return Response.json({ uploadUrl, publicUrl, key });
   } catch (err) {
     console.error("Upload URL error:", err);
-    return Response.json({ error: "Failed to generate upload URL" }, { status: 500 });
+    return Response.json({ error: `Failed to generate upload URL: ${err.message}` }, { status: 500 });
   }
 }
