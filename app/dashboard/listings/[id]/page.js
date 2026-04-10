@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
@@ -24,14 +24,11 @@ const STATUS_COLORS = {
 export default function ListingDetailPage() {
   const { id }  = useParams();
   const router  = useRouter();
-  const fileRef = useRef(null);
 
   const [booking,    setBooking]   = useState(null);
   const [gallery,    setGallery]   = useState(null);
   const [loading,    setLoading]   = useState(true);
   const [saving,     setSaving]    = useState(false);
-  const [uploading,  setUploading] = useState(false);
-  const [uploadPct,  setUploadPct] = useState(0);
   const [tab,        setTab]       = useState("overview");
   const [msg,        setMsg]       = useState({ text: "", type: "" });
   const [showDeliver, setShowDeliver]   = useState(false);
@@ -99,7 +96,11 @@ export default function ListingDetailPage() {
     finally { setSaving(false); }
   }
 
-  async function ensureGallery() {
+  async function openGalleryEditor() {
+    if (gallery) {
+      router.push(`/dashboard/galleries/${gallery.id}`);
+      return;
+    }
     const token = await auth.currentUser.getIdToken();
     const res = await fetch(`/api/dashboard/bookings/${id}/gallery`, {
       method: "POST",
@@ -107,75 +108,8 @@ export default function ListingDetailPage() {
     });
     const data = await res.json();
     if (res.ok) {
-      // Refresh gallery
-      const gRes = await fetch(`/api/dashboard/listings/${id}/gallery`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (gRes.ok) {
-        const { gallery: g } = await gRes.json();
-        setGallery(g);
-        setBooking((b) => ({ ...b, galleryId: data.galleryId }));
-      }
-      setTab("media");
+      router.push(`/dashboard/galleries/${data.galleryId}`);
     }
-  }
-
-  async function uploadFiles(files) {
-    if (!gallery) { await ensureGallery(); }
-    const currentGallery = gallery || await getGallery();
-    if (!currentGallery) return;
-
-    setUploading(true);
-    setUploadPct(0);
-    const token = await auth.currentUser.getIdToken();
-    const total = files.length;
-    let done = 0;
-
-    for (const file of files) {
-      try {
-        const urlRes = await fetch("/api/gallery/upload-url", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ fileName: file.name, fileType: file.type, galleryId: currentGallery.id }),
-        });
-        if (!urlRes.ok) { setMsg({ text: `Failed to get upload URL for ${file.name}.`, type: "error" }); continue; }
-        const { uploadUrl, publicUrl, key } = await urlRes.json();
-
-        const r2Res = await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
-        if (!r2Res.ok) { setMsg({ text: `Failed to upload ${file.name} to storage.`, type: "error" }); continue; }
-
-        const saveRes = await fetch(`/api/dashboard/galleries/${currentGallery.id}/media`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ publicUrl, key, fileName: file.name, fileType: file.type }),
-        });
-        if (!saveRes.ok) { setMsg({ text: `Failed to save ${file.name}. Check auth.`, type: "error" }); continue; }
-
-        done++;
-        setUploadPct(Math.round((done / total) * 100));
-        setGallery((g) => ({
-          ...g,
-          media: [...(g?.media || []), { url: publicUrl, key, fileName: file.name, fileType: file.type }],
-        }));
-      } catch (err) { setMsg({ text: `Failed: ${file.name} — ${err.message}`, type: "error" }); }
-    }
-
-    setUploading(false);
-    setMsg({ text: `${done} file${done !== 1 ? "s" : ""} uploaded.`, type: "success" });
-    if (!booking?.galleryId) setBooking((b) => ({ ...b, galleryId: currentGallery.id }));
-  }
-
-  async function getGallery() {
-    const token = await auth.currentUser.getIdToken();
-    const res = await fetch(`/api/dashboard/listings/${id}/gallery`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) {
-      const { gallery: g } = await res.json();
-      setGallery(g);
-      return g;
-    }
-    return null;
   }
 
   async function deliverGallery() {
@@ -258,13 +192,13 @@ export default function ListingDetailPage() {
   return (
     <div>
       {/* Hero */}
-      <div className="relative h-52 bg-gray-900 overflow-hidden">
+      <div className="relative h-56 bg-gray-900 overflow-hidden">
         {coverUrl ? (
           <img src={coverUrl} alt={address} className="absolute inset-0 w-full h-full object-cover opacity-60" />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-navy to-navy/70" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
         <div className="absolute bottom-4 left-6 right-6">
           <div className="flex items-end justify-between">
             <div>
@@ -298,7 +232,7 @@ export default function ListingDetailPage() {
                 </button>
               )}
               <button
-                onClick={() => { setTab("media"); if (!gallery && !booking.galleryId) ensureGallery(); }}
+                onClick={openGalleryEditor}
                 className="px-4 py-2 text-sm font-semibold rounded-sm bg-white text-navy hover:bg-gray-100 transition-colors">
                 Upload Media
               </button>
@@ -318,7 +252,6 @@ export default function ListingDetailPage() {
         <div className="flex gap-0">
           {[
             { id: "overview",  label: "Overview" },
-            { id: "media",     label: `Media${gallery?.media?.length ? ` (${gallery.media.length})` : ""}` },
             { id: "orders",    label: "Orders" },
             { id: "property",  label: "Property Site" },
           ].map((t) => (
@@ -349,7 +282,7 @@ export default function ListingDetailPage() {
         {tab === "overview" && (
           <div className="grid md:grid-cols-2 gap-6">
             {/* Client / Agent */}
-            <div className="bg-white rounded-sm border border-gray-200 p-5">
+            <div className="bg-white rounded-sm border border-gray-100 shadow-sm p-5">
               <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Agent / Client</p>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-navy/10 flex items-center justify-center text-navy font-bold">
@@ -372,7 +305,7 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Shoot management */}
-            <div className="bg-white rounded-sm border border-gray-200 p-5">
+            <div className="bg-white rounded-sm border border-gray-100 shadow-sm p-5">
               <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Shoot Details</p>
               <div className="space-y-4">
                 {/* Auto-derived status badges */}
@@ -434,7 +367,7 @@ export default function ListingDetailPage() {
 
             {/* Services */}
             {(booking.packageId || booking.serviceIds?.length > 0) && (
-              <div className="bg-white rounded-sm border border-gray-200 p-5">
+              <div className="bg-white rounded-sm border border-gray-100 shadow-sm p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Services Booked</p>
                 {booking.packageId && (
                   <p className="text-sm font-medium text-navy mb-2">
@@ -456,7 +389,7 @@ export default function ListingDetailPage() {
 
             {/* Gallery quick links */}
             {gallery && (
-              <div className="bg-white rounded-sm border border-gray-200 p-5">
+              <div className="bg-white rounded-sm border border-gray-100 shadow-sm p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Gallery</p>
                 <div className="flex items-center justify-between mb-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -482,102 +415,10 @@ export default function ListingDetailPage() {
           </div>
         )}
 
-        {/* ── MEDIA TAB ────────────────────────────────────────────────────── */}
-        {tab === "media" && (
-          <div>
-            {/* Upload zone */}
-            <div
-              className="border-2 border-dashed border-gray-200 rounded-sm p-8 mb-6 text-center cursor-pointer hover:border-navy/40 hover:bg-gray-50 transition-colors"
-              onClick={() => !uploading && fileRef.current?.click()}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                const files = Array.from(e.dataTransfer.files).filter(
-                  (f) => f.type.startsWith("image/") || f.type.startsWith("video/")
-                );
-                if (files.length) uploadFiles(files);
-              }}
-            >
-              <input ref={fileRef} type="file" multiple accept="image/*,video/*" className="hidden"
-                onChange={(e) => e.target.files?.length && uploadFiles(Array.from(e.target.files))} />
-              {uploading ? (
-                <div className="max-w-xs mx-auto">
-                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                    <div className="bg-navy h-2 rounded-full transition-all" style={{ width: `${uploadPct}%` }} />
-                  </div>
-                  <p className="text-sm text-gray-500">Uploading… {uploadPct}%</p>
-                </div>
-              ) : (
-                <>
-                  <p className="text-2xl mb-2">☁️</p>
-                  <p className="text-sm text-gray-500">
-                    Drop files here or <span className="text-navy font-medium">click to upload</span>
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Full-resolution originals — agents download web or print format
-                  </p>
-                </>
-              )}
-            </div>
-
-            {/* Gallery actions */}
-            {gallery && (
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-gray-500">
-                  {images.length} photos · {videos.length} videos
-                  {gallery.delivered && <span className="ml-2 text-xs text-green-600 font-medium">· Delivered</span>}
-                </p>
-                <div className="flex gap-2">
-                  <Link href={`/dashboard/galleries/${gallery.id}`}
-                    className="btn-outline text-xs px-3 py-1.5">
-                    Manage in Gallery Editor →
-                  </Link>
-                  <button onClick={toggleUnlock} className="btn-outline text-xs px-3 py-1.5">
-                    {gallery.unlocked ? "🔓 Unlocked" : "🔒 Locked"}
-                  </button>
-                  <button onClick={() => setShowDeliver(true)} className="btn-primary text-xs px-4 py-1.5">
-                    Deliver →
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Photo grid */}
-            {images.length > 0 && (
-              <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-6">
-                {images.map((m, i) => (
-                  <div key={i} className="aspect-square rounded-sm overflow-hidden bg-gray-100 relative group">
-                    <img src={m.url} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="text-white text-xs px-1 truncate">{i + 1}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Videos */}
-            {videos.length > 0 && (
-              <div className="grid md:grid-cols-2 gap-4">
-                {videos.map((v, i) => (
-                  <video key={i} src={v.url} controls className="w-full rounded-sm" />
-                ))}
-              </div>
-            )}
-
-            {!gallery && !booking.galleryId && (
-              <div className="text-center py-8 text-gray-400">
-                <p className="text-3xl mb-2">📷</p>
-                <p className="text-sm">Upload photos to auto-create the gallery.</p>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* ── ORDERS TAB ───────────────────────────────────────────────────── */}
         {tab === "orders" && (
           <div className="space-y-4 max-w-lg">
-            <div className="bg-white rounded-sm border border-gray-200 p-5">
+            <div className="bg-white rounded-sm border border-gray-100 shadow-sm p-5">
               <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Payment Summary</p>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">

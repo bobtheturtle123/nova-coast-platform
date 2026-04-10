@@ -285,7 +285,7 @@ export default function TenantPaymentPage() {
   }
 
   function handleSuccess() {
-    setBookingResult(bookingId);
+    setBookingResult(bookingId, effectivePayFull);
     router.push(`/${params.slug}/book/confirmation?bookingId=${bookingId}`);
   }
 

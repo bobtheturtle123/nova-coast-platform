@@ -147,7 +147,7 @@ export default function ListingsPage() {
 
             return (
               <Link key={listing.id} href={`/dashboard/listings/${listing.id}`}
-                className="bg-white rounded-sm border border-gray-200 overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
+                className="group bg-white rounded-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:border-gray-300 hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
                 {/* Cover photo */}
                 <div className="relative h-44 bg-gray-100 flex-shrink-0">
                   {coverUrl ? (

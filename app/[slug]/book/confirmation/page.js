@@ -10,7 +10,7 @@ function ConfirmationContent() {
   const searchParams = useSearchParams();
 
   const { bookingId, clientName, clientEmail, address, city, state, zip,
-          preferredDate, pricing, packageId, serviceIds, addonIds, resetBooking } = useBookingStore();
+          preferredDate, pricing, packageId, serviceIds, addonIds, paidInFull, resetBooking } = useBookingStore();
 
   const bId = searchParams.get("bookingId") || bookingId;
 
@@ -73,18 +73,27 @@ function ConfirmationContent() {
           )}
 
           {/* Payment summary */}
-          {pricing?.deposit > 0 && (
+          {pricing && (
             <div className="border-t border-gray-100 pt-3 space-y-1.5">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Deposit paid</span>
-                <span className="font-semibold text-green-600">${pricing.deposit?.toLocaleString()}</span>
-              </div>
-              {pricing.balance > 0 && (
+              {paidInFull ? (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Balance due at delivery</span>
-                  <span className="font-medium text-charcoal">${pricing.balance?.toLocaleString()}</span>
+                  <span className="text-gray-400">Paid in full</span>
+                  <span className="font-semibold text-green-600">${pricing.subtotal?.toLocaleString()}</span>
                 </div>
-              )}
+              ) : pricing.deposit > 0 ? (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Deposit paid</span>
+                    <span className="font-semibold text-green-600">${pricing.deposit?.toLocaleString()}</span>
+                  </div>
+                  {pricing.balance > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Balance due at delivery</span>
+                      <span className="font-medium text-charcoal">${pricing.balance?.toLocaleString()}</span>
+                    </div>
+                  )}
+                </>
+              ) : null}
             </div>
           )}
         </div>

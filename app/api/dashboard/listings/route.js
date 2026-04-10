@@ -72,6 +72,7 @@ export async function GET(req) {
       remainingBalance: b.remainingBalance || 0,
       depositPaid:  b.depositPaid  || false,
       balancePaid:  b.balancePaid  || false,
+      paidInFull:   b.paidInFull   || false,
       // Services
       packageId:   b.packageId  || null,
       serviceIds:  b.serviceIds || [],

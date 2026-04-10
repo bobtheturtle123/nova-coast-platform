@@ -44,6 +44,7 @@ const INITIAL_STATE = {
   // Post-payment
   bookingId:   null,
   depositPaid: false,
+  paidInFull:  false,
 };
 
 export const useBookingStore = create(
@@ -82,8 +83,8 @@ export const useBookingStore = create(
       setClientInfo:    (fields) => set(fields),
       setCustomFields:  (customFields) => set({ customFields }),
 
-      setBookingResult: (bookingId) =>
-        set({ bookingId, depositPaid: true }),
+      setBookingResult: (bookingId, paidInFull = false) =>
+        set({ bookingId, depositPaid: true, paidInFull }),
 
       resetBooking: () => set(INITIAL_STATE),
 
