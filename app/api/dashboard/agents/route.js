@@ -33,6 +33,35 @@ export async function GET(req) {
   return Response.json({ agents });
 }
 
+// Create new customer manually
+export async function PUT(req) {
+  const ctx = await getCtx(req);
+  if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { name, email, phone, company, notes } = await req.json();
+  if (!name || !email) return Response.json({ error: "Name and email required" }, { status: 400 });
+
+  const agentId = Buffer.from(email.toLowerCase()).toString("base64").replace(/[^a-zA-Z0-9]/g, "").slice(0, 32);
+  const ref = adminDb.collection("tenants").doc(ctx.tenantId).collection("agents").doc(agentId);
+  const existing = await ref.get();
+  if (existing.exists) return Response.json({ error: "A customer with this email already exists." }, { status: 409 });
+
+  await ref.set({
+    id: agentId,
+    name,
+    email: email.toLowerCase().trim(),
+    phone: phone || "",
+    company: company || "",
+    notes: notes || "",
+    totalOrders: 0,
+    totalSpent: 0,
+    firstOrderAt: new Date(),
+    lastOrderAt: new Date(),
+  });
+
+  return Response.json({ ok: true, agentId });
+}
+
 // Lookup by email — used by booking form autocomplete
 export async function POST(req) {
   const ctx = await getCtx(req);

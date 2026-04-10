@@ -381,9 +381,9 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-8 max-w-2xl">
-      <h1 className="font-display text-2xl text-navy mb-2">Settings</h1>
-      <p className="text-gray-500 text-sm mb-8">Manage your business profile, branding, and pricing.</p>
+    <div className="p-6 max-w-2xl">
+      <h1 className="font-semibold text-xl text-charcoal mb-1">Settings</h1>
+      <p className="text-gray-400 text-sm mb-8">Manage your business profile, branding, and pricing.</p>
 
       {msg.text && (
         <div className={`text-sm px-4 py-2 rounded-sm mb-6 ${
@@ -393,7 +393,7 @@ export default function SettingsPage() {
       )}
 
       {/* Booking URL */}
-      <div className="bg-cream rounded-sm border border-gray-200 p-4 mb-6">
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-6">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Your Booking Page</p>
         <div className="flex items-center gap-2">
           <code className="text-sm text-navy flex-1 truncate">{bookingUrl}</code>
@@ -406,8 +406,8 @@ export default function SettingsPage() {
 
       <form onSubmit={saveBranding} className="space-y-6">
         {/* Business info */}
-        <div className="bg-white rounded-sm border border-gray-200 p-6">
-          <h2 className="font-display text-navy text-base mb-4">Business Info</h2>
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="font-semibold text-charcoal text-base mb-4">Business Info</h2>
           <div className="space-y-4">
             <div>
               <label className="label-field">Business Name</label>
@@ -427,8 +427,8 @@ export default function SettingsPage() {
         </div>
 
         {/* Branding */}
-        <div className="bg-white rounded-sm border border-gray-200 p-6">
-          <h2 className="font-display text-navy text-base mb-4">Branding</h2>
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="font-semibold text-charcoal text-base mb-4">Branding</h2>
           <div className="space-y-4">
             <div>
               <label className="label-field">Tagline</label>
@@ -473,7 +473,7 @@ export default function SettingsPage() {
       </form>
 
       {/* ─── Pricing Tiers ─────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-sm border border-gray-200 p-6 mt-8">
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-display text-navy text-base">Pricing Tiers</h2>
           <button onClick={resetTiers} className="text-xs text-gray-400 hover:text-navy">Reset to defaults</button>
@@ -565,7 +565,7 @@ export default function SettingsPage() {
       {/* ─── Booking Config ──────────────────────────────────────────────────── */}
       <div className="bg-white rounded-sm border border-gray-200 p-6 mt-8 space-y-8">
         <div>
-          <h2 className="font-display text-navy text-base mb-1">Booking Settings</h2>
+          <h2 className="font-semibold text-charcoal text-base mb-1">Booking Settings</h2>
           <p className="text-sm text-gray-500">Configure deposit requirements, time slots, and custom form fields.</p>
         </div>
 
@@ -689,8 +689,8 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Availability ────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-sm border border-gray-200 p-6 mt-8">
-        <h2 className="font-display text-navy text-base mb-1">Availability & Scheduling</h2>
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+        <h2 className="font-semibold text-charcoal text-base mb-1">Availability & Scheduling</h2>
         <p className="text-sm text-gray-500 mb-6">
           Control how time slots are offered to clients on the booking schedule step.
         </p>
@@ -770,8 +770,8 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Terms of Service ─────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-sm border border-gray-200 p-6 mt-8">
-        <h2 className="font-display text-navy text-base mb-1">Terms of Service</h2>
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+        <h2 className="font-semibold text-charcoal text-base mb-1">Terms of Service</h2>
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-gray-500">
             Clients must agree to these terms before completing a booking. Leave blank to disable the checkbox.
@@ -812,8 +812,8 @@ export default function SettingsPage() {
         </div>
       </div>
       {/* ─── Privacy Policy ──────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-sm border border-gray-200 p-6 mt-8">
-        <h2 className="font-display text-navy text-base mb-1">Privacy Policy</h2>
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+        <h2 className="font-semibold text-charcoal text-base mb-1">Privacy Policy</h2>
         <p className="text-sm text-gray-500 mb-4">
           Shown at <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">/{tenant?.slug}/privacy</code>.
           Linked from the checkout terms checkbox. Leave blank to disable.
@@ -853,8 +853,8 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Email Template ──────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-sm border border-gray-200 p-6 mt-8">
-        <h2 className="font-display text-navy text-base mb-1">Gallery Delivery Email Template</h2>
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+        <h2 className="font-semibold text-charcoal text-base mb-1">Gallery Delivery Email Template</h2>
         <p className="text-sm text-gray-500 mb-4">
           Default email content used when delivering a gallery to a client. You can override
           per-delivery in the gallery editor. Use <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{address}}"}</code> and{" "}

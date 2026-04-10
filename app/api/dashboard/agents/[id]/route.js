@@ -1,7 +1,4 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
-import { sendBookingApproved } from "@/lib/email";
-import { getTenantById } from "@/lib/tenants";
-import { v4 as uuidv4 } from "uuid";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -13,25 +10,12 @@ async function getCtx(req) {
   } catch { return null; }
 }
 
-export async function GET(req, { params }) {
-  const ctx = await getCtx(req);
-  if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
-  const doc = await adminDb
-    .collection("tenants").doc(ctx.tenantId)
-    .collection("bookings").doc(params.id)
-    .get();
-
-  if (!doc.exists) return Response.json({ error: "Not found" }, { status: 404 });
-  return Response.json({ booking: { id: doc.id, ...doc.data() } });
-}
-
 export async function PATCH(req, { params }) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const allowed = ["status", "shootDate", "shootTime", "photographerId", "notes", "propertyWebsite"];
+  const allowed = ["name", "email", "phone", "notes", "company"];
   const update = {};
   for (const k of allowed) {
     if (body[k] !== undefined) update[k] = body[k];
@@ -39,8 +23,20 @@ export async function PATCH(req, { params }) {
 
   await adminDb
     .collection("tenants").doc(ctx.tenantId)
-    .collection("bookings").doc(params.id)
+    .collection("agents").doc(params.id)
     .update(update);
+
+  return Response.json({ ok: true });
+}
+
+export async function DELETE(req, { params }) {
+  const ctx = await getCtx(req);
+  if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  await adminDb
+    .collection("tenants").doc(ctx.tenantId)
+    .collection("agents").doc(params.id)
+    .delete();
 
   return Response.json({ ok: true });
 }

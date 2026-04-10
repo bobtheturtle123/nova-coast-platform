@@ -17,8 +17,8 @@ const STATUS_COLORS = {
   pending_payment: "bg-gray-100 text-gray-600",
   requested:       "bg-amber-50 text-amber-700",
   confirmed:       "bg-blue-50 text-blue-700",
-  completed:       "bg-purple-50 text-purple-700",
-  cancelled:       "bg-red-50 text-red-700",
+  completed:       "bg-emerald-50 text-emerald-700",
+  cancelled:       "bg-red-50 text-red-600",
 };
 
 export default function ListingDetailPage() {
@@ -36,6 +36,7 @@ export default function ListingDetailPage() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailNote,    setEmailNote]   = useState("");
   const [shootDate, setShootDate] = useState("");
+  const [shootTime, setShootTime] = useState("");
 
   // Property website state
   const [propSite,      setPropSite]      = useState({});
@@ -65,6 +66,7 @@ export default function ListingDetailPage() {
       const { booking: b } = await bRes.json();
       setBooking(b);
       setShootDate(b.shootDate?.split?.("T")?.[0] || b.preferredDate?.split?.("T")?.[0] || "");
+      setShootTime(b.shootTime || "");
       setEmailSubject(`Your listing media is ready | ${b.fullAddress || b.address || ""}`);
       if (b.propertyWebsite) setPropSite(b.propertyWebsite);
       else setPropSite({ address: b.fullAddress || b.address || "" });
@@ -169,7 +171,7 @@ export default function ListingDetailPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-6 h-6 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
     </div>
   );
   if (!booking) return (
@@ -205,7 +207,7 @@ export default function ListingDetailPage() {
               <p className="text-white/60 text-xs mb-1">
                 <Link href="/dashboard/listings" className="hover:text-white">← All Listings</Link>
               </p>
-              <h1 className="font-display text-white text-2xl leading-tight">{address}</h1>
+              <h1 className="font-semibold text-white text-2xl leading-tight">{address}</h1>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {gallery?.delivered && (
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-sm bg-green-500 text-white">Listing Delivered</span>
@@ -258,8 +260,8 @@ export default function ListingDetailPage() {
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`px-4 py-3.5 text-sm font-medium border-b-2 transition-colors ${
                 tab === t.id
-                  ? "border-navy text-navy"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  ? "border-charcoal text-charcoal"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
               }`}>
               {t.label}
             </button>
@@ -282,7 +284,7 @@ export default function ListingDetailPage() {
         {tab === "overview" && (
           <div className="grid md:grid-cols-2 gap-6">
             {/* Client / Agent */}
-            <div className="bg-white rounded-sm border border-gray-100 shadow-sm p-5">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
               <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Agent / Client</p>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-navy/10 flex items-center justify-center text-navy font-bold">
@@ -305,7 +307,7 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Shoot management */}
-            <div className="bg-white rounded-sm border border-gray-100 shadow-sm p-5">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
               <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Shoot Details</p>
               <div className="space-y-4">
                 {/* Auto-derived status badges */}
@@ -345,21 +347,45 @@ export default function ListingDetailPage() {
                     ))}
                   </select>
                 </div>
+                {/* Client requested time */}
+                {(booking.preferredDate || booking.preferredTime) && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-sm px-3 py-2.5 text-xs">
+                    <p className="font-semibold text-amber-800 mb-0.5">Client Requested</p>
+                    <p className="text-amber-700">
+                      {booking.preferredDate
+                        ? new Date(booking.preferredDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+                        : "No date specified"}
+                      {booking.preferredTime && ` · ${
+                        booking.preferredTime === "morning"   ? "Morning (8am–12pm)" :
+                        booking.preferredTime === "afternoon" ? "Afternoon (12pm–5pm)" :
+                        booking.preferredTime === "flexible"  ? "Flexible / Any time" :
+                        booking.preferredTimeSpecific         ? `Specific time: ${booking.preferredTimeSpecific}` :
+                        booking.preferredTime
+                      }`}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
-                    {booking.shootDate ? "Confirmed Shoot Date" : "Requested Date"}
+                    Confirm Shoot Date &amp; Time
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mb-2">
                     <input type="date" value={shootDate}
                       onChange={(e) => setShootDate(e.target.value)}
                       className="input-field flex-1" />
-                    <button onClick={() => patchBooking({ shootDate })} disabled={saving}
-                      className="btn-outline px-3 py-2 text-xs whitespace-nowrap">
-                      {saving ? "…" : "Save"}
-                    </button>
+                    <input type="time" value={shootTime}
+                      onChange={(e) => setShootTime(e.target.value)}
+                      className="input-field w-32" />
                   </div>
-                  {shootDateDisplay && (
-                    <p className="text-xs text-gray-400 mt-1">{shootDateDisplay}</p>
+                  <button onClick={() => patchBooking({ shootDate, shootTime })} disabled={saving}
+                    className="btn-primary w-full py-2 text-xs">
+                    {saving ? "Saving…" : "Confirm Shoot Date"}
+                  </button>
+                  {booking.shootDate && (
+                    <p className="text-xs text-green-600 mt-1.5 flex items-center gap-1">
+                      <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      Confirmed: {shootDateDisplay}{booking.shootTime ? ` at ${booking.shootTime}` : ""}
+                    </p>
                   )}
                 </div>
               </div>
@@ -367,7 +393,7 @@ export default function ListingDetailPage() {
 
             {/* Services */}
             {(booking.packageId || booking.serviceIds?.length > 0) && (
-              <div className="bg-white rounded-sm border border-gray-100 shadow-sm p-5">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Services Booked</p>
                 {booking.packageId && (
                   <p className="text-sm font-medium text-navy mb-2">
@@ -389,7 +415,7 @@ export default function ListingDetailPage() {
 
             {/* Gallery quick links */}
             {gallery && (
-              <div className="bg-white rounded-sm border border-gray-100 shadow-sm p-5">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Gallery</p>
                 <div className="flex items-center justify-between mb-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -418,7 +444,7 @@ export default function ListingDetailPage() {
         {/* ── ORDERS TAB ───────────────────────────────────────────────────── */}
         {tab === "orders" && (
           <div className="space-y-4 max-w-lg">
-            <div className="bg-white rounded-sm border border-gray-100 shadow-sm p-5">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
               <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Payment Summary</p>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">

@@ -799,7 +799,7 @@ export default function GalleryDetailPage() {
           <p className="text-xs text-gray-400 mb-5">Add 3D tours, floor plans, and documents — all delivered alongside photos in the client gallery.</p>
 
           {/* 3D / Matterport */}
-          <div className="bg-white border border-gray-100 rounded-sm p-5 shadow-sm mb-4">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-card mb-4">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-7 h-7 rounded-sm bg-navy/8 flex items-center justify-center flex-shrink-0">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
@@ -807,8 +807,8 @@ export default function GalleryDetailPage() {
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-semibold text-charcoal">3D Interactive Tour</p>
-                <p className="text-xs text-gray-400">Matterport, iGuide, Zillow 3D, or any iframe URL</p>
+                <p className="text-sm font-semibold text-charcoal">3D Tour Link</p>
+                <p className="text-xs text-gray-400">Paste your Matterport, iGuide, Zillow 3D, or similar URL — it will be embedded in the client gallery.</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -820,37 +820,19 @@ export default function GalleryDetailPage() {
                 className="input-field flex-1 text-sm"
               />
               <button onClick={saveExtras} disabled={savingExtras} className="btn-primary px-4 py-2 text-xs whitespace-nowrap">
-                {savingExtras ? "…" : "Save"}
+                {savingExtras ? "Saving…" : "Save"}
               </button>
             </div>
-
-            {/* Additional virtual links */}
-            <div className="mt-3 space-y-2">
-              {virtualLinks.map((l, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm bg-gray-50 rounded-sm px-3 py-2">
-                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-navy flex-shrink-0">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                  </svg>
-                  <span className="font-medium text-navy flex-shrink-0">{l.label}</span>
-                  <span className="text-gray-400 text-xs truncate flex-1">{l.url}</span>
-                  <button onClick={() => { setVirtualLinks((p) => p.filter((_, idx) => idx !== i)); }} className="text-gray-300 hover:text-red-400 flex-shrink-0 text-base leading-none">×</button>
-                </div>
-              ))}
-              <div className="flex gap-2 pt-1">
-                <input type="text" value={newLinkLabel} onChange={(e) => setNewLinkLabel(e.target.value)}
-                  placeholder="Label (e.g. Video Walkthrough)" className="input-field text-xs py-2 w-44 flex-shrink-0" />
-                <input type="url" value={newLinkUrl} onChange={(e) => setNewLinkUrl(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addVirtualLink()}
-                  placeholder="URL" className="input-field text-xs py-2 flex-1" />
-                <button onClick={addVirtualLink} disabled={!newLinkUrl} className="btn-outline px-3 py-2 text-xs whitespace-nowrap disabled:opacity-40">
-                  + Add
-                </button>
-              </div>
-            </div>
+            {matterportUrl && (
+              <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                3D tour will appear as an interactive embed in the client gallery.
+              </p>
+            )}
           </div>
 
           {/* Floor Plans */}
-          <div className="bg-white border border-gray-100 rounded-sm p-5 shadow-sm mb-4">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-card mb-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-sm bg-navy/8 flex items-center justify-center flex-shrink-0">

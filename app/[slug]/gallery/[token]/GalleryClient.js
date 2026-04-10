@@ -371,33 +371,6 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           </div>
         )}
 
-        {/* ── AI-powered callout ────────────────────────────────────────────── */}
-        <div className="mt-12 rounded-sm overflow-hidden border border-gray-100" style={{ background: "linear-gradient(135deg, #0b2a55 0%, #1a4080 100%)" }}>
-          <div className="px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <div className="w-9 h-9 rounded-sm bg-white/10 flex items-center justify-center">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-white">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .03 2.798-1.332 2.798H4.13c-1.362 0-2.333-1.798-1.332-2.798L4.2 15.3" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-white font-semibold text-sm leading-tight">Powered by Claude AI</p>
-                <p className="text-white/50 text-xs">by Anthropic</p>
-              </div>
-            </div>
-            <div className="flex-1">
-              <p className="text-white/80 text-xs leading-relaxed">
-                This gallery platform is built with Claude — the same AI that powers some of the world's most advanced tools.
-                Your photographer uses AI to deliver a smarter, faster experience from booking to delivery.
-              </p>
-            </div>
-            <a href="https://claude.ai" target="_blank" rel="noopener noreferrer"
-              className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-sm bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors whitespace-nowrap">
-              Learn more →
-            </a>
-          </div>
-        </div>
-
       </main>
 
       {/* Footer */}
