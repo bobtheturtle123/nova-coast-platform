@@ -1,4 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { getTenantById } from "@/lib/tenants";
+import { sendBookingCreatedNotifications } from "@/lib/email";
 
 async function getAuthContext(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -16,24 +18,28 @@ export async function POST(req) {
     const {
       clientName, clientEmail, clientPhone = "",
       address, city = "", state = "CA", zip = "",
+      sqft = "",
       preferredDate = "", preferredTime = "",
       notes = "", totalPrice = 0, depositPaid = false,
       status = "confirmed", source = "manual",
+      packageId = null, serviceIds = [], addonIds = [], customLineItems = [],
+      photographerEmail = "", photographerName = "",
     } = await req.json();
 
     if (!clientName || !clientEmail || !address) {
-      return Response.json({ error: "clientName, clientEmail, and address are required." }, { status: 400 });
+      return Response.json({ error: "Client name, email, and address are required." }, { status: 400 });
     }
 
-    const bookingId  = adminDb.collection("tmp").doc().id; // generate ID
+    const bookingId  = adminDb.collection("tmp").doc().id;
     const tenantRef  = adminDb.collection("tenants").doc(ctx.tenantId);
     const bookingRef = tenantRef.collection("bookings").doc(bookingId);
 
     const fullAddress = [address, city, state, zip].filter(Boolean).join(", ");
+    const finalPrice  = Number(totalPrice) || 0;
 
-    await bookingRef.set({
-      id: bookingId,
-      tenantId: ctx.tenantId,
+    const bookingData = {
+      id:              bookingId,
+      tenantId:        ctx.tenantId,
       clientName,
       clientEmail,
       clientPhone,
@@ -41,25 +47,35 @@ export async function POST(req) {
       city,
       state,
       zip,
+      sqft:            sqft ? Number(sqft) : null,
       fullAddress,
       preferredDate,
       preferredTime,
       notes,
-      totalPrice:    Number(totalPrice) || 0,
-      depositPaid:   Boolean(depositPaid),
-      balancePaid:   false,
-      paidInFull:    false,
-      remainingBalance: Number(totalPrice) || 0,
+      totalPrice:      finalPrice,
+      depositAmount:   0,
+      depositPaid:     Boolean(depositPaid),
+      balancePaid:     false,
+      paidInFull:      Boolean(depositPaid) && finalPrice === 0,
+      remainingBalance: finalPrice,
       status,
       source,
-      createdAt:     new Date(),
-      createdBy:     ctx.uid,
-      // No Stripe payment intent — manually created booking
-      stripePaymentIntentId: null,
-      galleryId: null,
-    });
+      packageId:       packageId || null,
+      serviceIds:      serviceIds || [],
+      addonIds:        addonIds || [],
+      customLineItems: customLineItems || [],
+      photographerEmail: photographerEmail || null,
+      photographerName:  photographerName  || null,
+      createdAt:       new Date(),
+      createdBy:       ctx.uid,
+      stripeDepositIntentId:  null,
+      stripeBalanceIntentId:  null,
+      galleryId:       null,
+    };
 
-    // Upsert agent/customer record
+    await bookingRef.set(bookingData);
+
+    // Upsert customer record
     if (clientEmail) {
       const agentKey = Buffer.from(clientEmail.toLowerCase().trim()).toString("base64").replace(/[+/=]/g, "");
       const agentRef = tenantRef.collection("agents").doc(agentKey);
@@ -71,20 +87,37 @@ export async function POST(req) {
           email: clientEmail,
           phone: clientPhone,
           totalOrders: 1,
-          totalSpent: Number(totalPrice) || 0,
+          totalSpent:  finalPrice,
           lastOrderAt: new Date(),
-          createdAt: new Date(),
+          createdAt:   new Date(),
         });
       } else {
         const prev = agentSnap.data();
         await agentRef.update({
           totalOrders: (prev.totalOrders || 0) + 1,
-          totalSpent:  (prev.totalSpent  || 0) + (Number(totalPrice) || 0),
+          totalSpent:  (prev.totalSpent  || 0) + finalPrice,
           lastOrderAt: new Date(),
-          name: clientName,
+          name:  clientName,
           phone: clientPhone || prev.phone,
         });
       }
+    }
+
+    // Send notifications (fire-and-forget — don't fail the booking if email fails)
+    try {
+      const [tenant, adminRecord] = await Promise.all([
+        getTenantById(ctx.tenantId),
+        adminAuth.getUser(ctx.uid),
+      ]);
+      if (tenant) {
+        await sendBookingCreatedNotifications({
+          booking:    { ...bookingData },
+          tenant,
+          adminEmail: adminRecord.email || tenant.email || null,
+        });
+      }
+    } catch (emailErr) {
+      console.error("Notification email error (non-fatal):", emailErr);
     }
 
     return Response.json({ bookingId, ok: true });

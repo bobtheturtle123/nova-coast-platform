@@ -4,15 +4,6 @@ import { useEffect, useState, useMemo } from "react";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 
-const STATUS_META = {
-  pending_payment: { label: "Awaiting Payment", dot: "bg-gray-400" },
-  requested:       { label: "Pending Review",   dot: "bg-amber-400" },
-  confirmed:       { label: "Confirmed",         dot: "bg-blue-500"  },
-  completed:       { label: "Shoot Complete",    dot: "bg-purple-500" },
-  cancelled:       { label: "Cancelled",         dot: "bg-red-400"   },
-  payment_failed:  { label: "Payment Failed",    dot: "bg-red-500"   },
-};
-
 const FILTERS = [
   { id: "all",       label: "All" },
   { id: "requested", label: "Pending Review" },
@@ -21,13 +12,15 @@ const FILTERS = [
   { id: "delivered", label: "Delivered" },
 ];
 
-function statusBadges(listing) {
-  const badges = [];
-  if (listing.gallery?.delivered) badges.push({ label: "Delivered",    cls: "bg-green-600 text-white" });
-  if (listing.gallery && !listing.gallery.delivered) badges.push({ label: "Gallery Ready", cls: "bg-blue-600 text-white" });
-  if (listing.balancePaid) badges.push({ label: "Paid",       cls: "bg-emerald-500 text-white" });
-  else if (listing.depositPaid) badges.push({ label: "Deposit Paid", cls: "bg-amber-500 text-white" });
-  return badges;
+function paymentBadge(listing) {
+  if (listing.paidInFull || listing.balancePaid) return { label: "Paid in Full", cls: "bg-emerald-500 text-white" };
+  if (listing.depositPaid) return { label: "Deposit Paid", cls: "bg-blue-500 text-white" };
+  return { label: "Unpaid", cls: "bg-gray-400 text-white" };
+}
+
+function deliveryBadge(listing) {
+  if (listing.gallery?.delivered) return { label: "Delivered", cls: "bg-green-600 text-white" };
+  return { label: "Undelivered", cls: "bg-amber-500 text-white" };
 }
 
 export default function ListingsPage() {
@@ -147,8 +140,8 @@ export default function ListingsPage() {
         // ── GRID VIEW ──────────────────────────────────────────────────────────
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((listing) => {
-            const badges = statusBadges(listing);
-            const statusMeta = STATUS_META[listing.status] || STATUS_META.requested;
+            const pmtBadge = paymentBadge(listing);
+            const dlvBadge = deliveryBadge(listing);
             const coverUrl = listing.gallery?.coverUrl;
             const shootDateStr = formatDate(listing.shootDate || listing.preferredDate);
 
@@ -165,19 +158,14 @@ export default function ListingsPage() {
                       <span className="text-4xl opacity-20">🏠</span>
                     </div>
                   )}
-                  {/* Status + delivery badges */}
+                  {/* Auto-derived status badges */}
                   <div className="absolute top-2 left-2 flex flex-wrap gap-1">
-                    {badges.map((b) => (
-                      <span key={b.label} className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${b.cls}`}>
-                        {b.label}
-                      </span>
-                    ))}
-                    {badges.length === 0 && (
-                      <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-sm bg-black/40 text-white">
-                        <span className={`w-1.5 h-1.5 rounded-full ${statusMeta.dot}`} />
-                        {statusMeta.label}
-                      </span>
-                    )}
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${pmtBadge.cls}`}>
+                      {pmtBadge.label}
+                    </span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${dlvBadge.cls}`}>
+                      {dlvBadge.label}
+                    </span>
                   </div>
                   {/* Media count */}
                   {listing.gallery?.mediaCount > 0 && (
@@ -229,7 +217,8 @@ export default function ListingsPage() {
         // ── LIST VIEW ──────────────────────────────────────────────────────────
         <div className="bg-white rounded-sm border border-gray-200 divide-y divide-gray-50">
           {filtered.map((listing) => {
-            const statusMeta = STATUS_META[listing.status] || STATUS_META.requested;
+            const pmtBadge = paymentBadge(listing);
+            const dlvBadge = deliveryBadge(listing);
             const coverUrl = listing.gallery?.coverUrl;
             const shootDateStr = formatDate(listing.shootDate || listing.preferredDate);
 
@@ -258,16 +247,8 @@ export default function ListingsPage() {
                 </div>
 
                 <div className="flex items-center gap-1 flex-shrink-0 flex-wrap justify-end">
-                  {listing.gallery?.delivered && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-medium">Delivered</span>
-                  )}
-                  {listing.balancePaid && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium">Paid</span>
-                  )}
-                  <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-gray-50 text-gray-600`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${statusMeta.dot}`} />
-                    {statusMeta.label}
-                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${pmtBadge.cls}`}>{pmtBadge.label}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${dlvBadge.cls}`}>{dlvBadge.label}</span>
                 </div>
               </Link>
             );

@@ -1,7 +1,7 @@
 import { stripe } from "@/lib/stripe";
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
-import { sendBookingConfirmation } from "@/lib/email";
+import { sendBookingCreatedNotifications } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +37,13 @@ export async function POST(req) {
           await bookingRef.update({ depositPaid: true, status: "requested", stripeDepositIntentId: pi.id });
           try {
             const tenant = await getTenantById(tenantId);
-            if (tenant) await sendBookingConfirmation({ booking: { ...booking, depositPaid: true }, tenant });
+            if (tenant) {
+              await sendBookingCreatedNotifications({
+                booking: { ...booking, depositPaid: true },
+                tenant,
+                adminEmail: tenant.email || null,
+              });
+            }
           } catch (e) { console.error("Confirmation email failed:", e); }
         }
 
@@ -59,7 +65,13 @@ export async function POST(req) {
           }
           try {
             const tenant = await getTenantById(tenantId);
-            if (tenant) await sendBookingConfirmation({ booking: { ...booking, depositPaid: true }, tenant });
+            if (tenant) {
+              await sendBookingCreatedNotifications({
+                booking: { ...booking, depositPaid: true },
+                tenant,
+                adminEmail: tenant.email || null,
+              });
+            }
           } catch (e) { console.error("Confirmation email failed:", e); }
         }
 

@@ -133,19 +133,23 @@ export default function ListingDetailPage() {
 
     for (const file of files) {
       try {
-        const { uploadUrl, publicUrl, key } = await fetch("/api/gallery/upload-url", {
+        const urlRes = await fetch("/api/gallery/upload-url", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ fileName: file.name, fileType: file.type, galleryId: currentGallery.id }),
-        }).then((r) => r.json());
+        });
+        if (!urlRes.ok) { setMsg({ text: `Failed to get upload URL for ${file.name}.`, type: "error" }); continue; }
+        const { uploadUrl, publicUrl, key } = await urlRes.json();
 
-        await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+        const r2Res = await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+        if (!r2Res.ok) { setMsg({ text: `Failed to upload ${file.name} to storage.`, type: "error" }); continue; }
 
-        await fetch(`/api/dashboard/galleries/${currentGallery.id}/media`, {
+        const saveRes = await fetch(`/api/dashboard/galleries/${currentGallery.id}/media`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ publicUrl, key, fileName: file.name, fileType: file.type }),
         });
+        if (!saveRes.ok) { setMsg({ text: `Failed to save ${file.name}. Check auth.`, type: "error" }); continue; }
 
         done++;
         setUploadPct(Math.round((done / total) * 100));
@@ -153,7 +157,7 @@ export default function ListingDetailPage() {
           ...g,
           media: [...(g?.media || []), { url: publicUrl, key, fileName: file.name, fileType: file.type }],
         }));
-      } catch { setMsg({ text: `Failed: ${file.name}`, type: "error" }); }
+      } catch (err) { setMsg({ text: `Failed: ${file.name} — ${err.message}`, type: "error" }); }
     }
 
     setUploading(false);
@@ -357,8 +361,8 @@ export default function ListingDetailPage() {
                   {booking.clientPhone && <p className="text-sm text-gray-500">{booking.clientPhone}</p>}
                 </div>
               </div>
-              {booking.squareFootage && (
-                <p className="text-xs text-gray-400">{booking.squareFootage} sq ft · {booking.propertyType}</p>
+              {(booking.sqft || booking.squareFootage) && (
+                <p className="text-xs text-gray-400">{(booking.sqft || booking.squareFootage).toLocaleString()} sq ft{booking.propertyType ? ` · ${booking.propertyType}` : ""}</p>
               )}
               {booking.notes && (
                 <div className="mt-3 p-3 bg-gray-50 rounded-sm">
@@ -371,8 +375,34 @@ export default function ListingDetailPage() {
             <div className="bg-white rounded-sm border border-gray-200 p-5">
               <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Shoot Details</p>
               <div className="space-y-4">
+                {/* Auto-derived status badges */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Status</label>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Payment Status</label>
+                  <div className="flex flex-wrap gap-2">
+                    {booking.paidInFull || booking.balancePaid ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-sm bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ✓ Paid in Full
+                      </span>
+                    ) : booking.depositPaid ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-sm bg-blue-50 text-blue-700 border border-blue-200">
+                        ◑ Deposit Paid
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-sm bg-gray-50 text-gray-500 border border-gray-200">
+                        ○ Unpaid
+                      </span>
+                    )}
+                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-sm border ${
+                      gallery?.delivered
+                        ? "bg-green-50 text-green-700 border-green-200"
+                        : "bg-amber-50 text-amber-600 border-amber-200"
+                    }`}>
+                      {gallery?.delivered ? "✓ Delivered" : "— Undelivered"}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Workflow Stage</label>
                   <select
                     value={booking.status}
                     onChange={(e) => patchBooking({ status: e.target.value })}
@@ -620,14 +650,34 @@ export default function ListingDetailPage() {
                 )}
               </div>
               <button
-                onClick={() => setPropField("published", !propSite.published)}
-                className={`px-4 py-2 text-sm font-semibold rounded-sm transition-colors ${
+                onClick={async () => {
+                  const next = { ...propSite, published: !propSite.published };
+                  setPropSite(next);
+                  setSavingPropSite(true);
+                  try {
+                    const token = await auth.currentUser.getIdToken();
+                    const res = await fetch(`/api/dashboard/bookings/${id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                      body: JSON.stringify({ propertyWebsite: next }),
+                    });
+                    if (res.ok) {
+                      setBooking((b) => ({ ...b, propertyWebsite: next }));
+                      setPropSiteMsg({ text: next.published ? "Website is now live." : "Website unpublished.", type: "success" });
+                    } else {
+                      setPropSiteMsg({ text: "Failed to update.", type: "error" });
+                    }
+                  } catch { setPropSiteMsg({ text: "Something went wrong.", type: "error" }); }
+                  finally { setSavingPropSite(false); }
+                }}
+                disabled={savingPropSite}
+                className={`px-4 py-2 text-sm font-semibold rounded-sm transition-colors disabled:opacity-60 ${
                   propSite.published
                     ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
                     : "bg-green-500 text-white hover:bg-green-600"
                 }`}
               >
-                {propSite.published ? "Unpublish" : "Publish"}
+                {savingPropSite ? "…" : propSite.published ? "Unpublish" : "Publish"}
               </button>
             </div>
 

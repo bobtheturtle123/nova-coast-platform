@@ -3,24 +3,117 @@
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
+import { getSqftTier, getItemPrice, calculateTenantPrice, getActiveTiers, formatPrice } from "@/lib/catalogUtils";
 
 const STATUS_LABELS = {
-  pending_payment: { label: "Awaiting payment", cls: "bg-gray-50 text-gray-600" },
-  requested:       { label: "Pending review",   cls: "bg-amber-50 text-amber-700" },
+  pending_payment: { label: "Awaiting payment", cls: "bg-gray-50 text-gray-500" },
+  requested:       { label: "Pending review",   cls: "bg-amber-50 text-amber-600" },
   confirmed:       { label: "Confirmed",         cls: "bg-green-50 text-green-700" },
-  completed:       { label: "Completed",         cls: "bg-blue-50 text-blue-700" },
-  cancelled:       { label: "Cancelled",         cls: "bg-red-50 text-red-700" },
-  payment_failed:  { label: "Payment failed",    cls: "bg-red-50 text-red-700" },
+  completed:       { label: "Completed",         cls: "bg-blue-50 text-blue-600" },
+  cancelled:       { label: "Cancelled",         cls: "bg-red-50 text-red-500" },
+  payment_failed:  { label: "Payment failed",    cls: "bg-red-50 text-red-500" },
 };
 
 const EMPTY_FORM = {
   clientName: "", clientEmail: "", clientPhone: "",
-  address: "", city: "", state: "CA", zip: "",
+  address: "", sqft: "",
   preferredDate: "", preferredTime: "",
-  notes: "", totalPrice: "", depositPaid: false, status: "confirmed",
-  selectedPackage: "", selectedServices: [], selectedAddons: [],
-  customLineItems: [], // [{ label, price }]
+  photographerEmail: "", photographerName: "",
+  notes: "",
+  totalPrice: "",
+  depositPaid: false,
+  status: "confirmed",
+  selectedPackage: "",
+  selectedServices: [],
+  selectedAddons: [],
+  customLineItems: [],
 };
+
+// ── Selectable card for a package ─────────────────────────────────────────────
+function PackageCard({ pkg, tier, selected, onSelect }) {
+  const price = getItemPrice(pkg, tier);
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`relative text-left rounded-sm border p-4 transition-all ${
+        selected
+          ? "border-navy bg-navy text-white"
+          : "border-gray-200 bg-white hover:border-navy/40"
+      }`}
+    >
+      <p className={`text-sm font-semibold leading-tight ${selected ? "text-white" : "text-charcoal"}`}>
+        {pkg.name}
+      </p>
+      {pkg.description && (
+        <p className={`text-xs mt-0.5 leading-snug ${selected ? "text-white/70" : "text-gray-400"}`}>
+          {pkg.description}
+        </p>
+      )}
+      <p className={`text-base font-bold mt-2 ${selected ? "text-gold" : "text-navy"}`}>
+        {formatPrice(price)}
+      </p>
+    </button>
+  );
+}
+
+// ── Selectable row for a service / add-on ─────────────────────────────────────
+function ServiceRow({ item, tier, checked, onToggle }) {
+  const price = getItemPrice(item, tier);
+  const [expanded, setExpanded] = useState(false);
+  const long = item.description && item.description.length > 80;
+  return (
+    <div
+      className={`w-full rounded-sm border transition-all ${
+        checked
+          ? "border-navy/60 bg-navy/5"
+          : "border-transparent bg-gray-50 hover:border-gray-200"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-3 py-2.5 text-left"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
+            checked ? "bg-navy border-navy" : "border-gray-300"
+          }`}>
+            {checked && (
+              <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </div>
+          <div>
+            <p className="text-sm text-charcoal font-medium leading-none">{item.name}</p>
+            {item.description && !long && (
+              <p className="text-xs text-gray-400 mt-0.5">{item.description}</p>
+            )}
+            {item.description && long && !expanded && (
+              <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{item.description}</p>
+            )}
+          </div>
+        </div>
+        <span className="text-sm font-semibold text-navy ml-4 flex-shrink-0">{formatPrice(price)}</span>
+      </button>
+      {item.description && long && (
+        <div className="px-3 pb-2">
+          {expanded && (
+            <p className="text-xs text-gray-500 leading-relaxed mb-1">{item.description}</p>
+          )}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+            className="text-xs text-navy/60 hover:text-navy underline underline-offset-2"
+          >
+            {expanded ? "Show less" : "Read more"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function BookingsPage() {
   const [bookings,    setBookings]    = useState([]);
@@ -31,8 +124,8 @@ export default function BookingsPage() {
   const [saving,      setSaving]      = useState(false);
   const [createError, setCreateError] = useState("");
   const [catalog,     setCatalog]     = useState(null);
-  const [newLineLabel, setNewLineLabel] = useState("");
-  const [newLinePrice, setNewLinePrice] = useState("");
+  const [customLabel, setCustomLabel] = useState("");
+  const [customPrice, setCustomPrice] = useState("");
 
   useEffect(() => {
     loadBookings();
@@ -42,10 +135,7 @@ export default function BookingsPage() {
   async function loadCatalog() {
     const token = await auth.currentUser?.getIdToken();
     if (!token) return;
-    // Get the tenant's slug first, then load catalog
-    const tenantRes = await fetch("/api/dashboard/tenant", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const tenantRes = await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } });
     if (!tenantRes.ok) return;
     const { tenant } = await tenantRes.json();
     const catRes = await fetch(`/api/tenant-public/${tenant.slug}/catalog`);
@@ -55,72 +145,91 @@ export default function BookingsPage() {
   async function loadBookings() {
     const token = await auth.currentUser?.getIdToken();
     if (!token) return;
-    const res = await fetch("/api/dashboard/bookings", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setBookings(data.bookings);
-    }
+    const res = await fetch("/api/dashboard/bookings", { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) setBookings((await res.json()).bookings);
     setLoading(false);
   }
 
-  function setField(f) {
-    return (e) => setForm((prev) => ({ ...prev, [f]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
+  function setField(f, val) {
+    setForm((p) => ({ ...p, [f]: val }));
   }
 
   function toggleService(id) {
-    setForm((prev) => ({
-      ...prev,
+    setForm((p) => ({
+      ...p,
       selectedPackage: "",
-      selectedServices: prev.selectedServices.includes(id)
-        ? prev.selectedServices.filter((s) => s !== id)
-        : [...prev.selectedServices, id],
+      selectedServices: p.selectedServices.includes(id)
+        ? p.selectedServices.filter((s) => s !== id)
+        : [...p.selectedServices, id],
     }));
   }
 
   function toggleAddon(id) {
-    setForm((prev) => ({
-      ...prev,
-      selectedAddons: prev.selectedAddons.includes(id)
-        ? prev.selectedAddons.filter((a) => a !== id)
-        : [...prev.selectedAddons, id],
+    setForm((p) => ({
+      ...p,
+      selectedAddons: p.selectedAddons.includes(id)
+        ? p.selectedAddons.filter((a) => a !== id)
+        : [...p.selectedAddons, id],
+    }));
+  }
+
+  function selectPackage(id) {
+    setForm((p) => ({
+      ...p,
+      selectedPackage:  p.selectedPackage === id ? "" : id,
+      selectedServices: [],
     }));
   }
 
   function addCustomLine() {
-    const label = newLineLabel.trim();
-    const price = Number(newLinePrice) || 0;
+    const label = customLabel.trim();
+    const price = parseFloat(customPrice) || 0;
     if (!label) return;
-    setForm((prev) => ({ ...prev, customLineItems: [...prev.customLineItems, { label, price }] }));
-    setNewLineLabel(""); setNewLinePrice("");
+    setForm((p) => ({ ...p, customLineItems: [...p.customLineItems, { label, price }] }));
+    setCustomLabel("");
+    setCustomPrice("");
   }
 
-  function removeCustomLine(i) {
-    setForm((prev) => ({ ...prev, customLineItems: prev.customLineItems.filter((_, idx) => idx !== i) }));
-  }
+  // ── Live pricing ─────────────────────────────────────────────────────────────
+  const pricingConfig = catalog?.pricingConfig || null;
+  const bookingConfig = catalog?.bookingConfig || null;
+  const tier = getSqftTier(form.sqft, pricingConfig);
+  const pricingMode = pricingConfig?.mode || "sqft";
+  const showSqft = pricingMode !== "flat";
 
-  function calcAutoPrice() {
-    if (!catalog) return 0;
-    let base = 0;
-    if (form.selectedPackage) {
-      const pkg = catalog.packages?.find((p) => p.id === form.selectedPackage);
-      base = pkg?.price || 0;
-    } else {
-      base = form.selectedServices.reduce((sum, id) => {
-        const svc = catalog.services?.find((s) => s.id === id);
-        return sum + (svc?.price || 0);
-      }, 0);
-    }
-    const addons = form.selectedAddons.reduce((sum, id) => {
-      const a = catalog.addons?.find((x) => x.id === id);
-      return sum + (a?.price || 0);
-    }, 0);
-    const custom = form.customLineItems.reduce((sum, l) => sum + (l.price || 0), 0);
-    return base + addons + custom;
-  }
+  const pricing = catalog
+    ? calculateTenantPrice(
+        form.selectedPackage || null,
+        form.selectedServices,
+        form.selectedAddons,
+        0,
+        catalog,
+        form.sqft || 0,
+      )
+    : { subtotal: 0, base: 0, addonTotal: 0, deposit: 0, balance: 0 };
 
-  const autoPrice = calcAutoPrice();
+  const customTotal = form.customLineItems.reduce((s, l) => s + (l.price || 0), 0);
+  const total = form.totalPrice !== "" ? Number(form.totalPrice) : (pricing.subtotal + customTotal);
+
+  const activeTiers = getActiveTiers(pricingConfig);
+  const tierLabel = tier ? activeTiers.find((t) => t.name === tier)?.label || tier : null;
+
+  // Line items for summary
+  const lines = [];
+  if (form.selectedPackage && catalog) {
+    const pkg = catalog.packages?.find((p) => p.id === form.selectedPackage);
+    if (pkg) lines.push({ name: pkg.name, price: getItemPrice(pkg, tier) });
+  } else {
+    form.selectedServices.forEach((id) => {
+      const s = catalog?.services?.find((x) => x.id === id);
+      if (s) lines.push({ name: s.name, price: getItemPrice(s, tier) });
+    });
+  }
+  form.selectedAddons.forEach((id) => {
+    const a = catalog?.addons?.find((x) => x.id === id);
+    if (a) lines.push({ name: `+ ${a.name}`, price: getItemPrice(a, tier) });
+  });
+  form.customLineItems.forEach((l) => lines.push({ name: l.label, price: l.price }));
 
   async function createBooking(e) {
     e.preventDefault();
@@ -132,13 +241,12 @@ export default function BookingsPage() {
     setCreateError("");
     try {
       const token = await auth.currentUser.getIdToken();
-      const finalPrice = form.totalPrice !== "" ? Number(form.totalPrice) : autoPrice;
       const res = await fetch("/api/dashboard/bookings/create", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           ...form,
-          totalPrice:      finalPrice,
+          totalPrice:      total,
           packageId:       form.selectedPackage || null,
           serviceIds:      form.selectedServices,
           addonIds:        form.selectedAddons,
@@ -157,71 +265,66 @@ export default function BookingsPage() {
     setSaving(false);
   }
 
-  const filtered = filter === "all"
-    ? bookings
-    : bookings.filter((b) => b.status === filter);
+  const filtered = filter === "all" ? bookings : bookings.filter((b) => b.status === filter);
 
   return (
     <div className="p-8">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display text-2xl text-navy">Bookings</h1>
-        <button onClick={() => setShowCreate(true)}
-          className="btn-primary px-4 py-2 text-sm">
+        <button onClick={() => setShowCreate(true)} className="btn-primary px-4 py-2 text-sm">
           + New Booking
         </button>
       </div>
 
-      {/* Filter tabs */}
+      {/* Filter pills */}
       <div className="flex gap-2 mb-6 flex-wrap">
         {["all", "requested", "confirmed", "completed", "cancelled"].map((s) => (
           <button key={s} onClick={() => setFilter(s)}
             className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors
-              ${filter === s ? "bg-navy text-white border-navy" : "text-gray-500 border-gray-200 hover:border-navy hover:text-navy"}`}>
+              ${filter === s ? "bg-navy text-white border-navy" : "text-gray-500 border-gray-200 hover:border-navy/40 hover:text-navy"}`}>
             {s === "all" ? "All" : STATUS_LABELS[s]?.label || s}
           </button>
         ))}
       </div>
 
+      {/* Bookings list */}
       {loading ? (
         <div className="flex justify-center py-16">
           <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-sm border border-gray-200 p-12 text-center text-gray-400 text-sm">
+        <div className="bg-white rounded-sm border border-gray-100 p-16 text-center text-gray-400 text-sm">
           No bookings found.
         </div>
       ) : (
-        <div className="bg-white rounded-sm border border-gray-200 divide-y divide-gray-50">
+        <div className="bg-white rounded-sm border border-gray-100 divide-y divide-gray-50">
           {filtered.map((b) => {
-            const s = STATUS_LABELS[b.status] || { label: b.status, cls: "bg-gray-50 text-gray-600" };
+            const s = STATUS_LABELS[b.status] || { label: b.status, cls: "bg-gray-50 text-gray-500" };
+            const dateStr = b.preferredDate
+              ? new Date(b.preferredDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              : "No date";
+            const timeStr = b.preferredTime && !["flexible","morning","afternoon"].includes(b.preferredTime)
+              ? ` · ${b.preferredTime}` : "";
             return (
-              <div key={b.id} className="px-6 py-4 flex items-center justify-between gap-4">
+              <div key={b.id} className="px-6 py-4 flex items-center gap-4 hover:bg-gray-50/50 transition-colors">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 mb-0.5">
                     <p className="text-sm font-medium text-navy truncate">{b.clientName}</p>
                     {b.source === "manual" && (
-                      <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">manual</span>
+                      <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded">manual</span>
                     )}
                   </div>
                   <p className="text-xs text-gray-400 truncate">{b.fullAddress || b.address}</p>
-                  <p className="text-xs text-gray-400">
-                    {b.preferredDate ? new Date(b.preferredDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "No date set"}
-                    {b.preferredTime && b.preferredTime !== "flexible" && b.preferredTime !== "morning" && b.preferredTime !== "afternoon"
-                      ? ` · ${b.preferredTime}`
-                      : b.preferredTime ? ` · ${b.preferredTime.charAt(0).toUpperCase() + b.preferredTime.slice(1)}`
-                      : ""}
-                  </p>
+                  <p className="text-xs text-gray-300">{dateStr}{timeStr}</p>
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0">
                   <div className="text-right hidden sm:block">
                     <p className="text-sm font-semibold text-navy">${(b.totalPrice || 0).toLocaleString()}</p>
-                    <p className="text-xs text-gray-400">
-                      {b.depositPaid ? "Deposit paid" : "No deposit"}
-                    </p>
+                    <p className="text-xs text-gray-400">{b.depositPaid ? "Deposit paid" : "No deposit"}</p>
                   </div>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.cls}`}>{s.label}</span>
-                  <Link href={`/dashboard/bookings/${b.id}`}
-                    className="text-xs text-navy hover:underline whitespace-nowrap">
+                  <Link href={`/dashboard/bookings/${b.id}`} className="text-xs text-navy hover:underline whitespace-nowrap">
                     View →
                   </Link>
                 </div>
@@ -231,215 +334,319 @@ export default function BookingsPage() {
         </div>
       )}
 
-      {/* ── Create booking modal ──────────────────────────────────────────── */}
+      {/* ── Create booking modal ──────────────────────────────────────────────── */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto py-8 px-4">
-          <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl my-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="font-display text-lg text-navy">New Manual Booking</h2>
-              <button onClick={() => { setShowCreate(false); setCreateError(""); setForm(EMPTY_FORM); }}
-                className="text-gray-400 hover:text-navy text-xl leading-none">×</button>
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto py-6 px-4">
+          <div className="bg-white rounded-sm shadow-2xl w-full max-w-4xl my-auto">
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100">
+              <div>
+                <h2 className="font-display text-xl text-navy">New Booking</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Manually create a confirmed booking for a phone or in-person client.</p>
+              </div>
+              <button
+                onClick={() => { setShowCreate(false); setCreateError(""); setForm(EMPTY_FORM); }}
+                className="text-gray-300 hover:text-gray-500 transition-colors text-2xl leading-none w-8 h-8 flex items-center justify-center">
+                ×
+              </button>
             </div>
 
-            <form onSubmit={createBooking} className="p-6 space-y-5">
-              {createError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-sm">
-                  {createError}
-                </div>
-              )}
+            <form onSubmit={createBooking}>
+              <div className="flex divide-x divide-gray-100">
 
-              {/* Client info */}
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Client Information</p>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="label-field">Full Name *</label>
-                      <input type="text" value={form.clientName} onChange={setField("clientName")}
-                        className="input-field w-full" placeholder="Jane Smith" />
+                {/* ── LEFT: form fields ─────────────────────────────────────── */}
+                <div className="flex-1 px-8 py-6 space-y-7 overflow-y-auto max-h-[70vh]">
+
+                  {createError && (
+                    <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-2.5 rounded-sm">
+                      {createError}
                     </div>
-                    <div>
-                      <label className="label-field">Phone</label>
-                      <input type="tel" value={form.clientPhone} onChange={setField("clientPhone")}
-                        className="input-field w-full" placeholder="(619) 555-0100" />
-                    </div>
-                  </div>
+                  )}
+
+                  {/* Client */}
                   <div>
-                    <label className="label-field">Email *</label>
-                    <input type="email" value={form.clientEmail} onChange={setField("clientEmail")}
-                      className="input-field w-full" placeholder="jane@example.com" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Property */}
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Property</p>
-                <div className="space-y-3">
-                  <div>
-                    <label className="label-field">Street Address *</label>
-                    <input type="text" value={form.address} onChange={setField("address")}
-                      className="input-field w-full" placeholder="123 Ocean Dr" />
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="col-span-1">
-                      <label className="label-field">City</label>
-                      <input type="text" value={form.city} onChange={setField("city")}
-                        className="input-field w-full" />
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Agent / Client</p>
+                    <div className="space-y-3">
+                      <input
+                        type="text" autoFocus
+                        value={form.clientName} onChange={(e) => setField("clientName", e.target.value)}
+                        placeholder="Full name *"
+                        className="input-field w-full"
+                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          type="email"
+                          value={form.clientEmail} onChange={(e) => setField("clientEmail", e.target.value)}
+                          placeholder="Email address *"
+                          className="input-field w-full"
+                        />
+                        <input
+                          type="tel"
+                          value={form.clientPhone} onChange={(e) => setField("clientPhone", e.target.value)}
+                          placeholder="Phone (optional)"
+                          className="input-field w-full"
+                        />
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Property */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Property</p>
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={form.address} onChange={(e) => setField("address", e.target.value)}
+                        placeholder="Street address *"
+                        className="input-field w-full"
+                      />
+                      {showSqft && (
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            value={form.sqft} onChange={(e) => setField("sqft", e.target.value)}
+                            placeholder="Square footage (for pricing)"
+                            className="input-field flex-1"
+                            min="0"
+                          />
+                          {tierLabel && (
+                            <span className="text-xs px-2.5 py-1.5 rounded-sm bg-navy/10 text-navy font-medium whitespace-nowrap">
+                              {tierLabel}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Schedule */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Schedule</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        type="date"
+                        value={form.preferredDate} onChange={(e) => setField("preferredDate", e.target.value)}
+                        className="input-field w-full"
+                      />
+                      <input
+                        type="time"
+                        value={form.preferredTime} onChange={(e) => setField("preferredTime", e.target.value)}
+                        className="input-field w-full"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">
+                      A calendar invite will be emailed to the client and photographer if a date and time are set.
+                    </p>
+                  </div>
+
+                  {/* Services */}
+                  {catalog && (
                     <div>
-                      <label className="label-field">State</label>
-                      <input type="text" value={form.state} onChange={setField("state")}
-                        className="input-field w-full" maxLength={2} />
-                    </div>
-                    <div>
-                      <label className="label-field">ZIP</label>
-                      <input type="text" value={form.zip} onChange={setField("zip")}
-                        className="input-field w-full" maxLength={5} />
-                    </div>
-                  </div>
-                </div>
-              </div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Services</p>
 
-              {/* Schedule */}
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Schedule</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="label-field">Shoot Date</label>
-                    <input type="date" value={form.preferredDate} onChange={setField("preferredDate")}
-                      className="input-field w-full" />
-                  </div>
-                  <div>
-                    <label className="label-field">Shoot Time</label>
-                    <input type="time" value={form.preferredTime} onChange={setField("preferredTime")}
-                      className="input-field w-full" />
-                  </div>
-                </div>
-              </div>
+                      {/* Packages */}
+                      {catalog.packages?.filter((p) => p.active !== false).length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-xs text-gray-400 mb-2">Packages</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {catalog.packages.filter((p) => p.active !== false).map((pkg) => (
+                              <PackageCard
+                                key={pkg.id}
+                                pkg={pkg}
+                                tier={tier}
+                                selected={form.selectedPackage === pkg.id}
+                                onSelect={() => selectPackage(pkg.id)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-              {/* Services */}
-              {catalog && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Services</p>
+                      {/* Individual services — only when no package */}
+                      {!form.selectedPackage && catalog.services?.filter((s) => s.active !== false).length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-xs text-gray-400 mb-2">Services</p>
+                          <div className="space-y-1">
+                            {catalog.services.filter((s) => s.active !== false).map((svc) => (
+                              <ServiceRow
+                                key={svc.id}
+                                item={svc}
+                                tier={tier}
+                                checked={form.selectedServices.includes(svc.id)}
+                                onToggle={() => toggleService(svc.id)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-                  {/* Packages */}
-                  {catalog.packages?.length > 0 && (
-                    <div className="mb-3">
-                      <label className="label-field">Package</label>
-                      <select value={form.selectedPackage}
-                        onChange={(e) => setForm((p) => ({ ...p, selectedPackage: e.target.value, selectedServices: [] }))}
-                        className="input-field w-full text-sm">
-                        <option value="">— None (build custom) —</option>
-                        {catalog.packages.map((pkg) => (
-                          <option key={pkg.id} value={pkg.id}>{pkg.name} — ${pkg.price?.toLocaleString()}</option>
+                      {/* Add-ons */}
+                      {catalog.addons?.filter((a) => a.active !== false).length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-xs text-gray-400 mb-2">Add-ons</p>
+                          <div className="space-y-1">
+                            {catalog.addons.filter((a) => a.active !== false).map((addon) => (
+                              <ServiceRow
+                                key={addon.id}
+                                item={addon}
+                                tier={tier}
+                                checked={form.selectedAddons.includes(addon.id)}
+                                onToggle={() => toggleAddon(addon.id)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Custom line items */}
+                      <div>
+                        <p className="text-xs text-gray-400 mb-2">Custom items</p>
+                        {form.customLineItems.map((line, i) => (
+                          <div key={i} className="flex items-center gap-2 mb-1.5 px-3 py-2 bg-gray-50 rounded-sm">
+                            <span className="text-sm text-charcoal flex-1">{line.label}</span>
+                            <span className="text-sm font-semibold text-navy">{formatPrice(line.price || 0)}</span>
+                            <button type="button" onClick={() => setForm((p) => ({ ...p, customLineItems: p.customLineItems.filter((_, j) => j !== i) }))}
+                              className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                          </div>
                         ))}
+                        <div className="flex gap-2 mt-1">
+                          <input
+                            type="text" value={customLabel}
+                            onChange={(e) => setCustomLabel(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustomLine())}
+                            placeholder="e.g. Rush fee"
+                            className="input-field flex-1 text-sm"
+                          />
+                          <input
+                            type="number" value={customPrice}
+                            onChange={(e) => setCustomPrice(e.target.value)}
+                            placeholder="$0"
+                            className="input-field w-24 text-sm"
+                            min="0"
+                          />
+                          <button type="button" onClick={addCustomLine}
+                            className="btn-outline px-3 text-sm">
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Photographer */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Photographer (optional)</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        value={form.photographerName} onChange={(e) => setField("photographerName", e.target.value)}
+                        placeholder="Name"
+                        className="input-field w-full"
+                      />
+                      <input
+                        type="email"
+                        value={form.photographerEmail} onChange={(e) => setField("photographerEmail", e.target.value)}
+                        placeholder="Email for notification"
+                        className="input-field w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── RIGHT: order summary ──────────────────────────────────── */}
+                <div className="w-72 flex-shrink-0 px-6 py-6 flex flex-col bg-gray-50/60">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Order Summary</p>
+
+                  {/* Line items */}
+                  <div className="flex-1 space-y-2 mb-5">
+                    {lines.length === 0 ? (
+                      <p className="text-sm text-gray-300 italic">No services selected</p>
+                    ) : (
+                      lines.map((l, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <span className="text-xs text-gray-500 flex-1 pr-2">{l.name}</span>
+                          <span className="text-xs font-semibold text-charcoal">{formatPrice(l.price || 0)}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Tier badge */}
+                  {tierLabel && form.sqft && (
+                    <div className="text-xs px-2.5 py-1.5 bg-white border border-gray-200 rounded-sm text-gray-500 mb-4">
+                      Priced as <span className="font-medium text-charcoal">{tierLabel}</span>
+                      <span className="text-gray-300"> ({Number(form.sqft).toLocaleString()} sqft)</span>
+                    </div>
+                  )}
+
+                  {/* Total */}
+                  <div className="border-t border-gray-200 pt-4 mb-5">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-500">Total</span>
+                      <span className="text-xl font-bold text-navy font-display">{formatPrice(total)}</span>
+                    </div>
+
+                    {/* Override total */}
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">Override price</p>
+                      <input
+                        type="number"
+                        value={form.totalPrice}
+                        onChange={(e) => setField("totalPrice", e.target.value)}
+                        placeholder={`Auto: ${formatPrice(pricing.subtotal + customTotal)}`}
+                        className="input-field w-full text-sm"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Status + deposit */}
+                  <div className="space-y-3 mb-5">
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">Booking status</p>
+                      <select value={form.status} onChange={(e) => setField("status", e.target.value)}
+                        className="input-field w-full text-sm">
+                        <option value="confirmed">Confirmed</option>
+                        <option value="requested">Pending review</option>
+                        <option value="completed">Completed</option>
                       </select>
                     </div>
-                  )}
-
-                  {/* Individual services (when no package selected) */}
-                  {!form.selectedPackage && catalog.services?.length > 0 && (
-                    <div className="mb-3">
-                      <label className="label-field">Services</label>
-                      <div className="space-y-1 max-h-36 overflow-y-auto border border-gray-200 rounded-sm p-2">
-                        {catalog.services.map((svc) => (
-                          <label key={svc.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded text-sm">
-                            <input type="checkbox" checked={form.selectedServices.includes(svc.id)}
-                              onChange={() => toggleService(svc.id)} className="rounded" />
-                            <span className="flex-1 text-charcoal">{svc.name}</span>
-                            <span className="text-gray-400 text-xs">${svc.price?.toLocaleString()}</span>
-                          </label>
-                        ))}
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <div
+                        onClick={() => setField("depositPaid", !form.depositPaid)}
+                        className={`relative w-8 h-4 rounded-full transition-colors flex-shrink-0 ${form.depositPaid ? "bg-navy" : "bg-gray-200"}`}
+                      >
+                        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${form.depositPaid ? "translate-x-4" : "translate-x-0.5"}`} />
                       </div>
-                    </div>
-                  )}
+                      <span className="text-xs text-gray-500">Deposit already collected</span>
+                    </label>
+                  </div>
 
-                  {/* Add-ons */}
-                  {catalog.addons?.length > 0 && (
-                    <div className="mb-3">
-                      <label className="label-field">Add-ons</label>
-                      <div className="space-y-1 max-h-28 overflow-y-auto border border-gray-200 rounded-sm p-2">
-                        {catalog.addons.map((a) => (
-                          <label key={a.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 px-1 py-0.5 rounded text-sm">
-                            <input type="checkbox" checked={form.selectedAddons.includes(a.id)}
-                              onChange={() => toggleAddon(a.id)} className="rounded" />
-                            <span className="flex-1 text-charcoal">{a.name}</span>
-                            <span className="text-gray-400 text-xs">${a.price?.toLocaleString()}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {/* Notes */}
+                  <div className="mb-6">
+                    <p className="text-xs text-gray-400 mb-1">Internal notes</p>
+                    <textarea
+                      value={form.notes} onChange={(e) => setField("notes", e.target.value)}
+                      rows={3}
+                      placeholder="Called in — needs drone, gate code…"
+                      className="input-field w-full text-sm resize-none"
+                    />
+                  </div>
 
-                  {/* Custom line items */}
-                  <div>
-                    <label className="label-field">Custom Line Items</label>
-                    {form.customLineItems.map((line, i) => (
-                      <div key={i} className="flex items-center gap-2 mb-1">
-                        <span className="text-sm flex-1 text-charcoal">{line.label}</span>
-                        <span className="text-sm text-navy">${(line.price || 0).toLocaleString()}</span>
-                        <button onClick={() => removeCustomLine(i)} className="text-red-400 hover:text-red-600 text-lg">×</button>
-                      </div>
-                    ))}
-                    <div className="flex gap-2 mt-1">
-                      <input type="text" value={newLineLabel} onChange={(e) => setNewLineLabel(e.target.value)}
-                        placeholder="Description" className="input-field flex-1 text-sm" />
-                      <input type="number" value={newLinePrice} onChange={(e) => setNewLinePrice(e.target.value)}
-                        placeholder="$" className="input-field w-20 text-sm" min="0" />
-                      <button type="button" onClick={addCustomLine}
-                        className="btn-outline px-3 py-2 text-sm">+ Add</button>
-                    </div>
+                  {/* Actions */}
+                  <div className="space-y-2">
+                    <button type="submit" disabled={saving}
+                      className="w-full btn-primary py-3 text-sm font-semibold">
+                      {saving ? "Creating…" : "Create Booking →"}
+                    </button>
+                    <button type="button"
+                      onClick={() => { setShowCreate(false); setCreateError(""); setForm(EMPTY_FORM); }}
+                      className="w-full text-center text-xs text-gray-400 hover:text-gray-600 py-2 transition-colors">
+                      Cancel
+                    </button>
                   </div>
                 </div>
-              )}
-
-              {/* Pricing & status */}
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Pricing & Status</p>
-                {autoPrice > 0 && (
-                  <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-1.5 mb-3">
-                    Auto-calculated total: <strong>${autoPrice.toLocaleString()}</strong> — leave price blank to use this
-                  </p>
-                )}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="label-field">Total Price ($) <span className="font-normal text-gray-400">— override auto</span></label>
-                    <input type="number" value={form.totalPrice} onChange={setField("totalPrice")}
-                      className="input-field w-full" placeholder={autoPrice > 0 ? `Auto: $${autoPrice}` : "0"} min="0" />
-                  </div>
-                  <div>
-                    <label className="label-field">Status</label>
-                    <select value={form.status} onChange={setField("status")} className="input-field w-full">
-                      <option value="confirmed">Confirmed</option>
-                      <option value="requested">Pending review</option>
-                      <option value="completed">Completed</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <input type="checkbox" id="depositPaid" checked={form.depositPaid} onChange={setField("depositPaid")}
-                    className="rounded border-gray-300 text-navy" />
-                  <label htmlFor="depositPaid" className="text-sm text-gray-600 cursor-pointer">
-                    Mark deposit as paid (client already paid)
-                  </label>
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="label-field">Notes (internal)</label>
-                <textarea value={form.notes} onChange={setField("notes")} rows={2}
-                  className="input-field w-full text-sm" placeholder="Called in, requested exterior + drone…" />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-                <button type="button"
-                  onClick={() => { setShowCreate(false); setCreateError(""); setForm(EMPTY_FORM); }}
-                  className="btn-outline px-6 py-2 text-sm">Cancel</button>
-                <button type="submit" disabled={saving} className="btn-primary px-6 py-2 text-sm">
-                  {saving ? "Creating…" : "Create Booking"}
-                </button>
               </div>
             </form>
           </div>
