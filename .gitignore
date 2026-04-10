@@ -30,3 +30,9 @@ Thumbs.db
 
 # Vercel
 .vercel
+
+# Service account keys — NEVER commit these
+*-firebase-adminsdk-*.json
+*-service-account*.json
+serviceAccountKey.json
+firebase-adminsdk*.json
