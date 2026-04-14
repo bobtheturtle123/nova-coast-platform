@@ -33,6 +33,6 @@ export async function POST(req) {
     return Response.json({ tenantId, slug });
   } catch (err) {
     console.error("Tenant register error:", err);
-    return Response.json({ error: "Registration failed" }, { status: 500 });
+    return Response.json({ error: err.message || "Registration failed" }, { status: 500 });
   }
 }
