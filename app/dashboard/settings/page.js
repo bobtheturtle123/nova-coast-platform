@@ -102,6 +102,8 @@ export default function SettingsPage() {
 
   // Travel fee state
   const [travelEnabled,    setTravelEnabled]    = useState(false);
+  const [travelMode,       setTravelMode]       = useState("perMile"); // "perMile" | "flat" | "zones"
+  const [travelFlatFee,    setTravelFlatFee]    = useState(50);
   const [travelFreeRadius, setTravelFreeRadius] = useState(20);
   const [travelRate,       setTravelRate]       = useState(1.5);
   const [travelMaxRadius,  setTravelMaxRadius]  = useState(0);
@@ -197,6 +199,8 @@ export default function SettingsPage() {
         if (data.tenant.travelFeeConfig) {
           const tf = data.tenant.travelFeeConfig;
           if (tf.enabled    !== undefined) setTravelEnabled(tf.enabled);
+          if (tf.mode       !== undefined) setTravelMode(tf.mode);
+          if (tf.flatFee    !== undefined) setTravelFlatFee(tf.flatFee);
           if (tf.freeRadius !== undefined) setTravelFreeRadius(tf.freeRadius);
           if (tf.ratePerMile !== undefined) setTravelRate(tf.ratePerMile);
           if (tf.maxRadius  !== undefined) setTravelMaxRadius(tf.maxRadius);
@@ -402,6 +406,8 @@ export default function SettingsPage() {
         body: JSON.stringify({
           travelFeeConfig: {
             enabled:    travelEnabled,
+            mode:       travelMode,
+            flatFee:    Number(travelFlatFee) || 0,
             freeRadius: Number(travelFreeRadius) || 20,
             ratePerMile: Number(travelRate) || 1.5,
             maxRadius:  Number(travelMaxRadius) || 0,
@@ -613,36 +619,48 @@ export default function SettingsPage() {
         <div className={`space-y-2 mb-4 ${pricingMode === "flat" ? "opacity-40 pointer-events-none" : ""}`}>
           <div className="grid grid-cols-12 text-xs text-gray-400 uppercase tracking-wide font-medium px-1 mb-1">
             <div className="col-span-3">Tier name</div>
-            <div className="col-span-5">Label (shown to client)</div>
-            <div className="col-span-3">Max {modeLabels[pricingMode]?.unit || "value"}</div>
+            <div className="col-span-4">Label (shown to client)</div>
+            <div className="col-span-2 text-right pr-2">From</div>
+            <div className="col-span-2">To</div>
             <div className="col-span-1" />
           </div>
-          {tiers.map((tier, i) => (
-            <div key={i} className="grid grid-cols-12 gap-2 items-center">
-              <div className="col-span-3">
-                <input type="text" value={tier.name} onChange={(e) => updateTier(i, "name", e.target.value)}
-                  className="input-field py-2 text-sm font-mono" placeholder="Tier ID" />
+          {tiers.map((tier, i) => {
+            const prevMax = i === 0 ? 0 : (tiers[i - 1].max === 999999 ? null : tiers[i - 1].max + 1);
+            const isLast  = i === tiers.length - 1;
+            return (
+              <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                <div className="col-span-3">
+                  <input type="text" value={tier.name} onChange={(e) => updateTier(i, "name", e.target.value)}
+                    className="input-field py-2 text-sm font-mono" placeholder="Tier ID" />
+                </div>
+                <div className="col-span-4">
+                  <input type="text" value={tier.label} onChange={(e) => updateTier(i, "label", e.target.value)}
+                    className="input-field py-2 text-sm" placeholder="Shown to client" />
+                </div>
+                {/* "From" — read-only, derived from previous tier */}
+                <div className="col-span-2 text-right pr-2">
+                  <span className="text-sm text-gray-400 font-mono">
+                    {i === 0 ? "0" : prevMax?.toLocaleString()}
+                  </span>
+                </div>
+                {/* "To" — editable max */}
+                <div className="col-span-2">
+                  {!isLast ? (
+                    <input type="number" value={tier.max === 999999 ? "" : tier.max}
+                      onChange={(e) => updateTier(i, "max", e.target.value)}
+                      className="input-field py-2 text-sm" placeholder="e.g. 800" min="1" />
+                  ) : (
+                    <span className="text-sm text-gray-400">unlimited</span>
+                  )}
+                </div>
+                <div className="col-span-1 flex justify-center">
+                  {tiers.length > 2 && (
+                    <button onClick={() => removeTier(i)} className="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+                  )}
+                </div>
               </div>
-              <div className="col-span-5">
-                <input type="text" value={tier.label} onChange={(e) => updateTier(i, "label", e.target.value)}
-                  className="input-field py-2 text-sm" placeholder="Shown to client" />
-              </div>
-              <div className="col-span-3">
-                {i < tiers.length - 1 ? (
-                  <input type="number" value={tier.max === 999999 ? "" : tier.max}
-                    onChange={(e) => updateTier(i, "max", e.target.value)}
-                    className="input-field py-2 text-sm" placeholder="e.g. 800" min="1" />
-                ) : (
-                  <span className="text-sm text-gray-400 px-3">Unlimited (last tier)</span>
-                )}
-              </div>
-              <div className="col-span-1 flex justify-center">
-                {tiers.length > 2 && (
-                  <button onClick={() => removeTier(i)} className="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="flex items-center gap-3">
@@ -774,10 +792,11 @@ export default function SettingsPage() {
         {/* Mode toggle */}
         <div className="mb-6">
           <h3 className="text-sm font-semibold text-charcoal mb-3">Availability Mode</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {[
-              { value: "slots", label: "Generic Time Slots", desc: "Show fixed 30-min intervals within business hours. No conflict checking." },
-              { value: "real",  label: "Real Availability",  desc: "Block out times that are already booked (plus buffer). Only show truly open slots." },
+              { value: "slots",  label: "Time Grid",          desc: "Show fixed intervals within business hours. Client picks an exact time." },
+              { value: "real",   label: "Real Availability",  desc: "Only show times not already booked (respects buffer between shoots)." },
+              { value: "named",  label: "Named Time Slots",   desc: "Client chooses a named window like Morning, Afternoon, or Flexible." },
             ].map((m) => (
               <button key={m.value} type="button" onClick={() => setAvailMode(m.value)}
                 className={`p-3 border rounded-sm text-left transition-colors ${
@@ -790,8 +809,8 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Business hours */}
-        <div className="mb-5">
+        {/* Business hours — shown for time grid + real availability */}
+        <div className={`mb-5 ${availMode === "named" ? "hidden" : ""}`}>
           <h3 className="text-sm font-semibold text-charcoal mb-3">Business Hours</h3>
           <div className="flex items-center gap-4">
             <div>
@@ -808,8 +827,8 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Slot interval */}
-        <div className="mb-5">
+        {/* Slot interval — shown for time grid + real availability */}
+        <div className={`mb-5 ${availMode === "named" ? "hidden" : ""}`}>
           <h3 className="text-sm font-semibold text-charcoal mb-3">Slot Interval & Durations</h3>
           <div className="grid grid-cols-3 gap-4">
             <div>
@@ -838,10 +857,10 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Scheduling style: named slots vs time grid */}
-        <div className="mb-5">
-          <h3 className="text-sm font-semibold text-charcoal mb-1">Client Scheduling Options</h3>
-          <p className="text-xs text-gray-400 mb-3">Choose what time-selection methods you offer to clients when they book. Toggle each one on or off and rename them.</p>
+        {/* Named time slots — only shown when "named" mode is selected */}
+        <div className={`mb-5 ${availMode !== "named" ? "hidden" : ""}`}>
+          <h3 className="text-sm font-semibold text-charcoal mb-1">Named Time Slot Options</h3>
+          <p className="text-xs text-gray-400 mb-3">Toggle each slot on or off and rename them. Clients will see only the enabled ones.</p>
           <div className="space-y-2">
             {timeSlots.map((slot) => (
               <div key={slot.value} className={`border rounded-sm px-3 py-2.5 flex items-center gap-3 ${slot.enabled ? "border-gray-200 bg-white" : "border-dashed border-gray-200 bg-gray-50 opacity-60"}`}>
@@ -997,66 +1016,107 @@ export default function SettingsPage() {
 
         {travelEnabled && (
           <div className="space-y-5">
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="label-field">Free radius (miles)</label>
-                <input
-                  type="number" min="0" max="200"
-                  value={travelFreeRadius}
-                  onChange={(e) => setTravelFreeRadius(e.target.value)}
-                  className="input-field w-full"
-                />
-                <p className="text-xs text-gray-400 mt-1">No charge within this distance</p>
-              </div>
-              <div>
-                <label className="label-field">Rate per mile</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                  <input
-                    type="number" min="0" step="0.25"
-                    value={travelRate}
-                    onChange={(e) => setTravelRate(e.target.value)}
-                    className="input-field w-full pl-6"
-                  />
-                </div>
-                <p className="text-xs text-gray-400 mt-1">Per mile beyond free radius</p>
-              </div>
-              <div>
-                <label className="label-field">Max service radius (miles)</label>
-                <input
-                  type="number" min="0" max="500"
-                  value={travelMaxRadius}
-                  onChange={(e) => setTravelMaxRadius(e.target.value)}
-                  className="input-field w-full"
-                />
-                <p className="text-xs text-gray-400 mt-1">0 = no limit</p>
+            {/* Mode selection */}
+            <div>
+              <label className="label-field">Fee Type</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: "perMile", label: "Per Mile",        desc: "Rate × distance beyond free radius" },
+                  { value: "flat",    label: "Flat Fee",         desc: "Same amount for all bookings" },
+                  { value: "zones",   label: "By Service Area",  desc: "Different fee per geographic zone" },
+                ].map((m) => (
+                  <button key={m.value} type="button" onClick={() => setTravelMode(m.value)}
+                    className={`p-2.5 border rounded-sm text-left transition-colors ${
+                      travelMode === m.value ? "border-navy bg-navy/5" : "border-gray-200 hover:border-navy/30"
+                    }`}>
+                    <p className={`text-xs font-semibold ${travelMode === m.value ? "text-navy" : "text-charcoal"}`}>{m.label}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{m.desc}</p>
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Example calculation */}
-            <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 text-sm">
-              <p className="font-medium text-charcoal mb-2">Example calculation</p>
-              <div className="space-y-1 text-gray-500 text-xs">
-                <div className="flex justify-between">
-                  <span>Within {travelFreeRadius} miles</span>
-                  <span className="font-medium text-green-600">Free</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{Number(travelFreeRadius) + 10} miles away</span>
-                  <span className="font-medium">${(10 * Number(travelRate)).toFixed(0)} travel fee</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{Number(travelFreeRadius) + 30} miles away</span>
-                  <span className="font-medium">${(30 * Number(travelRate)).toFixed(0)} travel fee</span>
-                </div>
-                {Number(travelMaxRadius) > 0 && (
-                  <div className="flex justify-between text-gray-400">
-                    <span>Beyond {travelMaxRadius} miles</span>
-                    <span className="font-medium">Outside service area</span>
+            {/* Flat fee config */}
+            {travelMode === "flat" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label-field">Flat travel fee</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                    <input type="number" min="0" step="1" value={travelFlatFee}
+                      onChange={(e) => setTravelFlatFee(e.target.value)}
+                      className="input-field w-full pl-6" />
                   </div>
-                )}
+                  <p className="text-xs text-gray-400 mt-1">Added to every booking</p>
+                </div>
+                <div>
+                  <label className="label-field">Max service radius (miles)</label>
+                  <input type="number" min="0" max="500" value={travelMaxRadius}
+                    onChange={(e) => setTravelMaxRadius(e.target.value)} className="input-field w-full" />
+                  <p className="text-xs text-gray-400 mt-1">0 = no limit</p>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Per-mile config */}
+            {travelMode === "perMile" && (
+              <>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="label-field">Free radius (miles)</label>
+                    <input type="number" min="0" max="200" value={travelFreeRadius}
+                      onChange={(e) => setTravelFreeRadius(e.target.value)} className="input-field w-full" />
+                    <p className="text-xs text-gray-400 mt-1">No charge within this distance</p>
+                  </div>
+                  <div>
+                    <label className="label-field">Rate per mile</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                      <input type="number" min="0" step="0.25" value={travelRate}
+                        onChange={(e) => setTravelRate(e.target.value)} className="input-field w-full pl-6" />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">Per mile beyond free radius</p>
+                  </div>
+                  <div>
+                    <label className="label-field">Max service radius (miles)</label>
+                    <input type="number" min="0" max="500" value={travelMaxRadius}
+                      onChange={(e) => setTravelMaxRadius(e.target.value)} className="input-field w-full" />
+                    <p className="text-xs text-gray-400 mt-1">0 = no limit</p>
+                  </div>
+                </div>
+                <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 text-sm">
+                  <p className="font-medium text-charcoal mb-2">Example</p>
+                  <div className="space-y-1 text-gray-500 text-xs">
+                    <div className="flex justify-between">
+                      <span>Within {travelFreeRadius} miles</span>
+                      <span className="font-medium text-green-600">Free</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>{Number(travelFreeRadius) + 10} miles away</span>
+                      <span className="font-medium">${(10 * Number(travelRate)).toFixed(0)} fee</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>{Number(travelFreeRadius) + 30} miles away</span>
+                      <span className="font-medium">${(30 * Number(travelRate)).toFixed(0)} fee</span>
+                    </div>
+                    {Number(travelMaxRadius) > 0 && (
+                      <div className="flex justify-between text-gray-400">
+                        <span>Beyond {travelMaxRadius} miles</span>
+                        <span className="font-medium">Outside service area</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Zones config */}
+            {travelMode === "zones" && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
+                <p className="font-medium text-amber-800 mb-1">Zone-based pricing</p>
+                <p className="text-amber-700 text-xs">Draw service zones in <a href="/dashboard/service-areas" className="underline">Service Areas</a> and assign a travel fee to each zone. Fees will be applied automatically based on the property address.</p>
+              </div>
+            )}
           </div>
         )}
 

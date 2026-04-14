@@ -36,8 +36,7 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
         </div>
       )}
       <img src={src} alt={alt} onLoad={() => setLoaded(true)} onError={() => setErrored(true)}
-        className={`w-full h-full object-cover transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
-        crossOrigin="anonymous" />
+        className={`w-full h-full object-cover transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`} />
 
       {/* Selection checkbox */}
       <div
@@ -629,7 +628,7 @@ export default function GalleryDetailPage() {
     <div>
       {/* Hero */}
       <div className="relative h-44 bg-gray-900 overflow-hidden">
-        {coverImg && <img src={coverImg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" crossOrigin="anonymous" />}
+        {coverImg && <img src={coverImg} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
         <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
           <div>

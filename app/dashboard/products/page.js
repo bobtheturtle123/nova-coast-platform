@@ -33,7 +33,7 @@ const TYPE_META = {
 };
 
 // ─── Product edit form ────────────────────────────────────────────────────────
-function ProductForm({ item, type, allServices, teamMembers, onSave, onDelete, onClose }) {
+function ProductForm({ item, type, allServices, teamMembers, pricingConfig, onSave, onDelete, onClose }) {
   const [form,    setForm]    = useState(() => ({
     name:         item?.name         || "",
     description:  item?.description  || "",
@@ -44,7 +44,7 @@ function ProductForm({ item, type, allServices, teamMembers, onSave, onDelete, o
     active:       item?.active !== false,
     featured:     item?.featured     || false,
     tiered:       !!(item?.priceTiers),
-    priceTiers:   item?.priceTiers || { Tiny: 0, Small: 0, Medium: 0, Large: 0, XL: 0, XXL: 0 },
+    priceTiers:   item?.priceTiers || {},
     includes:     item?.includes     || [],
     assignedPhotographers: item?.assignedPhotographers || [],
   }));
@@ -261,18 +261,32 @@ function ProductForm({ item, type, allServices, teamMembers, onSave, onDelete, o
                   className="input-field w-40" />
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {SQFT_TIERS.map((tier) => (
-                  <div key={tier}>
-                    <label className="block text-xs text-gray-500 mb-1">{tier} <span className="text-gray-400">({TIER_LABELS[tier]})</span></label>
-                    <div className="flex items-center gap-1">
-                      <span className="text-gray-400 text-sm">$</span>
-                      <input type="number" value={form.priceTiers[tier] || ""} onChange={tierField(tier)}
-                        min="0" step="1" className="input-field py-1.5 text-sm w-full" placeholder="0" />
-                    </div>
+              (() => {
+                const tiers = pricingConfig?.tiers?.length ? pricingConfig.tiers : [];
+                if (tiers.length === 0) {
+                  return <p className="text-xs text-amber-600">Configure pricing tiers in Settings → Pricing Tiers first.</p>;
+                }
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {tiers.map((tier) => (
+                      <div key={tier.name}>
+                        <label className="block text-xs text-gray-500 mb-1">
+                          {tier.label || tier.name}
+                          <span className="text-gray-400 ml-1">
+                            ({tier.max === 999999 ? "unlimited+" : `to ${(tier.max || 0).toLocaleString()}`})
+                          </span>
+                        </label>
+                        <div className="flex items-center gap-1">
+                          <span className="text-gray-400 text-sm">$</span>
+                          <input type="number" value={form.priceTiers[tier.name] || ""}
+                            onChange={(e) => setForm((f) => ({ ...f, priceTiers: { ...f.priceTiers, [tier.name]: Number(e.target.value) || 0 } }))}
+                            min="0" step="1" className="input-field py-1.5 text-sm w-full" placeholder="0" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()
             )}
           </div>
 
@@ -396,20 +410,22 @@ export default function ProductsPage() {
   const [editing,     setEditing]     = useState(null);
   const [msg,         setMsg]         = useState("");
   const [teamMembers, setTeamMembers] = useState([]);
+  const [pricingConfig, setPricingConfig] = useState(null);
 
   const getToken = () => auth.currentUser?.getIdToken();
 
   useEffect(() => {
     async function load() {
       const token = await getToken();
-      const [pkgRes, svcRes, adnRes, teamRes] = await Promise.all([
+      const [pkgRes, svcRes, adnRes, teamRes, tenantRes] = await Promise.all([
         fetch("/api/dashboard/products?type=packages", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/products?type=services", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/products?type=addons",   { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/team",                   { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/tenant",                 { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      const [pkgData, svcData, adnData, teamData] = await Promise.all([
-        pkgRes.json(), svcRes.json(), adnRes.json(), teamRes.json(),
+      const [pkgData, svcData, adnData, teamData, tenantData] = await Promise.all([
+        pkgRes.json(), svcRes.json(), adnRes.json(), teamRes.json(), tenantRes.json(),
       ]);
       setItems({
         packages: pkgData.items || [],
@@ -417,6 +433,7 @@ export default function ProductsPage() {
         addons:   adnData.items || [],
       });
       setTeamMembers(teamData.members || []);
+      setPricingConfig(tenantData.tenant?.pricingConfig || null);
       setLoading(false);
     }
     auth.currentUser?.getIdToken().then(() => load());
@@ -577,6 +594,7 @@ export default function ProductsPage() {
           type={editing.type}
           allServices={items.services}
           teamMembers={teamMembers}
+          pricingConfig={pricingConfig}
           onSave={saveItem}
           onDelete={deleteItem}
           onClose={() => setEditing(null)}

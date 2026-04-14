@@ -115,6 +115,129 @@ function ServiceRow({ item, tier, checked, onToggle }) {
   );
 }
 
+const TIME_OPTIONS = [
+  "7:00 AM","8:00 AM","8:30 AM","9:00 AM","9:30 AM","10:00 AM","10:30 AM",
+  "11:00 AM","11:30 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM",
+];
+
+function timeToValue(label) {
+  const [time, ampm] = label.split(" ");
+  let [h, m] = time.split(":").map(Number);
+  if (ampm === "PM" && h !== 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+}
+
+function valueToLabel(val) {
+  if (!val) return "";
+  const [h, m] = val.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2,"0")} ${ampm}`;
+}
+
+function DateTimePicker({ date, time, onConfirm, onClose }) {
+  const today = new Date();
+  const initDate = date ? new Date(date + "T12:00:00") : today;
+  const [viewYear,  setViewYear]  = useState(initDate.getFullYear());
+  const [viewMonth, setViewMonth] = useState(initDate.getMonth());
+  const [selDate,   setSelDate]   = useState(date || "");
+  const [selTime,   setSelTime]   = useState(time || "");
+
+  const DAYS = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+  function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
+  function firstDow(y, m)    { return new Date(y, m, 1).getDay(); }
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
+    else setViewMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0); }
+    else setViewMonth(m => m + 1);
+  }
+
+  const totalDays = daysInMonth(viewYear, viewMonth);
+  const startDow  = firstDow(viewYear, viewMonth);
+  const cells = [...Array(startDow).fill(null), ...Array.from({length: totalDays}, (_, i) => i + 1)];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  function dateStr(day) {
+    return `${viewYear}-${String(viewMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  }
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <div className="p-5">
+          {/* Month nav */}
+          <div className="flex items-center justify-between mb-4">
+            <button type="button" onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">‹</button>
+            <p className="font-semibold text-sm text-charcoal">{MONTHS[viewMonth]} {viewYear}</p>
+            <button type="button" onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">›</button>
+          </div>
+          {/* Day headers */}
+          <div className="grid grid-cols-7 mb-1">
+            {DAYS.map(d => <div key={d} className="text-center text-xs text-gray-400 py-1">{d}</div>)}
+          </div>
+          {/* Calendar cells */}
+          <div className="grid grid-cols-7 gap-y-1 mb-4">
+            {cells.map((day, i) => {
+              if (!day) return <div key={i} />;
+              const ds = dateStr(day);
+              const isSelected = selDate === ds;
+              const isToday = ds === todayStr;
+              const isPast  = ds < todayStr;
+              return (
+                <button key={i} type="button" disabled={isPast}
+                  onClick={() => setSelDate(ds)}
+                  className={`w-8 h-8 mx-auto rounded-full text-sm transition-colors ${
+                    isSelected ? "bg-navy text-white font-semibold" :
+                    isToday    ? "border border-navy text-navy font-semibold" :
+                    isPast     ? "text-gray-200 cursor-not-allowed" :
+                    "hover:bg-navy/10 text-charcoal"
+                  }`}>
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+          {/* Time grid */}
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Time</p>
+          <div className="grid grid-cols-5 gap-1 mb-4">
+            {TIME_OPTIONS.map((t) => {
+              const val = timeToValue(t);
+              return (
+                <button key={t} type="button" onClick={() => setSelTime(val)}
+                  className={`py-1.5 text-xs rounded transition-colors ${
+                    selTime === val ? "bg-navy text-white font-semibold" : "bg-gray-50 hover:bg-navy/10 text-charcoal"
+                  }`}>
+                  {t}
+                </button>
+              );
+            })}
+          </div>
+          {/* Actions */}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => onConfirm("", "")}
+              className="text-xs text-gray-400 hover:text-gray-600 px-3 py-2">Clear</button>
+            <div className="flex-1" />
+            <button type="button" onClick={onClose}
+              className="btn-outline px-4 py-2 text-sm">Cancel</button>
+            <button type="button" onClick={() => onConfirm(selDate, selTime)} disabled={!selDate}
+              className="btn-primary px-4 py-2 text-sm">
+              Set Date
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function BookingsPage() {
   const [bookings,    setBookings]    = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -123,6 +246,7 @@ export default function BookingsPage() {
   const [form,        setForm]        = useState(EMPTY_FORM);
   const [saving,      setSaving]      = useState(false);
   const [createError, setCreateError] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [catalog,     setCatalog]     = useState(null);
   const [customLabel, setCustomLabel] = useState("");
   const [customPrice, setCustomPrice] = useState("");
@@ -532,21 +656,18 @@ export default function BookingsPage() {
                   {/* Schedule */}
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Schedule</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <input
-                        type="date"
-                        value={form.preferredDate} onChange={(e) => setField("preferredDate", e.target.value)}
-                        className="input-field w-full"
-                      />
-                      <input
-                        type="time"
-                        value={form.preferredTime} onChange={(e) => setField("preferredTime", e.target.value)}
-                        className="input-field w-full"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-400 mt-2">
-                      A calendar invite will be emailed to the client and photographer if a date and time are set.
-                    </p>
+                    <button type="button" onClick={() => setShowDatePicker(true)}
+                      className="input-field w-full text-left flex items-center gap-2">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                      <span className={form.preferredDate ? "text-charcoal" : "text-gray-400"}>
+                        {form.preferredDate
+                          ? `${new Date(form.preferredDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}${form.preferredTime ? ` · ${form.preferredTime}` : ""}`
+                          : "Select date & time"}
+                      </span>
+                    </button>
+                    <p className="text-xs text-gray-400 mt-2">A calendar invite will be emailed to the client and photographer if a date and time are set.</p>
                   </div>
 
                   {/* Services */}
@@ -775,6 +896,15 @@ export default function BookingsPage() {
                 </div>
               </div>
             </form>
+
+            {showDatePicker && (
+              <DateTimePicker
+                date={form.preferredDate}
+                time={form.preferredTime}
+                onConfirm={(d, t) => { setField("preferredDate", d); setField("preferredTime", t); setShowDatePicker(false); }}
+                onClose={() => setShowDatePicker(false)}
+              />
+            )}
           </div>
         </div>
       )}

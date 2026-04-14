@@ -20,6 +20,36 @@ const STATUS_LABELS = {
   cancelled:       "Cancelled",
 };
 
+// Simple SVG donut chart
+function DonutChart({ data, colorMap }) {
+  const total = data.reduce((s, d) => s + d.count, 0) || 1;
+  const COLORS = ["#0b2a55","#c9a96e","#3b82f6","#10b981","#ef4444","#8b5cf6","#f59e0b"];
+  let angle = 0;
+  function polarToXY(deg, r) {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return { x: 50 + r * Math.cos(rad), y: 50 + r * Math.sin(rad) };
+  }
+  function slicePath(start, sweep, r, inner) {
+    const end = start + sweep - 0.5;
+    const p1 = polarToXY(start, r), p2 = polarToXY(end, r);
+    const q1 = polarToXY(end, inner), q2 = polarToXY(start, inner);
+    const lg = sweep > 180 ? 1 : 0;
+    return `M ${p1.x} ${p1.y} A ${r} ${r} 0 ${lg} 1 ${p2.x} ${p2.y} L ${q1.x} ${q1.y} A ${inner} ${inner} 0 ${lg} 0 ${q2.x} ${q2.y} Z`;
+  }
+  return (
+    <svg viewBox="0 0 100 100" className="w-32 h-32 flex-shrink-0">
+      {data.map((d, i) => {
+        const sweep = (d.count / total) * 360;
+        const path  = slicePath(angle, sweep, 45, 28);
+        angle += sweep;
+        return <path key={i} d={path} fill={COLORS[i % COLORS.length]} className="hover:opacity-80 transition-opacity" />;
+      })}
+      <text x="50" y="46" textAnchor="middle" className="text-xs" style={{ fontSize: 10, fill: "#0b2a55", fontWeight: "bold" }}>{total}</text>
+      <text x="50" y="57" textAnchor="middle" style={{ fontSize: 7, fill: "#9ca3af" }}>bookings</text>
+    </svg>
+  );
+}
+
 // Simple bar chart rendered with divs
 function BarChart({ data, valueKey, labelKey, color = "bg-navy", prefix = "$", formatVal }) {
   const max = Math.max(...data.map((d) => d[valueKey] || 0), 1);
@@ -49,17 +79,27 @@ function BarChart({ data, valueKey, labelKey, color = "bg-navy", prefix = "$", f
 
 export default function ReportsPage() {
   const [bookings, setBookings] = useState([]);
+  const [catalog,  setCatalog]  = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [period,   setPeriod]   = useState("12"); // months
 
   useEffect(() => {
     auth.currentUser?.getIdToken(true).then(async (token) => {
-      const res = await fetch("/api/dashboard/listings", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const d = await res.json();
-        setBookings(d.listings || []);
+      const [bookRes, tenantRes] = await Promise.all([
+        fetch("/api/dashboard/bookings", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/tenant",   { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (bookRes.ok) {
+        const d = await bookRes.json();
+        setBookings(d.bookings || []);
+      }
+      if (tenantRes.ok) {
+        const td = await tenantRes.json();
+        const slug = td.tenant?.slug;
+        if (slug) {
+          const catRes = await fetch(`/api/tenant-public/${slug}/catalog`);
+          if (catRes.ok) setCatalog(await catRes.json());
+        }
       }
       setLoading(false);
     });
@@ -114,15 +154,22 @@ export default function ReportsPage() {
 
   // ─── Revenue by service / package ────────────────────────────────────────
   const byService = useMemo(() => {
+    // Build a lookup: id → name from catalog
+    const nameMap = {};
+    catalog?.packages?.forEach((p) => { nameMap[p.id] = p.name; });
+    catalog?.services?.forEach((s) => { nameMap[s.id] = s.name; });
+    catalog?.addons?.forEach((a)   => { nameMap[a.id] = a.name; });
+
     const map = {};
     filtered.forEach((b) => {
-      const key = b.packageId || (b.serviceIds?.[0]) || "custom";
-      if (!map[key]) map[key] = { label: key, revenue: 0, count: 0 };
-      map[key].revenue += b.totalPrice || 0;
-      map[key].count++;
+      const rawKey = b.packageId || (b.serviceIds?.[0]) || "custom";
+      const label  = nameMap[rawKey] || (rawKey === "custom" ? "Custom / A la carte" : rawKey);
+      if (!map[rawKey]) map[rawKey] = { label, revenue: 0, count: 0 };
+      map[rawKey].revenue += b.totalPrice || 0;
+      map[rawKey].count++;
     });
     return Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 8);
-  }, [filtered]);
+  }, [filtered, catalog]);
 
   // ─── Status breakdown ─────────────────────────────────────────────────────
   const statusBreakdown = useMemo(() => {
@@ -242,21 +289,23 @@ export default function ReportsPage() {
           {statusBreakdown.length === 0
             ? <p className="text-gray-400 text-sm">No data</p>
             : (
-              <div className="space-y-2">
-                {statusBreakdown.map(({ status, count }) => (
-                  <div key={status} className="flex items-center justify-between">
-                    <span className={`text-xs px-2 py-0.5 rounded-sm font-medium ${STATUS_COLORS[status] || "bg-gray-100 text-gray-500"}`}>
-                      {STATUS_LABELS[status] || status}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-20 bg-gray-100 rounded-full">
-                        <div className="h-full bg-navy/40 rounded-full"
-                          style={{ width: `${Math.round((count / totalBookings) * 100)}%` }} />
+              <div className="flex items-center gap-5">
+                <DonutChart data={statusBreakdown} />
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  {statusBreakdown.map(({ status, count }) => {
+                    const pct = Math.round((count / totalBookings) * 100);
+                    return (
+                      <div key={status}>
+                        <div className="flex justify-between text-xs mb-0.5">
+                          <span className={`px-1.5 py-0.5 rounded-sm font-medium ${STATUS_COLORS[status] || "bg-gray-100 text-gray-500"}`}>
+                            {STATUS_LABELS[status] || status}
+                          </span>
+                          <span className="text-gray-500 font-medium">{count} <span className="text-gray-300">({pct}%)</span></span>
+                        </div>
                       </div>
-                      <span className="text-sm font-semibold text-charcoal w-6 text-right">{count}</span>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })}
+                </div>
               </div>
             )
           }

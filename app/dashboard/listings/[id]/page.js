@@ -5,6 +5,79 @@ import { useParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 
+// ─── Date/Time Picker ────────────────────────────────────────────────────────
+const TIME_OPTIONS = [
+  "7:00 AM","8:00 AM","8:30 AM","9:00 AM","9:30 AM","10:00 AM","10:30 AM",
+  "11:00 AM","11:30 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM",
+];
+function timeToVal(label) {
+  const [time, ampm] = label.split(" ");
+  let [h, m] = time.split(":").map(Number);
+  if (ampm === "PM" && h !== 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+}
+function valToLabel(val) {
+  if (!val) return "";
+  const [h, m] = val.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2,"0")} ${ampm}`;
+}
+function DateTimePicker({ date, time, onConfirm, onClose }) {
+  const today = new Date();
+  const initD = date ? new Date(date + "T12:00:00") : today;
+  const [viewYear, setViewYear]   = useState(initD.getFullYear());
+  const [viewMonth, setViewMonth] = useState(initD.getMonth());
+  const [selDate, setSelDate]     = useState(date || "");
+  const [selTime, setSelTime]     = useState(time || "");
+  const DAYS   = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const daysInMonth = (y,m) => new Date(y,m+1,0).getDate();
+  const firstDow    = (y,m) => new Date(y,m,1).getDay();
+  const prevMonth = () => { if (viewMonth===0){setViewYear(y=>y-1);setViewMonth(11);}else setViewMonth(m=>m-1); };
+  const nextMonth = () => { if (viewMonth===11){setViewYear(y=>y+1);setViewMonth(0);}else setViewMonth(m=>m+1); };
+  const cells = [...Array(firstDow(viewYear,viewMonth)).fill(null), ...Array.from({length:daysInMonth(viewYear,viewMonth)},(_,i)=>i+1)];
+  while(cells.length%7!==0) cells.push(null);
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+  const ds = (day) => `${viewYear}-${String(viewMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm" onClick={(e)=>e.stopPropagation()}>
+        <div className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <button type="button" onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">‹</button>
+            <p className="font-semibold text-sm text-charcoal">{MONTHS[viewMonth]} {viewYear}</p>
+            <button type="button" onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">›</button>
+          </div>
+          <div className="grid grid-cols-7 mb-1">{DAYS.map(d=><div key={d} className="text-center text-xs text-gray-400 py-1">{d}</div>)}</div>
+          <div className="grid grid-cols-7 gap-y-1 mb-4">
+            {cells.map((day,i)=>{
+              if(!day) return <div key={i}/>;
+              const s=ds(day), isSel=selDate===s, isToday=s===todayStr, isPast=s<todayStr;
+              return <button key={i} type="button" disabled={isPast} onClick={()=>setSelDate(s)}
+                className={`w-8 h-8 mx-auto rounded-full text-sm transition-colors ${isSel?"bg-navy text-white font-semibold":isToday?"border border-navy text-navy font-semibold":isPast?"text-gray-200 cursor-not-allowed":"hover:bg-navy/10 text-charcoal"}`}>{day}</button>;
+            })}
+          </div>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Time</p>
+          <div className="grid grid-cols-5 gap-1 mb-4">
+            {TIME_OPTIONS.map((t)=>{
+              const v=timeToVal(t);
+              return <button key={t} type="button" onClick={()=>setSelTime(v)}
+                className={`py-1.5 text-xs rounded transition-colors ${selTime===v?"bg-navy text-white font-semibold":"bg-gray-50 hover:bg-navy/10 text-charcoal"}`}>{t}</button>;
+            })}
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={()=>onConfirm("","")} className="text-xs text-gray-400 hover:text-gray-600 px-3 py-2">Clear</button>
+            <div className="flex-1"/>
+            <button type="button" onClick={onClose} className="btn-outline px-4 py-2 text-sm">Cancel</button>
+            <button type="button" onClick={()=>onConfirm(selDate,selTime)} disabled={!selDate} className="btn-primary px-4 py-2 text-sm">Set Date</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const STATUS_OPTIONS = [
   { value: "pending_payment", label: "Awaiting Payment" },
   { value: "requested",       label: "Pending Review" },
@@ -37,6 +110,7 @@ export default function ListingDetailPage() {
   const [emailNote,    setEmailNote]   = useState("");
   const [shootDate, setShootDate] = useState("");
   const [shootTime, setShootTime] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Property website state
   const [propSite,      setPropSite]      = useState({});
@@ -369,15 +443,18 @@ export default function ListingDetailPage() {
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
                     Confirm Shoot Date &amp; Time
                   </label>
-                  <div className="flex gap-2 mb-2">
-                    <input type="date" value={shootDate}
-                      onChange={(e) => setShootDate(e.target.value)}
-                      className="input-field flex-1" />
-                    <input type="time" value={shootTime}
-                      onChange={(e) => setShootTime(e.target.value)}
-                      className="input-field w-32" />
-                  </div>
-                  <button onClick={() => patchBooking({ shootDate, shootTime })} disabled={saving}
+                  <button type="button" onClick={() => setShowDatePicker(true)}
+                    className="input-field w-full text-left flex items-center gap-2 mb-2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
+                      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <span className={shootDate ? "text-charcoal text-sm" : "text-gray-400 text-sm"}>
+                      {shootDate
+                        ? `${new Date(shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}${shootTime ? ` · ${valToLabel(shootTime)}` : ""}`
+                        : "Pick date & time"}
+                    </span>
+                  </button>
+                  <button onClick={() => patchBooking({ shootDate, shootTime })} disabled={saving || !shootDate}
                     className="btn-primary w-full py-2 text-xs">
                     {saving ? "Saving…" : "Confirm Shoot Date"}
                   </button>
@@ -725,6 +802,15 @@ export default function ListingDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showDatePicker && (
+        <DateTimePicker
+          date={shootDate}
+          time={shootTime}
+          onConfirm={(d, t) => { setShootDate(d); setShootTime(t); setShowDatePicker(false); }}
+          onClose={() => setShowDatePicker(false)}
+        />
       )}
     </div>
   );
