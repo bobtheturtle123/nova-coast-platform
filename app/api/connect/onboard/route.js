@@ -35,6 +35,6 @@ export async function POST(req) {
     return Response.json({ url });
   } catch (err) {
     console.error("Connect onboard error:", err);
-    return Response.json({ error: "Failed to start Stripe Connect" }, { status: 500 });
+    return Response.json({ error: err.message || "Failed to start Stripe Connect" }, { status: 500 });
   }
 }
