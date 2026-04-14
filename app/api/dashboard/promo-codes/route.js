@@ -34,7 +34,7 @@ export async function POST(req) {
     if (!tenantId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { code, type, value, usageLimit = 0, active = true, expiresAt = null, description = "" } = body;
+    const { code, type, value, usageLimit = 0, minOrder = 0, active = true, expiresAt = null, description = "" } = body;
 
     if (!code?.trim())         return Response.json({ error: "Code is required" }, { status: 400 });
     if (!["flat", "percent"].includes(type)) return Response.json({ error: "Type must be flat or percent" }, { status: 400 });
@@ -60,6 +60,7 @@ export async function POST(req) {
         type,
         value:       Number(value),
         usageLimit:  Number(usageLimit) || 0,
+        minOrder:    Number(minOrder) || 0,
         usageCount:  0,
         active,
         description: description.trim(),

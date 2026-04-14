@@ -140,7 +140,7 @@ function ProductForm({ item, type, allServices, teamMembers, onSave, onDelete, o
           <div className="flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div className="w-20 h-20 rounded-lg bg-gray-200 overflow-hidden flex-shrink-0">
               {form.mediaUrls[0]
-                ? <img src={form.mediaUrls[0]} alt="" className="w-full h-full object-cover" crossOrigin="anonymous" />
+                ? <img src={form.mediaUrls[0]} alt="" className="w-full h-full object-cover" />
                 : <div className="w-full h-full flex items-center justify-center text-2xl opacity-30">🏠</div>
               }
             </div>
@@ -151,7 +151,9 @@ function ProductForm({ item, type, allServices, teamMembers, onSave, onDelete, o
                 <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{form.description}</p>
               )}
               <p className="text-sm font-semibold text-charcoal mt-1">
-                {form.tiered ? `From $${Math.min(...Object.values(form.priceTiers).filter(v => v > 0), form.price || 0).toLocaleString()}` : `$${Number(form.price).toLocaleString()}`}
+                {form.tiered
+                  ? (() => { const tv = Object.values(form.priceTiers).filter(v => v > 0); return tv.length > 0 ? `From $${Math.min(...tv).toLocaleString()}` : "Set tier prices below"; })()
+                  : `$${Number(form.price).toLocaleString()}`}
               </p>
             </div>
           </div>
@@ -180,7 +182,7 @@ function ProductForm({ item, type, allServices, teamMembers, onSave, onDelete, o
                   <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 group">
                     {url.match(/\.(mp4|mov|webm)$/i)
                       ? <video src={url} className="w-full h-full object-cover" />
-                      : <img src={url} alt="" className="w-full h-full object-cover" crossOrigin="anonymous" />
+                      : <img src={url} alt="" className="w-full h-full object-cover" />
                     }
                     {idx === 0 && (
                       <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5">Cover</div>
@@ -242,7 +244,7 @@ function ProductForm({ item, type, allServices, teamMembers, onSave, onDelete, o
             <div className="flex items-center justify-between mb-3">
               <label className="label-field mb-0">Pricing</label>
               <label className="flex items-center gap-2 cursor-pointer">
-                <span className="text-xs text-gray-500">Sq. ft. tier pricing</span>
+                <span className="text-xs text-gray-500">Tier pricing</span>
                 <div
                   onClick={() => setForm((f) => ({ ...f, tiered: !f.tiered }))}
                   className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${form.tiered ? "bg-navy" : "bg-gray-300"}`}
@@ -329,8 +331,9 @@ function ProductForm({ item, type, allServices, teamMembers, onSave, onDelete, o
 
 // ─── Product row ──────────────────────────────────────────────────────────────
 function ProductRow({ item, type, onEdit, onToggleActive, onDuplicate }) {
+  const tierVals = item.priceTiers ? Object.values(item.priceTiers).filter(v => v > 0) : [];
   const fromPrice = item.priceTiers
-    ? `From $${Math.min(...Object.values(item.priceTiers).filter(v => v > 0), item.price || 0).toLocaleString()}`
+    ? tierVals.length > 0 ? `From $${Math.min(...tierVals).toLocaleString()}` : "Tier pricing"
     : `$${(item.price || 0).toLocaleString()}`;
 
   return (
@@ -338,7 +341,7 @@ function ProductRow({ item, type, onEdit, onToggleActive, onDuplicate }) {
       {/* Thumb */}
       <div className="w-12 h-12 rounded-sm bg-gray-100 overflow-hidden flex-shrink-0">
         {item.thumbnailUrl
-          ? <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover" crossOrigin="anonymous" />
+          ? <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover" />
           : <div className="w-full h-full flex items-center justify-center text-lg opacity-20">🏠</div>
         }
       </div>

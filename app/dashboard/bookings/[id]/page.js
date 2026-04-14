@@ -5,6 +5,92 @@ import { useParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 
+function WeatherWidget({ booking }) {
+  const [wx,      setWx]      = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const address = booking.fullAddress || booking.address;
+    const date    = booking.shootDate?.split?.("T")?.[0];
+    if (!address || !date) return;
+    setLoading(true);
+    auth.currentUser?.getIdToken().then(async (token) => {
+      const res = await fetch(
+        `/api/dashboard/weather?address=${encodeURIComponent(address)}&date=${date}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      setWx(data);
+      setLoading(false);
+    });
+  }, [booking.fullAddress, booking.address, booking.shootDate]);
+
+  if (!booking.shootDate) return null;
+  if (loading) return (
+    <div className="bg-white rounded-sm border border-gray-200 p-5 mb-6">
+      <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-2">Weather Forecast</h3>
+      <div className="flex items-center gap-2 text-sm text-gray-400">
+        <div className="w-4 h-4 border-2 border-gray-200 border-t-navy rounded-full animate-spin" />
+        Loading forecast…
+      </div>
+    </div>
+  );
+  if (!wx) return null;
+
+  if (!wx.available) {
+    const msg = wx.reason === "too_far"
+      ? `Forecast unavailable — shoot is ${wx.daysOut} days out (max 16 days)`
+      : wx.reason === "past"
+      ? "Shoot date has passed"
+      : "Forecast unavailable for this location";
+    return (
+      <div className="bg-white rounded-sm border border-gray-200 p-5 mb-6">
+        <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-2">Weather Forecast</h3>
+        <p className="text-sm text-gray-400">{msg}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-sm border border-gray-200 p-5 mb-6">
+      <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-3">
+        Weather Forecast
+        <span className="ml-2 font-normal normal-case text-gray-300">
+          {wx.daysOut === 0 ? "Today" : wx.daysOut === 1 ? "Tomorrow" : `${wx.daysOut} days out`}
+        </span>
+      </h3>
+      <div className="flex items-center gap-4 mb-3">
+        <span className="text-4xl">{wx.icon}</span>
+        <div>
+          <p className="text-2xl font-semibold text-charcoal">{wx.temp}°F</p>
+          <p className="text-sm text-gray-500">{wx.description} · H:{wx.tempHigh}° L:{wx.tempLow}°</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-3 text-sm">
+        <div className="bg-gray-50 rounded p-2.5">
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">UV Index</p>
+          <p className={`font-semibold ${wx.uvLabel?.color || "text-charcoal"}`}>{wx.uvIndex}</p>
+          <p className={`text-xs ${wx.uvLabel?.color || "text-gray-400"}`}>{wx.uvLabel?.label}</p>
+        </div>
+        {wx.aqi !== null && (
+          <div className="bg-gray-50 rounded p-2.5">
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Air Quality</p>
+            <p className={`font-semibold ${wx.aqiLabel?.color || "text-charcoal"}`}>{wx.aqi}</p>
+            <p className={`text-xs ${wx.aqiLabel?.color || "text-gray-400"}`}>{wx.aqiLabel?.label}</p>
+          </div>
+        )}
+        <div className="bg-gray-50 rounded p-2.5">
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Wind</p>
+          <p className="font-semibold text-charcoal">{wx.windSpeed} mph</p>
+          {wx.precipitation > 0 && (
+            <p className="text-xs text-blue-500">{wx.precipitation}" precip</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function BookingDetailPage() {
   const { id }   = useParams();
   const router   = useRouter();
@@ -13,16 +99,23 @@ export default function BookingDetailPage() {
   const [saving,  setSaving]   = useState(false);
   const [msg,     setMsg]      = useState("");
   const [shootDate, setShootDate] = useState("");
+  const [showWeather, setShowWeather] = useState(true);
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
-      const res = await fetch(`/api/dashboard/bookings/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const [bookingRes, tenantRes] = await Promise.all([
+        fetch(`/api/dashboard/bookings/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/tenant",          { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (bookingRes.ok) {
+        const data = await bookingRes.json();
         setBooking(data.booking);
         setShootDate(data.booking.shootDate?.split?.("T")?.[0] || "");
+      }
+      if (tenantRes.ok) {
+        const td = await tenantRes.json();
+        const av = td.tenant?.bookingConfig?.availability;
+        if (av?.showWeather !== undefined) setShowWeather(av.showWeather);
       }
       setLoading(false);
     });
@@ -156,6 +249,9 @@ export default function BookingDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Weather */}
+      {showWeather && <WeatherWidget booking={{ ...booking, shootDate: booking.shootDate }} />}
 
       {/* Status + shoot date */}
       <div className="bg-white rounded-sm border border-gray-200 p-5 mb-6">

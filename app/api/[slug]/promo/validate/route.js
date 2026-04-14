@@ -46,6 +46,11 @@ export async function POST(req, { params }) {
       return Response.json({ valid: false, message: "This code has reached its usage limit" });
     }
 
+    // Check minimum order
+    if (promo.minOrder > 0 && Number(subtotal) < promo.minOrder) {
+      return Response.json({ valid: false, message: `Minimum order of $${promo.minOrder} required` });
+    }
+
     // Calculate discount
     const sub = Number(subtotal) || 0;
     let discount = 0;

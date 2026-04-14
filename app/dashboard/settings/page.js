@@ -83,7 +83,7 @@ export default function SettingsPage() {
 
   // Pricing config state
   const [pricingMode,  setPricingMode]  = useState("sqft");
-  const [tiers,        setTiers]        = useState(DEFAULT_TIERS);
+  const [tiers,        setTiers]        = useState([]);
   const [savingTiers,  setSavingTiers]  = useState(false);
 
   // Booking config state
@@ -115,6 +115,7 @@ export default function SettingsPage() {
   const [availDuration,    setAvailDuration]    = useState(120);
   const [availBuffer,      setAvailBuffer]      = useState(30);
   const [savingAvail,      setSavingAvail]      = useState(false);
+  const [showWeather,      setShowWeather]      = useState(true);
 
   // Terms of service state
   const [termsText,    setTermsText]    = useState("");
@@ -131,7 +132,7 @@ export default function SettingsPage() {
 
   // Promo codes state
   const [promoCodes,    setPromoCodes]    = useState([]);
-  const [promoForm,     setPromoForm]     = useState({ code: "", type: "flat", value: "", description: "" });
+  const [promoForm,     setPromoForm]     = useState({ code: "", type: "flat", value: "", description: "", usageLimit: "", minOrder: "", expiresAt: "" });
   const [showPromoForm, setShowPromoForm] = useState(false);
   const [savingPromo,   setSavingPromo]   = useState(false);
   const [promoError,    setPromoError]    = useState("");
@@ -185,6 +186,7 @@ export default function SettingsPage() {
             if (av.intervalMinutes)  setAvailInterval(av.intervalMinutes);
             if (av.defaultDuration)  setAvailDuration(av.defaultDuration);
             if (av.bufferMinutes)    setAvailBuffer(av.bufferMinutes);
+            if (av.showWeather !== undefined) setShowWeather(av.showWeather);
           }
         }
         if (data.tenant.emailTemplate) {
@@ -273,8 +275,18 @@ export default function SettingsPage() {
   }
 
   function resetTiers() {
-    setTiers(DEFAULT_TIERS);
-    setPricingMode("sqft");
+    if (pricingMode === "photos") {
+      setTiers([
+        { name: "XS",  label: "Under 20 photos", max: 20 },
+        { name: "S",   label: "21–40 photos",     max: 40 },
+        { name: "M",   label: "41–70 photos",     max: 70 },
+        { name: "L",   label: "71–100 photos",    max: 100 },
+        { name: "XL",  label: "100+ photos",      max: 999999 },
+      ]);
+    } else {
+      setTiers(DEFAULT_TIERS);
+      setPricingMode("sqft");
+    }
   }
 
   // ─── Booking config helpers ───────────────────────────────────────────────
@@ -315,6 +327,7 @@ export default function SettingsPage() {
         intervalMinutes: Number(availInterval) || 30,
         defaultDuration: Number(availDuration) || 120,
         bufferMinutes:   Number(availBuffer)   || 30,
+        showWeather,
       },
     };
   }
@@ -702,31 +715,6 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* Time slots */}
-        <div>
-          <h3 className="text-sm font-semibold text-charcoal mb-1">Preferred Time Slots</h3>
-          <p className="text-xs text-gray-400 mb-3">Control which time options clients see when scheduling. You can rename them.</p>
-          <div className="space-y-2">
-            {timeSlots.map((slot) => (
-              <div key={slot.value} className={`border rounded-sm px-3 py-2.5 flex items-center gap-3 ${slot.enabled ? "border-gray-200 bg-white" : "border-dashed border-gray-200 bg-gray-50 opacity-60"}`}>
-                <div
-                  onClick={() => toggleTimeSlot(slot.value)}
-                  className={`relative w-9 h-5 rounded-full flex-shrink-0 cursor-pointer transition-colors ${slot.enabled ? "bg-navy" : "bg-gray-300"}`}>
-                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${slot.enabled ? "translate-x-4" : "translate-x-0.5"}`} />
-                </div>
-                <div className="flex-1 grid grid-cols-2 gap-2">
-                  <input type="text" value={slot.label} disabled={!slot.enabled}
-                    onChange={(e) => updateTimeSlot(slot.value, "label", e.target.value)}
-                    className="input-field py-1.5 text-sm" placeholder="Label" />
-                  <input type="text" value={slot.desc} disabled={!slot.enabled}
-                    onChange={(e) => updateTimeSlot(slot.value, "desc", e.target.value)}
-                    className="input-field py-1.5 text-sm text-gray-500" placeholder="Description" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Custom form fields */}
         <div>
           <h3 className="text-sm font-semibold text-charcoal mb-1">Custom Booking Form Fields</h3>
@@ -850,10 +838,61 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Scheduling style: named slots vs time grid */}
+        <div className="mb-5">
+          <h3 className="text-sm font-semibold text-charcoal mb-1">Client Scheduling Options</h3>
+          <p className="text-xs text-gray-400 mb-3">Choose what time-selection methods you offer to clients when they book. Toggle each one on or off and rename them.</p>
+          <div className="space-y-2">
+            {timeSlots.map((slot) => (
+              <div key={slot.value} className={`border rounded-sm px-3 py-2.5 flex items-center gap-3 ${slot.enabled ? "border-gray-200 bg-white" : "border-dashed border-gray-200 bg-gray-50 opacity-60"}`}>
+                <div
+                  onClick={() => toggleTimeSlot(slot.value)}
+                  className={`relative w-9 h-5 rounded-full flex-shrink-0 cursor-pointer transition-colors ${slot.enabled ? "bg-navy" : "bg-gray-300"}`}>
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${slot.enabled ? "translate-x-4" : "translate-x-0.5"}`} />
+                </div>
+                <div className="flex-1 grid grid-cols-2 gap-2">
+                  <input type="text" value={slot.label} disabled={!slot.enabled}
+                    onChange={(e) => updateTimeSlot(slot.value, "label", e.target.value)}
+                    className="input-field py-1.5 text-sm" placeholder="Label" />
+                  <input type="text" value={slot.desc} disabled={!slot.enabled}
+                    onChange={(e) => updateTimeSlot(slot.value, "desc", e.target.value)}
+                    className="input-field py-1.5 text-sm text-gray-500" placeholder="Description" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Weather Widget */}
+        <div className="pt-4 border-t border-gray-100">
+          <h3 className="text-sm font-semibold text-charcoal mb-1">Weather Report</h3>
+          <p className="text-xs text-gray-400 mb-3">Show a weather forecast (temp, UV, AQI) on each booking for the shoot date and location. Shown to admin only.</p>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <button type="button" onClick={() => setShowWeather((v) => !v)}
+              className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${showWeather ? "bg-navy" : "bg-gray-200"}`}>
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${showWeather ? "left-5" : "left-0.5"}`} />
+            </button>
+            <span className="text-sm text-charcoal">{showWeather ? "Weather widget enabled" : "Weather widget disabled"}</span>
+          </label>
+        </div>
+
         <div className="pt-4 border-t border-gray-100">
           <button onClick={saveAvailability} disabled={savingAvail} className="btn-primary px-8 py-3">
             {savingAvail ? "Saving…" : "Save Availability Settings"}
           </button>
+        </div>
+      </div>
+
+      {/* ─── Service Areas ──────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-charcoal text-base">Service Areas & Zones</h2>
+            <p className="text-sm text-gray-500 mt-0.5">Draw include/exclude zones on a map, assign photographers to regions.</p>
+          </div>
+          <a href="/dashboard/service-areas" className="btn-outline text-sm px-4 py-2">
+            Manage Service Areas →
+          </a>
         </div>
       </div>
 
@@ -1073,6 +1112,26 @@ export default function SettingsPage() {
                   onChange={(e) => setPromoForm((f) => ({ ...f, value: e.target.value }))}
                   className="input-field w-full" placeholder={promoForm.type === "flat" ? "50" : "20"}
                   min="0.01" max={promoForm.type === "percent" ? "100" : undefined} step="0.01" required />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="label-field">Expiry Date <span className="text-gray-400 font-normal">(optional)</span></label>
+                <input type="date" value={promoForm.expiresAt}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, expiresAt: e.target.value }))}
+                  className="input-field w-full text-sm" min={new Date().toISOString().split("T")[0]} />
+              </div>
+              <div>
+                <label className="label-field">Min. Order <span className="text-gray-400 font-normal">($ optional)</span></label>
+                <input type="number" value={promoForm.minOrder}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, minOrder: e.target.value }))}
+                  className="input-field w-full text-sm" placeholder="0" min="0" step="1" />
+              </div>
+              <div>
+                <label className="label-field">Max Uses <span className="text-gray-400 font-normal">(0 = unlimited)</span></label>
+                <input type="number" value={promoForm.usageLimit}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, usageLimit: e.target.value }))}
+                  className="input-field w-full text-sm" placeholder="0" min="0" step="1" />
               </div>
             </div>
             {promoError && <p className="text-xs text-red-500">{promoError}</p>}

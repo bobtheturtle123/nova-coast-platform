@@ -1,16 +1,37 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
+
+const PLANS = [
+  { id: "starter", name: "Starter", price: 39,  desc: "Up to 30 bookings/month · 1 team member" },
+  { id: "pro",     name: "Pro",     price: 79,  desc: "Up to 150 bookings/month · 5 team members · Custom domain" },
+  { id: "studio",  name: "Studio",  price: 149, desc: "Unlimited bookings · 25 team members · White-label" },
+];
 
 const PLAN_NAMES  = { starter: "Starter", pro: "Pro", studio: "Studio", agency: "Studio" };
 const PLAN_PRICES = { starter: 39, pro: 79, studio: 149, agency: 149 };
+
+function isStripeNotConfigured(errorMsg) {
+  if (!errorMsg) return false;
+  const lower = errorMsg.toLowerCase();
+  return lower.includes("invalid plan") || lower.includes("no such price") || lower.includes("price_");
+}
 
 export default function BillingPage() {
   const [tenant,  setTenant]  = useState(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
-  const [msg,     setMsg]     = useState("");
+  const [msg,     setMsg]     = useState({ text: "", type: "error" });
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("subscribed") === "true") {
+      setMsg({ text: "You're subscribed! Welcome aboard. Your plan is now active.", type: "success" });
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
@@ -25,6 +46,17 @@ export default function BillingPage() {
     });
   }, []);
 
+  function setError(text) {
+    if (isStripeNotConfigured(text)) {
+      setMsg({
+        text: "Stripe is not yet configured. Contact support or add STRIPE_PRICE_* environment variables.",
+        type: "config",
+      });
+    } else {
+      setMsg({ text, type: "error" });
+    }
+  }
+
   async function openPortal() {
     setWorking(true);
     try {
@@ -35,9 +67,9 @@ export default function BillingPage() {
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else setMsg(data.error || "Could not open billing portal.");
+      else setError(data.error || "Could not open billing portal.");
     } catch {
-      setMsg("Something went wrong.");
+      setError("Something went wrong. Please try again.");
     } finally {
       setWorking(false);
     }
@@ -54,9 +86,9 @@ export default function BillingPage() {
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else setMsg(data.error || "Could not start checkout.");
+      else setError(data.error || "Could not start checkout.");
     } catch {
-      setMsg("Something went wrong.");
+      setError("Something went wrong. Please try again.");
     } finally {
       setWorking(false);
     }
@@ -72,9 +104,9 @@ export default function BillingPage() {
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
-      else setMsg(data.error || "Could not start Stripe Connect.");
+      else setError(data.error || "Could not start Stripe Connect.");
     } catch {
-      setMsg("Something went wrong.");
+      setError("Something went wrong. Please try again.");
     } finally {
       setWorking(false);
     }
@@ -86,21 +118,32 @@ export default function BillingPage() {
     </div>
   );
 
-  const plan = tenant?.subscriptionPlan || "starter";
-  const status = tenant?.subscriptionStatus || "trialing";
+  const plan       = tenant?.subscriptionPlan || "starter";
+  const status     = tenant?.subscriptionStatus || "trialing";
+  const subscribed = !!tenant?.stripeSubscriptionId;
+
+  const msgStyles = {
+    success: "bg-green-50 border border-green-300 text-green-800",
+    error:   "bg-red-50 border border-red-300 text-red-800",
+    config:  "bg-amber-50 border border-amber-300 text-amber-900",
+  };
 
   return (
     <div className="p-8 max-w-2xl">
       <h1 className="font-display text-2xl text-navy mb-2">Billing</h1>
       <p className="text-gray-500 text-sm mb-8">Manage your subscription and payment settings.</p>
 
-      {msg && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 text-sm px-4 py-2 rounded-sm mb-6">
-          {msg}
+      {/* Feedback message */}
+      {msg.text && (
+        <div className={`text-sm px-4 py-3 rounded-sm mb-6 font-medium ${msgStyles[msg.type] || msgStyles.error}`}>
+          {msg.type === "config" && (
+            <span className="font-bold block mb-0.5">Configuration required</span>
+          )}
+          {msg.text}
         </div>
       )}
 
-      {/* Current plan */}
+      {/* Current plan summary */}
       <div className="bg-white rounded-sm border border-gray-200 p-6 mb-6">
         <h2 className="font-display text-navy text-base mb-4">Current Plan</h2>
         <div className="flex items-center justify-between">
@@ -116,6 +159,7 @@ export default function BillingPage() {
             {status === "trialing" ? "Free trial" : status}
           </span>
         </div>
+
         {status === "trialing" && tenant?.trialEndsAt && (
           <p className="text-xs text-amber-600 mt-2">
             Trial ends {(() => {
@@ -125,43 +169,85 @@ export default function BillingPage() {
             })()}
           </p>
         )}
-        {tenant?.stripeSubscriptionId && (
-          <button onClick={openPortal} disabled={working}
-            className="btn-outline text-sm px-4 py-2 mt-4">
-            {working ? "Loading…" : "Manage subscription →"}
-          </button>
+
+        {subscribed ? (
+          <div className="flex flex-wrap gap-2 mt-4">
+            <button onClick={openPortal} disabled={working}
+              className="btn-outline text-sm px-4 py-2">
+              {working ? "Loading…" : "Manage subscription →"}
+            </button>
+            <button onClick={openPortal} disabled={working}
+              className="text-sm px-4 py-2 rounded-sm border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50">
+              {working ? "Loading…" : "Cancel subscription"}
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 mt-2">
+            No active subscription. Select a plan below to get started after your trial.
+          </p>
         )}
-        {!tenant?.stripeSubscriptionId && (
-          <p className="text-xs text-gray-400 mt-2">No active subscription. Select a plan below to get started after your trial.</p>
+
+        {subscribed && (
+          <p className="text-xs text-gray-400 mt-2">
+            To cancel, click "Cancel subscription" — you can manage or cancel your plan in the Stripe portal.
+          </p>
         )}
       </div>
 
-      {/* Plan options */}
-      {!tenant?.stripeSubscriptionId && (
-        <div className="space-y-3 mb-6">
-          <h2 className="font-display text-navy text-base">Choose a Plan</h2>
-          {[
-            { id: "starter", name: "Starter", price: 39,  desc: "Up to 30 bookings/month · 1 team member" },
-            { id: "pro",     name: "Pro",     price: 79,  desc: "Up to 150 bookings/month · 5 team members · Custom domain" },
-            { id: "studio",  name: "Studio",  price: 149, desc: "Unlimited bookings · 25 team members · White-label" },
-          ].map((p) => (
-            <div key={p.id} className={`flex items-center justify-between p-4 rounded-sm border
-              ${plan === p.id ? "border-navy bg-navy/5" : "border-gray-200 bg-white"}`}>
-              <div>
-                <p className="font-medium text-navy text-sm">{p.name}</p>
-                <p className="text-xs text-gray-500">{p.desc}</p>
+      {/* Plan cards — always shown */}
+      <div className="mb-6">
+        <h2 className="font-display text-navy text-base mb-3">
+          {subscribed ? "Your Plan" : "Choose a Plan"}
+        </h2>
+        <div className="space-y-3">
+          {PLANS.map((p) => {
+            const isCurrent = plan === p.id;
+            const isOther   = subscribed && !isCurrent;
+
+            return (
+              <div key={p.id}
+                className={`flex items-center justify-between p-4 rounded-sm border transition-all
+                  ${isCurrent
+                    ? "border-2 border-navy bg-navy/5 shadow-sm"
+                    : isOther
+                      ? "border-gray-100 bg-gray-50 opacity-60"
+                      : "border-gray-200 bg-white"}`}>
+                <div className="flex items-start gap-3">
+                  {isCurrent && (
+                    <span className="mt-0.5 text-xs font-semibold bg-navy text-white px-2 py-0.5 rounded-full whitespace-nowrap">
+                      Current Plan
+                    </span>
+                  )}
+                  <div>
+                    <p className={`font-medium text-sm ${isCurrent ? "text-navy" : "text-gray-600"}`}>{p.name}</p>
+                    <p className="text-xs text-gray-500">{p.desc}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 ml-4">
+                  <span className={`text-sm font-semibold ${isCurrent ? "text-navy" : "text-gray-400"}`}>
+                    ${p.price}/mo
+                  </span>
+                  {isCurrent && subscribed && (
+                    <span className="text-xs text-green-700 font-medium">Active</span>
+                  )}
+                  {isOther && subscribed && (
+                    <button onClick={openPortal} disabled={working}
+                      className="text-xs px-3 py-1.5 rounded-sm border border-gray-300 text-gray-500 hover:bg-white transition-colors disabled:opacity-50">
+                      {working ? "…" : "Upgrade via portal"}
+                    </button>
+                  )}
+                  {!subscribed && (
+                    <button onClick={() => subscribe(p.id)} disabled={working}
+                      className="btn-primary text-xs px-3 py-1.5">
+                      {working ? "…" : "Subscribe"}
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-navy">${p.price}/mo</span>
-                <button onClick={() => subscribe(p.id)} disabled={working}
-                  className="btn-primary text-xs px-3 py-1.5">
-                  {working ? "…" : "Subscribe"}
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      )}
+      </div>
 
       {/* Stripe Connect */}
       <div className="bg-white rounded-sm border border-gray-200 p-6">
