@@ -1,11 +1,44 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
 import { calculateTenantPrice, getItemPrice, getSqftTier } from "@/lib/catalogUtils";
 import StepProgress from "@/components/booking/StepProgress";
 import PriceSummary from "@/components/booking/PriceSummary";
 import clsx from "clsx";
+
+// ─── Addon Lightbox ────────────────────────────────────────────────────────────
+function AddonLightbox({ addon, images, price, onClose }) {
+  const [idx, setIdx] = useState(0);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={onClose}>
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+        {images.length > 0 && (
+          <div className="relative h-56 overflow-hidden rounded-t-xl bg-gray-100">
+            <img src={images[idx]} alt={addon.name} className="w-full h-full object-cover" />
+            {images.length > 1 && (
+              <>
+                <button onClick={() => setIdx((i) => (i - 1 + images.length) % images.length)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center">‹</button>
+                <button onClick={() => setIdx((i) => (i + 1) % images.length)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center">›</button>
+              </>
+            )}
+          </div>
+        )}
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-2">
+            <h2 className="font-display text-xl text-navy">{addon.name}</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none ml-4">×</button>
+          </div>
+          {price && <p className="font-display text-2xl text-navy mb-3">+{price}</p>}
+          {addon.description && <p className="text-gray-600 leading-relaxed">{addon.description}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const ADDON_IMAGES = {
   floorplans2d:       "https://novacoastmedia.com/wp-content/uploads/2024/10/Floor-Plans-scaled.jpg",
@@ -27,6 +60,13 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
   const router = useRouter();
   const { packageId, serviceIds, addonIds, squareFootage, toggleAddon, setPricing, travelFee } =
     useBookingStore();
+  const [lightboxAddon, setLightboxAddon] = useState(null);
+
+  function getImages(addon) {
+    if (addon.mediaUrls?.length) return addon.mediaUrls.filter((u) => u && !u.match(/\.(mp4|mov|webm)$/i));
+    const fallback = ADDON_IMAGES[addon.id];
+    return fallback ? [fallback] : [];
+  }
 
   function handleContinue() {
     const pricing = calculateTenantPrice(packageId, serviceIds, addonIds, travelFee, catalog, squareFootage);
@@ -49,6 +89,8 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
             <div className="space-y-3">
               {addons.map((addon) => {
                 const selected = addonIds.includes(addon.id);
+                const images   = getImages(addon);
+                const img      = images[0];
                 return (
                   <button key={addon.id} onClick={() => toggleAddon(addon.id)}
                     className={clsx(
@@ -56,9 +98,9 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
                       selected ? "border-navy bg-navy/5 ring-1 ring-navy/20" : "border-gray-200 bg-white hover:border-navy/30"
                     )}>
                     <div className="flex items-center gap-4 p-4">
-                      {ADDON_IMAGES[addon.id] && (
+                      {img && (
                         <div className="w-20 h-14 flex-shrink-0 overflow-hidden rounded-sm">
-                          <img src={ADDON_IMAGES[addon.id]} alt={addon.name} className="w-full h-full object-cover" />
+                          <img src={img} alt={addon.name} className="w-full h-full object-cover" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
@@ -66,6 +108,13 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
                           {addon.name}
                         </p>
                         <p className="text-sm text-gray-500 line-clamp-2">{addon.description}</p>
+                        {(addon.description?.length > 80 || images.length > 1) && (
+                          <button type="button"
+                            onClick={(e) => { e.stopPropagation(); setLightboxAddon({ addon, images, price: `$${getItemPrice(addon, getSqftTier(squareFootage)).toLocaleString()}` }); }}
+                            className="text-xs text-navy/50 hover:text-navy underline underline-offset-2 mt-0.5">
+                            View details
+                          </button>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 flex-shrink-0">
                         <span className={clsx("font-display text-xl", selected ? "text-navy" : "text-charcoal")}>
@@ -94,6 +143,15 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
           <div className="lg:col-span-1"><PriceSummary catalog={catalog} /></div>
         </div>
       </div>
+
+      {lightboxAddon && (
+        <AddonLightbox
+          addon={lightboxAddon.addon}
+          images={lightboxAddon.images}
+          price={lightboxAddon.price}
+          onClose={() => setLightboxAddon(null)}
+        />
+      )}
     </>
   );
 }

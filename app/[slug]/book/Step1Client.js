@@ -7,6 +7,94 @@ import StepProgress from "@/components/booking/StepProgress";
 import { getSqftTier, getItemPrice, SQFT_TIERS } from "@/lib/catalogUtils";
 import clsx from "clsx";
 
+// ─── Product Lightbox ──────────────────────────────────────────────────────────
+function ProductLightbox({ item, images, price, onClose }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight") setIdx((i) => (i + 1) % images.length);
+      if (e.key === "ArrowLeft")  setIdx((i) => (i - 1 + images.length) % images.length);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [images.length, onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={onClose}>
+      <div
+        className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Image carousel */}
+        {images.length > 0 && (
+          <div className="relative">
+            <div className="h-72 overflow-hidden rounded-t-xl bg-gray-100">
+              <img src={images[idx]} alt={item.name} className="w-full h-full object-cover" />
+            </div>
+            {images.length > 1 && (
+              <>
+                <button onClick={() => setIdx((i) => (i - 1 + images.length) % images.length)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors">
+                  ‹
+                </button>
+                <button onClick={() => setIdx((i) => (i + 1) % images.length)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors">
+                  ›
+                </button>
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {images.map((_, i) => (
+                    <button key={i} onClick={() => setIdx(i)}
+                      className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? "bg-white" : "bg-white/50"}`} />
+                  ))}
+                </div>
+              </>
+            )}
+            {/* Thumbnail strip */}
+            {images.length > 1 && (
+              <div className="flex gap-2 p-3 overflow-x-auto bg-gray-50">
+                {images.map((img, i) => (
+                  <button key={i} onClick={() => setIdx(i)}
+                    className={`w-14 h-10 flex-shrink-0 rounded overflow-hidden border-2 transition-colors ${i === idx ? "border-navy" : "border-transparent"}`}>
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-3">
+            <h2 className="font-display text-2xl text-navy">{item.name}</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none ml-4">×</button>
+          </div>
+          {price && <p className="font-display text-3xl text-navy mb-4">{price}</p>}
+          {item.description && (
+            <p className="text-gray-600 leading-relaxed mb-4">{item.description}</p>
+          )}
+          {item.includes?.length > 0 && (
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Includes</p>
+              <ul className="space-y-1">
+                {item.includes.map((s, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-charcoal">
+                    <span className="text-gold font-bold">✓</span>{s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {item.deliverables && (
+            <p className="text-sm text-gray-500 border-t border-gray-100 pt-3">{item.deliverables}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const TIER_LABELS = Object.fromEntries(SQFT_TIERS.map((t) => [t.name, t.label]));
 
 // Images sourced from novacoastmedia.com — update to R2 URLs when migrated
@@ -40,7 +128,6 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
 
   const pricingConfig = catalog.pricingConfig || {};
   const pricingMode   = pricingConfig.mode || "sqft";
-  // Skip the gate if flat pricing (no tier variable)
   const usesGate      = pricingMode !== "flat";
   const gateLabel     = pricingMode === "photos" ? "Number of Photos" : "Interior Square Footage";
   const gateQuestion  = pricingMode === "photos" ? "How many photos do you need?" : "What's the square footage?";
@@ -48,8 +135,16 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
     ? "Tell us how many photos you need so we can show you exact pricing."
     : "Enter the interior square footage of the home so we can show you exact pricing.";
 
-  const [sqftInput, setSqftInput] = useState(squareFootage || "");
-  const [confirmed, setConfirmed] = useState(!usesGate || !!squareFootage);
+  const [sqftInput,    setSqftInput]    = useState(squareFootage || "");
+  const [confirmed,    setConfirmed]    = useState(!usesGate || !!squareFootage);
+  const [lightboxItem, setLightboxItem] = useState(null); // { item, images, price }
+
+  // Get images for an item: prefer mediaUrls, fall back to ITEM_IMAGES lookup
+  function getImages(item) {
+    if (item.mediaUrls?.length) return item.mediaUrls.filter((u) => u && !u.match(/\.(mp4|mov|webm)$/i));
+    const fallback = ITEM_IMAGES[item.id];
+    return fallback ? [fallback] : [];
+  }
 
   useEffect(() => {
     setTenant(slug, tenantId, tenantName);
@@ -136,7 +231,8 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
           {packages.map((pkg) => {
             const selected = packageId === pkg.id;
-            const img = ITEM_IMAGES[pkg.id];
+            const images   = getImages(pkg);
+            const img      = images[0];
             return (
               <button key={pkg.id} onClick={() => setPackage(pkg.id)}
                 className={clsx(
@@ -152,9 +248,14 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                   )}>Most Popular</span>
                 )}
                 {img && (
-                  <div className="relative h-44 overflow-hidden flex-shrink-0">
+                  <div className="relative h-44 overflow-hidden flex-shrink-0 group">
                     <img src={img} alt={pkg.name} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                    {images.length > 1 && (
+                      <span className="absolute bottom-2 right-2 text-xs bg-black/50 text-white px-1.5 py-0.5 rounded">
+                        1/{images.length}
+                      </span>
+                    )}
                   </div>
                 )}
                 <div className={clsx("p-5 flex flex-col flex-1", selected ? "bg-navy" : "bg-white")}>
@@ -184,6 +285,15 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                       {pkg.deliverables}
                     </p>
                   )}
+                  {(pkg.description || images.length > 0) && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setLightboxItem({ item: pkg, images, price: displayPrice(pkg) }); }}
+                      className={clsx("text-xs mt-2 underline underline-offset-2 text-left", selected ? "text-white/60 hover:text-white" : "text-navy/50 hover:text-navy")}
+                    >
+                      View details {images.length > 1 ? `(${images.length} photos)` : ""}
+                    </button>
+                  )}
                 </div>
               </button>
             );
@@ -200,7 +310,8 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-12">
               {services.map((svc) => {
                 const selected = serviceIds.includes(svc.id);
-                const img = ITEM_IMAGES[svc.id];
+                const images   = getImages(svc);
+                const img      = images[0];
                 return (
                   <button key={svc.id} onClick={() => toggleService(svc.id)}
                     className={clsx(
@@ -208,14 +319,26 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                       selected ? "border-navy shadow-sm ring-1 ring-navy/20" : "border-gray-200 bg-white hover:border-navy/30"
                     )}>
                     {img && (
-                      <div className="h-36 overflow-hidden">
+                      <div className="relative h-36 overflow-hidden">
                         <img src={img} alt={svc.name} className="w-full h-full object-cover" />
+                        {images.length > 1 && (
+                          <span className="absolute bottom-2 right-2 text-xs bg-black/50 text-white px-1.5 py-0.5 rounded">
+                            {images.length} photos
+                          </span>
+                        )}
                       </div>
                     )}
                     <div className={clsx("p-4 flex items-start justify-between gap-4", selected ? "bg-navy/5" : "bg-white")}>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <p className={clsx("font-semibold mb-1", selected ? "text-navy" : "text-charcoal")}>{svc.name}</p>
                         <p className="text-sm text-gray-500 line-clamp-2">{svc.description}</p>
+                        {(svc.description?.length > 80 || images.length > 0) && (
+                          <button type="button"
+                            onClick={(e) => { e.stopPropagation(); setLightboxItem({ item: svc, images, price: displayPrice(svc) }); }}
+                            className="text-xs text-navy/50 hover:text-navy underline underline-offset-2 mt-1">
+                            View details
+                          </button>
+                        )}
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className={clsx("font-display text-xl", selected ? "text-navy" : "text-charcoal")}>
@@ -241,6 +364,16 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
           </button>
         </div>
       </div>
+
+      {/* Product lightbox */}
+      {lightboxItem && (
+        <ProductLightbox
+          item={lightboxItem.item}
+          images={lightboxItem.images}
+          price={lightboxItem.price}
+          onClose={() => setLightboxItem(null)}
+        />
+      )}
     </>
   );
 }

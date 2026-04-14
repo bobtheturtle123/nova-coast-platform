@@ -39,7 +39,7 @@ function isSameDay(a, b) {
 }
 
 // ─── Member form modal ────────────────────────────────────────────────────────
-function MemberForm({ member, onSave, onDelete, onClose }) {
+function MemberForm({ member, products, onSave, onDelete, onClose }) {
   const [form, setForm] = useState({
     name:   member?.name   || "",
     email:  member?.email  || "",
@@ -54,6 +54,13 @@ function MemberForm({ member, onSave, onDelete, onClose }) {
   function toggleSkill(s) {
     setForm((f) => ({ ...f, skills: f.skills.includes(s) ? f.skills.filter((x) => x !== s) : [...f.skills, s] }));
   }
+
+  // All products flattened for skills selection
+  const allProducts = [
+    ...(products.services || []),
+    ...(products.packages || []),
+    ...(products.addons   || []),
+  ].filter((p) => p.active !== false);
 
   async function handleSave() {
     setSaving(true);
@@ -107,17 +114,21 @@ function MemberForm({ member, onSave, onDelete, onClose }) {
           </div>
 
           <div>
-            <label className="label-field">Skills / Services</label>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(SKILL_LABELS).map(([id, label]) => (
-                <button key={id} type="button" onClick={() => toggleSkill(id)}
-                  className={`text-xs px-2.5 py-1.5 rounded-sm border font-medium transition-colors ${
-                    form.skills.includes(id) ? "bg-navy text-white border-navy" : "border-gray-200 text-gray-600 hover:border-navy/40"
-                  }`}>
-                  {label}
-                </button>
-              ))}
-            </div>
+            <label className="label-field">Services They Can Perform</label>
+            {allProducts.length === 0 ? (
+              <p className="text-xs text-gray-400">Add products first to assign services to photographers.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {allProducts.map((p) => (
+                  <button key={p.id} type="button" onClick={() => toggleSkill(p.id)}
+                    className={`text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors ${
+                      form.skills.includes(p.id) ? "bg-charcoal text-white border-charcoal" : "border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}>
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -148,7 +159,15 @@ function MemberForm({ member, onSave, onDelete, onClose }) {
 
 // ─── Calendar sync modal ─────────────────────────────────────────────────────
 function CalendarSyncModal({ member, onClose, onRegenerate }) {
-  const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
+  const APP_URL    = typeof window !== "undefined" ? window.location.origin : "";
+  const isGCalConnected = !!member.googleCalendar?.refreshToken;
+
+  async function connectGoogleCalendar() {
+    const { getIdToken } = await import("firebase/auth");
+    const { auth: firebaseAuth } = await import("@/lib/firebase");
+    const token = await firebaseAuth.currentUser.getIdToken();
+    window.location.href = `/api/calendar/oauth/start?token=${token}&memberId=${member.id}`;
+  }
   const feedUrl = member.calendarToken
     ? `${APP_URL}/api/calendar/${member.calendarToken}`
     : null;
@@ -176,6 +195,31 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
         </div>
 
         <div className="p-6 space-y-5">
+          {/* Google Calendar OAuth */}
+          <div className={`border rounded-lg p-4 ${isGCalConnected ? "border-green-200 bg-green-50" : "border-gray-200 bg-gray-50"}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect width="24" height="24" rx="2" fill="#4285F4"/>
+                  <path d="M18 12c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6 6-2.69 6-6z" fill="white"/>
+                  <path d="M14.5 12c0-1.38-1.12-2.5-2.5-2.5S9.5 10.62 9.5 12s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z" fill="#4285F4"/>
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-charcoal">Google Calendar Sync</p>
+                  <p className="text-xs text-gray-500">
+                    {isGCalConnected
+                      ? `Connected · last synced ${member.googleCalendar?.connectedAt ? new Date(member.googleCalendar.connectedAt).toLocaleDateString() : "recently"}`
+                      : "Connect to block unavailable times automatically"}
+                  </p>
+                </div>
+              </div>
+              {isGCalConnected
+                ? <span className="tag-green">Connected</span>
+                : <button onClick={connectGoogleCalendar} className="btn-primary text-xs px-3 py-1.5">Connect</button>
+              }
+            </div>
+          </div>
+
           <p className="text-sm text-gray-500">
             Subscribe to this calendar feed to see {member.name}&apos;s shoots in any calendar app.
             The feed updates automatically as new bookings are confirmed.
@@ -262,24 +306,51 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
 export default function TeamPage() {
   const [members,       setMembers]       = useState([]);
   const [bookings,      setBookings]      = useState([]);
+  const [products,      setProducts]      = useState({ services: [], packages: [], addons: [] });
   const [loading,       setLoading]       = useState(true);
-  const [editing,       setEditing]       = useState(null);   // null | member | "new"
+  const [editing,       setEditing]       = useState(null);
   const [anchor,        setAnchor]        = useState(new Date());
   const [filterMember,  setFilterMember]  = useState("all");
-  const [calModal,      setCalModal]      = useState(null);   // member | null
+  const [calModal,      setCalModal]      = useState(null);
+  const [flashMsg,      setFlashMsg]      = useState("");
 
   const getToken = () => auth.currentUser?.getIdToken();
+
+  // Handle OAuth callback params
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("calSuccess")) {
+      setFlashMsg("Google Calendar connected successfully!");
+      window.history.replaceState({}, "", "/dashboard/team");
+      setTimeout(() => setFlashMsg(""), 4000);
+    } else if (params.get("calError")) {
+      setFlashMsg("Calendar connection failed: " + params.get("calError"));
+      window.history.replaceState({}, "", "/dashboard/team");
+      setTimeout(() => setFlashMsg(""), 6000);
+    }
+  }, []);
 
   useEffect(() => {
     async function load() {
       const token = await getToken();
-      const [teamRes, listRes] = await Promise.all([
-        fetch("/api/dashboard/team",     { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/listings", { headers: { Authorization: `Bearer ${token}` } }),
+      const [teamRes, listRes, svcRes, pkgRes, adnRes] = await Promise.all([
+        fetch("/api/dashboard/team",                   { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/listings",               { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/products?type=services", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/products?type=packages", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/products?type=addons",   { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      const [teamData, listData] = await Promise.all([teamRes.json(), listRes.json()]);
-      setMembers(teamData.members  || []);
+      const [teamData, listData, svcData, pkgData, adnData] = await Promise.all([
+        teamRes.json(), listRes.json(), svcRes.json(), pkgRes.json(), adnRes.json(),
+      ]);
+      setMembers(teamData.members   || []);
       setBookings(listData.listings || []);
+      setProducts({
+        services: svcData.items || [],
+        packages: pkgData.items || [],
+        addons:   adnData.items || [],
+      });
       setLoading(false);
     }
     load();
@@ -364,6 +435,14 @@ export default function TeamPage() {
           <span className="text-lg leading-none">+</span> Add Member
         </button>
       </div>
+
+      {flashMsg && (
+        <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${
+          flashMsg.includes("failed") || flashMsg.includes("Error")
+            ? "bg-red-50 border-red-200 text-red-700"
+            : "bg-green-50 border-green-200 text-green-700"
+        }`}>{flashMsg}</div>
+      )}
 
       {/* Team member cards */}
       {members.length > 0 && (
@@ -565,6 +644,7 @@ export default function TeamPage() {
       {editing && (
         <MemberForm
           member={editing === "new" ? null : editing}
+          products={products}
           onSave={saveMember}
           onDelete={deleteMember}
           onClose={() => setEditing(null)}

@@ -41,6 +41,11 @@ const INITIAL_STATE = {
   clientEmail: "",
   clientPhone: "",
 
+  // Promo code
+  promoCode:  "",
+  promoId:    null,
+  discount:   0,
+
   // Post-payment
   bookingId:   null,
   depositPaid: false,
@@ -82,6 +87,8 @@ export const useBookingStore = create(
       setSchedule:      (fields) => set(fields),
       setClientInfo:    (fields) => set(fields),
       setCustomFields:  (customFields) => set({ customFields }),
+      setPromo:         (promoCode, promoId, discount) => set({ promoCode, promoId, discount }),
+      clearPromo:       () => set({ promoCode: "", promoId: null, discount: 0 }),
 
       setBookingResult: (bookingId, paidInFull = false) =>
         set({ bookingId, depositPaid: true, paidInFull }),

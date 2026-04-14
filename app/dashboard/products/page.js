@@ -1,7 +1,20 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { auth } from "@/lib/firebase";
+
+async function uploadProductMedia(file) {
+  const token = await auth.currentUser.getIdToken();
+  const res = await fetch("/api/dashboard/products/upload-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ fileName: file.name, fileType: file.type }),
+  });
+  const { uploadUrl, publicUrl, error } = await res.json();
+  if (error) throw new Error(error);
+  await fetch(uploadUrl, { method: "PUT", body: file });
+  return publicUrl;
+}
 
 const SQFT_TIERS = ["Tiny", "Small", "Medium", "Large", "XL", "XXL"];
 const TIER_LABELS = {
@@ -20,11 +33,11 @@ const TYPE_META = {
 };
 
 // ─── Product edit form ────────────────────────────────────────────────────────
-function ProductForm({ item, type, allServices, onSave, onDelete, onClose }) {
+function ProductForm({ item, type, allServices, teamMembers, onSave, onDelete, onClose }) {
   const [form,    setForm]    = useState(() => ({
     name:         item?.name         || "",
     description:  item?.description  || "",
-    thumbnailUrl: item?.thumbnailUrl || "",
+    mediaUrls:    item?.mediaUrls    || (item?.thumbnailUrl ? [item.thumbnailUrl] : []),
     price:        item?.price        || 0,
     tagline:      item?.tagline      || "",
     deliverables: item?.deliverables || "",
@@ -32,10 +45,13 @@ function ProductForm({ item, type, allServices, onSave, onDelete, onClose }) {
     featured:     item?.featured     || false,
     tiered:       !!(item?.priceTiers),
     priceTiers:   item?.priceTiers || { Tiny: 0, Small: 0, Medium: 0, Large: 0, XL: 0, XXL: 0 },
-    includes:     item?.includes || [],
+    includes:     item?.includes     || [],
+    assignedPhotographers: item?.assignedPhotographers || [],
   }));
-  const [saving,  setSaving]  = useState(false);
-  const [deleting,setDeleting]= useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [deleting,  setDeleting]  = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   function field(key) {
     return (e) => setForm((f) => ({ ...f, [key]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
@@ -57,15 +73,45 @@ function ProductForm({ item, type, allServices, onSave, onDelete, onClose }) {
     }));
   }
 
+  function togglePhotographer(uid) {
+    setForm((f) => ({
+      ...f,
+      assignedPhotographers: f.assignedPhotographers.includes(uid)
+        ? f.assignedPhotographers.filter((id) => id !== uid)
+        : [...f.assignedPhotographers, uid],
+    }));
+  }
+
+  async function handleMediaUpload(e) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      const urls = await Promise.all(files.map((f) => uploadProductMedia(f)));
+      setForm((f) => ({ ...f, mediaUrls: [...f.mediaUrls, ...urls] }));
+    } catch (err) {
+      alert("Upload failed: " + err.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  function removeMedia(idx) {
+    setForm((f) => ({ ...f, mediaUrls: f.mediaUrls.filter((_, i) => i !== idx) }));
+  }
+
   async function handleSave() {
     setSaving(true);
     const payload = {
       name:        form.name,
       description: form.description,
-      thumbnailUrl: form.thumbnailUrl,
+      mediaUrls:   form.mediaUrls,
+      thumbnailUrl: form.mediaUrls[0] || "",
       price:       Number(form.price),
       active:      form.active,
-      ...(form.tiered ? { priceTiers: form.priceTiers } : {}),
+      assignedPhotographers: form.assignedPhotographers,
+      ...(form.tiered ? { priceTiers: form.priceTiers } : { priceTiers: null }),
       ...(type === "packages" ? { tagline: form.tagline, deliverables: form.deliverables, featured: form.featured, includes: form.includes } : {}),
     };
     await onSave(payload);
@@ -91,20 +137,20 @@ function ProductForm({ item, type, allServices, onSave, onDelete, onClose }) {
 
         <div className="p-6 space-y-5">
           {/* Preview */}
-          <div className="flex gap-4 p-4 bg-gray-50 rounded-sm border border-gray-200">
-            <div className="w-20 h-20 rounded-sm bg-gray-200 overflow-hidden flex-shrink-0">
-              {form.thumbnailUrl
-                ? <img src={form.thumbnailUrl} alt="" className="w-full h-full object-cover" crossOrigin="anonymous" />
+          <div className="flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="w-20 h-20 rounded-lg bg-gray-200 overflow-hidden flex-shrink-0">
+              {form.mediaUrls[0]
+                ? <img src={form.mediaUrls[0]} alt="" className="w-full h-full object-cover" crossOrigin="anonymous" />
                 : <div className="w-full h-full flex items-center justify-center text-2xl opacity-30">🏠</div>
               }
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-navy truncate">{form.name || "Product Name"}</p>
+              <p className="font-semibold text-charcoal truncate">{form.name || "Product Name"}</p>
               {form.tagline && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{form.tagline}</p>}
               {!form.tagline && form.description && (
                 <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{form.description}</p>
               )}
-              <p className="text-sm font-semibold text-navy mt-1">
+              <p className="text-sm font-semibold text-charcoal mt-1">
                 {form.tiered ? `From $${Math.min(...Object.values(form.priceTiers).filter(v => v > 0), form.price || 0).toLocaleString()}` : `$${Number(form.price).toLocaleString()}`}
               </p>
             </div>
@@ -122,11 +168,39 @@ function ProductForm({ item, type, allServices, onSave, onDelete, onClose }) {
               className="input-field w-full resize-none" placeholder="Describe what this includes…" />
           </div>
 
+          {/* Media upload */}
           <div>
-            <label className="label-field">Thumbnail Image URL</label>
-            <input type="url" value={form.thumbnailUrl} onChange={field("thumbnailUrl")}
-              className="input-field w-full" placeholder="https://…" />
-            <p className="text-xs text-gray-400 mt-1">Paste a URL (use your existing listing photos or upload to R2)</p>
+            <label className="label-field">Photos / Videos</label>
+            <input ref={fileInputRef} type="file" multiple
+              accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
+              className="hidden" onChange={handleMediaUpload} />
+            {form.mediaUrls.length > 0 && (
+              <div className="flex gap-2 flex-wrap mb-3">
+                {form.mediaUrls.map((url, idx) => (
+                  <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 group">
+                    {url.match(/\.(mp4|mov|webm)$/i)
+                      ? <video src={url} className="w-full h-full object-cover" />
+                      : <img src={url} alt="" className="w-full h-full object-cover" crossOrigin="anonymous" />
+                    }
+                    {idx === 0 && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5">Cover</div>
+                    )}
+                    <button type="button" onClick={() => removeMedia(idx)}
+                      className="absolute top-1 right-1 w-5 h-5 bg-black/60 text-white rounded-full text-xs leading-none opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
+              className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
+              {uploading
+                ? <><div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" /> Uploading…</>
+                : <><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg> Upload Photos or Video</>
+              }
+            </button>
+            <p className="text-xs text-gray-400 mt-1">First image is the cover. Images and videos only.</p>
           </div>
 
           {/* Package-specific: tagline, deliverables, featured */}
@@ -199,6 +273,30 @@ function ProductForm({ item, type, allServices, onSave, onDelete, onClose }) {
               </div>
             )}
           </div>
+
+          {/* Photographer assignment */}
+          {teamMembers?.length > 0 && (
+            <div>
+              <label className="label-field">Assigned Photographers</label>
+              <p className="text-xs text-gray-400 mb-2">Only these photographers will be assigned to this service. Leave blank for all.</p>
+              <div className="flex flex-wrap gap-2">
+                {teamMembers.map((m) => (
+                  <button key={m.id} type="button" onClick={() => togglePhotographer(m.id)}
+                    className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors ${
+                      form.assignedPhotographers.includes(m.id)
+                        ? "bg-charcoal text-white border-charcoal"
+                        : "border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}>
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+                      style={{ background: m.color || "#6B7280" }}>
+                      {m.name?.[0]?.toUpperCase()}
+                    </div>
+                    {m.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Active toggle */}
           <div className="flex items-center gap-3 pt-1">
@@ -289,28 +387,33 @@ function ProductRow({ item, type, onEdit, onToggleActive, onDuplicate }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function ProductsPage() {
-  const [activeType, setActiveType] = useState("packages");
-  const [items,      setItems]      = useState({ packages: [], services: [], addons: [] });
-  const [loading,    setLoading]    = useState(true);
-  const [editing,    setEditing]    = useState(null);    // null | { item, type } — item=null means new
-  const [msg,        setMsg]        = useState("");
+  const [activeType,  setActiveType]  = useState("packages");
+  const [items,       setItems]       = useState({ packages: [], services: [], addons: [] });
+  const [loading,     setLoading]     = useState(true);
+  const [editing,     setEditing]     = useState(null);
+  const [msg,         setMsg]         = useState("");
+  const [teamMembers, setTeamMembers] = useState([]);
 
   const getToken = () => auth.currentUser?.getIdToken();
 
   useEffect(() => {
     async function load() {
       const token = await getToken();
-      const [pkgRes, svcRes, adnRes] = await Promise.all([
+      const [pkgRes, svcRes, adnRes, teamRes] = await Promise.all([
         fetch("/api/dashboard/products?type=packages", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/products?type=services", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/products?type=addons",   { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/team",                   { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      const [pkgData, svcData, adnData] = await Promise.all([pkgRes.json(), svcRes.json(), adnRes.json()]);
+      const [pkgData, svcData, adnData, teamData] = await Promise.all([
+        pkgRes.json(), svcRes.json(), adnRes.json(), teamRes.json(),
+      ]);
       setItems({
         packages: pkgData.items || [],
         services: svcData.items || [],
         addons:   adnData.items || [],
       });
+      setTeamMembers(teamData.members || []);
       setLoading(false);
     }
     auth.currentUser?.getIdToken().then(() => load());
@@ -470,6 +573,7 @@ export default function ProductsPage() {
           item={editing.item}
           type={editing.type}
           allServices={items.services}
+          teamMembers={teamMembers}
           onSave={saveItem}
           onDelete={deleteItem}
           onClose={() => setEditing(null)}

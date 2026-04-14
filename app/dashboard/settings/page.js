@@ -129,6 +129,20 @@ export default function SettingsPage() {
   const [emailTplBody,    setEmailTplBody]    = useState("");
   const [savingTemplate,  setSavingTemplate]  = useState(false);
 
+  // Promo codes state
+  const [promoCodes,    setPromoCodes]    = useState([]);
+  const [promoForm,     setPromoForm]     = useState({ code: "", type: "flat", value: "", description: "" });
+  const [showPromoForm, setShowPromoForm] = useState(false);
+  const [savingPromo,   setSavingPromo]   = useState(false);
+  const [promoError,    setPromoError]    = useState("");
+
+  useEffect(() => {
+    auth.currentUser?.getIdToken().then(async (token) => {
+      const res = await fetch("/api/dashboard/promo-codes", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { const d = await res.json(); setPromoCodes(d.codes || []); }
+    });
+  }, []);
+
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
       const res = await fetch("/api/dashboard/tenant", {
@@ -400,6 +414,43 @@ export default function SettingsPage() {
       else showMsg("Failed to save.", "error");
     } catch { showMsg("Something went wrong.", "error"); }
     setSavingTemplate(false);
+  }
+
+  async function createPromoCode(e) {
+    e.preventDefault();
+    if (!promoForm.code.trim() || !promoForm.value) return;
+    setSavingPromo(true); setPromoError("");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/promo-codes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(promoForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create code");
+      setPromoCodes((prev) => [{ id: data.id, ...promoForm, code: promoForm.code.trim().toUpperCase(), usageCount: 0, active: true }, ...prev]);
+      setPromoForm({ code: "", type: "flat", value: "", description: "" });
+      setShowPromoForm(false);
+    } catch (err) { setPromoError(err.message); }
+    setSavingPromo(false);
+  }
+
+  async function togglePromoCode(promo) {
+    const token = await auth.currentUser.getIdToken();
+    await fetch(`/api/dashboard/promo-codes/${promo.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ active: !promo.active }),
+    });
+    setPromoCodes((prev) => prev.map((p) => p.id === promo.id ? { ...p, active: !p.active } : p));
+  }
+
+  async function deletePromoCode(promo) {
+    if (!confirm(`Delete code "${promo.code}"? This cannot be undone.`)) return;
+    const token = await auth.currentUser.getIdToken();
+    await fetch(`/api/dashboard/promo-codes/${promo.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    setPromoCodes((prev) => prev.filter((p) => p.id !== promo.id));
   }
 
   if (loading) return (
@@ -960,7 +1011,7 @@ export default function SettingsPage() {
                   <span className="font-medium">${(30 * Number(travelRate)).toFixed(0)} travel fee</span>
                 </div>
                 {Number(travelMaxRadius) > 0 && (
-                  <div className="flex justify-between text-red-500">
+                  <div className="flex justify-between text-gray-400">
                     <span>Beyond {travelMaxRadius} miles</span>
                     <span className="font-medium">Outside service area</span>
                   </div>
@@ -975,6 +1026,97 @@ export default function SettingsPage() {
             {savingTravel ? "Saving…" : "Save Travel Fee Settings"}
           </button>
         </div>
+      </div>
+
+      {/* ─── Promo Codes ─────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-semibold text-charcoal text-base">Promo Codes</h2>
+            <p className="text-sm text-gray-500 mt-0.5">Create discount codes customers can apply at checkout.</p>
+          </div>
+          <button onClick={() => { setShowPromoForm((v) => !v); setPromoError(""); }}
+            className="btn-primary text-sm px-4 py-2">
+            {showPromoForm ? "Cancel" : "+ New Code"}
+          </button>
+        </div>
+
+        {showPromoForm && (
+          <form onSubmit={createPromoCode} className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3 border border-gray-200">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label-field">Code</label>
+                <input type="text" value={promoForm.code}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                  className="input-field w-full font-mono" placeholder="SUMMER20" required />
+              </div>
+              <div>
+                <label className="label-field">Description (optional)</label>
+                <input type="text" value={promoForm.description}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, description: e.target.value }))}
+                  className="input-field w-full" placeholder="Summer promo" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label-field">Discount Type</label>
+                <select value={promoForm.type}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, type: e.target.value }))}
+                  className="input-field w-full">
+                  <option value="flat">Flat amount ($ off)</option>
+                  <option value="percent">Percentage (% off)</option>
+                </select>
+              </div>
+              <div>
+                <label className="label-field">{promoForm.type === "flat" ? "Amount ($)" : "Percent (%)"}</label>
+                <input type="number" value={promoForm.value}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, value: e.target.value }))}
+                  className="input-field w-full" placeholder={promoForm.type === "flat" ? "50" : "20"}
+                  min="0.01" max={promoForm.type === "percent" ? "100" : undefined} step="0.01" required />
+              </div>
+            </div>
+            {promoError && <p className="text-xs text-red-500">{promoError}</p>}
+            <button type="submit" disabled={savingPromo} className="btn-primary px-6 py-2 text-sm">
+              {savingPromo ? "Creating…" : "Create Code"}
+            </button>
+          </form>
+        )}
+
+        {promoCodes.length === 0 ? (
+          <p className="text-sm text-gray-400 py-4 text-center border border-dashed border-gray-200 rounded-lg">
+            No promo codes yet. Create one above.
+          </p>
+        ) : (
+          <div className="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
+            {promoCodes.map((p) => (
+              <div key={p.id} className={`flex items-center justify-between px-4 py-3 gap-4 ${p.active ? "bg-white" : "bg-gray-50"}`}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={`font-mono text-sm font-semibold px-2.5 py-1 rounded ${p.active ? "bg-navy/8 text-navy" : "bg-gray-200 text-gray-400 line-through"}`}>
+                    {p.code}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm text-charcoal font-medium">
+                      {p.type === "flat" ? `$${p.value} off` : `${p.value}% off`}
+                    </p>
+                    {p.description && <p className="text-xs text-gray-400 truncate">{p.description}</p>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className="text-xs text-gray-400 hidden sm:block">{p.usageCount || 0} uses</span>
+                  <button onClick={() => togglePromoCode(p)} title={p.active ? "Disable" : "Enable"}
+                    className={`relative w-8 h-4 rounded-full transition-colors ${p.active ? "bg-charcoal" : "bg-gray-200"}`}>
+                    <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${p.active ? "translate-x-4" : "translate-x-0.5"}`} />
+                  </button>
+                  <button onClick={() => deletePromoCode(p)} className="text-gray-300 hover:text-red-400 transition-colors">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ─── Email Template ──────────────────────────────────────────────────── */}

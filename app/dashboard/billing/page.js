@@ -118,7 +118,11 @@ export default function BillingPage() {
         </div>
         {status === "trialing" && tenant?.trialEndsAt && (
           <p className="text-xs text-amber-600 mt-2">
-            Trial ends {new Date(tenant.trialEndsAt?.seconds ? tenant.trialEndsAt.seconds * 1000 : tenant.trialEndsAt).toLocaleDateString()}
+            Trial ends {(() => {
+              const raw = tenant.trialEndsAt;
+              const d = raw?.seconds ? new Date(raw.seconds * 1000) : new Date(raw);
+              return isNaN(d) ? "in 14 days" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+            })()}
           </p>
         )}
         {tenant?.stripeSubscriptionId && (

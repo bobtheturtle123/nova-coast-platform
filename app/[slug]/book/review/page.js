@@ -13,12 +13,41 @@ export default function TenantReviewPage() {
   const {
     packageId, serviceIds, addonIds, address, city, state, zip,
     squareFootage, propertyType, notes, travelFee, setTravelFee, setPricing, pricing,
+    promoCode, discount, setPromo, clearPromo,
   } = store;
 
-  const [catalog,  setCatalog]  = useState(null);
-  const [loading,  setLoading]  = useState(true);
+  const [catalog,       setCatalog]       = useState(null);
+  const [loading,       setLoading]       = useState(true);
+  const [promoInput,    setPromoInput]    = useState(promoCode || "");
+  const [promoMsg,      setPromoMsg]      = useState(promoCode ? { text: discount > 0 ? `Code applied — $${discount} off` : "Code applied", ok: true } : null);
+  const [promoLoading,  setPromoLoading]  = useState(false);
   const fullAddress = [address, city, state, zip].filter(Boolean).join(", ");
   const tier = getSqftTier(Number(squareFootage) || 0);
+
+  async function applyPromo() {
+    if (!promoInput.trim()) return;
+    setPromoLoading(true); setPromoMsg(null);
+    try {
+      const res = await fetch(`/api/${params.slug}/promo/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: promoInput.trim(), subtotal: pricing?.subtotal || 0 }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setPromo(data.code, data.promoId, data.discount);
+        setPromoMsg({ text: data.message, ok: true });
+        // Recalculate pricing with discount applied
+        if (pricing) setPricing({ ...pricing, discount: data.discount, finalTotal: data.finalTotal });
+      } else {
+        clearPromo();
+        setPromoMsg({ text: data.message || "Invalid code", ok: false });
+      }
+    } catch {
+      setPromoMsg({ text: "Error checking code", ok: false });
+    }
+    setPromoLoading(false);
+  }
 
   useEffect(() => {
     async function loadAndPrice() {
@@ -169,18 +198,48 @@ export default function TenantReviewPage() {
                       <span className="font-medium">${pricing.travelFee?.toLocaleString()}</span>
                     </div>
                   )}
+                  {discount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Promo ({promoCode})</span>
+                      <span>−${discount.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-semibold border-t border-gray-100 pt-2">
                     <span>Total</span>
-                    <span className="text-navy">${pricing.subtotal?.toLocaleString()}</span>
+                    <span className="text-navy">${(pricing.finalTotal ?? pricing.subtotal)?.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-gold-dark font-semibold">
                     <span>Deposit (50%)</span>
-                    <span>${pricing.deposit?.toLocaleString()}</span>
+                    <span>${(pricing.deposit ?? 0)?.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-gray-400">
                     <span>Due at delivery</span>
-                    <span>${pricing.balance?.toLocaleString()}</span>
+                    <span>${(pricing.balance ?? 0)?.toLocaleString()}</span>
                   </div>
+                </div>
+
+                {/* Promo code */}
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide font-medium">Promo Code</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={promoInput}
+                      onChange={(e) => { setPromoInput(e.target.value.toUpperCase()); if (promoMsg) { setPromoMsg(null); clearPromo(); } }}
+                      placeholder="Enter code"
+                      className="input-field flex-1 text-sm font-mono uppercase"
+                      onKeyDown={(e) => e.key === "Enter" && applyPromo()}
+                    />
+                    <button type="button" onClick={applyPromo} disabled={promoLoading || !promoInput.trim()}
+                      className="btn-outline text-sm px-3 whitespace-nowrap">
+                      {promoLoading ? "…" : "Apply"}
+                    </button>
+                  </div>
+                  {promoMsg && (
+                    <p className={`text-xs mt-1.5 ${promoMsg.ok ? "text-green-600" : "text-red-500"}`}>
+                      {promoMsg.text}
+                    </p>
+                  )}
                 </div>
 
                 {squareFootage && (

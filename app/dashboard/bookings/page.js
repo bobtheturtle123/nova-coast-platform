@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import { getSqftTier, getItemPrice, calculateTenantPrice, getActiveTiers, formatPrice } from "@/lib/catalogUtils";
@@ -16,7 +16,7 @@ const STATUS_LABELS = {
 
 const EMPTY_FORM = {
   clientName: "", clientEmail: "", clientPhone: "",
-  address: "", sqft: "",
+  address: "", city: "", state: "CA", zip: "", sqft: "",
   preferredDate: "", preferredTime: "",
   photographerEmail: "", photographerName: "",
   notes: "",
@@ -126,11 +126,61 @@ export default function BookingsPage() {
   const [catalog,     setCatalog]     = useState(null);
   const [customLabel, setCustomLabel] = useState("");
   const [customPrice, setCustomPrice] = useState("");
+  const [agents,       setAgents]      = useState([]);
+  const [teamMembers,  setTeamMembers] = useState([]);
+  const [agentQuery,   setAgentQuery]  = useState("");
+  const [showAgentDD,  setShowAgentDD] = useState(false);
+  const addressInputRef = useRef(null);
+  const autocompleteRef = useRef(null);
 
   useEffect(() => {
     loadBookings();
     loadCatalog();
   }, []);
+
+  // Google Maps Places autocomplete for address
+  useEffect(() => {
+    if (!showCreate) { autocompleteRef.current = null; return; }
+    const timer = setTimeout(() => {
+      function initAC() {
+        if (!addressInputRef.current || autocompleteRef.current) return;
+        if (!window.google?.maps?.places) return;
+        const ac = new window.google.maps.places.Autocomplete(addressInputRef.current, {
+          types: ["address"],
+          componentRestrictions: { country: "us" },
+        });
+        ac.addListener("place_changed", () => {
+          const place = ac.getPlace();
+          if (!place.address_components) return;
+          const get = (t) => place.address_components.find((c) => c.types.includes(t));
+          const street = [get("street_number")?.long_name, get("route")?.long_name].filter(Boolean).join(" ");
+          const city   = get("locality")?.long_name || get("sublocality_level_1")?.long_name || "";
+          const state  = get("administrative_area_level_1")?.short_name || "";
+          const zip    = get("postal_code")?.long_name || "";
+          setForm((p) => ({ ...p, address: street || p.address, city, state, zip }));
+        });
+        autocompleteRef.current = ac;
+      }
+      const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+      if (!key) return;
+      if (window.google?.maps?.places) {
+        initAC();
+      } else if (!document.getElementById("gmap-booking-script")) {
+        const s = document.createElement("script");
+        s.id    = "gmap-booking-script";
+        s.src   = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+        s.async = true;
+        s.onload = initAC;
+        document.head.appendChild(s);
+      } else {
+        const retry = setInterval(() => {
+          if (window.google?.maps?.places) { clearInterval(retry); initAC(); }
+        }, 200);
+        setTimeout(() => clearInterval(retry), 10000);
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [showCreate]);
 
   async function loadCatalog() {
     const token = await auth.currentUser?.getIdToken();
@@ -138,8 +188,14 @@ export default function BookingsPage() {
     const tenantRes = await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } });
     if (!tenantRes.ok) return;
     const { tenant } = await tenantRes.json();
-    const catRes = await fetch(`/api/tenant-public/${tenant.slug}/catalog`);
-    if (catRes.ok) setCatalog(await catRes.json());
+    const [catRes, agentsRes, teamRes] = await Promise.all([
+      fetch(`/api/tenant-public/${tenant.slug}/catalog`),
+      fetch("/api/dashboard/agents", { headers: { Authorization: `Bearer ${token}` } }),
+      fetch("/api/dashboard/team",   { headers: { Authorization: `Bearer ${token}` } }),
+    ]);
+    if (catRes.ok)    setCatalog(await catRes.json());
+    if (agentsRes.ok) { const d = await agentsRes.json(); setAgents(d.agents || []); }
+    if (teamRes.ok)   { const d = await teamRes.json();   setTeamMembers(d.members || []); }
   }
 
   async function loadBookings() {
@@ -346,7 +402,7 @@ export default function BookingsPage() {
                 <p className="text-xs text-gray-400 mt-0.5">Manually create a confirmed booking for a phone or in-person client.</p>
               </div>
               <button
-                onClick={() => { setShowCreate(false); setCreateError(""); setForm(EMPTY_FORM); }}
+                onClick={() => { setShowCreate(false); setCreateError(""); setForm(EMPTY_FORM); setAgentQuery(""); setShowAgentDD(false); }}
                 className="text-gray-300 hover:text-gray-500 transition-colors text-2xl leading-none w-8 h-8 flex items-center justify-center">
                 ×
               </button>
@@ -368,6 +424,53 @@ export default function BookingsPage() {
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Agent / Client</p>
                     <div className="space-y-3">
+                      {/* Customer autocomplete */}
+                      {agents.length > 0 && (
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={agentQuery}
+                            onChange={(e) => { setAgentQuery(e.target.value); setShowAgentDD(true); }}
+                            onFocus={() => agentQuery && setShowAgentDD(true)}
+                            onBlur={() => setTimeout(() => setShowAgentDD(false), 150)}
+                            placeholder="Search existing customers…"
+                            className="input-field w-full text-sm"
+                          />
+                          {showAgentDD && agentQuery.trim() && (
+                            <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                              {agents
+                                .filter((a) => {
+                                  const q = agentQuery.toLowerCase();
+                                  return a.name?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q);
+                                })
+                                .slice(0, 8)
+                                .map((a) => (
+                                  <button key={a.id} type="button"
+                                    onMouseDown={() => {
+                                      setForm((p) => ({ ...p, clientName: a.name || "", clientEmail: a.email || "", clientPhone: a.phone || "" }));
+                                      setAgentQuery(a.name || "");
+                                      setShowAgentDD(false);
+                                    }}
+                                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 border-b border-gray-50 last:border-b-0">
+                                    <div className="w-7 h-7 rounded-full bg-navy/10 flex items-center justify-center text-xs font-semibold text-navy flex-shrink-0">
+                                      {a.name?.[0]?.toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-sm text-charcoal font-medium truncate">{a.name}</p>
+                                      <p className="text-xs text-gray-400 truncate">{a.email}</p>
+                                    </div>
+                                  </button>
+                                ))}
+                              {agents.filter((a) => {
+                                const q = agentQuery.toLowerCase();
+                                return a.name?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q);
+                              }).length === 0 && (
+                                <p className="px-4 py-3 text-sm text-gray-400 text-center">No matching customers</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <input
                         type="text" autoFocus
                         value={form.clientName} onChange={(e) => setField("clientName", e.target.value)}
@@ -396,11 +499,17 @@ export default function BookingsPage() {
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Property</p>
                     <div className="space-y-3">
                       <input
+                        ref={addressInputRef}
                         type="text"
                         value={form.address} onChange={(e) => setField("address", e.target.value)}
                         placeholder="Street address *"
                         className="input-field w-full"
                       />
+                      <div className="grid grid-cols-3 gap-2">
+                        <input type="text" value={form.city} onChange={(e) => setField("city", e.target.value)} placeholder="City" className="input-field text-sm" />
+                        <input type="text" value={form.state} onChange={(e) => setField("state", e.target.value)} placeholder="State" className="input-field text-sm" maxLength={2} />
+                        <input type="text" value={form.zip} onChange={(e) => setField("zip", e.target.value)} placeholder="ZIP" className="input-field text-sm" />
+                      </div>
                       {showSqft && (
                         <div className="flex items-center gap-3">
                           <input
@@ -537,19 +646,36 @@ export default function BookingsPage() {
                   {/* Photographer */}
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Photographer (optional)</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <input
-                        type="text"
-                        value={form.photographerName} onChange={(e) => setField("photographerName", e.target.value)}
-                        placeholder="Name"
-                        className="input-field w-full"
-                      />
-                      <input
-                        type="email"
-                        value={form.photographerEmail} onChange={(e) => setField("photographerEmail", e.target.value)}
-                        placeholder="Email for notification"
-                        className="input-field w-full"
-                      />
+                    <div className="space-y-2">
+                      {teamMembers.filter((m) => m.active !== false).length > 0 && (
+                        <select
+                          value={teamMembers.find((m) => m.email === form.photographerEmail)?.id || ""}
+                          onChange={(e) => {
+                            const member = teamMembers.find((m) => m.id === e.target.value);
+                            if (member) setForm((p) => ({ ...p, photographerName: member.name, photographerEmail: member.email }));
+                            else setForm((p) => ({ ...p, photographerName: "", photographerEmail: "" }));
+                          }}
+                          className="input-field w-full text-sm">
+                          <option value="">— Select from your team —</option>
+                          {teamMembers.filter((m) => m.active !== false).map((m) => (
+                            <option key={m.id} value={m.id}>{m.name}</option>
+                          ))}
+                        </select>
+                      )}
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          type="text"
+                          value={form.photographerName} onChange={(e) => setField("photographerName", e.target.value)}
+                          placeholder="Name (or external)"
+                          className="input-field w-full text-sm"
+                        />
+                        <input
+                          type="email"
+                          value={form.photographerEmail} onChange={(e) => setField("photographerEmail", e.target.value)}
+                          placeholder="Email for notification"
+                          className="input-field w-full text-sm"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -641,7 +767,7 @@ export default function BookingsPage() {
                       {saving ? "Creating…" : "Create Booking →"}
                     </button>
                     <button type="button"
-                      onClick={() => { setShowCreate(false); setCreateError(""); setForm(EMPTY_FORM); }}
+                      onClick={() => { setShowCreate(false); setCreateError(""); setForm(EMPTY_FORM); setAgentQuery(""); setShowAgentDD(false); }}
                       className="w-full text-center text-xs text-gray-400 hover:text-gray-600 py-2 transition-colors">
                       Cancel
                     </button>
