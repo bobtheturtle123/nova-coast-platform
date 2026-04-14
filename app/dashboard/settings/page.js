@@ -100,6 +100,13 @@ export default function SettingsPage() {
   const [newFieldLabel, setNewFieldLabel] = useState("");
   const [newFieldType,  setNewFieldType]  = useState("text");
 
+  // Travel fee state
+  const [travelEnabled,    setTravelEnabled]    = useState(false);
+  const [travelFreeRadius, setTravelFreeRadius] = useState(20);
+  const [travelRate,       setTravelRate]       = useState(1.5);
+  const [travelMaxRadius,  setTravelMaxRadius]  = useState(0);
+  const [savingTravel,     setSavingTravel]     = useState(false);
+
   // Availability state
   const [availMode,        setAvailMode]        = useState("slots"); // "slots" | "real"
   const [availStart,       setAvailStart]       = useState("08:00");
@@ -169,6 +176,14 @@ export default function SettingsPage() {
         if (data.tenant.emailTemplate) {
           if (data.tenant.emailTemplate.subject) setEmailTplSubject(data.tenant.emailTemplate.subject);
           if (data.tenant.emailTemplate.body)    setEmailTplBody(data.tenant.emailTemplate.body);
+        }
+        // Load travel fee config
+        if (data.tenant.travelFeeConfig) {
+          const tf = data.tenant.travelFeeConfig;
+          if (tf.enabled    !== undefined) setTravelEnabled(tf.enabled);
+          if (tf.freeRadius !== undefined) setTravelFreeRadius(tf.freeRadius);
+          if (tf.ratePerMile !== undefined) setTravelRate(tf.ratePerMile);
+          if (tf.maxRadius  !== undefined) setTravelMaxRadius(tf.maxRadius);
         }
       }
       setLoading(false);
@@ -348,6 +363,28 @@ export default function SettingsPage() {
       else showMsg("Failed to save.", "error");
     } catch { showMsg("Something went wrong.", "error"); }
     setSavingTerms(false);
+  }
+
+  async function saveTravelFee() {
+    setSavingTravel(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/tenants/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          travelFeeConfig: {
+            enabled:    travelEnabled,
+            freeRadius: Number(travelFreeRadius) || 20,
+            ratePerMile: Number(travelRate) || 1.5,
+            maxRadius:  Number(travelMaxRadius) || 0,
+          },
+        }),
+      });
+      if (res.ok) showMsg("Travel fee settings saved.");
+      else showMsg("Failed to save.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    setSavingTravel(false);
   }
 
   async function saveEmailTemplate() {
@@ -849,6 +886,94 @@ export default function SettingsPage() {
               Preview public privacy page →
             </a>
           )}
+        </div>
+      </div>
+
+      {/* ─── Travel Fees ─────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="font-semibold text-charcoal text-base">Travel Fees</h2>
+          <button
+            type="button"
+            onClick={() => setTravelEnabled((v) => !v)}
+            className={`relative w-10 h-6 rounded-full flex-shrink-0 transition-colors ${travelEnabled ? "bg-charcoal" : "bg-gray-200"}`}>
+            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${travelEnabled ? "translate-x-5" : "translate-x-1"}`} />
+          </button>
+        </div>
+        <p className="text-sm text-gray-500 mb-6">
+          Automatically add a travel fee to bookings based on drive distance from your home base.
+          {!travelEnabled && <span className="text-gray-400"> (Currently disabled — clients won't be charged travel fees.)</span>}
+        </p>
+
+        {travelEnabled && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="label-field">Free radius (miles)</label>
+                <input
+                  type="number" min="0" max="200"
+                  value={travelFreeRadius}
+                  onChange={(e) => setTravelFreeRadius(e.target.value)}
+                  className="input-field w-full"
+                />
+                <p className="text-xs text-gray-400 mt-1">No charge within this distance</p>
+              </div>
+              <div>
+                <label className="label-field">Rate per mile</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                  <input
+                    type="number" min="0" step="0.25"
+                    value={travelRate}
+                    onChange={(e) => setTravelRate(e.target.value)}
+                    className="input-field w-full pl-6"
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Per mile beyond free radius</p>
+              </div>
+              <div>
+                <label className="label-field">Max service radius (miles)</label>
+                <input
+                  type="number" min="0" max="500"
+                  value={travelMaxRadius}
+                  onChange={(e) => setTravelMaxRadius(e.target.value)}
+                  className="input-field w-full"
+                />
+                <p className="text-xs text-gray-400 mt-1">0 = no limit</p>
+              </div>
+            </div>
+
+            {/* Example calculation */}
+            <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 text-sm">
+              <p className="font-medium text-charcoal mb-2">Example calculation</p>
+              <div className="space-y-1 text-gray-500 text-xs">
+                <div className="flex justify-between">
+                  <span>Within {travelFreeRadius} miles</span>
+                  <span className="font-medium text-green-600">Free</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{Number(travelFreeRadius) + 10} miles away</span>
+                  <span className="font-medium">${(10 * Number(travelRate)).toFixed(0)} travel fee</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{Number(travelFreeRadius) + 30} miles away</span>
+                  <span className="font-medium">${(30 * Number(travelRate)).toFixed(0)} travel fee</span>
+                </div>
+                {Number(travelMaxRadius) > 0 && (
+                  <div className="flex justify-between text-red-500">
+                    <span>Beyond {travelMaxRadius} miles</span>
+                    <span className="font-medium">Outside service area</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-5 pt-4 border-t border-gray-100">
+          <button onClick={saveTravelFee} disabled={savingTravel} className="btn-primary px-8 py-3">
+            {savingTravel ? "Saving…" : "Save Travel Fee Settings"}
+          </button>
         </div>
       </div>
 
