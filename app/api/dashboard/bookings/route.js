@@ -20,6 +20,14 @@ export async function GET(req) {
     .orderBy("createdAt", "desc")
     .get();
 
-  const bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const bookings = snap.docs.map((d) => {
+    const data = d.data();
+    // Serialize Firestore Timestamps to ISO strings
+    for (const key of ["createdAt", "updatedAt", "preferredDate", "shootDate"]) {
+      if (data[key]?._seconds) data[key] = new Date(data[key]._seconds * 1000).toISOString();
+      else if (data[key]?.toDate) data[key] = data[key].toDate().toISOString();
+    }
+    return { id: d.id, ...data };
+  });
   return Response.json({ bookings });
 }

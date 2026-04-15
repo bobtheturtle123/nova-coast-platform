@@ -17,7 +17,7 @@ export async function POST(req) {
 
     const {
       clientName, clientEmail, clientPhone = "",
-      address, city = "", state = "CA", zip = "",
+      address, unit = "", city = "", state = "CA", zip = "",
       sqft = "",
       preferredDate = "", preferredTime = "",
       notes = "", totalPrice = 0, depositPaid = false,
@@ -34,7 +34,7 @@ export async function POST(req) {
     const tenantRef  = adminDb.collection("tenants").doc(ctx.tenantId);
     const bookingRef = tenantRef.collection("bookings").doc(bookingId);
 
-    const fullAddress = [address, city, state, zip].filter(Boolean).join(", ");
+    const fullAddress = [address, unit, city, state, zip].filter(Boolean).join(", ");
     const finalPrice  = Number(totalPrice) || 0;
 
     const bookingData = {
@@ -44,6 +44,7 @@ export async function POST(req) {
       clientEmail,
       clientPhone,
       address,
+      unit:            unit || null,
       city,
       state,
       zip,

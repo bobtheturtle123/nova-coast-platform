@@ -23,7 +23,12 @@ export async function GET(req, { params }) {
     .get();
 
   if (!doc.exists) return Response.json({ error: "Not found" }, { status: 404 });
-  return Response.json({ booking: { id: doc.id, ...doc.data() } });
+  const data = doc.data();
+  for (const key of ["createdAt", "updatedAt", "preferredDate", "shootDate"]) {
+    if (data[key]?._seconds) data[key] = new Date(data[key]._seconds * 1000).toISOString();
+    else if (data[key]?.toDate) data[key] = data[key].toDate().toISOString();
+  }
+  return Response.json({ booking: { id: doc.id, ...data } });
 }
 
 export async function PATCH(req, { params }) {

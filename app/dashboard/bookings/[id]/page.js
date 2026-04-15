@@ -104,6 +104,11 @@ export default function BookingDetailPage() {
   const [shootDate, setShootDate] = useState("");
   const [showWeather, setShowWeather] = useState(true);
 
+  // Job costs state
+  const [costs, setCosts] = useState({ shooterFee: 0, editorFee: 0, travelCost: 0, otherCosts: 0, shootHours: "", editHoursPerPhoto: "", notes: "" });
+  const [costsSaving, setCostsSaving] = useState(false);
+  const [costsMsg,    setCostsMsg]    = useState("");
+
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
       const [bookingRes, tenantRes] = await Promise.all([
@@ -114,6 +119,17 @@ export default function BookingDetailPage() {
         const data = await bookingRes.json();
         setBooking(data.booking);
         setShootDate(data.booking.shootDate?.split?.("T")?.[0] || "");
+        if (data.booking.costs) {
+          setCosts({
+            shooterFee:        data.booking.costs.shooterFee        || 0,
+            editorFee:         data.booking.costs.editorFee         || 0,
+            travelCost:        data.booking.costs.travelCost        || 0,
+            otherCosts:        data.booking.costs.otherCosts        || 0,
+            shootHours:        data.booking.costs.shootHours        ?? "",
+            editHoursPerPhoto: data.booking.costs.editHoursPerPhoto ?? "",
+            notes:             data.booking.costs.notes             || "",
+          });
+        }
       }
       if (tenantRes.ok) {
         const td = await tenantRes.json();
@@ -194,6 +210,38 @@ export default function BookingDetailPage() {
     }
   }
 
+  async function saveCosts() {
+    setCostsSaving(true);
+    setCostsMsg("");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/bookings/${id}/costs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          shooterFee:        Number(costs.shooterFee)        || 0,
+          editorFee:         Number(costs.editorFee)         || 0,
+          travelCost:        Number(costs.travelCost)        || 0,
+          otherCosts:        Number(costs.otherCosts)        || 0,
+          shootHours:        costs.shootHours        !== "" ? Number(costs.shootHours)        : undefined,
+          editHoursPerPhoto: costs.editHoursPerPhoto !== "" ? Number(costs.editHoursPerPhoto) : undefined,
+          notes:             costs.notes || "",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setBooking((b) => ({ ...b, costs: data.costs }));
+        setCostsMsg("Costs saved.");
+      } else {
+        setCostsMsg(data.error || "Failed to save costs.");
+      }
+    } catch {
+      setCostsMsg("Something went wrong.");
+    } finally {
+      setCostsSaving(false);
+    }
+  }
+
   async function createGallery() {
     setSaving(true);
     setMsg("");
@@ -238,6 +286,11 @@ export default function BookingDetailPage() {
         <div>
           <h1 className="font-display text-2xl text-navy">{booking.clientName}</h1>
           <p className="text-gray-400 text-sm">{booking.fullAddress}</p>
+          {(booking.shootDate || booking.preferredDate) && (
+            <p className="text-gray-400 text-sm mt-0.5">
+              {new Date((booking.shootDate || booking.preferredDate).split("T")[0] + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+            </p>
+          )}
         </div>
         <span className={`text-xs px-3 py-1 rounded-full font-medium
           ${booking.status === "confirmed" ? "bg-green-50 text-green-700" :
@@ -284,6 +337,97 @@ export default function BookingDetailPage() {
 
       {/* Weather */}
       {showWeather && <WeatherWidget booking={booking} />}
+
+      {/* Job Costs */}
+      {(() => {
+        const totalCost   = (Number(costs.shooterFee) || 0) + (Number(costs.editorFee) || 0) + (Number(costs.travelCost) || 0) + (Number(costs.otherCosts) || 0);
+        const totalPrice  = booking.totalPrice || 0;
+        const profit      = totalPrice - totalCost;
+        const margin      = totalPrice > 0 ? Math.round((profit / totalPrice) * 100) : null;
+        return (
+          <div className="bg-white rounded-sm border border-gray-200 p-5 mb-6">
+            <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-4">Job Costs &amp; Profit</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              {[
+                { label: "Shooter Fee",  key: "shooterFee"  },
+                { label: "Editor Fee",   key: "editorFee"   },
+                { label: "Travel Cost",  key: "travelCost"  },
+                { label: "Other Costs",  key: "otherCosts"  },
+              ].map(({ label, key }) => (
+                <div key={key}>
+                  <label className="block text-xs text-gray-500 mb-1">{label}</label>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                    <input
+                      type="number" min="0" step="0.01"
+                      value={costs[key]}
+                      onChange={(e) => setCosts((c) => ({ ...c, [key]: e.target.value }))}
+                      className="input-field pl-6 text-sm w-full"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Shoot Hours</label>
+                <input
+                  type="number" min="0" step="0.5"
+                  value={costs.shootHours}
+                  onChange={(e) => setCosts((c) => ({ ...c, shootHours: e.target.value }))}
+                  className="input-field text-sm w-full"
+                  placeholder="e.g. 2.5"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Edit Hrs / Photo</label>
+                <input
+                  type="number" min="0" step="0.01"
+                  value={costs.editHoursPerPhoto}
+                  onChange={(e) => setCosts((c) => ({ ...c, editHoursPerPhoto: e.target.value }))}
+                  className="input-field text-sm w-full"
+                  placeholder="e.g. 0.05"
+                />
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-xs text-gray-500 mb-1">Notes (contractor, vendor…)</label>
+              <input
+                type="text"
+                value={costs.notes}
+                onChange={(e) => setCosts((c) => ({ ...c, notes: e.target.value }))}
+                className="input-field text-sm w-full"
+                placeholder="e.g. Edited by Jane Doe"
+              />
+            </div>
+            {/* Profit summary */}
+            <div className="bg-gray-50 rounded-sm p-3 mb-4 grid grid-cols-3 gap-3 text-sm">
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">Total Cost</p>
+                <p className="font-semibold text-charcoal">${totalCost.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">Revenue</p>
+                <p className="font-semibold text-charcoal">${totalPrice.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">Net Profit</p>
+                <p className={`font-bold ${profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  ${profit.toLocaleString()}
+                  {margin !== null && <span className="font-normal text-xs ml-1">({margin}%)</span>}
+                </p>
+              </div>
+            </div>
+            {costsMsg && (
+              <p className="text-xs text-blue-600 mb-3">{costsMsg}</p>
+            )}
+            <button onClick={saveCosts} disabled={costsSaving} className="btn-outline text-sm px-4 py-2">
+              {costsSaving ? "Saving…" : "Save Costs"}
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Status + shoot date */}
       <div className="bg-white rounded-sm border border-gray-200 p-5 mb-6">
@@ -349,6 +493,36 @@ export default function BookingDetailPage() {
             className="btn-outline px-4 py-2 text-sm">
             View Gallery →
           </Link>
+        )}
+        {(booking.shootDate || booking.preferredDate) && (
+          <div className="flex flex-col gap-1.5">
+            <a
+              href={(() => {
+                const dateRaw = booking.shootDate || booking.preferredDate;
+                const dateStr = dateRaw?.split?.("T")?.[0]?.replace(/-/g, "") || "";
+                const title   = encodeURIComponent(`Photo Shoot — ${booking.fullAddress || booking.address || "Property"}`);
+                const details = encodeURIComponent(`Client: ${booking.clientName}\n${booking.clientEmail}`);
+                const loc     = encodeURIComponent(booking.fullAddress || booking.address || "");
+                return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateStr}/${dateStr}&details=${details}&location=${loc}`;
+              })()}
+              target="_blank" rel="noreferrer"
+              className="btn-outline px-4 py-2 text-sm">
+              📅 Add to Google Calendar
+            </a>
+            <button
+              onClick={async () => {
+                const token = await auth.currentUser.getIdToken();
+                const res = await fetch(`/api/dashboard/bookings/${id}/ics`, { headers: { Authorization: `Bearer ${token}` } });
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url; a.download = `booking-${id}.ics`; a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="text-xs text-navy/60 hover:text-navy underline text-center">
+              Download .ics (Apple / Outlook)
+            </button>
+          </div>
         )}
       </div>
     </div>

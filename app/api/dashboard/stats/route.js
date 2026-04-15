@@ -35,5 +35,13 @@ export async function GET(req) {
   const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
   const tenant    = tenantDoc.exists ? tenantDoc.data() : null;
 
-  return Response.json({ stats, recentBookings, tenant });
+  // Count bookings created this calendar year
+  const thisYear = new Date().getFullYear();
+  const listingsThisYear = bookings.filter((b) => {
+    const ca = b.createdAt;
+    const d  = ca?._seconds ? new Date(ca._seconds * 1000) : (ca?.toDate ? ca.toDate() : new Date(ca));
+    return d.getFullYear() === thisYear;
+  }).length;
+
+  return Response.json({ stats: { ...stats, listingsThisYear }, recentBookings, tenant });
 }

@@ -20,7 +20,8 @@ function isStripeNotConfigured(errorMsg) {
 }
 
 export default function BillingPage() {
-  const [tenant,  setTenant]  = useState(null);
+  const [tenant,           setTenant]          = useState(null);
+  const [listingsThisYear, setListingsThisYear] = useState(0);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [msg,     setMsg]     = useState({ text: "", type: "error" });
@@ -35,13 +36,12 @@ export default function BillingPage() {
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
-      const res = await fetch("/api/dashboard/tenant", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTenant(data.tenant);
-      }
+      const [tenantRes, statsRes] = await Promise.all([
+        fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/stats",  { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (tenantRes.ok) { const data = await tenantRes.json(); setTenant(data.tenant); }
+      if (statsRes.ok)  { const data = await statsRes.json();  setListingsThisYear(data.stats?.listingsThisYear || 0); }
       setLoading(false);
     });
   }, []);
@@ -122,6 +122,12 @@ export default function BillingPage() {
   const status     = tenant?.subscriptionStatus || "trialing";
   const subscribed = !!tenant?.stripeSubscriptionId;
 
+  // Listing limits per plan (yearly)
+  const LISTING_LIMITS = { starter: 50, pro: 150, studio: Infinity, agency: Infinity };
+  const listingLimit   = LISTING_LIMITS[plan] || 50;
+  const listingsUsed   = listingsThisYear;
+  const listingPct     = listingLimit === Infinity ? 0 : Math.min(100, Math.round((listingsUsed / listingLimit) * 100));
+
   const msgStyles = {
     success: "bg-green-50 border border-green-300 text-green-800",
     error:   "bg-red-50 border border-red-300 text-red-800",
@@ -192,6 +198,34 @@ export default function BillingPage() {
             To cancel, click "Cancel subscription" — you can manage or cancel your plan in the Stripe portal.
           </p>
         )}
+      </div>
+
+      {/* Listings usage */}
+      <div className="bg-white rounded-sm border border-gray-200 p-6 mb-6">
+        <h2 className="font-display text-navy text-base mb-4">Listings Usage</h2>
+        <div className="flex items-end justify-between mb-2">
+          <p className="text-sm text-gray-500">Listings this year</p>
+          <p className="text-sm font-semibold text-charcoal">
+            {listingsUsed.toLocaleString()}
+            {listingLimit !== Infinity && ` / ${listingLimit.toLocaleString()}`}
+            {listingLimit === Infinity && " (unlimited)"}
+          </p>
+        </div>
+        {listingLimit !== Infinity && (
+          <>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${listingPct >= 90 ? "bg-red-500" : listingPct >= 70 ? "bg-amber-400" : "bg-navy"}`}
+                style={{ width: `${listingPct}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-1.5">{listingPct}% of your yearly allowance used</p>
+            {listingPct >= 90 && (
+              <p className="text-xs text-red-600 mt-1 font-medium">Approaching limit — consider upgrading to avoid interruptions.</p>
+            )}
+          </>
+        )}
+        <p className="text-xs text-gray-400 mt-3">Resets on January 1st each year.</p>
       </div>
 
       {/* Plan cards — always shown */}

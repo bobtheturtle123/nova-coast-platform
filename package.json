@@ -24,7 +24,8 @@
     "@aws-sdk/client-s3": "^3.600.0",
     "@aws-sdk/s3-request-presigner": "^3.600.0",
     "sharp": "^0.33.4",
-    "archiver": "^7.0.1"
+    "archiver": "^7.0.1",
+    "@anthropic-ai/sdk": "^0.27.3"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.4",

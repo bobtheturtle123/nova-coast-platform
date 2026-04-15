@@ -16,7 +16,7 @@ const STATUS_LABELS = {
 
 const EMPTY_FORM = {
   clientName: "", clientEmail: "", clientPhone: "",
-  address: "", city: "", state: "CA", zip: "", sqft: "",
+  address: "", unit: "", city: "", state: "CA", zip: "", sqft: "",
   preferredDate: "", preferredTime: "",
   photographerEmail: "", photographerName: "",
   notes: "",
@@ -629,6 +629,12 @@ export default function BookingsPage() {
                         placeholder="Street address *"
                         className="input-field w-full"
                       />
+                      <input
+                        type="text"
+                        value={form.unit} onChange={(e) => setField("unit", e.target.value)}
+                        placeholder="Unit / Apt / Suite (optional)"
+                        className="input-field w-full text-sm"
+                      />
                       <div className="grid grid-cols-3 gap-2">
                         <input type="text" value={form.city} onChange={(e) => setField("city", e.target.value)} placeholder="City" className="input-field text-sm" />
                         <input type="text" value={form.state} onChange={(e) => setField("state", e.target.value)} placeholder="State" className="input-field text-sm" maxLength={2} />
@@ -639,7 +645,7 @@ export default function BookingsPage() {
                           <input
                             type="number"
                             value={form.sqft} onChange={(e) => setField("sqft", e.target.value)}
-                            placeholder="Square footage (for pricing)"
+                            placeholder={pricingMode === "photos" ? "Photo count (for pricing)" : pricingMode === "custom" ? `${catalog?.pricingConfig?.customGateLabel || "Custom value"} (for pricing)` : "Square footage (for pricing)"}
                             className="input-field flex-1"
                             min="0"
                           />

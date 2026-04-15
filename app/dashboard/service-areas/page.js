@@ -145,6 +145,7 @@ export default function ServiceAreasPage() {
   const [pendingZone, setPendingZone] = useState(null); // polygon drawn but not yet saved
   const [drawingMode, setDrawingMode] = useState(false);
   const [msg,         setMsg]         = useState("");
+  const [filterPhotog, setFilterPhotog] = useState("all"); // "all" | memberId
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || "";
 
@@ -297,6 +298,9 @@ export default function ServiceAreasPage() {
   }
 
   const noMapsKey = !process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+  const visibleZones = filterPhotog === "all"
+    ? zones
+    : zones.filter((z) => z.assignedTo?.includes(filterPhotog));
 
   return (
     <div className="p-6">
@@ -317,6 +321,27 @@ export default function ServiceAreasPage() {
           </button>
         )}
       </div>
+
+      {/* Photographer filter */}
+      {teamMembers.length > 0 && (
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">View:</span>
+          <button onClick={() => setFilterPhotog("all")}
+            className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${filterPhotog === "all" ? "bg-navy text-white border-navy" : "text-gray-500 border-gray-200 hover:border-navy/40"}`}>
+            All Zones
+          </button>
+          {teamMembers.map((m) => (
+            <button key={m.id} onClick={() => setFilterPhotog(m.id)}
+              className={`px-3 py-1.5 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${filterPhotog === m.id ? "bg-navy text-white border-navy" : "text-gray-500 border-gray-200 hover:border-navy/40"}`}>
+              <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+                style={{ background: m.color || "#6B7280" }}>
+                {m.name?.[0]?.toUpperCase()}
+              </div>
+              {m.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {msg && (
         <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-2 rounded-lg mb-4">
@@ -356,7 +381,7 @@ export default function ServiceAreasPage() {
 
           {/* Zone list */}
           <div className="lg:col-span-1 space-y-3">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Zones ({zones.length})</p>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Zones ({visibleZones.length})</p>
 
             {loading && (
               <div className="flex justify-center py-8">
@@ -364,14 +389,14 @@ export default function ServiceAreasPage() {
               </div>
             )}
 
-            {!loading && zones.length === 0 && (
+            {!loading && visibleZones.length === 0 && (
               <div className="bg-white rounded-xl border border-gray-200 p-6 text-center shadow-card">
-                <p className="text-sm text-gray-400">No zones yet.</p>
-                <p className="text-xs text-gray-400 mt-1">Click "Draw New Zone" to start.</p>
+                <p className="text-sm text-gray-400">{filterPhotog === "all" ? "No zones yet." : "No zones assigned to this photographer."}</p>
+                <p className="text-xs text-gray-400 mt-1">{filterPhotog === "all" ? 'Click "Draw New Zone" to start.' : "Draw a zone and assign this photographer to it."}</p>
               </div>
             )}
 
-            {zones.map((zone) => (
+            {visibleZones.map((zone) => (
               <div key={zone.id}
                 onClick={() => setEditing(zone)}
                 className="bg-white rounded-xl border border-gray-200 p-4 shadow-card cursor-pointer hover:shadow-card-hover hover:-translate-y-0.5 transition-all">

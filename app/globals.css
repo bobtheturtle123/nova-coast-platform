@@ -140,3 +140,12 @@ html {
   background: #0F172A;
   color: #fff;
 }
+
+/* Print / PDF styles for reports */
+@media print {
+  body { background: white !important; }
+  nav, aside, header, .print\:hidden { display: none !important; }
+  #reports-print-area { padding: 0 !important; }
+  .bg-white { background: white !important; }
+  .border { border-color: #e5e7eb !important; }
+}

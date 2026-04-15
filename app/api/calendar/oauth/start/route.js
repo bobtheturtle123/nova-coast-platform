@@ -21,6 +21,11 @@ export async function GET(req) {
       return Response.json({ error: "GOOGLE_CLIENT_ID not configured" }, { status: 500 });
     }
 
+    // Preflight check — just validate config without redirecting
+    if (url.searchParams.get("preflight") === "1") {
+      return Response.json({ ok: true });
+    }
+
     // Store a temporary state to verify callback
     const state = Buffer.from(JSON.stringify({ tenantId: decoded.tenantId, memberId })).toString("base64url");
 

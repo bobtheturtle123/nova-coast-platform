@@ -100,6 +100,7 @@ export default function ListingDetailPage() {
 
   const [booking,    setBooking]   = useState(null);
   const [gallery,    setGallery]   = useState(null);
+  const [catalog,    setCatalog]   = useState(null);
   const [loading,    setLoading]   = useState(true);
   const [saving,     setSaving]    = useState(false);
   const [tab,        setTab]       = useState("overview");
@@ -133,7 +134,11 @@ export default function ListingDetailPage() {
     ]);
     if (tRes.ok) {
       const { tenant } = await tRes.json();
-      if (tenant?.slug) setTenantSlug(tenant.slug);
+      if (tenant?.slug) {
+        setTenantSlug(tenant.slug);
+        const catRes = await fetch(`/api/tenant-public/${tenant.slug}/catalog`);
+        if (catRes.ok) setCatalog(await catRes.json());
+      }
     }
 
     if (bRes.ok) {
@@ -456,7 +461,7 @@ export default function ListingDetailPage() {
                   </button>
                   <button onClick={() => patchBooking({ shootDate, shootTime })} disabled={saving || !shootDate}
                     className="btn-primary w-full py-2 text-xs">
-                    {saving ? "Saving…" : "Confirm Shoot Date"}
+                    {saving ? "Saving…" : "Save Shoot Date"}
                   </button>
                   {booking.shootDate && (
                     <p className="text-xs text-green-600 mt-1.5 flex items-center gap-1">
@@ -469,24 +474,48 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Services */}
-            {(booking.packageId || booking.serviceIds?.length > 0) && (
+            {(booking.packageId || booking.serviceIds?.length > 0 || booking.customLineItems?.length > 0) && (
               <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Services Booked</p>
-                {booking.packageId && (
-                  <p className="text-sm font-medium text-navy mb-2">
-                    📦 Package: <span className="capitalize">{booking.packageId}</span>
-                  </p>
-                )}
-                {booking.serviceIds?.map((s) => (
-                  <p key={s} className="text-sm text-gray-600">• {s}</p>
-                ))}
-                {booking.addonIds?.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-gray-100">
-                    {booking.addonIds.map((a) => (
-                      <p key={a} className="text-sm text-gray-500">+ {a}</p>
-                    ))}
-                  </div>
-                )}
+                {(() => {
+                  const allItems = [
+                    ...(catalog?.packages || []),
+                    ...(catalog?.services  || []),
+                    ...(catalog?.addons    || []),
+                  ];
+                  const nameOf = (id) => allItems.find((x) => x.id === id)?.name || id;
+                  return (
+                    <div className="space-y-1.5">
+                      {booking.packageId && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">Package</span>
+                          <span className="text-sm font-medium text-charcoal">{nameOf(booking.packageId)}</span>
+                        </div>
+                      )}
+                      {booking.serviceIds?.map((s) => (
+                        <div key={s} className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-medium">Service</span>
+                          <span className="text-sm text-charcoal">{nameOf(s)}</span>
+                        </div>
+                      ))}
+                      {booking.addonIds?.map((a) => (
+                        <div key={a} className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium">Add-on</span>
+                          <span className="text-sm text-charcoal">{nameOf(a)}</span>
+                        </div>
+                      ))}
+                      {booking.customLineItems?.map((l, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">Custom</span>
+                            <span className="text-sm text-charcoal">{l.label}</span>
+                          </div>
+                          <span className="text-sm font-medium text-navy">${l.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -633,31 +662,91 @@ export default function ListingDetailPage() {
               }`}>{propSiteMsg.text}</div>
             )}
 
+            {/* Display settings */}
+            <div className="bg-white rounded-sm border border-gray-200 p-6">
+              <h3 className="font-display text-navy text-base mb-5">Website Settings</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="label-field">Custom Property Name</label>
+                  <input type="text" value={propSite.customName || ""}
+                    onChange={(e) => setPropField("customName", e.target.value)}
+                    className="input-field w-full" placeholder={booking?.fullAddress || "Displays address by default"} />
+                  <p className="text-xs text-gray-400 mt-1">Leave blank to show the property address.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label-field">Property Status</label>
+                    <select value={propSite.status || ""} onChange={(e) => setPropField("status", e.target.value)}
+                      className="input-field w-full">
+                      <option value="">— None —</option>
+                      <option value="For Sale">For Sale</option>
+                      <option value="Coming Soon">Coming Soon</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Sold">Sold</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-field">MLS Live Date</label>
+                    <input type="date" value={propSite.mlsLiveDate || ""}
+                      onChange={(e) => setPropField("mlsLiveDate", e.target.value)}
+                      className="input-field w-full" />
+                    <p className="text-xs text-gray-400 mt-1">Status → "For Sale" automatically on this day.</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-sm">
+                  <div>
+                    <p className="text-sm font-medium text-charcoal">Branded website</p>
+                    <p className="text-xs text-gray-400">Show your business name and logo on the listing page</p>
+                  </div>
+                  <button type="button"
+                    onClick={() => setPropField("branded", propSite.branded === false ? true : false)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${propSite.branded !== false ? "bg-navy" : "bg-gray-300"}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${propSite.branded !== false ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Property details */}
             <div className="bg-white rounded-sm border border-gray-200 p-6">
               <h3 className="font-display text-navy text-base mb-5">Property Details</h3>
               <div className="space-y-4">
-                <div>
-                  <label className="label-field">Address / Title</label>
-                  <input type="text" value={propSite.address || ""}
-                    onChange={(e) => setPropField("address", e.target.value)}
-                    className="input-field w-full" placeholder={booking?.fullAddress || booking?.address} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label-field">Property Address</label>
+                    <input type="text" value={propSite.address || ""}
+                      onChange={(e) => setPropField("address", e.target.value)}
+                      className="input-field w-full" placeholder={booking?.fullAddress || booking?.address} />
+                  </div>
+                  <div>
+                    <label className="label-field">MLS Number</label>
+                    <input type="text" value={propSite.mlsNumber || ""}
+                      onChange={(e) => setPropField("mlsNumber", e.target.value)}
+                      className="input-field w-full" placeholder="e.g. 24123456" />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="label-field">Listing Price</label>
                     <input type="text" value={propSite.price || ""}
                       onChange={(e) => setPropField("price", e.target.value)}
-                      className="input-field w-full" placeholder="e.g. $450,000" />
+                      className="input-field w-full" placeholder="$450,000" />
                   </div>
                   <div>
                     <label className="label-field">Property Type</label>
-                    <input type="text" value={propSite.type || ""}
-                      onChange={(e) => setPropField("type", e.target.value)}
-                      className="input-field w-full" placeholder="e.g. Single Family" />
+                    <select value={propSite.type || ""} onChange={(e) => setPropField("type", e.target.value)}
+                      className="input-field w-full">
+                      <option value="">— Select —</option>
+                      <option value="Single Family">Single Family</option>
+                      <option value="Condo / Townhome">Condo / Townhome</option>
+                      <option value="Multi-Family">Multi-Family</option>
+                      <option value="Land">Land</option>
+                      <option value="Commercial">Commercial</option>
+                      <option value="Luxury Estate">Luxury Estate</option>
+                    </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="label-field">Beds</label>
                     <input type="text" value={propSite.beds || ""}
@@ -676,15 +765,27 @@ export default function ListingDetailPage() {
                       onChange={(e) => setPropField("sqft", e.target.value)}
                       className="input-field w-full" placeholder="2,200" />
                   </div>
+                  <div>
+                    <label className="label-field">Lot Acres</label>
+                    <input type="text" value={propSite.lotAcres || ""}
+                      onChange={(e) => setPropField("lotAcres", e.target.value)}
+                      className="input-field w-full" placeholder="0.25" />
+                  </div>
+                  <div>
+                    <label className="label-field">Parking Spots</label>
+                    <input type="text" value={propSite.parking || ""}
+                      onChange={(e) => setPropField("parking", e.target.value)}
+                      className="input-field w-full" placeholder="2" />
+                  </div>
+                  <div>
+                    <label className="label-field">Year Built</label>
+                    <input type="text" value={propSite.yearBuilt || ""}
+                      onChange={(e) => setPropField("yearBuilt", e.target.value)}
+                      className="input-field w-full" placeholder="2005" />
+                  </div>
                 </div>
                 <div>
-                  <label className="label-field">Year Built</label>
-                  <input type="text" value={propSite.yearBuilt || ""}
-                    onChange={(e) => setPropField("yearBuilt", e.target.value)}
-                    className="input-field w-48" placeholder="2005" />
-                </div>
-                <div>
-                  <label className="label-field">Description</label>
+                  <label className="label-field">Property Description</label>
                   <textarea
                     value={propSite.description || ""}
                     onChange={(e) => setPropField("description", e.target.value)}
@@ -702,6 +803,12 @@ export default function ListingDetailPage() {
                     placeholder={"Hardwood floors\nGranite countertops\nAttached 2-car garage"}
                     className="input-field w-full resize-y text-sm"
                   />
+                </div>
+                <div>
+                  <label className="label-field">Video Tour URL (YouTube / Vimeo)</label>
+                  <input type="url" value={propSite.videoUrl || ""}
+                    onChange={(e) => setPropField("videoUrl", e.target.value)}
+                    className="input-field w-full" placeholder="https://youtube.com/watch?v=..." />
                 </div>
               </div>
             </div>

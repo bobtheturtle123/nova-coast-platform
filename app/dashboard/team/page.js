@@ -162,11 +162,24 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
   const APP_URL    = typeof window !== "undefined" ? window.location.origin : "";
   const isGCalConnected = !!member.googleCalendar?.refreshToken;
 
+  const [gcalError, setGcalError] = useState("");
+
   async function connectGoogleCalendar() {
-    const { getIdToken } = await import("firebase/auth");
-    const { auth: firebaseAuth } = await import("@/lib/firebase");
-    const token = await firebaseAuth.currentUser.getIdToken();
-    window.location.href = `/api/calendar/oauth/start?token=${token}&memberId=${member.id}`;
+    setGcalError("");
+    try {
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const token = await firebaseAuth.currentUser.getIdToken();
+      // Quick preflight check
+      const check = await fetch(`/api/calendar/oauth/start?token=${token}&memberId=${member.id}&preflight=1`);
+      if (!check.ok) {
+        const d = await check.json().catch(() => ({}));
+        setGcalError(d.error || "Configuration error");
+        return;
+      }
+      window.location.href = `/api/calendar/oauth/start?token=${token}&memberId=${member.id}`;
+    } catch (e) {
+      setGcalError(e.message);
+    }
   }
   const feedUrl = member.calendarToken
     ? `${APP_URL}/api/calendar/${member.calendarToken}`
@@ -217,6 +230,14 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
                 ? <span className="tag-green">Connected</span>
                 : <button onClick={connectGoogleCalendar} className="btn-primary text-xs px-3 py-1.5">Connect</button>
               }
+              {gcalError && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+                  <p className="font-semibold mb-1">Setup required</p>
+                  <p>{gcalError === "GOOGLE_CLIENT_ID not configured"
+                    ? "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your Vercel environment variables. Create OAuth credentials at console.cloud.google.com → APIs & Services → Credentials → OAuth 2.0 Client IDs."
+                    : gcalError}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -460,14 +481,19 @@ export default function TeamPage() {
               <button
                 onClick={() => setCalModal(m)}
                 title="Calendar sync"
-                className="ml-2 text-gray-300 hover:text-navy transition-colors"
+                className={`ml-2 text-xs px-2.5 py-1 rounded-full border font-medium transition-colors flex items-center gap-1.5 ${
+                  m.googleCalendar?.refreshToken
+                    ? "border-green-200 bg-green-50 text-green-700"
+                    : "border-gray-200 text-gray-400 hover:border-navy/40 hover:text-navy"
+                }`}
               >
-                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+                <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                   <line x1="16" y1="2" x2="16" y2="6"/>
                   <line x1="8" y1="2" x2="8" y2="6"/>
                   <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
+                {m.googleCalendar?.refreshToken ? "Synced" : "Sync Cal"}
               </button>
             </div>
           ))}
