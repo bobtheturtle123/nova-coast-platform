@@ -87,6 +87,39 @@ export async function POST(req) {
         break;
       }
 
+      case "checkout.session.completed": {
+        const session = event.data.object;
+        const { bookingId, tenantId, type } = session.metadata || {};
+        if (!bookingId || !tenantId || type !== "deposit") break;
+
+        const bookingRef = adminDb
+          .collection("tenants").doc(tenantId)
+          .collection("bookings").doc(bookingId);
+
+        const bookingDoc = await bookingRef.get();
+        if (!bookingDoc.exists) break;
+        const booking = bookingDoc.data();
+
+        if (!booking.depositPaid) {
+          await bookingRef.update({
+            depositPaid: true,
+            status: "requested",
+            stripeDepositSessionId: session.id,
+          });
+          try {
+            const tenant = await getTenantById(tenantId);
+            if (tenant) {
+              await sendBookingCreatedNotifications({
+                booking: { ...booking, depositPaid: true },
+                tenant,
+                adminEmail: tenant.email || null,
+              });
+            }
+          } catch (e) { console.error("Deposit confirmation email failed:", e); }
+        }
+        break;
+      }
+
       case "payment_intent.payment_failed": {
         const pi = event.data.object;
         const { bookingId, tenantId } = pi.metadata;

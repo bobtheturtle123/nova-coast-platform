@@ -82,9 +82,10 @@ export default function SettingsPage() {
   });
 
   // Pricing config state
-  const [pricingMode,  setPricingMode]  = useState("sqft");
-  const [tiers,        setTiers]        = useState([]);
-  const [savingTiers,  setSavingTiers]  = useState(false);
+  const [pricingMode,     setPricingMode]     = useState("sqft");
+  const [tiers,           setTiers]           = useState([]);
+  const [customGateLabel, setCustomGateLabel] = useState("Custom value");
+  const [savingTiers,     setSavingTiers]     = useState(false);
 
   // Booking config state
   const [depositType,   setDepositType]   = useState("percent"); // "percent" | "fixed" | "none"
@@ -167,6 +168,9 @@ export default function SettingsPage() {
           setPricingMode(data.tenant.pricingConfig.mode || "sqft");
           if (data.tenant.pricingConfig.tiers?.length) {
             setTiers(data.tenant.pricingConfig.tiers);
+          }
+          if (data.tenant.pricingConfig.customGateLabel) {
+            setCustomGateLabel(data.tenant.pricingConfig.customGateLabel);
           }
         }
         // Load booking config
@@ -254,7 +258,7 @@ export default function SettingsPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          pricingConfig: { mode: pricingMode, tiers },
+          pricingConfig: { mode: pricingMode, tiers, ...(pricingMode === "custom" ? { customGateLabel } : {}) },
         }),
       });
       if (res.ok) showMsg("Pricing configuration saved.");
@@ -278,19 +282,30 @@ export default function SettingsPage() {
     setTiers((prev) => prev.filter((_, idx) => idx !== i));
   }
 
-  function resetTiers() {
-    if (pricingMode === "photos") {
+  function switchPricingMode(mode) {
+    setPricingMode(mode);
+    if (mode === "photos") {
       setTiers([
-        { name: "XS",  label: "Under 20 photos", max: 20 },
-        { name: "S",   label: "21–40 photos",     max: 40 },
-        { name: "M",   label: "41–70 photos",     max: 70 },
-        { name: "L",   label: "71–100 photos",    max: 100 },
-        { name: "XL",  label: "100+ photos",      max: 999999 },
+        { name: "XS", label: "Under 20 photos", max: 20 },
+        { name: "S",  label: "21–40 photos",     max: 40 },
+        { name: "M",  label: "41–70 photos",     max: 70 },
+        { name: "L",  label: "71–100 photos",    max: 100 },
+        { name: "XL", label: "100+ photos",      max: 999999 },
       ]);
-    } else {
+    } else if (mode === "sqft") {
       setTiers(DEFAULT_TIERS);
-      setPricingMode("sqft");
+    } else if (mode === "custom") {
+      setTiers([
+        { name: "Tier1", label: "Level 1", max: 0 },
+        { name: "Tier2", label: "Level 2", max: 0 },
+        { name: "Tier3", label: "Level 3", max: 999999 },
+      ]);
     }
+    // flat: no tiers needed
+  }
+
+  function resetTiers() {
+    switchPricingMode(pricingMode);
   }
 
   // ─── Booking config helpers ───────────────────────────────────────────────
@@ -487,10 +502,24 @@ export default function SettingsPage() {
     custom: { unit: "Value",   gate: "Custom value" },
   };
 
+  const SECTIONS = [
+    { id: "branding",      label: "Branding" },
+    { id: "pricing",       label: "Pricing Tiers" },
+    { id: "booking",       label: "Booking" },
+    { id: "availability",  label: "Availability" },
+    { id: "service-areas", label: "Service Areas" },
+    { id: "travel",        label: "Travel Fees" },
+    { id: "promos",        label: "Promo Codes" },
+    { id: "terms",         label: "Terms & Privacy" },
+    { id: "email",         label: "Email Templates" },
+  ];
+
   return (
-    <div className="p-6 max-w-2xl">
-      <h1 className="font-semibold text-xl text-charcoal mb-1">Settings</h1>
-      <p className="text-gray-400 text-sm mb-8">Manage your business profile, branding, and pricing.</p>
+    <div className="p-6 max-w-5xl">
+      <div className="mb-6">
+        <h1 className="font-semibold text-xl text-charcoal mb-1">Settings</h1>
+        <p className="text-gray-400 text-sm">Manage your business profile, branding, and pricing.</p>
+      </div>
 
       {msg.text && (
         <div className={`text-sm px-4 py-2 rounded-sm mb-6 ${
@@ -498,6 +527,23 @@ export default function SettingsPage() {
           : "bg-red-50 border border-red-200 text-red-700"
         }`}>{msg.text}</div>
       )}
+
+      <div className="flex gap-8 items-start">
+        {/* Sticky side nav */}
+        <nav className="hidden lg:block w-40 flex-shrink-0 sticky top-6">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2 px-2">Sections</p>
+          <div className="space-y-0.5">
+            {SECTIONS.map((s) => (
+              <a key={s.id} href={`#settings-${s.id}`}
+                className="block text-sm text-gray-500 hover:text-navy py-1.5 px-2 rounded hover:bg-navy/5 transition-colors">
+                {s.label}
+              </a>
+            ))}
+          </div>
+        </nav>
+
+        {/* Main content */}
+        <div className="flex-1 min-w-0">
 
       {/* Booking URL */}
       <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-6">
@@ -511,7 +557,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <form onSubmit={saveBranding} className="space-y-6">
+      <form id="settings-branding" onSubmit={saveBranding} className="space-y-6 scroll-mt-6">
         {/* Business info */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="font-semibold text-charcoal text-base mb-4">Business Info</h2>
@@ -580,7 +626,7 @@ export default function SettingsPage() {
       </form>
 
       {/* ─── Pricing Tiers ─────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+      <div id="settings-pricing" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-display text-navy text-base">Pricing Tiers</h2>
           <button onClick={resetTiers} className="text-xs text-gray-400 hover:text-navy">Reset to defaults</button>
@@ -597,9 +643,9 @@ export default function SettingsPage() {
               { value: "sqft",   label: "By Square Footage", desc: "Client enters sq ft — pricing adjusts by tier" },
               { value: "photos", label: "By Photo Count",    desc: "Client enters # of photos — pricing adjusts by tier" },
               { value: "flat",   label: "Flat Pricing",      desc: "No gate question — every item uses its base price" },
-              { value: "custom", label: "Custom Value",      desc: "You define what the tiers mean" },
+              { value: "custom", label: "Custom Value",      desc: "Define your own tier labels and gate question" },
             ].map((m) => (
-              <button key={m.value} type="button" onClick={() => setPricingMode(m.value)}
+              <button key={m.value} type="button" onClick={() => switchPricingMode(m.value)}
                 className={`p-3 border rounded-sm text-left transition-colors ${
                   pricingMode === m.value ? "border-navy bg-navy/5" : "border-gray-200 hover:border-navy/30"
                 }`}>
@@ -663,6 +709,17 @@ export default function SettingsPage() {
           })}
         </div>
 
+        {pricingMode === "custom" && (
+          <div className="mb-4 p-3 bg-gray-50 rounded border border-gray-200">
+            <label className="label-field">Gate question label</label>
+            <p className="text-xs text-gray-400 mb-2">What will clients be asked for at booking? (e.g. "Number of rooms", "Project size")</p>
+            <input type="text" value={customGateLabel}
+              onChange={(e) => setCustomGateLabel(e.target.value)}
+              className="input-field w-full text-sm"
+              placeholder="e.g. Number of rooms" />
+          </div>
+        )}
+
         <div className="flex items-center gap-3">
           <button type="button" onClick={addTier}
             className="text-sm text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5">
@@ -670,6 +727,7 @@ export default function SettingsPage() {
           </button>
           <p className="text-xs text-gray-400">
             {pricingMode === "flat" ? "With flat pricing, all products use their base price." :
+             pricingMode === "custom" ? `Client will be asked: "${customGateLabel}"` :
              `Client will be asked for their ${modeLabels[pricingMode]?.gate?.toLowerCase() || "value"} at booking.`}
           </p>
         </div>
@@ -682,7 +740,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Booking Config ──────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-sm border border-gray-200 p-6 mt-8 space-y-8">
+      <div id="settings-booking" className="bg-white rounded-sm border border-gray-200 p-6 mt-8 space-y-8 scroll-mt-6">
         <div>
           <h2 className="font-semibold text-charcoal text-base mb-1">Booking Settings</h2>
           <p className="text-sm text-gray-500">Configure deposit requirements, time slots, and custom form fields.</p>
@@ -783,7 +841,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Availability ────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+      <div id="settings-availability" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <h2 className="font-semibold text-charcoal text-base mb-1">Availability & Scheduling</h2>
         <p className="text-sm text-gray-500 mb-6">
           Control how time slots are offered to clients on the booking schedule step.
@@ -903,7 +961,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Service Areas ──────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+      <div id="settings-service-areas" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-charcoal text-base">Service Areas & Zones</h2>
@@ -916,7 +974,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Terms of Service ─────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+      <div id="settings-terms" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <h2 className="font-semibold text-charcoal text-base mb-1">Terms of Service</h2>
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-gray-500">
@@ -999,7 +1057,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Travel Fees ─────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+      <div id="settings-travel" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-semibold text-charcoal text-base">Travel Fees</h2>
           <button
@@ -1128,7 +1186,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Promo Codes ─────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+      <div id="settings-promos" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="font-semibold text-charcoal text-base">Promo Codes</h2>
@@ -1239,7 +1297,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Email Template ──────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+      <div id="settings-email" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <h2 className="font-semibold text-charcoal text-base mb-1">Gallery Delivery Email Template</h2>
         <p className="text-sm text-gray-500 mb-4">
           Default email content used when delivering a gallery to a client. You can override
@@ -1284,6 +1342,8 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+        </div>{/* end main content */}
+      </div>{/* end flex */}
     </div>
   );
 }

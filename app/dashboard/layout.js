@@ -156,10 +156,10 @@ export default function DashboardLayout({ children }) {
               onClick={() => setSidebarOpen(false)}
               className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-100 ${
                 active
-                  ? "bg-white/10 text-white"
-                  : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                  ? "bg-white/15 text-white"
+                  : "text-white/65 hover:text-white hover:bg-white/8"
               }`}>
-              <span className={`flex-shrink-0 ${active ? "opacity-100" : "opacity-60"}`}>
+              <span className={`flex-shrink-0 ${active ? "opacity-100" : "opacity-75"}`}>
                 {item.icon}
               </span>
               <span>{item.label}</span>
@@ -170,10 +170,10 @@ export default function DashboardLayout({ children }) {
 
       {/* Footer */}
       <div className="px-3 py-3 border-t border-white/5">
-        <p className="text-[11px] text-white/25 truncate px-2 mb-1">{user?.email}</p>
+        <p className="text-[11px] text-white/40 truncate px-2 mb-1">{user?.email}</p>
         <button
           onClick={() => auth.signOut().then(() => router.push("/auth/login"))}
-          className="w-full text-left text-[12px] text-white/30 hover:text-white/60 transition-colors px-2 py-1 rounded hover:bg-white/5">
+          className="w-full text-left text-[12px] text-white/50 hover:text-white/80 transition-colors px-2 py-1 rounded hover:bg-white/5">
           Sign out
         </button>
       </div>

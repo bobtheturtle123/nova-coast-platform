@@ -9,9 +9,12 @@ function WeatherWidget({ booking }) {
   const [wx,      setWx]      = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Use confirmed shootDate, fall back to preferredDate
+  const weatherDate = (booking.shootDate || booking.preferredDate)?.split?.("T")?.[0];
+
   useEffect(() => {
     const address = booking.fullAddress || booking.address;
-    const date    = booking.shootDate?.split?.("T")?.[0];
+    const date    = weatherDate;
     if (!address || !date) return;
     setLoading(true);
     auth.currentUser?.getIdToken().then(async (token) => {
@@ -23,9 +26,9 @@ function WeatherWidget({ booking }) {
       setWx(data);
       setLoading(false);
     });
-  }, [booking.fullAddress, booking.address, booking.shootDate]);
+  }, [booking.fullAddress, booking.address, weatherDate]);
 
-  if (!booking.shootDate) return null;
+  if (!weatherDate) return null;
   if (loading) return (
     <div className="bg-white rounded-sm border border-gray-200 p-5 mb-6">
       <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-2">Weather Forecast</h3>
@@ -162,6 +165,35 @@ export default function BookingDetailPage() {
     }
   }
 
+  async function sendDepositRequest() {
+    setSaving(true);
+    setMsg("");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/bookings/${id}/send-deposit`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Copy link to clipboard
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(data.url);
+          setMsg(`Deposit link copied to clipboard! Send it to ${booking.clientEmail || "the client"}.`);
+        } else {
+          setMsg(`Deposit link: ${data.url}`);
+        }
+        setBooking((b) => ({ ...b, depositCheckoutUrl: data.url }));
+      } else {
+        setMsg(data.error || "Failed to create deposit link.");
+      }
+    } catch {
+      setMsg("Something went wrong.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function createGallery() {
     setSaving(true);
     setMsg("");
@@ -251,7 +283,7 @@ export default function BookingDetailPage() {
       </div>
 
       {/* Weather */}
-      {showWeather && <WeatherWidget booking={{ ...booking, shootDate: booking.shootDate }} />}
+      {showWeather && <WeatherWidget booking={booking} />}
 
       {/* Status + shoot date */}
       <div className="bg-white rounded-sm border border-gray-200 p-5 mb-6">
@@ -285,6 +317,21 @@ export default function BookingDetailPage() {
 
       {/* Actions */}
       <div className="flex flex-wrap gap-3">
+        {/* Deposit request — show when deposit not yet paid */}
+        {!booking.depositPaid && (
+          <div className="flex flex-col gap-1.5">
+            <button onClick={sendDepositRequest} disabled={saving}
+              className="btn-primary px-4 py-2 text-sm">
+              {saving ? "Generating…" : "📋 Copy Deposit Link"}
+            </button>
+            {booking.depositCheckoutUrl && (
+              <a href={booking.depositCheckoutUrl} target="_blank" rel="noreferrer"
+                className="text-xs text-navy/60 hover:text-navy underline text-center">
+                View deposit page →
+              </a>
+            )}
+          </div>
+        )}
         {booking.depositPaid && booking.status === "requested" && (
           <button onClick={sendConfirmation} disabled={saving}
             className="btn-primary px-4 py-2 text-sm">
