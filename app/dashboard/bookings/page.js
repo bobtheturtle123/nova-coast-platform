@@ -16,7 +16,7 @@ const STATUS_LABELS = {
 
 const EMPTY_FORM = {
   clientName: "", clientEmail: "", clientPhone: "",
-  address: "", unit: "", city: "", state: "CA", zip: "", sqft: "",
+  address: "", unit: "", city: "", state: "CA", zip: "", sqft: "", apn: "",
   preferredDate: "", preferredTime: "",
   photographerEmail: "", photographerName: "",
   notes: "",
@@ -254,6 +254,7 @@ export default function BookingsPage() {
   const [teamMembers,  setTeamMembers] = useState([]);
   const [agentQuery,   setAgentQuery]  = useState("");
   const [showAgentDD,  setShowAgentDD] = useState(false);
+  const [enableApn,    setEnableApn]   = useState(false);
   const addressInputRef = useRef(null);
   const autocompleteRef = useRef(null);
 
@@ -317,7 +318,11 @@ export default function BookingsPage() {
       fetch("/api/dashboard/agents", { headers: { Authorization: `Bearer ${token}` } }),
       fetch("/api/dashboard/team",   { headers: { Authorization: `Bearer ${token}` } }),
     ]);
-    if (catRes.ok)    setCatalog(await catRes.json());
+    if (catRes.ok)    {
+      const catData = await catRes.json();
+      setCatalog(catData);
+      if (catData.bookingConfig?.enableApn) setEnableApn(true);
+    }
     if (agentsRes.ok) { const d = await agentsRes.json(); setAgents(d.agents || []); }
     if (teamRes.ok)   { const d = await teamRes.json();   setTeamMembers(d.members || []); }
   }
@@ -431,6 +436,7 @@ export default function BookingsPage() {
           serviceIds:      form.selectedServices,
           addonIds:        form.selectedAddons,
           customLineItems: form.customLineItems,
+          apn:             form.apn || null,
           source:          "manual",
         }),
       });
@@ -622,13 +628,21 @@ export default function BookingsPage() {
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Property</p>
                     <div className="space-y-3">
-                      <input
-                        ref={addressInputRef}
-                        type="text"
-                        value={form.address} onChange={(e) => setField("address", e.target.value)}
-                        placeholder="Street address *"
-                        className="input-field w-full"
-                      />
+                      <div className="relative">
+                        <input
+                          ref={addressInputRef}
+                          type="text"
+                          value={form.address} onChange={(e) => setField("address", e.target.value)}
+                          placeholder="Street address *"
+                          className="input-field w-full"
+                          autoComplete="off"
+                        />
+                        {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY && (
+                          <p className="text-xs text-amber-600 mt-1">
+                            Address autocomplete requires NEXT_PUBLIC_GOOGLE_MAPS_KEY in your environment variables.
+                          </p>
+                        )}
+                      </div>
                       <input
                         type="text"
                         value={form.unit} onChange={(e) => setField("unit", e.target.value)}
@@ -655,6 +669,14 @@ export default function BookingsPage() {
                             </span>
                           )}
                         </div>
+                      )}
+                      {enableApn && (
+                        <input
+                          type="text"
+                          value={form.apn} onChange={(e) => setField("apn", e.target.value)}
+                          placeholder="APN (Assessor Parcel Number) — land/lot optional"
+                          className="input-field w-full text-sm"
+                        />
                       )}
                     </div>
                   </div>

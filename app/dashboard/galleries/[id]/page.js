@@ -10,18 +10,20 @@ const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
 // ─── Image thumbnail with loading/error ───────────────────────────────────────
 function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
   onDragStart, onDragOver, onDrop, onDragEnd, index, onAssignCategory,
-  selected, onSelect }) {
+  selected, onSelect, onDelete, selectMode }) {
   const [loaded,  setLoaded]  = useState(false);
   const [errored, setErrored] = useState(false);
 
   return (
     <div
-      draggable
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDragEnd={onDragEnd}
-      className={`aspect-square rounded-sm overflow-hidden bg-gray-100 relative group cursor-grab active:cursor-grabbing
+      draggable={!selectMode}
+      onDragStart={!selectMode ? onDragStart : undefined}
+      onDragOver={!selectMode ? onDragOver : undefined}
+      onDrop={!selectMode ? onDrop : undefined}
+      onDragEnd={!selectMode ? onDragEnd : undefined}
+      onClick={selectMode ? (e) => { e.stopPropagation(); onSelect?.(); } : undefined}
+      className={`aspect-square rounded-sm overflow-hidden bg-gray-100 relative group
+        ${selectMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}
         ${isDragging ? "opacity-40 scale-95" : ""}
         ${selected ? "ring-2 ring-gold ring-offset-1" : ""}
         transition-all duration-150`}
@@ -38,9 +40,9 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
       <img src={src} alt={alt} onLoad={() => setLoaded(true)} onError={() => setErrored(true)}
         className={`w-full h-full object-cover transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`} />
 
-      {/* Selection checkbox */}
+      {/* Selection checkbox — always visible in select mode, hover-only otherwise */}
       <div
-        className={`absolute top-1.5 left-1.5 z-10 transition-opacity ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+        className={`absolute top-1.5 left-1.5 z-10 transition-opacity ${selected || selectMode ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
         onClick={(e) => { e.stopPropagation(); onSelect?.(); }}
       >
         <div className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer
@@ -51,6 +53,16 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
 
       {/* Hover overlay */}
       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-end justify-end gap-1 p-1.5">
+        {/* Delete button (top-right) */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
+          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-500/90 hover:bg-red-600 flex items-center justify-center transition-colors"
+          title="Delete photo"
+        >
+          <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
         {/* Category picker */}
         {categories.length > 0 && (
           <select
@@ -66,7 +78,7 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
       </div>
 
       {isFirst && !selected && (
-        <div className="absolute top-1.5 right-1.5">
+        <div className="absolute top-1.5 left-7">
           <span className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-navy text-white">Cover</span>
         </div>
       )}
@@ -252,9 +264,12 @@ export default function GalleryDetailPage() {
   // Bulk selection state
   const [selectedKeys,    setSelectedKeys]    = useState(new Set());
   const [bulkCatTarget,   setBulkCatTarget]   = useState("");
+  const [selectMode,      setSelectMode]      = useState(false);
+  const [deleting,        setDeleting]        = useState(false);
 
   // 3D / floor plans / files state
   const [matterportUrl,   setMatterportUrl]   = useState("");
+  const [videoUrl,        setVideoUrl]        = useState(""); // YouTube / Vimeo URL
   const [virtualLinks,    setVirtualLinks]    = useState([]); // [{label, url}]
   const [floorPlans,      setFloorPlans]      = useState([]); // [{url, key, fileName}]
   const [attachedFiles,   setAttachedFiles]   = useState([]); // [{url, key, fileName, fileType}]
@@ -296,6 +311,7 @@ export default function GalleryDetailPage() {
 
         // Load extras
         if (data.gallery.matterportUrl) setMatterportUrl(data.gallery.matterportUrl);
+        if (data.gallery.videoUrl)      setVideoUrl(data.gallery.videoUrl);
         if (data.gallery.virtualLinks)  setVirtualLinks(data.gallery.virtualLinks);
         if (data.gallery.floorPlans)    setFloorPlans(data.gallery.floorPlans);
         if (data.gallery.attachedFiles) setAttachedFiles(data.gallery.attachedFiles);
@@ -449,6 +465,40 @@ export default function GalleryDetailPage() {
     setBulkCatTarget("");
   }
 
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelectedKeys(new Set());
+    setBulkCatTarget("");
+  }
+
+  async function deleteMedia(keys) {
+    if (!keys || keys.length === 0) return;
+    const confirmed = window.confirm(`Delete ${keys.length} photo${keys.length !== 1 ? "s" : ""}? This cannot be undone.`);
+    if (!confirmed) return;
+    setDeleting(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/galleries/${id}/media`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ keys }),
+      });
+      if (res.ok) {
+        const keySet = new Set(keys);
+        setGallery((g) => ({ ...g, media: (g.media || []).filter((m) => !keySet.has(m.key)) }));
+        setSelectedKeys((prev) => { const next = new Set(prev); keys.forEach((k) => next.delete(k)); return next; });
+        setMsg({ text: `Deleted ${keys.length} item${keys.length !== 1 ? "s" : ""}.`, type: "success" });
+      } else {
+        const d = await res.json();
+        setMsg({ text: d.error || "Delete failed.", type: "error" });
+      }
+    } catch {
+      setMsg({ text: "Delete failed.", type: "error" });
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   function applyBulkCategory() {
     if (!bulkCatTarget) return;
     setCategories((prev) => {
@@ -524,7 +574,7 @@ export default function GalleryDetailPage() {
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ matterportUrl, virtualLinks, floorPlans, attachedFiles }),
+      body: JSON.stringify({ matterportUrl, videoUrl, virtualLinks, floorPlans, attachedFiles }),
     });
     setSavingExtras(false);
     setMsg({ text: "Saved.", type: "success" });
@@ -713,9 +763,20 @@ export default function GalleryDetailPage() {
                 ))}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                <p className="text-xs text-gray-400 hidden md:block">Drag to reorder · first = cover</p>
-                <button onClick={saveOrder} disabled={savingOrder} className="text-xs btn-outline px-3 py-1">
-                  {savingOrder ? "Saving…" : "Save Order"}
+                {!selectMode && <p className="text-xs text-gray-400 hidden md:block">Drag to reorder · first = cover</p>}
+                {!selectMode && (
+                  <button onClick={saveOrder} disabled={savingOrder} className="text-xs btn-outline px-3 py-1">
+                    {savingOrder ? "Saving…" : "Save Order"}
+                  </button>
+                )}
+                <button
+                  onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
+                  className={`text-xs px-3 py-1 rounded-sm border font-medium transition-colors ${
+                    selectMode
+                      ? "border-navy bg-navy text-white"
+                      : "border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy"
+                  }`}>
+                  {selectMode ? "Done" : "Select"}
                 </button>
               </div>
             </div>
@@ -723,10 +784,12 @@ export default function GalleryDetailPage() {
             {activeTab !== "videos" && (
               <>
                 {/* Bulk selection toolbar */}
-                {selectedKeys.size > 0 && (
-                  <div className="flex items-center gap-3 bg-navy/5 border border-navy/20 rounded-sm px-3 py-2 mb-3">
-                    <span className="text-sm font-semibold text-navy">{selectedKeys.size} selected</span>
-                    {catNames.length > 0 && (
+                {(selectMode || selectedKeys.size > 0) && (
+                  <div className="flex items-center gap-3 bg-navy/5 border border-navy/20 rounded-sm px-3 py-2 mb-3 flex-wrap">
+                    <span className="text-sm font-semibold text-navy">
+                      {selectedKeys.size > 0 ? `${selectedKeys.size} selected` : "Tap photos to select"}
+                    </span>
+                    {selectedKeys.size > 0 && catNames.length > 0 && (
                       <>
                         <select
                           value={bulkCatTarget}
@@ -745,11 +808,24 @@ export default function GalleryDetailPage() {
                         </button>
                       </>
                     )}
-                    <button onClick={selectAll} className="text-xs text-navy border border-navy/20 px-2 py-1 rounded hover:bg-navy/5">
-                      Select all
-                    </button>
-                    <button onClick={clearSelection} className="text-xs text-gray-500 hover:text-red-500 ml-auto">
-                      Clear
+                    {selectedKeys.size > 0 && (
+                      <>
+                        <button onClick={selectAll} className="text-xs text-navy border border-navy/20 px-2 py-1 rounded hover:bg-navy/5">
+                          Select all
+                        </button>
+                        <button
+                          onClick={() => deleteMedia(Array.from(selectedKeys))}
+                          disabled={deleting}
+                          className="text-xs text-red-600 border border-red-200 px-2 py-1 rounded hover:bg-red-50 disabled:opacity-50">
+                          {deleting ? "Deleting…" : `Delete (${selectedKeys.size})`}
+                        </button>
+                        <button onClick={clearSelection} className="text-xs text-gray-500 hover:text-gray-700">
+                          Deselect all
+                        </button>
+                      </>
+                    )}
+                    <button onClick={exitSelectMode} className="text-xs text-gray-400 hover:text-red-500 ml-auto">
+                      Exit selection mode
                     </button>
                   </div>
                 )}
@@ -771,6 +847,8 @@ export default function GalleryDetailPage() {
                       onAssignCategory={(cat) => assignCategory(m.key, cat)}
                       selected={selectedKeys.has(m.key)}
                       onSelect={() => m.key && toggleSelect(m.key)}
+                      onDelete={() => m.key && deleteMedia([m.key])}
+                      selectMode={selectMode}
                     />
                   ))}
                 </div>
@@ -780,9 +858,17 @@ export default function GalleryDetailPage() {
             {activeTab === "videos" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {videos.map((v, i) => (
-                  <div key={v.key || i}>
+                  <div key={v.key || i} className="group relative">
                     <video src={v.url} controls className="w-full rounded-sm" />
-                    <p className="text-xs text-gray-400 truncate mt-1">{v.fileName}</p>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs text-gray-400 truncate">{v.fileName}</p>
+                      <button
+                        onClick={() => v.key && deleteMedia([v.key])}
+                        disabled={deleting}
+                        className="text-xs text-red-400 hover:text-red-600 px-2 py-0.5 flex-shrink-0">
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -826,6 +912,39 @@ export default function GalleryDetailPage() {
               <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                 3D tour will appear as an interactive embed in the client gallery.
+              </p>
+            )}
+          </div>
+
+          {/* Video Tour URL */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-card mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-sm bg-navy/8 flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-charcoal">Video Tour</p>
+                <p className="text-xs text-gray-400">YouTube or Vimeo URL — embedded in client gallery</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+                className="input-field flex-1 text-sm"
+              />
+              <button onClick={saveExtras} disabled={savingExtras} className="btn-primary px-4 py-2 text-xs whitespace-nowrap">
+                {savingExtras ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {videoUrl && (
+              <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                Video will appear in the client gallery under Property Extras.
               </p>
             )}
           </div>

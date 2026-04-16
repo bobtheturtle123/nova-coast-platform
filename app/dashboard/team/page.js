@@ -334,6 +334,11 @@ export default function TeamPage() {
   const [filterMember,  setFilterMember]  = useState("all");
   const [calModal,      setCalModal]      = useState(null);
   const [flashMsg,      setFlashMsg]      = useState("");
+  const [calView,       setCalView]       = useState("week"); // "week" | "month" | "day"
+  const [inviteEmail,   setInviteEmail]   = useState("");
+  const [showInvite,    setShowInvite]    = useState(false);
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteMsg,     setInviteMsg]     = useState("");
 
   const getToken = () => auth.currentUser?.getIdToken();
 
@@ -411,15 +416,64 @@ export default function TeamPage() {
   // ─── Calendar ──────────────────────────────────────────────────────────────
   const weekDates = useMemo(() => getWeekDates(anchor), [anchor]);
 
-  function prevWeek() {
-    setAnchor((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; });
+  function prevPeriod() {
+    setAnchor((d) => {
+      const n = new Date(d);
+      if (calView === "month") n.setMonth(n.getMonth() - 1);
+      else if (calView === "day") n.setDate(n.getDate() - 1);
+      else n.setDate(n.getDate() - 7);
+      return n;
+    });
   }
-  function nextWeek() {
-    setAnchor((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; });
+  function nextPeriod() {
+    setAnchor((d) => {
+      const n = new Date(d);
+      if (calView === "month") n.setMonth(n.getMonth() + 1);
+      else if (calView === "day") n.setDate(n.getDate() + 1);
+      else n.setDate(n.getDate() + 7);
+      return n;
+    });
   }
-  function goToday() {
-    setAnchor(new Date());
+  function goToday() { setAnchor(new Date()); }
+
+  async function sendInvite() {
+    if (!inviteEmail.trim()) return;
+    setInviteSending(true);
+    setInviteMsg("");
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/dashboard/team/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email: inviteEmail.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setInviteMsg(`Invite sent to ${inviteEmail.trim()}!`);
+        setInviteEmail("");
+        setTimeout(() => { setShowInvite(false); setInviteMsg(""); }, 2500);
+      } else {
+        setInviteMsg(data.error || "Failed to send invite.");
+      }
+    } catch {
+      setInviteMsg("Something went wrong.");
+    } finally {
+      setInviteSending(false);
+    }
   }
+
+  // ── Month view helpers ────────────────────────────────────────────────────
+  const monthDates = useMemo(() => {
+    const y = anchor.getFullYear(), m = anchor.getMonth();
+    const first = new Date(y, m, 1);
+    const last  = new Date(y, m + 1, 0);
+    const startDow = first.getDay();
+    const cells = [];
+    for (let i = 0; i < startDow; i++) cells.push(null);
+    for (let d = 1; d <= last.getDate(); d++) cells.push(new Date(y, m, d));
+    while (cells.length % 7 !== 0) cells.push(null);
+    return cells;
+  }, [anchor]);
 
   // Map confirmed/completed bookings that have a shootDate to calendar
   const calendarEvents = useMemo(() => {
@@ -452,9 +506,14 @@ export default function TeamPage() {
           <h1 className="font-display text-2xl text-navy">Team</h1>
           <p className="text-gray-400 text-sm mt-0.5">{members.length} team member{members.length !== 1 ? "s" : ""}</p>
         </div>
-        <button onClick={() => setEditing("new")} className="btn-primary text-sm px-5 py-2 flex items-center gap-2">
-          <span className="text-lg leading-none">+</span> Add Member
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowInvite(true)} className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
+            ✉ Invite via Email
+          </button>
+          <button onClick={() => setEditing("new")} className="btn-primary text-sm px-5 py-2 flex items-center gap-2">
+            <span className="text-lg leading-none">+</span> Add Manually
+          </button>
+        </div>
       </div>
 
       {flashMsg && (
@@ -503,102 +562,126 @@ export default function TeamPage() {
       {/* Calendar section */}
       <div className="bg-white border border-gray-200 rounded-sm overflow-hidden mb-6">
         {/* Calendar toolbar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-wrap gap-2">
           <div className="flex items-center gap-3">
-            <button onClick={prevWeek} className="p-1.5 hover:bg-gray-100 rounded">
+            <button onClick={prevPeriod} className="p-1.5 hover:bg-gray-100 rounded">
               <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
             <button onClick={goToday} className="text-xs border border-gray-200 px-2.5 py-1 rounded hover:bg-gray-50">Today</button>
-            <button onClick={nextWeek} className="p-1.5 hover:bg-gray-100 rounded">
+            <button onClick={nextPeriod} className="p-1.5 hover:bg-gray-100 rounded">
               <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </button>
             <p className="font-semibold text-charcoal text-sm">
-              {MONTHS[weekDates[0].getMonth()]} {weekDates[0].getDate()} – {weekDates[6].getDate()}, {weekDates[0].getFullYear()}
+              {calView === "month"
+                ? `${MONTHS[anchor.getMonth()]} ${anchor.getFullYear()}`
+                : calView === "day"
+                ? `${DAYS_SHORT[anchor.getDay()]}, ${MONTHS[anchor.getMonth()]} ${anchor.getDate()}, ${anchor.getFullYear()}`
+                : `${MONTHS[weekDates[0].getMonth()]} ${weekDates[0].getDate()} – ${weekDates[6].getDate()}, ${weekDates[0].getFullYear()}`
+              }
             </p>
           </div>
 
-          {/* Filter by photographer */}
-          <select value={filterMember} onChange={(e) => setFilterMember(e.target.value)}
-            className="input-field text-sm py-1.5 w-44">
-            <option value="all">All Photographers</option>
-            {members.map((m) => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Day headers */}
-        <div className="grid grid-cols-7 border-b border-gray-200">
-          {weekDates.map((d) => {
-            const isToday = isSameDay(d, today);
-            return (
-              <div key={d.toISOString()} className={`px-2 py-2 text-center border-r last:border-r-0 border-gray-100 ${isToday ? "bg-navy/4" : ""}`}>
-                <p className="text-xs text-gray-400 uppercase tracking-wide">{DAYS_SHORT[d.getDay()]}</p>
-                <p className={`text-sm font-bold mt-0.5 ${isToday ? "w-7 h-7 rounded-full bg-navy text-white flex items-center justify-center mx-auto" : "text-charcoal"}`}>
-                  {d.getDate()}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Calendar rows per photographer */}
-        {visibleMembers.length === 0 && members.length === 0 ? (
-          <div className="p-10 text-center text-gray-400">
-            <p className="text-3xl mb-2">📅</p>
-            <p className="font-medium text-gray-500">No team members yet</p>
-            <p className="text-sm mt-1">Add photographers to see their schedule here.</p>
+          <div className="flex items-center gap-2">
+            {/* View selector */}
+            <div className="flex border border-gray-200 rounded-sm overflow-hidden text-xs">
+              {["week","month","day"].map((v) => (
+                <button key={v} onClick={() => setCalView(v)}
+                  className={`px-3 py-1.5 capitalize font-medium transition-colors ${
+                    calView === v ? "bg-navy text-white" : "text-gray-500 hover:bg-gray-50"
+                  }`}>{v}</button>
+              ))}
+            </div>
+            {/* Filter by photographer */}
+            <select value={filterMember} onChange={(e) => setFilterMember(e.target.value)}
+              className="input-field text-sm py-1.5 w-44">
+              <option value="all">All Photographers</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
           </div>
-        ) : visibleMembers.length === 0 ? (
-          <div className="p-6 text-center text-gray-400 text-sm">No members match the filter.</div>
-        ) : (
-          <div>
-            {visibleMembers.map((member) => {
-              const memberEvents = calendarEvents.filter(
-                (e) => e.photographerId === member.id
-              );
+        </div>
 
+        {/* ── WEEK VIEW ──────────────────────────────────────────────────── */}
+        {calView === "week" && (<>
+          <div className="grid grid-cols-7 border-b border-gray-200">
+            {weekDates.map((d) => {
+              const isToday = isSameDay(d, today);
               return (
-                <div key={member.id} className="border-b last:border-b-0 border-gray-100">
-                  {/* Member label */}
-                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-50/50">
-                    <div className="w-5 h-5 rounded-full flex-shrink-0"
-                      style={{ background: member.color || "#0b2a55" }} />
-                    <p className="text-xs font-semibold text-charcoal">{member.name}</p>
-                    <div className="flex gap-1 flex-wrap ml-1">
-                      {(member.skills || []).slice(0, 4).map((s) => (
-                        <span key={s} className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-sm">
-                          {SKILL_LABELS[s] || s}
-                        </span>
-                      ))}
-                      {(member.skills || []).length > 4 && (
-                        <span className="text-xs text-gray-400">+{member.skills.length - 4} more</span>
-                      )}
+                <div key={d.toISOString()} className={`px-2 py-2 text-center border-r last:border-r-0 border-gray-100 ${isToday ? "bg-navy/4" : ""}`}>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide">{DAYS_SHORT[d.getDay()]}</p>
+                  <p className={`text-sm font-bold mt-0.5 ${isToday ? "w-7 h-7 rounded-full bg-navy text-white flex items-center justify-center mx-auto" : "text-charcoal"}`}>
+                    {d.getDate()}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+          {visibleMembers.length === 0 && members.length === 0 ? (
+            <div className="p-10 text-center text-gray-400">
+              <p className="text-3xl mb-2">📅</p>
+              <p className="font-medium text-gray-500">No team members yet</p>
+              <p className="text-sm mt-1">Add photographers to see their schedule here.</p>
+            </div>
+          ) : (
+            <div>
+              {visibleMembers.map((member) => {
+                const memberEvents = calendarEvents.filter((e) => e.photographerId === member.id);
+                return (
+                  <div key={member.id} className="border-b last:border-b-0 border-gray-100">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-gray-50/50">
+                      <div className="w-5 h-5 rounded-full flex-shrink-0" style={{ background: member.color || "#0b2a55" }} />
+                      <p className="text-xs font-semibold text-charcoal">{member.name}</p>
+                      <div className="flex gap-1 flex-wrap ml-1">
+                        {(member.skills || []).slice(0, 4).map((s) => (
+                          <span key={s} className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-sm">{SKILL_LABELS[s] || s}</span>
+                        ))}
+                        {(member.skills || []).length > 4 && <span className="text-xs text-gray-400">+{member.skills.length - 4} more</span>}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-7 min-h-12">
+                      {weekDates.map((d) => {
+                        const dayEvents = memberEvents.filter((e) => isSameDay(e.shootDateObj, d));
+                        const isToday = isSameDay(d, today);
+                        return (
+                          <div key={d.toISOString()} className={`p-1 border-r last:border-r-0 border-gray-100 min-h-12 ${isToday ? "bg-navy/2" : ""}`}>
+                            {dayEvents.map((ev) => (
+                              <div key={ev.id} style={{ background: member.color + "22", borderLeftColor: member.color }}
+                                className="text-xs border-l-2 px-1.5 py-1 rounded-sm mb-1 truncate">
+                                <p className="font-medium truncate" style={{ color: member.color }}>{ev.address}</p>
+                                {ev.preferredTime && <p className="text-gray-400 capitalize">{ev.preferredTime}</p>}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-
-                  {/* Day cells */}
+                );
+              })}
+              {filterMember === "all" && (
+                <div className="border-t border-dashed border-gray-200">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-amber-50/50">
+                    <div className="w-5 h-5 rounded-full bg-amber-400 flex-shrink-0" />
+                    <p className="text-xs font-semibold text-amber-700">Unassigned shoots</p>
+                    <span className="text-xs text-amber-600 ml-1">({unscheduled.length})</span>
+                  </div>
                   <div className="grid grid-cols-7 min-h-12">
                     {weekDates.map((d) => {
-                      const dayEvents = memberEvents.filter((e) => isSameDay(e.shootDateObj, d));
-                      const isToday   = isSameDay(d, today);
+                      const dayUnscheduled = unscheduled.filter((b) => {
+                        if (!b.preferredDate) return false;
+                        return isSameDay(new Date(b.preferredDate + "T12:00:00"), d);
+                      });
                       return (
-                        <div key={d.toISOString()}
-                          className={`p-1 border-r last:border-r-0 border-gray-100 min-h-12 ${isToday ? "bg-navy/2" : ""}`}>
-                          {dayEvents.map((ev) => (
-                            <div key={ev.id}
-                              style={{ background: member.color + "22", borderLeftColor: member.color }}
-                              className="text-xs border-l-2 px-1.5 py-1 rounded-sm mb-1 truncate">
-                              <p className="font-medium truncate" style={{ color: member.color }}>
-                                {ev.address}
-                              </p>
-                              {ev.preferredTime && (
-                                <p className="text-gray-400 capitalize">{ev.preferredTime}</p>
-                              )}
+                        <div key={d.toISOString()} className="p-1 border-r last:border-r-0 border-gray-100 min-h-12">
+                          {dayUnscheduled.map((b) => (
+                            <div key={b.id} className="text-xs bg-amber-50 border-l-2 border-amber-400 px-1.5 py-1 rounded-sm mb-1">
+                              <p className="font-medium text-amber-700 truncate">{b.address}</p>
+                              <p className="text-amber-500 capitalize">{b.preferredTime}</p>
                             </div>
                           ))}
                         </div>
@@ -606,35 +689,122 @@ export default function TeamPage() {
                     })}
                   </div>
                 </div>
-              );
-            })}
+              )}
+            </div>
+          )}
 
-            {/* Unassigned row */}
-            {filterMember === "all" && (
-              <div className="border-t border-dashed border-gray-200">
-                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50/50">
-                  <div className="w-5 h-5 rounded-full bg-amber-400 flex-shrink-0" />
-                  <p className="text-xs font-semibold text-amber-700">Unassigned shoots</p>
-                  <span className="text-xs text-amber-600 ml-1">({unscheduled.length})</span>
-                </div>
-                <div className="grid grid-cols-7 min-h-12">
-                  {weekDates.map((d) => {
-                    const dayUnscheduled = unscheduled.filter((b) => {
-                      if (!b.preferredDate) return false;
-                      return isSameDay(new Date(b.preferredDate + "T12:00:00"), d);
-                    });
-                    return (
-                      <div key={d.toISOString()} className="p-1 border-r last:border-r-0 border-gray-100 min-h-12">
-                        {dayUnscheduled.map((b) => (
-                          <div key={b.id} className="text-xs bg-amber-50 border-l-2 border-amber-400 px-1.5 py-1 rounded-sm mb-1">
-                            <p className="font-medium text-amber-700 truncate">{b.address}</p>
-                            <p className="text-amber-500 capitalize">{b.preferredTime}</p>
-                          </div>
-                        ))}
+          {/* ── Availability recap ─────────────────────────────────────────── */}
+          {visibleMembers.length > 0 && (
+            <div className="border-t border-gray-100 px-4 py-4 bg-gray-50/60">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">This Week&apos;s Availability</p>
+              <div className="space-y-2">
+                {visibleMembers.map((member) => {
+                  const memberEvents = calendarEvents.filter((e) => e.photographerId === member.id);
+                  const bookedDays = new Set(
+                    memberEvents
+                      .filter((e) => weekDates.some((d) => isSameDay(e.shootDateObj, d)))
+                      .map((e) => DAYS_SHORT[e.shootDateObj.getDay()])
+                  );
+                  const freeDays = weekDates
+                    .filter((d) => d >= today && !bookedDays.has(DAYS_SHORT[d.getDay()]))
+                    .map((d) => `${DAYS_SHORT[d.getDay()]} ${MONTHS[d.getMonth()].slice(0,3)} ${d.getDate()}`);
+                  return (
+                    <div key={member.id} className="flex items-start gap-3">
+                      <div className="w-4 h-4 rounded-full mt-0.5 flex-shrink-0" style={{ background: member.color || "#0b2a55" }} />
+                      <div>
+                        <span className="text-xs font-semibold text-charcoal">{member.name}: </span>
+                        {freeDays.length === 0
+                          ? <span className="text-xs text-amber-600">Fully booked this week</span>
+                          : <span className="text-xs text-green-700">Free — {freeDays.join(", ")}</span>
+                        }
+                        {bookedDays.size > 0 && (
+                          <span className="text-xs text-gray-400 ml-2">· Booked: {Array.from(bookedDays).join(", ")}</span>
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>)}
+
+        {/* ── MONTH VIEW ─────────────────────────────────────────────────── */}
+        {calView === "month" && (
+          <div>
+            <div className="grid grid-cols-7 border-b border-gray-200">
+              {DAYS_SHORT.map((d) => (
+                <div key={d} className="px-2 py-2 text-center text-xs text-gray-400 uppercase tracking-wide border-r last:border-r-0 border-gray-100">{d}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7">
+              {monthDates.map((d, i) => {
+                if (!d) return <div key={`empty-${i}`} className="border-r last:border-r-0 border-b border-gray-100 min-h-20 bg-gray-50/30" />;
+                const isToday = isSameDay(d, today);
+                const dayEvents = calendarEvents.filter((e) => isSameDay(e.shootDateObj, d));
+                const visibleDayEvents = filterMember === "all"
+                  ? dayEvents
+                  : dayEvents.filter((e) => e.photographerId === filterMember);
+                return (
+                  <div key={d.toISOString()} className={`border-r last:border-r-0 border-b border-gray-100 min-h-20 p-1 ${isToday ? "bg-blue-50/30" : ""}`}>
+                    <p className={`text-xs font-bold mb-1 w-6 h-6 flex items-center justify-center rounded-full ${isToday ? "bg-navy text-white" : "text-charcoal"}`}>
+                      {d.getDate()}
+                    </p>
+                    {visibleDayEvents.slice(0, 3).map((ev) => {
+                      const member = members.find((m) => m.id === ev.photographerId);
+                      return (
+                        <div key={ev.id} style={{ background: (member?.color || "#0b2a55") + "22", borderLeftColor: member?.color || "#0b2a55" }}
+                          className="text-xs border-l-2 px-1 py-0.5 rounded-sm mb-0.5 truncate">
+                          <span style={{ color: member?.color || "#0b2a55" }} className="font-medium">{ev.address?.split(",")[0]}</span>
+                        </div>
+                      );
+                    })}
+                    {visibleDayEvents.length > 3 && (
+                      <p className="text-xs text-gray-400">+{visibleDayEvents.length - 3} more</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── DAY VIEW ───────────────────────────────────────────────────── */}
+        {calView === "day" && (
+          <div className="p-4">
+            {visibleMembers.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-8">No team members to display.</p>
+            ) : (
+              <div className="space-y-4">
+                {visibleMembers.map((member) => {
+                  const memberEvents = calendarEvents.filter(
+                    (e) => e.photographerId === member.id && isSameDay(e.shootDateObj, anchor)
+                  );
+                  return (
+                    <div key={member.id} className="border border-gray-200 rounded-sm overflow-hidden">
+                      <div className="flex items-center gap-2 px-4 py-2 bg-gray-50/50 border-b border-gray-100">
+                        <div className="w-4 h-4 rounded-full" style={{ background: member.color || "#0b2a55" }} />
+                        <p className="text-sm font-semibold text-charcoal">{member.name}</p>
+                        <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${memberEvents.length > 0 ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700"}`}>
+                          {memberEvents.length > 0 ? `${memberEvents.length} shoot${memberEvents.length !== 1 ? "s" : ""}` : "Available"}
+                        </span>
+                      </div>
+                      {memberEvents.length === 0 ? (
+                        <p className="px-4 py-3 text-sm text-gray-400">No shoots scheduled for this day.</p>
+                      ) : (
+                        <div className="divide-y divide-gray-50">
+                          {memberEvents.map((ev) => (
+                            <div key={ev.id} className="px-4 py-3">
+                              <p className="text-sm font-medium text-charcoal">{ev.address}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">{ev.clientName} · {ev.preferredTime || "Time TBD"}</p>
+                              <a href={`/dashboard/listings/${ev.id}`} className="text-xs text-navy hover:underline">View booking →</a>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -675,6 +845,50 @@ export default function TeamPage() {
           onDelete={deleteMember}
           onClose={() => setEditing(null)}
         />
+      )}
+
+      {/* Invite modal */}
+      {showInvite && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-sm shadow-xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="font-display text-navy text-lg">Invite Photographer</h2>
+              <button onClick={() => { setShowInvite(false); setInviteEmail(""); setInviteMsg(""); }}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-500">
+                We&apos;ll send the photographer an email with a link to accept the invite,
+                confirm their details, and connect their calendar.
+              </p>
+              <div>
+                <label className="label-field">Photographer&apos;s Email</label>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendInvite()}
+                  className="input-field w-full"
+                  placeholder="photographer@example.com"
+                  autoFocus
+                />
+              </div>
+              {inviteMsg && (
+                <p className={`text-sm ${inviteMsg.includes("sent") ? "text-green-600" : "text-red-500"}`}>
+                  {inviteMsg}
+                </p>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+              <button onClick={() => { setShowInvite(false); setInviteEmail(""); setInviteMsg(""); }}
+                className="btn-outline px-4 py-2 text-sm">Cancel</button>
+              <button onClick={sendInvite} disabled={inviteSending || !inviteEmail.trim()}
+                className="btn-primary px-6 py-2 text-sm">
+                {inviteSending ? "Sending…" : "Send Invite"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Calendar sync modal */}
