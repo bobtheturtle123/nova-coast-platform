@@ -97,7 +97,8 @@ export default function SettingsPage() {
     { value: "specific",  label: "Specific Time", desc: "Agent enters exact time", enabled: false },
   ]);
   const [customFields,  setCustomFields]  = useState([]); // [{ id, label, type, required }]
-  const [enableApn,     setEnableApn]     = useState(false); // APN field for land photography
+  const [enableApn,          setEnableApn]          = useState(false);
+  const [requireServiceArea, setRequireServiceArea] = useState(false);
   const [savingBooking, setSavingBooking] = useState(false);
   const [newFieldLabel, setNewFieldLabel] = useState("");
   const [newFieldType,  setNewFieldType]  = useState("text");
@@ -184,6 +185,7 @@ export default function SettingsPage() {
           if (bc.timeSlots?.length) setTimeSlots(bc.timeSlots);
           if (bc.customFields?.length) setCustomFields(bc.customFields);
           if (bc.enableApn !== undefined) setEnableApn(bc.enableApn);
+          if (bc.requireServiceArea !== undefined) setRequireServiceArea(bc.requireServiceArea);
           if (bc.terms)   setTermsText(bc.terms);
           if (bc.privacy) setPrivacyText(bc.privacy);
           if (bc.availability) {
@@ -341,6 +343,7 @@ export default function SettingsPage() {
       timeSlots,
       customFields,
       enableApn,
+      requireServiceArea,
       terms:        termsText,
       privacy:      privacyText,
       availability: {
@@ -851,6 +854,27 @@ export default function SettingsPage() {
               <p className="text-xs text-gray-400 mt-0.5">
                 Shows an optional APN (Assessor Parcel Number) field on the booking form.
                 Useful if you offer land or vacant lot photography.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Service area gate toggle */}
+        <div className="pt-4 border-t border-gray-100">
+          <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={() => setRequireServiceArea((v) => !v)}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors mt-0.5 ${requireServiceArea ? "bg-navy" : "bg-gray-200"}`}
+            >
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${requireServiceArea ? "translate-x-4" : "translate-x-0"}`} />
+            </button>
+            <div>
+              <p className="text-sm font-medium text-charcoal">Require address to be in a service zone</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                If enabled, bookings are blocked for addresses outside your defined service areas.
+                Clients will see your contact info (phone &amp; email) and be asked to reach out.
+                Configure zones in the <a href="/dashboard/service-areas" className="text-navy underline">Service Areas</a> page.
               </p>
             </div>
           </div>

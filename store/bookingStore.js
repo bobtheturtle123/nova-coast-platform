@@ -41,6 +41,10 @@ const INITIAL_STATE = {
   clientEmail: "",
   clientPhone: "",
 
+  // Service area
+  serviceZonePhotographers: [], // memberIds assigned to the matched zone
+  serviceZoneName: null,
+
   // Promo code
   promoCode:  "",
   promoId:    null,
@@ -87,6 +91,8 @@ export const useBookingStore = create(
       setSchedule:      (fields) => set(fields),
       setClientInfo:    (fields) => set(fields),
       setCustomFields:  (customFields) => set({ customFields }),
+      setServiceZone:   (photographers, zoneName) =>
+        set({ serviceZonePhotographers: photographers, serviceZoneName: zoneName }),
       setPromo:         (promoCode, promoId, discount) => set({ promoCode, promoId, discount }),
       clearPromo:       () => set({ promoCode: "", promoId: null, discount: 0 }),
 

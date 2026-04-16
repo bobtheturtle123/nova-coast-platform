@@ -254,9 +254,14 @@ export default function BookingsPage() {
   const [teamMembers,  setTeamMembers] = useState([]);
   const [agentQuery,   setAgentQuery]  = useState("");
   const [showAgentDD,  setShowAgentDD] = useState(false);
-  const [enableApn,    setEnableApn]   = useState(false);
+  const [enableApn,         setEnableApn]         = useState(false);
+  const [tenantSlug,        setTenantSlug]        = useState(null);
+  const tenantSlugRef = useRef(null);
+  const [zonePhotographers, setZonePhotographers] = useState(null); // null=unchecked []=[ids]
+  const [zoneName,          setZoneName]          = useState(null);
   const addressInputRef = useRef(null);
   const autocompleteRef = useRef(null);
+  const zoneDebounceRef = useRef(null);
 
   useEffect(() => {
     loadBookings();
@@ -283,6 +288,7 @@ export default function BookingsPage() {
           const state  = get("administrative_area_level_1")?.short_name || "";
           const zip    = get("postal_code")?.long_name || "";
           setForm((p) => ({ ...p, address: street || p.address, city, state, zip }));
+          checkZonePhotographers(street, city, state, zip);
         });
         autocompleteRef.current = ac;
       }
@@ -307,6 +313,17 @@ export default function BookingsPage() {
     return () => clearTimeout(timer);
   }, [showCreate]);
 
+  // Debounce zone check on manual address entry
+  useEffect(() => {
+    if (!form.city || !form.zip) return;
+    clearTimeout(zoneDebounceRef.current);
+    zoneDebounceRef.current = setTimeout(() => {
+      checkZonePhotographers(form.address, form.city, form.state, form.zip);
+    }, 1200);
+    return () => clearTimeout(zoneDebounceRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.address, form.city, form.state, form.zip]);
+
   async function loadCatalog() {
     const token = await auth.currentUser?.getIdToken();
     if (!token) return;
@@ -325,6 +342,31 @@ export default function BookingsPage() {
     }
     if (agentsRes.ok) { const d = await agentsRes.json(); setAgents(d.agents || []); }
     if (teamRes.ok)   { const d = await teamRes.json();   setTeamMembers(d.members || []); }
+    tenantSlugRef.current = tenant.slug;
+    setTenantSlug(tenant.slug);
+  }
+
+  async function checkZonePhotographers(address, city, state, zip) {
+    const slug = tenantSlugRef.current;
+    if (!slug) return;
+    const fullAddress = [address, city, state, zip].filter(Boolean).join(", ");
+    if (!fullAddress.trim()) return;
+    try {
+      const res = await fetch(`/api/tenant-public/${slug}/check-service-area`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: fullAddress }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.covered && data.assignedPhotographers?.length > 0) {
+        setZonePhotographers(data.assignedPhotographers);
+        setZoneName(data.zoneName);
+      } else {
+        setZonePhotographers(null);
+        setZoneName(null);
+      }
+    } catch { /* ignore */ }
   }
 
   async function loadBookings() {
@@ -795,6 +837,11 @@ export default function BookingsPage() {
                   {/* Photographer */}
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Photographer (optional)</p>
+                    {zoneName && (
+                      <p className="text-xs text-navy bg-navy/5 border border-navy/10 rounded px-2 py-1 mb-2">
+                        Showing photographers for <strong>{zoneName}</strong> zone
+                      </p>
+                    )}
                     <div className="space-y-2">
                       {teamMembers.filter((m) => m.active !== false).length > 0 && (
                         <select
@@ -806,9 +853,12 @@ export default function BookingsPage() {
                           }}
                           className="input-field w-full text-sm">
                           <option value="">— Select from your team —</option>
-                          {teamMembers.filter((m) => m.active !== false).map((m) => (
-                            <option key={m.id} value={m.id}>{m.name}</option>
-                          ))}
+                          {teamMembers
+                            .filter((m) => m.active !== false)
+                            .filter((m) => !zonePhotographers || zonePhotographers.includes(m.id))
+                            .map((m) => (
+                              <option key={m.id} value={m.id}>{m.name}</option>
+                            ))}
                         </select>
                       )}
                       <div className="grid grid-cols-2 gap-3">
