@@ -10,7 +10,7 @@ import { NextResponse } from "next/server";
 // NOTE: Vercel/full domain mapping requires adding the domain in the Vercel project settings.
 // This middleware handles the *routing* once the request reaches Next.js.
 
-const PLATFORM_HOST = process.env.NEXT_PUBLIC_APP_DOMAIN || "novaos.app";
+const PLATFORM_HOST = process.env.NEXT_PUBLIC_APP_DOMAIN || "";
 
 export function middleware(request) {
   const host = request.headers.get("host") || "";
@@ -18,14 +18,18 @@ export function middleware(request) {
   // Strip port for local dev
   const hostname = host.split(":")[0];
 
-  // If on the main platform domain or localhost — skip
-  if (
-    hostname === "localhost" ||
-    hostname.endsWith(`.${PLATFORM_HOST}`) ||
-    hostname === PLATFORM_HOST
-  ) {
+  // Always pass through localhost, Vercel preview/deployment domains,
+  // and the configured platform domain.
+  const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
+  const isVercel    = hostname.endsWith(".vercel.app");
+  const isPlatform  = PLATFORM_HOST && (hostname === PLATFORM_HOST || hostname.endsWith(`.${PLATFORM_HOST}`));
+
+  // If no custom domain env var is set, or we're on a known platform host — skip entirely.
+  if (isLocalhost || isVercel || isPlatform || !PLATFORM_HOST) {
     return NextResponse.next();
   }
+
+  // At this point we're on an unknown hostname — treat it as a custom domain.
 
   // Custom domain — rewrite to the custom-domain handler page
   // which will look up the tenant by domain and render the right content
