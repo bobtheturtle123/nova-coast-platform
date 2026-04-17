@@ -1,7 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
+
+// ── Gallery Lightbox ──────────────────────────────────────────────────────────
+function GalleryLightbox({ images, startIndex, unlocked, onClose }) {
+  const [idx, setIdx] = useState(startIndex);
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === "ArrowRight") setIdx((i) => (i + 1) % images.length);
+      if (e.key === "ArrowLeft")  setIdx((i) => (i - 1 + images.length) % images.length);
+      if (e.key === "Escape")     onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [images.length, onClose]);
+
+  const img = images[idx];
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/96 flex items-center justify-center" onClick={onClose}>
+      <button onClick={onClose}
+        className="absolute top-4 right-5 text-white/50 hover:text-white text-3xl leading-none z-10">×</button>
+
+      {images.length > 1 && (
+        <>
+          <button onClick={(e) => { e.stopPropagation(); setIdx((i) => (i - 1 + images.length) % images.length); }}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white text-5xl leading-none z-10 px-3 py-4">‹</button>
+          <button onClick={(e) => { e.stopPropagation(); setIdx((i) => (i + 1) % images.length); }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white text-5xl leading-none z-10 px-3 py-4">›</button>
+        </>
+      )}
+
+      {/* Image + watermark wrapper */}
+      <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
+        <img
+          src={img?.url}
+          alt={img?.fileName || `Photo ${idx + 1}`}
+          draggable={false}
+          onContextMenu={(e) => { if (!unlocked) e.preventDefault(); }}
+          className="max-h-[90vh] max-w-[90vw] object-contain select-none"
+          style={!unlocked ? { pointerEvents: "none" } : {}}
+        />
+        {/* Watermark — always shown when not unlocked */}
+        {!unlocked && (
+          <div className="absolute inset-0 pointer-events-none select-none overflow-hidden"
+            style={{ userSelect: "none", WebkitUserSelect: "none" }}>
+            {Array.from({ length: 6 }).map((_, row) =>
+              Array.from({ length: 4 }).map((_, col) => (
+                <span key={`${row}-${col}`}
+                  className="absolute text-white/35 font-bold uppercase tracking-widest pointer-events-none select-none"
+                  style={{
+                    fontSize: "13px",
+                    top: `${row * 18 + 4}%`,
+                    left: `${col * 28 - 5}%`,
+                    transform: "rotate(-30deg)",
+                    whiteSpace: "nowrap",
+                    letterSpacing: "0.25em",
+                    textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+                  }}>
+                  PREVIEW ONLY
+                </span>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/40 text-sm">{idx + 1} / {images.length}</p>
+    </div>
+  );
+}
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
@@ -52,6 +122,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const [loadingPay,   setLoadingPay]   = useState(false);
   const [payMsg,       setPayMsg]       = useState("");
   const [activeTab,    setActiveTab]    = useState("images");
+  const [lightboxIdx,  setLightboxIdx]  = useState(null);
 
   const primary = tenant.branding?.primaryColor || "#0b2a55";
   const accent  = tenant.branding?.accentColor  || "#c9a96e";
@@ -234,7 +305,8 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {images.map((m, i) => (
-                    <div key={i} className="group relative rounded-sm overflow-hidden bg-gray-200 aspect-[4/3]">
+                    <div key={i} className="group relative rounded-sm overflow-hidden bg-gray-200 aspect-[4/3]"
+                      onClick={() => setLightboxIdx(i)} style={{ cursor: "pointer" }}>
                       <img
                         src={m.url}
                         alt={m.fileName || `Photo ${i + 1}`}
@@ -421,6 +493,16 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           Delivered by <span className="font-medium" style={{ color: primary }}>{name}</span>
         </p>
       </footer>
+
+      {/* Lightbox */}
+      {lightboxIdx !== null && (
+        <GalleryLightbox
+          images={images}
+          startIndex={lightboxIdx}
+          unlocked={unlocked}
+          onClose={() => setLightboxIdx(null)}
+        />
+      )}
     </div>
   );
 }

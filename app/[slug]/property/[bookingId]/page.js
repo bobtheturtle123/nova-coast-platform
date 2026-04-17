@@ -27,15 +27,32 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function PropertyWebsitePage({ params }) {
-  const tenant = await getTenantBySlug(params.slug);
-  if (!tenant) notFound();
+  let tenant;
+  try {
+    tenant = await getTenantBySlug(params.slug);
+  } catch (err) {
+    console.error("[property page] tenant lookup error:", err);
+  }
+  if (!tenant) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <p className="text-white/60 text-lg">Property listing not found.</p>
+      </div>
+    );
+  }
 
   const bookingDoc = await adminDb
     .collection("tenants").doc(tenant.id)
     .collection("bookings").doc(params.bookingId)
     .get();
 
-  if (!bookingDoc.exists) notFound();
+  if (!bookingDoc.exists) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <p className="text-white/60 text-lg">Listing not found.</p>
+      </div>
+    );
+  }
   const booking = bookingDoc.data();
   const pw = booking.propertyWebsite;
 

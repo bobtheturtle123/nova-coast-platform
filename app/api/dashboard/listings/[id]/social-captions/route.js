@@ -1,12 +1,9 @@
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
-import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = process.env.ANTHROPIC_API_KEY
-  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  : null;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 // POST /api/dashboard/listings/[id]/social-captions
-// AI-generated Instagram, Facebook, and email subject for a listing
+// AI-generated Instagram, Facebook, and email subject for a listing (Groq free tier)
 export async function POST(req, { params }) {
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
   if (!token) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -15,9 +12,9 @@ export async function POST(req, { params }) {
     const decoded = await adminAuth.verifyIdToken(token);
     if (!decoded.tenantId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!anthropic) {
+    if (!GROQ_API_KEY) {
       return Response.json(
-        { error: "AI not configured. Add ANTHROPIC_API_KEY to enable." },
+        { error: "AI not configured. Add GROQ_API_KEY to enable." },
         { status: 503 }
       );
     }
@@ -46,17 +43,31 @@ export async function POST(req, { params }) {
       pw.agentBrokerage && `Brokerage: ${pw.agentBrokerage}`,
     ].filter(Boolean).join("\n");
 
-    const response = await anthropic.messages.create({
-      model:      "claude-haiku-4-5-20251001",
-      max_tokens: 700,
-      messages: [{
-        role: "user",
-        content: `Generate real estate marketing copy for this listing:\n\n${parts}\n\nReturn ONLY valid JSON (no markdown, no extra text):\n{\n  "instagram": "Engaging caption 150-200 chars with relevant emojis, end with #JustListed #RealEstate hashtags",\n  "facebook": "2-3 sentence post that's warm and informative, good for sharing",\n  "emailSubject": "Attention-grabbing email subject under 60 characters"\n}`,
-      }],
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method:  "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model:       "llama-3.1-8b-instant",
+        max_tokens:  700,
+        temperature: 0.8,
+        messages: [{
+          role:    "user",
+          content: `Generate real estate marketing copy for this listing:\n\n${parts}\n\nReturn ONLY valid JSON (no markdown, no extra text):\n{\n  "instagram": "Engaging caption 150-200 chars with relevant emojis, end with #JustListed #RealEstate hashtags",\n  "facebook": "2-3 sentence post that's warm and informative, good for sharing",\n  "emailSubject": "Attention-grabbing email subject under 60 characters"\n}`,
+        }],
+      }),
     });
 
-    const raw = response.content[0]?.type === "text" ? response.content[0].text.trim() : "{}";
-    // Strip markdown fences if model wraps it anyway
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("[social-captions] Groq error:", err);
+      return Response.json({ error: "AI request failed" }, { status: 500 });
+    }
+
+    const data = await res.json();
+    const raw  = data.choices?.[0]?.message?.content?.trim() || "{}";
     const clean = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
 
     try {

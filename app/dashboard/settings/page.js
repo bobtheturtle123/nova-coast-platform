@@ -259,7 +259,11 @@ function CustomDomainSection() {
   );
 }
 
-const DEFAULT_TERMS = `TERMS OF SERVICE — REAL ESTATE MEDIA SERVICES
+const DEFAULT_TERMS = `⚠️ IMPORTANT NOTICE — PLACEHOLDER ONLY
+These default terms are provided for reference and convenience only. They are NOT a legal document, do NOT constitute legal advice, and should NOT be used without review by a qualified attorney. Replace this text with terms drafted or approved by your legal counsel before accepting client bookings.
+────────────────────────────────────────────
+
+TERMS OF SERVICE — REAL ESTATE MEDIA SERVICES
 
 Last updated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
 
@@ -833,7 +837,7 @@ export default function SettingsPage() {
         <div className="flex-1 min-w-0">
 
       {/* Booking URL */}
-      <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-6">
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-4">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Your Booking Page</p>
         <div className="flex items-center gap-2">
           <code className="text-sm text-navy flex-1 truncate">{bookingUrl}</code>
@@ -842,6 +846,21 @@ export default function SettingsPage() {
           <a href={bookingUrl} target="_blank" rel="noopener noreferrer"
             className="text-xs text-navy border border-navy/20 px-2 py-1 rounded hover:bg-navy/5">Open</a>
         </div>
+      </div>
+
+      {/* Embed Code */}
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-6">
+        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Embed Booking Form</p>
+        <p className="text-xs text-gray-400 mb-3">Paste this snippet into any website to embed your booking form directly. The header and navigation chrome are hidden inside the iframe.</p>
+        <div className="relative">
+          <pre className="text-[11px] bg-white border border-gray-200 rounded p-3 overflow-x-auto text-gray-700 leading-relaxed whitespace-pre-wrap break-all">{`<iframe\n  src="${bookingUrl}?embed=1"\n  width="100%"\n  height="700"\n  style="border:none;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,0.08);"\n  title="Book a Session"\n  allow="payment"\n></iframe>`}</pre>
+          <button
+            onClick={() => { navigator.clipboard.writeText(`<iframe\n  src="${bookingUrl}?embed=1"\n  width="100%"\n  height="700"\n  style="border:none;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,0.08);"\n  title="Book a Session"\n  allow="payment"\n></iframe>`); showMsg("Embed code copied!"); }}
+            className="absolute top-2 right-2 text-xs text-navy border border-navy/20 px-2 py-1 rounded bg-white hover:bg-navy/5">
+            Copy
+          </button>
+        </div>
+        <p className="text-[10px] text-gray-400 mt-2">Tip: Add this to your website, bio page, or anywhere clients should be able to book directly.</p>
       </div>
 
       <form id="settings-branding" onSubmit={saveBranding} className="space-y-6 scroll-mt-6">
@@ -1353,10 +1372,14 @@ export default function SettingsPage() {
           </p>
         </div>
         {!termsText && (
-          <div className="mb-3">
+          <div className="mb-3 space-y-2">
+            <div className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2 rounded">
+              <span className="text-base leading-none mt-0.5">⚠️</span>
+              <span>The default template is a <strong>placeholder only</strong> — not a legal document. Have an attorney review before use. You are responsible for your own terms.</span>
+            </div>
             <button type="button" onClick={() => setTermsText(DEFAULT_TERMS)}
               className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5 transition-colors">
-              Use default template
+              Load default template (review before publishing)
             </button>
           </div>
         )}

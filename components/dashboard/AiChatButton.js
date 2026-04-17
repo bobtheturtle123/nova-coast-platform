@@ -78,7 +78,15 @@ export default function AiChatButton() {
                 <p className="text-[10px] text-white/60">Powered by Claude</p>
               </div>
             </div>
-            <button onClick={() => setOpen(false)} className="text-white/60 hover:text-white text-xl leading-none">×</button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMessages([{ role: "assistant", content: "Hi! I'm your ShootFlow assistant. Ask me anything about the platform — features, how-tos, or troubleshooting." }])}
+                className="text-white/50 hover:text-white text-xs px-2 py-1 rounded hover:bg-white/10 transition-colors"
+                title="New conversation">
+                New chat
+              </button>
+              <button onClick={() => setOpen(false)} className="text-white/60 hover:text-white text-xl leading-none">×</button>
+            </div>
           </div>
 
           {/* Messages */}

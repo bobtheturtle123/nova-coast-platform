@@ -1,74 +1,107 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
-import { notFound } from "next/navigation";
 import BrochureClient from "./BrochureClient";
 
 export async function generateMetadata({ params }) {
-  const tenant = await getTenantBySlug(params.slug);
-  if (!tenant) return {};
-  const bookingDoc = await adminDb
-    .collection("tenants").doc(tenant.id)
-    .collection("bookings").doc(params.bookingId)
-    .get();
-  if (!bookingDoc.exists) return {};
-  const pw = bookingDoc.data().propertyWebsite;
-  const address = pw?.customName || pw?.address || "Property Brochure";
-  return { title: `${address} — Brochure` };
+  try {
+    const tenant = await getTenantBySlug(params.slug);
+    if (!tenant) return { title: "Brochure" };
+    const bookingDoc = await adminDb
+      .collection("tenants").doc(tenant.id)
+      .collection("bookings").doc(params.bookingId)
+      .get();
+    if (!bookingDoc.exists) return { title: "Brochure" };
+    const pw = bookingDoc.data().propertyWebsite;
+    const address = pw?.customName || pw?.address || "Property Brochure";
+    return { title: `${address} — Brochure` };
+  } catch {
+    return { title: "Property Brochure" };
+  }
 }
 
 export default async function BrochurePage({ params }) {
-  const tenant = await getTenantBySlug(params.slug);
-  if (!tenant) notFound();
-
-  const bookingDoc = await adminDb
-    .collection("tenants").doc(tenant.id)
-    .collection("bookings").doc(params.bookingId)
-    .get();
-  if (!bookingDoc.exists) notFound();
-
-  const booking = bookingDoc.data();
-  const pw = booking.propertyWebsite;
-  if (!pw) notFound();
-
-  // Fetch all gallery images for the brochure
-  let images = [];
-  if (booking.galleryId) {
-    const galleryDoc = await adminDb
-      .collection("tenants").doc(tenant.id)
-      .collection("galleries").doc(booking.galleryId)
-      .get();
-    if (galleryDoc.exists) {
-      images = (galleryDoc.data().media || [])
-        .filter((m) => !m.fileType?.startsWith("video/"))
-        .slice(0, 9);
+  try {
+    const tenant = await getTenantBySlug(params.slug);
+    if (!tenant) {
+      return <ErrorPage message="Tenant not found." />;
     }
+
+    const bookingDoc = await adminDb
+      .collection("tenants").doc(tenant.id)
+      .collection("bookings").doc(params.bookingId)
+      .get();
+
+    if (!bookingDoc.exists) {
+      return <ErrorPage message="Listing not found." />;
+    }
+
+    const booking = bookingDoc.data();
+    const pw = booking.propertyWebsite;
+
+    if (!pw) {
+      return <ErrorPage message="Property website not set up yet. Go to the listing's Property Site tab to add details first." />;
+    }
+
+    // Fetch all gallery images for the brochure
+    let images = [];
+    if (booking.galleryId) {
+      try {
+        const galleryDoc = await adminDb
+          .collection("tenants").doc(tenant.id)
+          .collection("galleries").doc(booking.galleryId)
+          .get();
+        if (galleryDoc.exists) {
+          images = (galleryDoc.data().media || [])
+            .filter((m) => !m.fileType?.startsWith("video/"))
+            .slice(0, 9);
+        }
+      } catch {}
+    }
+
+    const branding = {
+      primary: tenant.branding?.primaryColor  || "#0b2a55",
+      accent:  tenant.branding?.accentColor   || "#c9a96e",
+      bizName: tenant.branding?.businessName  || tenant.businessName || "",
+      tagline: tenant.branding?.tagline       || "",
+      logo:    tenant.branding?.logoUrl       || null,
+      phone:   tenant.branding?.phone         || "",
+      email:   tenant.branding?.email         || "",
+      website: tenant.branding?.website       || "",
+    };
+
+    // Build listing URL — fall back to relative if env var not set
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "";
+    const listingUrl = appUrl
+      ? `${appUrl}/${params.slug}/property/${params.bookingId}`
+      : `/${params.slug}/property/${params.bookingId}`;
+
+    return (
+      <BrochureClient
+        pw={pw}
+        booking={{
+          fullAddress: booking.fullAddress,
+          address:     booking.address,
+          clientName:  booking.clientName,
+        }}
+        images={images}
+        branding={branding}
+        listingUrl={listingUrl}
+      />
+    );
+  } catch (err) {
+    console.error("[brochure] Server error:", err);
+    return <ErrorPage message="Something went wrong generating the brochure. Please try again." />;
   }
+}
 
-  const branding = {
-    primary: tenant.branding?.primaryColor  || "#0b2a55",
-    accent:  tenant.branding?.accentColor   || "#c9a96e",
-    bizName: tenant.branding?.businessName  || tenant.businessName || "",
-    tagline: tenant.branding?.tagline       || "",
-    logo:    tenant.branding?.logoUrl       || null,
-    phone:   tenant.branding?.phone         || "",
-    email:   tenant.branding?.email         || "",
-    website: tenant.branding?.website       || "",
-  };
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-  const listingUrl = `${appUrl}/${params.slug}/property/${params.bookingId}`;
-
+function ErrorPage({ message }) {
   return (
-    <BrochureClient
-      pw={pw}
-      booking={{
-        fullAddress: booking.fullAddress,
-        address:     booking.address,
-        clientName:  booking.clientName,
-      }}
-      images={images}
-      branding={branding}
-      listingUrl={listingUrl}
-    />
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center text-center px-6">
+      <div>
+        <p className="text-4xl mb-4">📋</p>
+        <p className="text-white/70 text-lg mb-2">Brochure Unavailable</p>
+        <p className="text-white/40 text-sm max-w-sm">{message}</p>
+      </div>
+    </div>
   );
 }

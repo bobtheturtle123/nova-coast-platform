@@ -1,10 +1,28 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+
 export default function TenantBookHeader({ tenant }) {
+  const searchParams = useSearchParams();
+  const [isEmbed, setIsEmbed] = useState(false);
+
+  useEffect(() => {
+    // Persist embed mode across booking steps via sessionStorage
+    if (searchParams?.get("embed") === "1") {
+      sessionStorage.setItem("sf_embed", "1");
+    }
+    if (sessionStorage.getItem("sf_embed") === "1") {
+      setIsEmbed(true);
+    }
+  }, [searchParams]);
+
   const primary = tenant.branding?.primaryColor || "#0b2a55";
   const accent  = tenant.branding?.accentColor  || "#c9a96e";
   const name    = tenant.branding?.businessName || tenant.businessName || "Your Photographer";
   const tagline = tenant.branding?.tagline || "";
+
+  if (isEmbed) return null;
 
   return (
     <header className="bg-white/90 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-30">

@@ -36,8 +36,6 @@ export default function OnboardingPage() {
       const token = await u.getIdTokenResult();
       if (token.claims.tenantId) {
         setTenant({ id: token.claims.tenantId });
-        // If returning to onboarding, jump to stripe step
-        if (step === 0) setStep(2);
       }
       setUser(u);
 
@@ -47,9 +45,8 @@ export default function OnboardingPage() {
       if (res.ok) {
         const d = await res.json();
         if (d.tenant?.slug) setSlug(d.tenant.slug);
-        if (d.tenant?.businessName) {
-          setBranding((b) => ({ ...b }));
-        }
+        // Only skip ahead if they've already saved business info (returning user)
+        if (d.tenant?.phone && step === 0) setStep(2);
       }
     });
     return unsub;
@@ -163,8 +160,22 @@ export default function OnboardingPage() {
         {/* ── STEP 0: Business ───────────────────────────────────────────────── */}
         {step === 0 && (
           <div>
-            <h1 className="font-display text-3xl text-navy mb-2">Tell us about your business</h1>
-            <p className="text-gray-500 mb-8">This helps us set up travel fees and display your contact info.</p>
+            <h1 className="font-display text-3xl text-navy mb-2">Welcome to ShootFlow</h1>
+            <p className="text-gray-500 mb-5">We'll have your real estate photography business ready to take bookings in just a few minutes.</p>
+
+            {/* Quick workflow overview */}
+            <div className="bg-navy/5 border border-navy/10 rounded-sm p-4 mb-6 text-sm text-navy/80">
+              <p className="font-semibold text-navy mb-2 text-xs uppercase tracking-wide">Here's how it works after setup:</p>
+              <ol className="space-y-1 list-decimal list-inside text-xs text-gray-600">
+                <li>Add your <strong>services & pricing</strong> in Products</li>
+                <li>Clients book via your <strong>booking link</strong> (or you create bookings manually)</li>
+                <li>After the shoot, <strong>upload photos</strong> to the gallery</li>
+                <li><strong>Deliver the gallery</strong> — clients get a private link to download their files</li>
+                <li>Agents get built-in <strong>marketing tools</strong>: brochure, social captions, property website</li>
+              </ol>
+            </div>
+
+            <p className="text-gray-500 mb-4 text-sm">First, tell us a bit about your business:</p>
             <div className="bg-white rounded-sm border border-gray-200 p-6 space-y-5">
               <div>
                 <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">Phone Number</label>
@@ -299,27 +310,46 @@ export default function OnboardingPage() {
         {/* ── STEP 4: Service Areas ──────────────────────────────────────────── */}
         {step === 4 && (
           <div>
-            <h1 className="font-display text-3xl text-navy mb-2">Define your service areas</h1>
-            <p className="text-gray-500 mb-8">
-              Draw polygons on a map to define where you shoot. You can block bookings from outside your zones and assign specific photographers per region.
+            <h1 className="font-display text-3xl text-navy mb-2">Define where you work</h1>
+            <p className="text-gray-500 mb-6">
+              Service areas are the geographic zones where your company operates. You can draw multiple zones on a map, optionally block bookings from outside those zones, and assign specific team members (photographers, videographers) to each region.
             </p>
-            <div className="bg-white rounded-sm border border-gray-200 p-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-navy/10 rounded-lg flex items-center justify-center text-2xl">🗺️</div>
-                <div>
-                  <p className="font-medium text-charcoal">Service Area Map</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Draw include/exclude zones and assign photographers per region</p>
+            <div className="bg-white rounded-sm border border-gray-200 p-6 mb-4">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-lg flex-shrink-0">🗺️</div>
+                  <div>
+                    <p className="font-medium text-charcoal text-sm">Draw your coverage zones</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Use the map tool to draw the areas you cover. You can have multiple zones.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center text-lg flex-shrink-0">📸</div>
+                  <div>
+                    <p className="font-medium text-charcoal text-sm">Assign team members per zone</p>
+                    <p className="text-xs text-gray-500 mt-0.5">If you're a photographer or videographer yourself, you can assign yourself to a zone. Team members you've invited can also be assigned.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-lg flex-shrink-0">🚫</div>
+                  <div>
+                    <p className="font-medium text-charcoal text-sm">Optionally block outside bookings</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Enable "Require Service Area" in settings to prevent clients from booking outside your zones.</p>
+                  </div>
                 </div>
               </div>
-              <Link href="/dashboard/service-areas"
-                className="inline-flex items-center gap-2 btn-primary text-sm px-5 py-2.5">
-                Open Map →
-              </Link>
-              <p className="text-xs text-gray-400 mt-3">You can always set this up later from Settings → Service Areas.</p>
+              <div className="mt-5 pt-5 border-t border-gray-100">
+                <a href="/dashboard/service-areas" target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 btn-primary text-sm px-5 py-2.5">
+                  Open Map in new tab ↗
+                </a>
+                <p className="text-xs text-gray-400 mt-2">The map opens in a new tab — come back here when you're done to continue.</p>
+              </div>
             </div>
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-3 mt-2">
               <button onClick={prev} className="btn-outline px-6 py-3">← Back</button>
-              <button onClick={next} className="btn-primary px-8 py-3 flex-1">Continue →</button>
+              <button onClick={next} className="btn-primary px-8 py-3 flex-1">I'm done → Continue</button>
+              <button onClick={skip} className="btn-outline px-6 py-3 text-gray-400">Skip for now</button>
             </div>
           </div>
         )}
@@ -329,9 +359,31 @@ export default function OnboardingPage() {
           <div className="text-center">
             <div className="text-6xl mb-6">🚀</div>
             <h1 className="font-display text-3xl text-navy mb-3">You&apos;re all set!</h1>
-            <p className="text-gray-500 mb-8">
+            <p className="text-gray-500 mb-6">
               Your booking page is live and ready to share with clients.
             </p>
+
+            {/* Workflow overview */}
+            <div className="bg-white border border-gray-200 rounded-sm p-5 mb-6 text-left">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">How ShootFlow works — the typical flow</p>
+              <div className="space-y-3">
+                {[
+                  { step: "1", icon: "⚙️", label: "Set up your services & pricing", desc: "Go to Products → add your packages, services, and add-ons. Clients will choose these during booking." },
+                  { step: "2", icon: "📅", label: "Receive a booking", desc: "Clients book via your booking page link or the embeddable form on your website. Or you can create a manual booking from the dashboard." },
+                  { step: "3", icon: "📸", label: "Shoot the property", desc: "Your team gets notified. After the shoot, upload photos/videos directly to the gallery for that booking." },
+                  { step: "4", icon: "🖼️", label: "Deliver the gallery", desc: "Go to the booking → Open Gallery → upload media → click Deliver to Client. They get an email with their private gallery link." },
+                  { step: "5", icon: "🏡", label: "Agent gets their marketing tools", desc: "Agents can view photos, download for MLS, generate social captions, view the property website, and share a brochure — all from one link." },
+                ].map((item) => (
+                  <div key={item.step} className="flex items-start gap-3">
+                    <div className="w-7 h-7 rounded-full bg-navy/10 text-navy text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{item.step}</div>
+                    <div>
+                      <p className="text-sm font-medium text-charcoal">{item.icon} {item.label}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {slug && (
               <div className="bg-white border border-gray-200 rounded-sm p-4 mb-6 text-left">
