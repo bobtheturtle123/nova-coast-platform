@@ -32,7 +32,7 @@ export default function CreateBookingPage() {
     shootDate: "", shootTime: "",
     packageId: "", serviceIds: [], addonIds: [],
     totalPrice: "", depositPaid: false,
-    photographerId: "", photographerEmail: "", photographerName: "",
+    photographerId: "", photographerEmail: "", photographerName: "", photographerPhone: "",
     sendNotification: true,
   });
 
@@ -125,6 +125,7 @@ export default function CreateBookingPage() {
       photographerId:    member.id,
       photographerEmail: member.email,
       photographerName:  member.name,
+      photographerPhone: member.phone || "",
     }));
   }
 
@@ -415,7 +416,8 @@ export default function CreateBookingPage() {
           </div>
           {form.photographerEmail && (
             <p className="text-xs text-gray-400 mt-2">
-              Photographer notification will be sent to <strong>{form.photographerEmail}</strong>.
+              Email notification → <strong>{form.photographerEmail}</strong>
+              {form.photographerPhone && <span> · SMS → <strong>{form.photographerPhone}</strong></span>}
             </p>
           )}
         </div>

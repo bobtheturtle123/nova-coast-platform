@@ -122,6 +122,268 @@ function StaffAccessSection() {
   );
 }
 
+// ─── SMS Notifications Section ────────────────────────────────────────────────
+const SMS_EVENTS = [
+  {
+    key:   "bookingConfirmed",
+    label: "Booking Confirmed",
+    desc:  "Sent when a booking is created or payment received",
+    roles: ["client", "photographer"],
+  },
+  {
+    key:   "mediaDelivered",
+    label: "Media Delivered",
+    desc:  "Sent when photos are delivered to the agent/client",
+    roles: ["client", "photographer"],
+  },
+  {
+    key:   "shootReminder",
+    label: "Shoot Day Reminder",
+    desc:  "Sent 24 hours before the scheduled shoot",
+    roles: ["client", "photographer"],
+    extra: "hoursBeforeShoot",
+  },
+];
+
+const ROLE_LABELS = { client: "Agent / Client", photographer: "Photographer" };
+
+function SmsSetting({ label, checked, onChange }) {
+  return (
+    <label className="flex items-center gap-2 cursor-pointer select-none">
+      <div
+        onClick={onChange}
+        className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0 ${checked ? "bg-navy" : "bg-gray-200"}`}>
+        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`} />
+      </div>
+      <span className="text-sm text-gray-600">{label}</span>
+    </label>
+  );
+}
+
+function SmsNotificationsSection() {
+  const [prefs,   setPrefs]   = useState(null);
+  const [saving,  setSaving]  = useState(false);
+  const [msg,     setMsg]     = useState("");
+  const [twilio,  setTwilio]  = useState(null); // null=unknown, true/false
+
+  useEffect(() => {
+    auth.currentUser?.getIdToken().then(async (token) => {
+      const res = await fetch("/api/dashboard/sms-settings", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setPrefs(data.prefs);
+      }
+    });
+    // Check if Twilio is configured by attempting a test (we just check env indirectly via a flag)
+    // We'll show a soft warning instead of a real check
+    setTwilio(!!process.env.NEXT_PUBLIC_TWILIO_CONFIGURED); // set this env var if Twilio is configured
+  }, []);
+
+  function toggle(eventKey, role) {
+    setPrefs((p) => ({
+      ...p,
+      [eventKey]: { ...p[eventKey], [role]: !p[eventKey][role] },
+    }));
+  }
+
+  function setHours(eventKey, val) {
+    setPrefs((p) => ({
+      ...p,
+      [eventKey]: { ...p[eventKey], hoursBeforeShoot: Math.max(1, Number(val) || 24) },
+    }));
+  }
+
+  async function save() {
+    setSaving(true);
+    setMsg("");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res   = await fetch("/api/dashboard/sms-settings", {
+        method:  "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify(prefs),
+      });
+      setMsg(res.ok ? "SMS settings saved." : "Failed to save.");
+    } catch {
+      setMsg("Something went wrong.");
+    } finally {
+      setSaving(false);
+      setTimeout(() => setMsg(""), 3000);
+    }
+  }
+
+  if (!prefs) {
+    return (
+      <div id="settings-sms" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+        <div className="animate-pulse h-4 bg-gray-100 rounded w-32" />
+      </div>
+    );
+  }
+
+  return (
+    <div id="settings-sms" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <div className="flex items-start justify-between mb-1">
+        <div>
+          <h2 className="font-semibold text-charcoal text-base">SMS Notifications</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Toggle automated text messages sent to clients and photographers.</p>
+        </div>
+        <button onClick={save} disabled={saving}
+          className="btn-primary text-sm px-4 py-2 flex-shrink-0">
+          {saving ? "Saving…" : "Save"}
+        </button>
+      </div>
+
+      {msg && <p className={`text-xs mt-2 ${msg.includes("saved") ? "text-green-600" : "text-red-500"}`}>{msg}</p>}
+
+      {/* Twilio setup hint */}
+      <div className="mt-3 mb-5 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+        <strong>Setup required:</strong> Add <code className="font-mono bg-amber-100 px-1 rounded">TWILIO_ACCOUNT_SID</code>, <code className="font-mono bg-amber-100 px-1 rounded">TWILIO_AUTH_TOKEN</code>, and <code className="font-mono bg-amber-100 px-1 rounded">TWILIO_FROM_NUMBER</code> to your Vercel environment variables to enable SMS. <a href="https://www.twilio.com/try-twilio" target="_blank" rel="noopener noreferrer" className="underline font-medium">Get a free Twilio number →</a>
+      </div>
+
+      <div className="space-y-5">
+        {SMS_EVENTS.map((evt) => (
+          <div key={evt.key} className="pb-5 border-b border-gray-100 last:border-0 last:pb-0">
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <p className="font-medium text-charcoal text-sm">{evt.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{evt.desc}</p>
+              </div>
+              {evt.extra === "hoursBeforeShoot" && (
+                <div className="flex items-center gap-1.5 text-xs text-gray-500 flex-shrink-0">
+                  <span>Send</span>
+                  <input
+                    type="number"
+                    value={prefs[evt.key]?.hoursBeforeShoot || 24}
+                    onChange={(e) => setHours(evt.key, e.target.value)}
+                    className="w-12 border border-gray-200 rounded px-1.5 py-0.5 text-center text-xs"
+                    min="1" max="72"
+                  />
+                  <span>hrs before</span>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-5">
+              {evt.roles.map((role) => (
+                <SmsSetting
+                  key={role}
+                  label={ROLE_LABELS[role]}
+                  checked={!!prefs[evt.key]?.[role]}
+                  onChange={() => toggle(evt.key, role)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── QuickBooks Section ───────────────────────────────────────────────────────
+function QuickBooksSection() {
+  const [connected, setConnected] = useState(null); // null=loading, false=no, object=yes
+  const [loading,   setLoading]   = useState(true);
+  const [working,   setWorking]   = useState(false);
+  const [msg,       setMsg]       = useState("");
+
+  useEffect(() => {
+    // Check if QB is connected via tenant data
+    auth.currentUser?.getIdToken().then(async (token) => {
+      const res = await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setConnected(data.tenant?.quickbooks || false);
+      }
+      setLoading(false);
+    });
+    // Check URL param for post-OAuth redirect
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("qb") === "connected") setMsg("QuickBooks connected successfully!");
+    if (p.get("qb") === "error")     setMsg("QuickBooks connection failed. Try again.");
+  }, []);
+
+  async function connect() {
+    setWorking(true);
+    const token = await auth.currentUser.getIdToken();
+    const res   = await fetch("/api/dashboard/quickbooks/connect", { headers: { Authorization: `Bearer ${token}` } });
+    const data  = await res.json();
+    if (res.ok && data.url) {
+      window.location.href = data.url;
+    } else {
+      setMsg(data.error || "Failed to start QuickBooks connection.");
+      setWorking(false);
+    }
+  }
+
+  async function disconnect() {
+    if (!window.confirm("Disconnect QuickBooks? Future bookings won't sync automatically.")) return;
+    setWorking(true);
+    const token = await auth.currentUser.getIdToken();
+    await fetch("/api/dashboard/quickbooks/disconnect", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+    setConnected(false);
+    setMsg("QuickBooks disconnected.");
+    setWorking(false);
+  }
+
+  return (
+    <div id="settings-integrations" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h2 className="font-semibold text-charcoal text-base">Integrations</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Connect third-party tools to automate your workflow.</p>
+        </div>
+      </div>
+
+      {msg && (
+        <div className={`text-sm px-3 py-2 rounded mb-4 ${msg.includes("success") || msg.includes("connected") ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+          {msg}
+        </div>
+      )}
+
+      {/* QuickBooks */}
+      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-[#2CA01C] flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-bold text-sm">QB</span>
+          </div>
+          <div>
+            <p className="font-medium text-charcoal text-sm">QuickBooks Online</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {loading ? "Checking status…" : connected
+                ? `Connected · Auto-creates invoices for new bookings`
+                : "Auto-create invoices when bookings are confirmed"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {!loading && connected && (
+            <span className="text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">Connected</span>
+          )}
+          {!loading && (
+            connected ? (
+              <button onClick={disconnect} disabled={working}
+                className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 hover:border-red-200 hover:text-red-500 transition-colors disabled:opacity-50">
+                {working ? "…" : "Disconnect"}
+              </button>
+            ) : (
+              <button onClick={connect} disabled={working}
+                className="text-xs px-3 py-1.5 bg-[#2CA01C] text-white rounded-lg hover:bg-[#228016] transition-colors disabled:opacity-50">
+                {working ? "Redirecting…" : "Connect QuickBooks"}
+              </button>
+            )
+          )}
+        </div>
+      </div>
+
+      {connected && (
+        <p className="text-xs text-gray-400 mt-3">
+          Invoices are automatically created in QuickBooks when bookings are paid. Use "Sync to QB" on any listing to manually sync a single booking.
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── Custom Domain Section ────────────────────────────────────────────────────
 function CustomDomainSection() {
   const [domain,   setDomain]   = useState("");
@@ -803,6 +1065,8 @@ export default function SettingsPage() {
     { id: "promos",        label: "Promo Codes" },
     { id: "terms",         label: "Terms & Privacy" },
     { id: "email",         label: "Email Templates" },
+    { id: "sms",           label: "SMS Alerts" },
+    { id: "integrations",  label: "Integrations" },
   ];
 
   return (
@@ -1738,6 +2002,12 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+
+      {/* SMS Notifications */}
+      <SmsNotificationsSection />
+
+      {/* Integrations (QuickBooks etc) */}
+      <QuickBooksSection />
 
       {/* Custom Domain */}
       <CustomDomainSection />

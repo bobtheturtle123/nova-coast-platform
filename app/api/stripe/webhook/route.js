@@ -2,6 +2,9 @@ import { stripe } from "@/lib/stripe";
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
 import { sendBookingCreatedNotifications } from "@/lib/email";
+import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
+import { syncBookingToQB } from "@/lib/quickbooks";
+import { sendBookingConfirmedSms } from "@/lib/sms";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +46,11 @@ export async function POST(req) {
                 tenant,
                 adminEmail: tenant.email || null,
               });
+              sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" }).catch(() => {});
+              sendBookingConfirmedSms({ booking, tenant }).catch(() => {});
+              if (tenant.quickbooks?.accessToken) {
+                syncBookingToQB(tenantId, { id: bookingDoc.id, ...booking }, tenant.quickbooks).catch(() => {});
+              }
             }
           } catch (e) { console.error("Confirmation email failed:", e); }
         }
@@ -71,6 +79,8 @@ export async function POST(req) {
                 tenant,
                 adminEmail: tenant.email || null,
               });
+              sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" }).catch(() => {});
+              sendBookingConfirmedSms({ booking, tenant }).catch(() => {});
             }
           } catch (e) { console.error("Confirmation email failed:", e); }
         }
@@ -114,6 +124,8 @@ export async function POST(req) {
                 tenant,
                 adminEmail: tenant.email || null,
               });
+              sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" }).catch(() => {});
+              sendBookingConfirmedSms({ booking, tenant }).catch(() => {});
             }
           } catch (e) { console.error("Deposit confirmation email failed:", e); }
         }

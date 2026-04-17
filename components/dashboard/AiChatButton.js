@@ -4,11 +4,12 @@ import { useState, useRef, useEffect } from "react";
 import { auth } from "@/lib/firebase";
 
 const SUGGESTED_QUESTIONS = [
-  "How do I invite a photographer?",
+  "How do I assign services to a photographer?",
+  "How does the agent portal work?",
+  "How do I connect QuickBooks?",
+  "How do I create a manual booking?",
   "How does gallery delivery work?",
   "How do I set up service areas?",
-  "How do I connect Stripe?",
-  "How do I create a promo code?",
 ];
 
 export default function AiChatButton() {
@@ -75,7 +76,7 @@ export default function AiChatButton() {
               <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-sm">✨</div>
               <div>
                 <p className="text-sm font-semibold text-white">ShootFlow Assistant</p>
-                <p className="text-[10px] text-white/60">Powered by Claude</p>
+                <p className="text-[10px] text-white/60">Powered by AI</p>
               </div>
             </div>
             <div className="flex items-center gap-2">

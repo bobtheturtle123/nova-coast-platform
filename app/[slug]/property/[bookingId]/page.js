@@ -81,10 +81,19 @@ export default async function PropertyWebsitePage({ params }) {
       const images = allMedia.filter((m) => !m.fileType?.startsWith("video/"));
       const videos = allMedia.filter((m) => m.fileType?.startsWith("video/"));
       const previewCount = pw.previewCount || 12;
-      galleryMedia = [
+      const rawMedia = [
         ...(showAll ? images : images.slice(0, previewCount)),
         ...(showAll ? videos : videos.slice(0, 1)),
       ];
+      // Sanitize — strip any non-serializable Firestore values
+      galleryMedia = rawMedia.map((m) => ({
+        url:      m.url      || null,
+        fileName: m.fileName || null,
+        fileType: m.fileType || null,
+        key:      m.key      || null,
+        width:    m.width    || null,
+        height:   m.height   || null,
+      }));
     }
   }
 

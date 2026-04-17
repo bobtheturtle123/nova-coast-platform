@@ -35,10 +35,13 @@ export default async function AgentPortalPage({ params, searchParams }) {
     .collection("tenants").doc(tenant.id)
     .collection("bookings")
     .where("clientEmail", "==", agent.email)
-    .orderBy("createdAt", "desc")
     .get();
 
-  const bookings = bookingsSnap.docs.map((d) => {
+  const bookings = bookingsSnap.docs.sort((a, b) => {
+    const aTime = a.data().createdAt?.toMillis?.() ?? 0;
+    const bTime = b.data().createdAt?.toMillis?.() ?? 0;
+    return bTime - aTime;
+  }).map((d) => {
     const data = d.data();
     return {
       id:           d.id,

@@ -233,6 +233,10 @@ export default function ListingDetailPage() {
   const [agentPortalUrl,      setAgentPortalUrl]      = useState("");
   const [agentAccessMsg,      setAgentAccessMsg]      = useState("");
 
+  // QuickBooks sync state
+  const [qbSyncing, setQbSyncing] = useState(false);
+  const [qbMsg,     setQbMsg]     = useState("");
+
   useEffect(() => {
     load();
   }, [id]);
@@ -313,6 +317,29 @@ export default function ListingDetailPage() {
       setAgentAccessMsg("Something went wrong");
     } finally {
       setSendingAgentAccess(false);
+    }
+  }
+
+  async function syncToQB() {
+    setQbSyncing(true);
+    setQbMsg("");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res   = await fetch("/api/dashboard/quickbooks/sync", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ bookingId: id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setQbMsg(data.skipped ? "Already synced to QuickBooks." : `Synced! Invoice #${data.invoiceId}`);
+      } else {
+        setQbMsg(data.error || "QuickBooks sync failed.");
+      }
+    } catch {
+      setQbMsg("Something went wrong.");
+    } finally {
+      setQbSyncing(false);
     }
   }
 
@@ -580,6 +607,22 @@ export default function ListingDetailPage() {
                   </div>
                 )}
                 {agentAccessMsg && <p className="text-xs text-green-600 mt-1">{agentAccessMsg}</p>}
+              </div>
+
+              {/* QuickBooks */}
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-400 mb-2">QuickBooks</p>
+                <div className="flex items-center gap-2">
+                  <button onClick={syncToQB} disabled={qbSyncing}
+                    className="text-xs border border-gray-200 text-gray-500 px-3 py-1.5 rounded hover:bg-gray-50 disabled:opacity-40 transition-colors flex items-center gap-1.5">
+                    <span className="font-bold text-[#2CA01C]">QB</span>
+                    {qbSyncing ? "Syncing…" : booking?.qbInvoiceId ? "Re-sync to QB" : "Sync to QuickBooks"}
+                  </button>
+                  {booking?.qbInvoiceId && !qbMsg && (
+                    <span className="text-xs text-green-600">Invoice #{booking.qbInvoiceId}</span>
+                  )}
+                </div>
+                {qbMsg && <p className="text-xs text-green-600 mt-1">{qbMsg}</p>}
               </div>
             </div>
 

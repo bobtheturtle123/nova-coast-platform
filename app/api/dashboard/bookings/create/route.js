@@ -1,6 +1,8 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
 import { sendBookingCreatedNotifications } from "@/lib/email";
+import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
+import { sendBookingConfirmedSms } from "@/lib/sms";
 
 async function getAuthContext(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -23,7 +25,7 @@ export async function POST(req) {
       notes = "", totalPrice = 0, depositPaid = false,
       status = "confirmed", source = "manual",
       packageId = null, serviceIds = [], addonIds = [], customLineItems = [],
-      photographerId = null, photographerEmail = "", photographerName = "",
+      photographerId = null, photographerEmail = "", photographerName = "", photographerPhone = "",
       shootDate = "", shootTime = "",
       sendNotification = true,
     } = await req.json();
@@ -138,7 +140,7 @@ export async function POST(req) {
             }).catch(() => {}));
           }
 
-          // Photographer notification
+          // Photographer email notification
           if (photographerEmail) {
             sends.push(resend.emails.send({
               from, to: [photographerEmail],
@@ -148,10 +150,32 @@ export async function POST(req) {
           }
 
           await Promise.all(sends);
+
+          // SMS notifications (booking confirmed + photographer assignment)
+          sendBookingConfirmedSms({
+            booking: { ...bookingData, photographerPhone },
+            tenant,
+            photographerPhone,
+          }).catch(() => {});
         }
       } catch (emailErr) {
         console.error("Notification email error (non-fatal):", emailErr);
       }
+    }
+
+    // Auto-send agent portal link (fire-and-forget)
+    if (sendNotification !== false) {
+      try {
+        const portalTenant = tenant || await getTenantById(ctx.tenantId);
+        if (portalTenant) {
+          sendAgentPortalEmail({
+            tenantId: ctx.tenantId,
+            booking: bookingData,
+            tenant: portalTenant,
+            reason: "booking",
+          }).catch(() => {});
+        }
+      } catch {}
     }
 
     return Response.json({ bookingId, ok: true });

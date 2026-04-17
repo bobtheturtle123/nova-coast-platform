@@ -1,6 +1,8 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
 import { sendGalleryDelivery } from "@/lib/email";
+import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
+import { sendMediaDeliveredSms } from "@/lib/sms";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -38,5 +40,19 @@ export async function POST(req, { params }) {
 
   await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken, tenant, subject, note, to, cc });
   await galleryRef.update({ delivered: true, deliveredAt: new Date() });
+
+  // Auto-send agent portal link on delivery (fire-and-forget)
+  sendAgentPortalEmail({
+    tenantId: ctx.tenantId,
+    booking,
+    tenant,
+    reason: "delivery",
+  }).catch(() => {});
+
+  // SMS notifications — media delivered
+  const appUrl     = process.env.NEXT_PUBLIC_APP_URL || "";
+  const galleryUrl = gallery.accessToken ? `${appUrl}/${tenant?.slug}/gallery/${gallery.accessToken}` : null;
+  sendMediaDeliveredSms({ booking, tenant, galleryUrl }).catch(() => {});
+
   return Response.json({ ok: true });
 }
