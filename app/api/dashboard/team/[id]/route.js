@@ -11,12 +11,6 @@ async function getCtx(req) {
   } catch { return null; }
 }
 
-const ALL_SKILLS = [
-  "classicDaytime", "luxuryDaytime", "drone", "realTwilight",
-  "premiumCinematicVideo", "luxuryCinematicVideo", "socialReel",
-  "matterport", "zillow3d",
-];
-
 export async function PATCH(req, { params }) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -26,7 +20,8 @@ export async function PATCH(req, { params }) {
     name:   (body.name || "").slice(0, 80),
     email:  (body.email || "").toLowerCase(),
     phone:  body.phone || "",
-    skills: Array.isArray(body.skills) ? body.skills.filter((s) => ALL_SKILLS.includes(s)) : [],
+    // Accept any skill/service IDs — both legacy camelCase keys and product UUIDs from catalog
+    skills: Array.isArray(body.skills) ? body.skills.map(String).slice(0, 50) : [],
     color:  body.color || "#0b2a55",
     active: body.active !== false,
   };

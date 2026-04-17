@@ -778,7 +778,7 @@ export default function TeamPage() {
           ) : (
             <div>
               {visibleMembers.map((member) => {
-                const memberEvents = calendarEvents.filter((e) => e.photographerId === member.id);
+                const memberEvents = calendarEvents.filter((e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email));
                 return (
                   <div key={member.id} className="border-b last:border-b-0 border-gray-100">
                     <div className="flex items-center gap-2 px-3 py-2 bg-gray-50/50">
@@ -795,10 +795,12 @@ export default function TeamPage() {
                       {weekDates.map((d) => {
                         const dayEvents = memberEvents.filter((e) => isSameDay(e.shootDateObj, d));
                         const isToday = isSameDay(d, today);
+                        // Compare as YYYY-MM-DD strings to avoid timezone shifts
+                        const dayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
                         const dayBlocks = timeBlocks.filter((b) => {
-                          const start = new Date(b.startDate); start.setHours(0,0,0,0);
-                          const end   = new Date(b.endDate);   end.setHours(23,59,59,999);
-                          return d >= start && d <= end && (!b.memberId || b.memberId === member.id);
+                          const startStr = (b.startDate || "").slice(0, 10);
+                          const endStr   = (b.endDate   || "").slice(0, 10);
+                          return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
                         });
                         return (
                           <div key={d.toISOString()} className={`p-1 border-r last:border-r-0 border-gray-100 min-h-12 relative ${isToday ? "bg-navy/2" : ""}`}>
@@ -863,7 +865,7 @@ export default function TeamPage() {
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">This Week&apos;s Availability</p>
               <div className="space-y-2">
                 {visibleMembers.map((member) => {
-                  const memberEvents = calendarEvents.filter((e) => e.photographerId === member.id);
+                  const memberEvents = calendarEvents.filter((e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email));
                   const bookedDays = new Set(
                     memberEvents
                       .filter((e) => weekDates.some((d) => isSameDay(e.shootDateObj, d)))
@@ -942,7 +944,7 @@ export default function TeamPage() {
               <div className="space-y-4">
                 {visibleMembers.map((member) => {
                   const memberEvents = calendarEvents.filter(
-                    (e) => e.photographerId === member.id && isSameDay(e.shootDateObj, anchor)
+                    (e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email) && isSameDay(e.shootDateObj, anchor)
                   );
                   return (
                     <div key={member.id} className="border border-gray-200 rounded-sm overflow-hidden">

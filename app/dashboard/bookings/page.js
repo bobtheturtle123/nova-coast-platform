@@ -500,9 +500,15 @@ export default function BookingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display text-2xl text-navy">Bookings</h1>
-        <button onClick={() => setShowCreate(true)} className="btn-primary px-4 py-2 text-sm">
-          + New Booking
-        </button>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/bookings/create"
+            className="btn-outline px-4 py-2 text-sm flex items-center gap-1.5">
+            📅 New with Team View
+          </Link>
+          <button onClick={() => setShowCreate(true)} className="btn-primary px-4 py-2 text-sm">
+            + Quick Booking
+          </button>
+        </div>
       </div>
 
       {/* Filter pills */}

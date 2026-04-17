@@ -81,6 +81,9 @@ export default function ListingsPage() {
           {!loading && <p className="text-gray-400 text-sm mt-0.5">{listings.length} total</p>}
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/dashboard/bookings/create" className="btn-primary text-sm px-4 py-2">
+            + New Booking
+          </Link>
           {/* View toggle */}
           <div className="flex border border-gray-200 rounded-lg overflow-hidden bg-white shadow-card">
             <button onClick={() => setView("grid")}

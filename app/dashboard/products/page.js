@@ -439,6 +439,98 @@ function ProductRow({ item, type, onEdit, onToggleActive, onDuplicate }) {
   );
 }
 
+// ─── Import Pricing Button ────────────────────────────────────────────────────
+function ImportPricingButton({ onImport, activeType }) {
+  const [open,       setOpen]       = useState(false);
+  const [url,        setUrl]        = useState("");
+  const [text,       setText]       = useState("");
+  const [importing,  setImporting]  = useState(false);
+  const [msg,        setMsg]        = useState("");
+  const [mode,       setMode]       = useState("text"); // "url" | "text"
+
+  async function handleImport() {
+    const content = mode === "url" ? url.trim() : text.trim();
+    if (!content) return;
+    setImporting(true);
+    setMsg("");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/products/import", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ mode, content, targetType: activeType }),
+      });
+      const data = await res.json();
+      if (res.ok && data.imported > 0) {
+        setMsg(`✓ Imported ${data.imported} item${data.imported !== 1 ? "s" : ""}. Review and save each one.`);
+        if (onImport) onImport(data.items || {});
+        setTimeout(() => { setOpen(false); setMsg(""); setUrl(""); setText(""); }, 3000);
+      } else {
+        setMsg(data.error || "No items could be parsed. Try pasting the text instead.");
+      }
+    } catch {
+      setMsg("Something went wrong. Try pasting as text.");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)}
+        className="btn-outline text-sm px-4 py-2 flex items-center gap-1.5">
+        ↓ Import Pricing
+      </button>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="font-display text-navy text-lg">Import Pricing</h2>
+          <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        </div>
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-gray-500">
+            Paste pricing text from your website or another source. The AI will parse it into services/packages.
+          </p>
+
+          <div className="flex border border-gray-200 rounded-sm overflow-hidden text-xs mb-2">
+            {[["text", "Paste Text"], ["url", "From URL"]].map(([m, label]) => (
+              <button key={m} onClick={() => setMode(m)}
+                className={`px-4 py-2 flex-1 font-medium transition-colors ${mode === m ? "bg-navy text-white" : "text-gray-500 hover:bg-gray-50"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {mode === "url" ? (
+            <input type="url" value={url} onChange={(e) => setUrl(e.target.value)}
+              className="input-field w-full" placeholder="https://yourwebsite.com/pricing" />
+          ) : (
+            <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8}
+              className="input-field w-full text-sm font-mono"
+              placeholder={"Real Estate Photography — $299\n• 25 edited photos\n• Delivered in 24 hours\n\nDrone Add-on — $149\n• 10 aerial shots..."} />
+          )}
+
+          {msg && <p className={`text-sm ${msg.startsWith("✓") ? "text-green-600" : "text-red-500"}`}>{msg}</p>}
+          <div className="flex gap-3">
+            <button onClick={handleImport} disabled={importing || (!url.trim() && !text.trim())}
+              className="btn-primary px-6 py-2 text-sm flex-1 disabled:opacity-40">
+              {importing ? "Importing…" : "Import"}
+            </button>
+            <button onClick={() => setOpen(false)} className="btn-outline px-4 py-2 text-sm">Cancel</button>
+          </div>
+          <p className="text-xs text-gray-400">
+            Imported items will be added as drafts. Review each one before making it live.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function ProductsPage() {
   const [activeType,  setActiveType]  = useState("packages");
@@ -564,13 +656,19 @@ export default function ProductsPage() {
           <h1 className="font-display text-2xl text-navy">Products</h1>
           <p className="text-gray-400 text-sm mt-0.5">Customize the services that appear on your booking page</p>
         </div>
-        <button
-          onClick={() => setEditing({ item: null, type: activeType })}
-          className="btn-primary text-sm px-5 py-2 flex items-center gap-2"
-        >
-          <span className="text-lg leading-none">+</span>
-          New {TYPE_META[activeType].singular}
-        </button>
+        <div className="flex items-center gap-2">
+          <ImportPricingButton onImport={(items) => {
+            // Add imported items to the list (they're already saved via the API)
+            setItems((prev) => ({ ...prev, [activeType]: [...(items[activeType] || []), ...(prev[activeType] || [])] }));
+          }} activeType={activeType} />
+          <button
+            onClick={() => setEditing({ item: null, type: activeType })}
+            className="btn-primary text-sm px-5 py-2 flex items-center gap-2"
+          >
+            <span className="text-lg leading-none">+</span>
+            New {TYPE_META[activeType].singular}
+          </button>
+        </div>
       </div>
 
       {msg && (

@@ -23,7 +23,9 @@ export async function POST(req) {
       notes = "", totalPrice = 0, depositPaid = false,
       status = "confirmed", source = "manual",
       packageId = null, serviceIds = [], addonIds = [], customLineItems = [],
-      photographerEmail = "", photographerName = "",
+      photographerId = null, photographerEmail = "", photographerName = "",
+      shootDate = "", shootTime = "",
+      sendNotification = true,
     } = await req.json();
 
     if (!clientName || !clientEmail || !address) {
@@ -65,8 +67,11 @@ export async function POST(req) {
       serviceIds:      serviceIds || [],
       addonIds:        addonIds || [],
       customLineItems: customLineItems || [],
+      photographerId:    photographerId    || null,
       photographerEmail: photographerEmail || null,
       photographerName:  photographerName  || null,
+      shootDate:         shootDate         || null,
+      shootTime:         shootTime         || null,
       createdAt:       new Date(),
       createdBy:       ctx.uid,
       stripeDepositIntentId:  null,
@@ -105,20 +110,48 @@ export async function POST(req) {
     }
 
     // Send notifications (fire-and-forget — don't fail the booking if email fails)
-    try {
-      const [tenant, adminRecord] = await Promise.all([
-        getTenantById(ctx.tenantId),
-        adminAuth.getUser(ctx.uid),
-      ]);
-      if (tenant) {
-        await sendBookingCreatedNotifications({
-          booking:    { ...bookingData },
-          tenant,
-          adminEmail: adminRecord.email || tenant.email || null,
-        });
+    if (sendNotification !== false) {
+      try {
+        const [tenant, adminRecord] = await Promise.all([
+          getTenantById(ctx.tenantId),
+          adminAuth.getUser(ctx.uid),
+        ]);
+        if (tenant) {
+          const { Resend } = await import("resend");
+          const resend = new Resend(process.env.RESEND_API_KEY);
+          const primary   = tenant.branding?.primaryColor || "#0b2a55";
+          const bizName   = tenant.branding?.businessName || tenant.businessName || "ShootFlow";
+          const fromEmail = tenant.branding?.fromEmail || "noreply@shootflow.com";
+          const from      = `${bizName} <${fromEmail}>`;
+          const shootInfo = shootDate
+            ? `${new Date(shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}${shootTime ? ` at ${shootTime}` : ""}`
+            : null;
+
+          const sends = [];
+
+          // Client confirmation
+          if (clientEmail) {
+            sends.push(resend.emails.send({
+              from, to: [clientEmail],
+              subject: `Booking confirmed — ${fullAddress}`,
+              html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:40px 20px"><h2 style="color:${primary};font-family:Georgia,serif">Booking Confirmed</h2><p>Hi ${clientName},</p><p>Your booking for <strong>${fullAddress}</strong> has been created.${shootInfo ? `<br/>Scheduled: ${shootInfo}` : ""}</p><p style="color:#888;font-size:12px">Questions? Reply to this email.</p><hr style="border:none;border-top:1px solid #eee;margin:20px 0"/><p style="color:#ccc;font-size:11px">${bizName}</p></div>`,
+            }).catch(() => {}));
+          }
+
+          // Photographer notification
+          if (photographerEmail) {
+            sends.push(resend.emails.send({
+              from, to: [photographerEmail],
+              subject: `New booking assigned to you — ${fullAddress}`,
+              html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:40px 20px"><h2 style="color:${primary};font-family:Georgia,serif">New Shoot Assigned</h2><p>Hi ${photographerName || "there"},</p><p>You've been assigned a new booking:</p><ul style="line-height:1.8"><li><strong>Property:</strong> ${fullAddress}</li><li><strong>Client:</strong> ${clientName} (${clientEmail})</li>${shootInfo ? `<li><strong>Scheduled:</strong> ${shootInfo}</li>` : ""}${notes ? `<li><strong>Notes:</strong> ${notes}</li>` : ""}</ul><p>Log into the dashboard to view full details.</p><p style="color:#ccc;font-size:11px">${bizName}</p></div>`,
+            }).catch(() => {}));
+          }
+
+          await Promise.all(sends);
+        }
+      } catch (emailErr) {
+        console.error("Notification email error (non-fatal):", emailErr);
       }
-    } catch (emailErr) {
-      console.error("Notification email error (non-fatal):", emailErr);
     }
 
     return Response.json({ bookingId, ok: true });

@@ -1,0 +1,123 @@
+import { adminDb, adminAuth } from "@/lib/firebase-admin";
+
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+
+async function getCtx(req) {
+  const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
+  if (!auth) return null;
+  try {
+    const decoded = await adminAuth.verifyIdToken(auth);
+    if (!decoded.tenantId) return null;
+    return { tenantId: decoded.tenantId };
+  } catch { return null; }
+}
+
+// POST /api/dashboard/products/import
+// Parses pricing text (or fetches URL) using AI and creates draft products
+export async function POST(req) {
+  const ctx = await getCtx(req);
+  if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (!GROQ_API_KEY) {
+    return Response.json({ error: "AI not configured. Set GROQ_API_KEY to enable pricing import." }, { status: 503 });
+  }
+
+  const { mode, content, targetType = "services" } = await req.json();
+  if (!content) return Response.json({ error: "content required" }, { status: 400 });
+
+  let text = content;
+
+  // If URL mode, fetch the page content
+  if (mode === "url") {
+    try {
+      const res = await fetch(content, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; ShootFlow/1.0)" },
+        signal:  AbortSignal.timeout(8000),
+      });
+      const html    = await res.text();
+      // Strip HTML tags to get just text
+      text = html
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s{3,}/g, "\n")
+        .slice(0, 6000);
+    } catch {
+      return Response.json({ error: "Could not fetch URL. Try pasting the pricing text instead." }, { status: 400 });
+    }
+  }
+
+  const prompt = `You are parsing real estate photography pricing from a website or document.
+Extract ALL packages, services, and add-ons you can find. Be generous — include everything.
+
+TEXT TO PARSE:
+${text.slice(0, 5000)}
+
+Return ONLY valid JSON array (no markdown). Each item:
+{
+  "name": "Service name",
+  "type": "packages|services|addons",
+  "price": 299,
+  "description": "Brief description or empty string",
+  "deliverables": ["25 edited photos", "24hr delivery"]
+}
+
+Rules:
+- type must be "packages" for bundles, "services" for individual services, "addons" for extras
+- price is a number (no $ sign)
+- deliverables is array of strings describing what's included
+- If unsure of type, use "services"
+- Return at least 1 item if you find any pricing at all`;
+
+  try {
+    const aiRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROQ_API_KEY}` },
+      body: JSON.stringify({
+        model:       "llama-3.1-8b-instant",
+        max_tokens:  1500,
+        temperature: 0.2,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    const aiData = await aiRes.json();
+    const raw    = aiData.choices?.[0]?.message?.content?.trim() || "[]";
+    const clean  = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+    const parsed = JSON.parse(clean);
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return Response.json({ error: "No pricing items found. Try pasting the text directly." }, { status: 422 });
+    }
+
+    // Save as active:false (draft) products
+    const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
+    const batch     = adminDb.batch();
+    const created   = { packages: [], services: [], addons: [] };
+
+    for (const item of parsed.slice(0, 20)) {
+      const type = ["packages", "services", "addons"].includes(item.type) ? item.type : "services";
+      const ref  = tenantRef.collection("products").doc();
+      const doc  = {
+        id:           ref.id,
+        type,
+        name:         String(item.name || "Unnamed Service").slice(0, 100),
+        description:  String(item.description || "").slice(0, 500),
+        price:        Number(item.price) || 0,
+        deliverables: Array.isArray(item.deliverables) ? item.deliverables.map(String).slice(0, 10) : [],
+        active:       false, // draft — admin reviews before publishing
+        importedAt:   new Date(),
+        createdAt:    new Date(),
+      };
+      batch.set(ref, doc);
+      created[type].push(doc);
+    }
+
+    await batch.commit();
+    const total = Object.values(created).flat().length;
+    return Response.json({ imported: total, items: created });
+  } catch (err) {
+    console.error("[products/import] Error:", err);
+    return Response.json({ error: "Failed to parse pricing. Try pasting the text manually." }, { status: 500 });
+  }
+}
