@@ -108,6 +108,7 @@ export default function BookingDetailPage() {
   const [costs, setCosts] = useState({ shooterFee: 0, editorFee: 0, travelCost: 0, otherCosts: 0, shootHours: "", editHoursPerPhoto: "", notes: "" });
   const [costsSaving, setCostsSaving] = useState(false);
   const [costsMsg,    setCostsMsg]    = useState("");
+  const [globalCostRates, setGlobalCostRates] = useState(null);
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
@@ -115,26 +116,34 @@ export default function BookingDetailPage() {
         fetch(`/api/dashboard/bookings/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/tenant",          { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      if (bookingRes.ok) {
-        const data = await bookingRes.json();
-        setBooking(data.booking);
-        setShootDate(data.booking.shootDate?.split?.("T")?.[0] || "");
-        if (data.booking.costs) {
+      const [bookingData, tenantData] = await Promise.all([
+        bookingRes.ok  ? bookingRes.json()  : null,
+        tenantRes.ok   ? tenantRes.json()   : null,
+      ]);
+
+      if (bookingData) {
+        setBooking(bookingData.booking);
+        setShootDate(bookingData.booking.shootDate?.split?.("T")?.[0] || "");
+        if (bookingData.booking.costs) {
           setCosts({
-            shooterFee:        data.booking.costs.shooterFee        || 0,
-            editorFee:         data.booking.costs.editorFee         || 0,
-            travelCost:        data.booking.costs.travelCost        || 0,
-            otherCosts:        data.booking.costs.otherCosts        || 0,
-            shootHours:        data.booking.costs.shootHours        ?? "",
-            editHoursPerPhoto: data.booking.costs.editHoursPerPhoto ?? "",
-            notes:             data.booking.costs.notes             || "",
+            shooterFee:        bookingData.booking.costs.shooterFee        || 0,
+            editorFee:         bookingData.booking.costs.editorFee         || 0,
+            travelCost:        bookingData.booking.costs.travelCost        || 0,
+            otherCosts:        bookingData.booking.costs.otherCosts        || 0,
+            shootHours:        bookingData.booking.costs.shootHours        ?? "",
+            editHoursPerPhoto: bookingData.booking.costs.editHoursPerPhoto ?? "",
+            notes:             bookingData.booking.costs.notes             || "",
           });
+        } else if (tenantData?.tenant?.costRates) {
+          // No costs saved yet — seed from global rates
+          const cr = tenantData.tenant.costRates;
+          setCosts((prev) => ({ ...prev, otherCosts: cr.otherFlat || 0 }));
         }
       }
-      if (tenantRes.ok) {
-        const td = await tenantRes.json();
-        const av = td.tenant?.bookingConfig?.availability;
+      if (tenantData) {
+        const av = tenantData.tenant?.bookingConfig?.availability;
         if (av?.showWeather !== undefined) setShowWeather(av.showWeather);
+        if (tenantData.tenant?.costRates) setGlobalCostRates(tenantData.tenant.costRates);
       }
       setLoading(false);
     });
@@ -422,9 +431,21 @@ export default function BookingDetailPage() {
             {costsMsg && (
               <p className="text-xs text-blue-600 mb-3">{costsMsg}</p>
             )}
-            <button onClick={saveCosts} disabled={costsSaving} className="btn-outline text-sm px-4 py-2">
-              {costsSaving ? "Saving…" : "Save Costs"}
-            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={saveCosts} disabled={costsSaving} className="btn-outline text-sm px-4 py-2">
+                {costsSaving ? "Saving…" : "Save Costs"}
+              </button>
+              {globalCostRates && (
+                <button
+                  type="button"
+                  onClick={() => setCosts((c) => ({ ...c, otherCosts: globalCostRates.otherFlat || 0 }))}
+                  className="text-xs text-navy underline"
+                  title="Fill in default rates from Settings → Cost Rates"
+                >
+                  Apply global rates
+                </button>
+              )}
+            </div>
           </div>
         );
       })()}

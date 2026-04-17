@@ -3,6 +3,262 @@
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 
+// ─── Staff Access Section ─────────────────────────────────────────────────────
+function StaffAccessSection() {
+  const [invites,       setInvites]       = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [inviteEmail,   setInviteEmail]   = useState("");
+  const [inviteRole,    setInviteRole]    = useState("manager");
+  const [sending,       setSending]       = useState(false);
+  const [msg,           setMsg]           = useState("");
+  const [copyId,        setCopyId]        = useState(null);
+
+  useEffect(() => {
+    auth.currentUser?.getIdToken().then(async (token) => {
+      const res = await fetch("/api/dashboard/team/staff", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { const d = await res.json(); setInvites(d.invites || []); }
+      setLoading(false);
+    });
+  }, []);
+
+  async function sendInvite() {
+    if (!inviteEmail.trim()) return;
+    setSending(true); setMsg("");
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch("/api/dashboard/team/staff", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setMsg(`Invite sent to ${inviteEmail.trim()}`);
+      setInvites((prev) => [{
+        id: data.token,
+        email: inviteEmail.trim(),
+        role: inviteRole,
+        accepted: false,
+        createdAt: new Date().toISOString(),
+      }, ...prev]);
+      setInviteEmail("");
+    } else {
+      setMsg(data.error || "Failed to send.");
+    }
+    setSending(false);
+    setTimeout(() => setMsg(""), 3000);
+  }
+
+  async function revokeInvite(id) {
+    if (!window.confirm("Revoke this staff invite / remove access?")) return;
+    const token = await auth.currentUser.getIdToken();
+    await fetch(`/api/dashboard/team/staff?id=${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    setInvites((prev) => prev.filter((i) => i.id !== id));
+  }
+
+  return (
+    <div id="settings-staff-access" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <h2 className="font-semibold text-charcoal text-base mb-1">Staff Access</h2>
+      <p className="text-sm text-gray-500 mb-6">
+        Invite employees or virtual assistants to manage bookings and galleries. They get dashboard access but cannot change billing or settings.
+      </p>
+
+      {/* Invite form */}
+      <div className="flex gap-3 flex-wrap mb-6">
+        <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
+          className="input-field flex-1 min-w-48" placeholder="colleague@email.com" />
+        <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="input-field w-36">
+          <option value="manager">Manager</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button onClick={sendInvite} disabled={sending || !inviteEmail.trim()} className="btn-primary px-6 py-2 text-sm">
+          {sending ? "Sending…" : "Send Invite"}
+        </button>
+      </div>
+      {msg && <p className="text-sm text-green-700 mb-4">{msg}</p>}
+
+      {/* Role descriptions */}
+      <div className="grid grid-cols-2 gap-3 mb-6 max-w-lg">
+        {[
+          { role: "Admin", desc: "Full access except billing & platform settings" },
+          { role: "Manager", desc: "View/edit bookings, galleries, and team calendar" },
+        ].map((r) => (
+          <div key={r.role} className="bg-gray-50 rounded-sm p-3 border border-gray-100">
+            <p className="text-xs font-semibold text-charcoal">{r.role}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{r.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Invite list */}
+      {loading ? (
+        <div className="flex justify-center py-6">
+          <div className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+        </div>
+      ) : invites.length === 0 ? (
+        <p className="text-sm text-gray-400">No staff invites yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {invites.map((inv) => (
+            <div key={inv.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-sm">
+              <div>
+                <p className="text-sm font-medium text-charcoal">{inv.email}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {inv.role} ·{" "}
+                  {inv.accepted
+                    ? <span className="text-green-600 font-medium">Active</span>
+                    : <span className="text-amber-500">Pending</span>}
+                  {inv.createdAt && ` · Invited ${new Date(inv.createdAt).toLocaleDateString()}`}
+                </p>
+              </div>
+              <button onClick={() => revokeInvite(inv.id)}
+                className="text-xs text-red-400 hover:text-red-600 font-medium ml-4">
+                Revoke
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Custom Domain Section ────────────────────────────────────────────────────
+function CustomDomainSection() {
+  const [domain,   setDomain]   = useState("");
+  const [current,  setCurrent]  = useState(null);   // { domain, verified, addedAt }
+  const [loading,  setLoading]  = useState(true);
+  const [saving,   setSaving]   = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [msg,      setMsg]      = useState({ text: "", type: "" });
+
+  useEffect(() => {
+    auth.currentUser?.getIdToken().then(async (token) => {
+      const res = await fetch("/api/dashboard/custom-domain", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setCurrent(data.customDomain || null);
+        if (data.customDomain?.domain) setDomain(data.customDomain.domain);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  async function save() {
+    if (!domain.trim()) return;
+    setSaving(true);
+    setMsg({ text: "", type: "" });
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch("/api/dashboard/custom-domain", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ domain: domain.trim() }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setCurrent(data.customDomain);
+      setMsg({ text: "Domain saved. Follow the DNS instructions below to connect it.", type: "success" });
+    } else {
+      setMsg({ text: data.error || "Failed to save.", type: "error" });
+    }
+    setSaving(false);
+  }
+
+  async function remove() {
+    if (!window.confirm("Remove custom domain?")) return;
+    setRemoving(true);
+    const token = await auth.currentUser.getIdToken();
+    await fetch("/api/dashboard/custom-domain", { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    setCurrent(null);
+    setDomain("");
+    setRemoving(false);
+    setMsg({ text: "Custom domain removed.", type: "success" });
+  }
+
+  const platformHost = process.env.NEXT_PUBLIC_APP_DOMAIN || "novaos.app";
+
+  return (
+    <div id="settings-custom-domain" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <div className="flex items-start justify-between mb-1">
+        <div>
+          <h2 className="font-semibold text-charcoal text-base">Custom Domain</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Connect your own domain to your property websites.</p>
+        </div>
+        <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-semibold border border-amber-200 flex-shrink-0 mt-0.5">
+          Add-on Feature
+        </span>
+      </div>
+      <p className="text-xs text-gray-400 mb-6">
+        Agents can share branded listing URLs like <span className="font-mono bg-gray-100 px-1 rounded">listings.youragency.com</span> instead of your platform subdomain.
+      </p>
+
+      {loading ? (
+        <div className="flex justify-center py-4">
+          <div className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+        </div>
+      ) : (
+        <>
+          {/* Input row */}
+          <div className="flex gap-3 mb-4">
+            <input
+              type="text"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              placeholder="listings.yourdomain.com"
+              className="input-field flex-1 font-mono text-sm"
+            />
+            <button onClick={save} disabled={saving || !domain.trim()} className="btn-primary px-6 py-2 text-sm flex-shrink-0">
+              {saving ? "Saving…" : current ? "Update" : "Connect Domain"}
+            </button>
+            {current && (
+              <button onClick={remove} disabled={removing}
+                className="px-4 py-2 text-sm text-red-500 hover:text-red-700 border border-red-200 rounded-sm transition-colors flex-shrink-0">
+                {removing ? "…" : "Remove"}
+              </button>
+            )}
+          </div>
+
+          {msg.text && (
+            <div className={`text-sm px-4 py-2.5 rounded-sm mb-4 ${
+              msg.type === "success" ? "bg-green-50 border border-green-200 text-green-700" : "bg-red-50 border border-red-200 text-red-700"
+            }`}>{msg.text}</div>
+          )}
+
+          {/* DNS Instructions */}
+          {current && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mt-2">
+              <p className="text-sm font-semibold text-charcoal mb-3">
+                {current.verified ? "✅ Domain is active" : "⚙️ DNS Setup Required"}
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                Add the following record to your DNS provider (GoDaddy, Namecheap, Cloudflare, etc.):
+              </p>
+              <div className="bg-white border border-gray-200 rounded-sm overflow-hidden mb-4">
+                <div className="grid grid-cols-3 bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <span>Type</span><span>Name</span><span>Value</span>
+                </div>
+                <div className="grid grid-cols-3 px-4 py-3 font-mono text-sm">
+                  <span className="text-blue-600 font-semibold">CNAME</span>
+                  <span className="text-gray-700">{current.domain.split(".").slice(0, -2).join(".") || "@"}</span>
+                  <span className="text-gray-700 break-all">{platformHost}</span>
+                </div>
+              </div>
+              <div className="space-y-2 text-xs text-gray-500">
+                <p><span className="font-semibold text-gray-700">1.</span> Log into your DNS provider and navigate to DNS settings for your domain.</p>
+                <p><span className="font-semibold text-gray-700">2.</span> Add the CNAME record above. DNS changes can take up to 24 hours to propagate.</p>
+                <p><span className="font-semibold text-gray-700">3.</span> If using Vercel hosting, also add the domain in your Vercel project → Settings → Domains.</p>
+                <p><span className="font-semibold text-gray-700">4.</span> Once connected, property websites will be accessible at <span className="font-mono bg-gray-100 px-1 rounded">{current.domain}/[bookingId]</span></p>
+              </div>
+              {current.addedAt && (
+                <p className="text-xs text-gray-400 mt-3">Added {new Date(current.addedAt).toLocaleDateString()}</p>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 const DEFAULT_TERMS = `TERMS OF SERVICE — REAL ESTATE MEDIA SERVICES
 
 Last updated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
@@ -100,6 +356,10 @@ export default function SettingsPage() {
   const [enableApn,          setEnableApn]          = useState(false);
   const [requireServiceArea, setRequireServiceArea] = useState(false);
   const [savingBooking, setSavingBooking] = useState(false);
+
+  // Global job cost rates
+  const [costRates,     setCostRates]     = useState({ shooterHourly: 75, editorPerPhoto: 2, travelPerMile: 0.67, otherFlat: 0 });
+  const [savingCosts,   setSavingCosts]   = useState(false);
   const [newFieldLabel, setNewFieldLabel] = useState("");
   const [newFieldType,  setNewFieldType]  = useState("text");
 
@@ -202,6 +462,10 @@ export default function SettingsPage() {
         if (data.tenant.emailTemplate) {
           if (data.tenant.emailTemplate.subject) setEmailTplSubject(data.tenant.emailTemplate.subject);
           if (data.tenant.emailTemplate.body)    setEmailTplBody(data.tenant.emailTemplate.body);
+        }
+        // Load cost rates
+        if (data.tenant.costRates) {
+          setCostRates((prev) => ({ ...prev, ...data.tenant.costRates }));
         }
         // Load travel fee config
         if (data.tenant.travelFeeConfig) {
@@ -387,6 +651,21 @@ export default function SettingsPage() {
     setSavingBooking(false);
   }
 
+  async function saveCostRates() {
+    setSavingCosts(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/tenants/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ costRates }),
+      });
+      if (res.ok) showMsg("Cost rates saved.");
+      else showMsg("Failed to save.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    setSavingCosts(false);
+  }
+
   async function savePrivacy() {
     setSavingPrivacy(true);
     try {
@@ -512,9 +791,11 @@ export default function SettingsPage() {
     { id: "branding",      label: "Branding" },
     { id: "pricing",       label: "Pricing Tiers" },
     { id: "booking",       label: "Booking" },
+    { id: "cost-rates",    label: "Cost Rates" },
     { id: "availability",  label: "Availability" },
     { id: "service-areas", label: "Service Areas" },
     { id: "travel",        label: "Travel Fees" },
+    { id: "staff-access",  label: "Staff Access" },
     { id: "promos",        label: "Promo Codes" },
     { id: "terms",         label: "Terms & Privacy" },
     { id: "email",         label: "Email Templates" },
@@ -887,6 +1168,48 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* ─── Job Cost Rates ──────────────────────────────────────────────────── */}
+      <div id="settings-cost-rates" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+        <h2 className="font-semibold text-charcoal text-base mb-1">Default Job Cost Rates</h2>
+        <p className="text-sm text-gray-500 mb-6">
+          These default rates auto-fill the Job Costs card on each booking. You can still override them per booking.
+        </p>
+        <div className="grid grid-cols-2 gap-4 max-w-lg">
+          <div>
+            <label className="label-field">Shooter Rate ($/hr)</label>
+            <input type="number" min="0" step="1" value={costRates.shooterHourly}
+              onChange={(e) => setCostRates((r) => ({ ...r, shooterHourly: Number(e.target.value) || 0 }))}
+              className="input-field w-full" placeholder="75" />
+          </div>
+          <div>
+            <label className="label-field">Editor Rate ($/photo)</label>
+            <input type="number" min="0" step="0.25" value={costRates.editorPerPhoto}
+              onChange={(e) => setCostRates((r) => ({ ...r, editorPerPhoto: Number(e.target.value) || 0 }))}
+              className="input-field w-full" placeholder="2.00" />
+          </div>
+          <div>
+            <label className="label-field">Travel Rate ($/mile)</label>
+            <input type="number" min="0" step="0.01" value={costRates.travelPerMile}
+              onChange={(e) => setCostRates((r) => ({ ...r, travelPerMile: Number(e.target.value) || 0 }))}
+              className="input-field w-full" placeholder="0.67" />
+          </div>
+          <div>
+            <label className="label-field">Other Flat Cost ($)</label>
+            <input type="number" min="0" step="1" value={costRates.otherFlat}
+              onChange={(e) => setCostRates((r) => ({ ...r, otherFlat: Number(e.target.value) || 0 }))}
+              className="input-field w-full" placeholder="0" />
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 mt-3">
+          Shooter fee = rate × shoot hours. Editor fee = rate × photo count. Travel = rate × miles (from your ZIP to property).
+        </p>
+        <div className="pt-4 border-t border-gray-100 mt-4">
+          <button onClick={saveCostRates} disabled={savingCosts} className="btn-primary px-8 py-3">
+            {savingCosts ? "Saving…" : "Save Cost Rates"}
+          </button>
+        </div>
+      </div>
+
       {/* ─── Availability ────────────────────────────────────────────────────── */}
       <div id="settings-availability" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <h2 className="font-semibold text-charcoal text-base mb-1">Availability & Scheduling</h2>
@@ -1232,6 +1555,9 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* ─── Staff Access ────────────────────────────────────────────────────── */}
+      <StaffAccessSection />
+
       {/* ─── Promo Codes ─────────────────────────────────────────────────────── */}
       <div id="settings-promos" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <div className="flex items-center justify-between mb-4">
@@ -1389,6 +1715,10 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+
+      {/* Custom Domain */}
+      <CustomDomainSection />
+
         </div>{/* end main content */}
       </div>{/* end flex */}
     </div>

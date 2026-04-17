@@ -696,7 +696,14 @@ export default function GalleryDetailPage() {
 
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <Link href="/dashboard/galleries" className="text-sm text-gray-400 hover:text-navy">← All galleries</Link>
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard/galleries" className="text-sm text-gray-400 hover:text-navy">← All galleries</Link>
+            {gallery?.bookingId && (
+              <Link href={`/dashboard/bookings/${gallery.bookingId}`} className="text-sm text-gray-400 hover:text-navy border-l border-gray-200 pl-3">
+                ↗ View booking
+              </Link>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setShowCatPanel(true)} className="btn-outline text-xs px-3 py-1.5">
               📁 Categories ({catNames.length})

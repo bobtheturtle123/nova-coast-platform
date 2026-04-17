@@ -323,6 +323,126 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
   );
 }
 
+// ─── Block Time Modal ─────────────────────────────────────────────────────────
+const BLOCK_REASONS = ["Vacation", "Day Off", "Personal", "Holiday", "Sick Day", "Other"];
+
+function BlockTimeModal({ members, onSave, onClose, timeBlocks, onDeleteBlock }) {
+  const today = new Date().toISOString().split("T")[0];
+  const [form, setForm] = useState({
+    memberId:   "",
+    startDate:  today,
+    endDate:    today,
+    reason:     "Vacation",
+    note:       "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [tab, setTab] = useState("new"); // "new" | "existing"
+
+  async function handleSave() {
+    if (!form.startDate || !form.endDate) return;
+    setSaving(true);
+    const member = members.find((m) => m.id === form.memberId);
+    await onSave({
+      ...form,
+      memberName: member?.name || "All Team",
+    });
+    setSaving(false);
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-sm shadow-xl w-full max-w-md">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="font-display text-navy text-lg">Block Time</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        </div>
+
+        <div className="flex border-b border-gray-200">
+          {["new", "existing"].map((t) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors capitalize ${
+                tab === t ? "border-navy text-navy" : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}>
+              {t === "new" ? "Add Block" : `Existing (${timeBlocks.length})`}
+            </button>
+          ))}
+        </div>
+
+        {tab === "new" ? (
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="label-field">Photographer</label>
+              <select value={form.memberId} onChange={(e) => setForm((f) => ({ ...f, memberId: e.target.value }))}
+                className="input-field w-full">
+                <option value="">All Team (everyone blocked)</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label-field">Start Date</label>
+                <input type="date" value={form.startDate}
+                  onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+                  className="input-field w-full" />
+              </div>
+              <div>
+                <label className="label-field">End Date</label>
+                <input type="date" value={form.endDate} min={form.startDate}
+                  onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+                  className="input-field w-full" />
+              </div>
+            </div>
+            <div>
+              <label className="label-field">Reason</label>
+              <select value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
+                className="input-field w-full">
+                {BLOCK_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label-field">Note (optional)</label>
+              <input type="text" value={form.note}
+                onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                className="input-field w-full" placeholder="Internal note…" />
+            </div>
+            <div className="pt-2 flex gap-3">
+              <button onClick={handleSave} disabled={saving || !form.startDate || !form.endDate}
+                className="btn-primary px-6 py-2 text-sm flex-1">
+                {saving ? "Saving…" : "Block Dates"}
+              </button>
+              <button onClick={onClose} className="btn-outline px-4 py-2 text-sm">Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 space-y-2 max-h-80 overflow-y-auto">
+            {timeBlocks.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-6">No time blocks set.</p>
+            ) : (
+              timeBlocks.map((b) => (
+                <div key={b.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-sm">
+                  <div>
+                    <p className="text-sm font-medium text-charcoal">{b.memberName} — {b.reason}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {new Date(b.startDate).toLocaleDateString()} – {new Date(b.endDate).toLocaleDateString()}
+                      {b.note && ` · ${b.note}`}
+                    </p>
+                  </div>
+                  <button onClick={() => onDeleteBlock(b.id)}
+                    className="text-xs text-red-500 hover:text-red-700 ml-3 font-medium">
+                    Remove
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function TeamPage() {
   const [members,       setMembers]       = useState([]);
@@ -339,6 +459,8 @@ export default function TeamPage() {
   const [showInvite,    setShowInvite]    = useState(false);
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteMsg,     setInviteMsg]     = useState("");
+  const [timeBlocks,    setTimeBlocks]    = useState([]);
+  const [showBlockModal, setShowBlockModal] = useState(false);
 
   const getToken = () => auth.currentUser?.getIdToken();
 
@@ -360,15 +482,16 @@ export default function TeamPage() {
   useEffect(() => {
     async function load() {
       const token = await getToken();
-      const [teamRes, listRes, svcRes, pkgRes, adnRes] = await Promise.all([
+      const [teamRes, listRes, svcRes, pkgRes, adnRes, blocksRes] = await Promise.all([
         fetch("/api/dashboard/team",                   { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/listings",               { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/products?type=services", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/products?type=packages", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/products?type=addons",   { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/team/blocks",            { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      const [teamData, listData, svcData, pkgData, adnData] = await Promise.all([
-        teamRes.json(), listRes.json(), svcRes.json(), pkgRes.json(), adnRes.json(),
+      const [teamData, listData, svcData, pkgData, adnData, blocksData] = await Promise.all([
+        teamRes.json(), listRes.json(), svcRes.json(), pkgRes.json(), adnRes.json(), blocksRes.json(),
       ]);
       setMembers(teamData.members   || []);
       setBookings(listData.listings || []);
@@ -377,6 +500,7 @@ export default function TeamPage() {
         packages: pkgData.items || [],
         addons:   adnData.items || [],
       });
+      setTimeBlocks(blocksData.blocks || []);
       setLoading(false);
     }
     load();
@@ -462,6 +586,27 @@ export default function TeamPage() {
     }
   }
 
+  async function createBlock(blockData) {
+    const token = await getToken();
+    const res = await fetch("/api/dashboard/team/blocks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(blockData),
+    });
+    const data = await res.json();
+    if (res.ok) setTimeBlocks((prev) => [...prev, data.block]);
+    return res.ok;
+  }
+
+  async function deleteBlock(id) {
+    const token = await getToken();
+    await fetch(`/api/dashboard/team/blocks?id=${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setTimeBlocks((prev) => prev.filter((b) => b.id !== id));
+  }
+
   // ── Month view helpers ────────────────────────────────────────────────────
   const monthDates = useMemo(() => {
     const y = anchor.getFullYear(), m = anchor.getMonth();
@@ -507,6 +652,9 @@ export default function TeamPage() {
           <p className="text-gray-400 text-sm mt-0.5">{members.length} team member{members.length !== 1 ? "s" : ""}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowBlockModal(true)} className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
+            🚫 Block Time
+          </button>
           <button onClick={() => setShowInvite(true)} className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
             ✉ Invite via Email
           </button>
@@ -647,8 +795,24 @@ export default function TeamPage() {
                       {weekDates.map((d) => {
                         const dayEvents = memberEvents.filter((e) => isSameDay(e.shootDateObj, d));
                         const isToday = isSameDay(d, today);
+                        const dayBlocks = timeBlocks.filter((b) => {
+                          const start = new Date(b.startDate); start.setHours(0,0,0,0);
+                          const end   = new Date(b.endDate);   end.setHours(23,59,59,999);
+                          return d >= start && d <= end && (!b.memberId || b.memberId === member.id);
+                        });
                         return (
-                          <div key={d.toISOString()} className={`p-1 border-r last:border-r-0 border-gray-100 min-h-12 ${isToday ? "bg-navy/2" : ""}`}>
+                          <div key={d.toISOString()} className={`p-1 border-r last:border-r-0 border-gray-100 min-h-12 relative ${isToday ? "bg-navy/2" : ""}`}>
+                            {dayBlocks.length > 0 && (
+                              <div className="absolute inset-0 pointer-events-none"
+                                style={{ background: "repeating-linear-gradient(-45deg, #fee2e2, #fee2e2 3px, transparent 3px, transparent 10px)", opacity: 0.7 }} />
+                            )}
+                            {dayBlocks.map((bl) => (
+                              <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1.5 py-0.5 rounded-sm mb-1 flex items-center justify-between group">
+                                <span className="text-red-600 font-medium truncate">{bl.reason}</span>
+                                <button onClick={() => deleteBlock(bl.id)}
+                                  className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 ml-1 flex-shrink-0 text-[10px]">×</button>
+                              </div>
+                            ))}
                             {dayEvents.map((ev) => (
                               <div key={ev.id} style={{ background: member.color + "22", borderLeftColor: member.color }}
                                 className="text-xs border-l-2 px-1.5 py-1 rounded-sm mb-1 truncate">
@@ -904,13 +1068,26 @@ export default function TeamPage() {
               headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
               body: JSON.stringify({ regenerateCalendarToken: true }),
             });
-            // Reload the member to get the new token
             const res   = await fetch("/api/dashboard/team", { headers: { Authorization: `Bearer ${token}` } });
             const data  = await res.json();
             const updated = (data.members || []).find((m) => m.id === calModal.id);
             setMembers(data.members || []);
             if (updated) setCalModal(updated);
           }}
+        />
+      )}
+
+      {/* Block Time modal */}
+      {showBlockModal && (
+        <BlockTimeModal
+          members={members}
+          onSave={async (data) => {
+            const ok = await createBlock(data);
+            if (ok) setShowBlockModal(false);
+          }}
+          onClose={() => setShowBlockModal(false)}
+          timeBlocks={timeBlocks}
+          onDeleteBlock={deleteBlock}
         />
       )}
     </div>

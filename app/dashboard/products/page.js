@@ -101,6 +101,20 @@ function ProductForm({ item, type, allServices, teamMembers, pricingConfig, onSa
     setForm((f) => ({ ...f, mediaUrls: f.mediaUrls.filter((_, i) => i !== idx) }));
   }
 
+  function moveMedia(from, to) {
+    setForm((f) => {
+      const arr = [...f.mediaUrls];
+      const [item] = arr.splice(from, 1);
+      arr.splice(to, 0, item);
+      return { ...f, mediaUrls: arr };
+    });
+  }
+
+  function setCover(idx) {
+    if (idx === 0) return;
+    moveMedia(idx, 0);
+  }
+
   async function handleSave() {
     setSaving(true);
     const payload = {
@@ -179,18 +193,41 @@ function ProductForm({ item, type, allServices, teamMembers, pricingConfig, onSa
             {form.mediaUrls.length > 0 && (
               <div className="flex gap-2 flex-wrap mb-3">
                 {form.mediaUrls.map((url, idx) => (
-                  <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 group">
+                  <div key={url + idx} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 group"
+                    style={{ borderColor: idx === 0 ? "#0b2a55" : "#e5e7eb" }}>
                     {url.match(/\.(mp4|mov|webm)$/i)
                       ? <video src={url} className="w-full h-full object-cover" />
                       : <img src={url} alt="" className="w-full h-full object-cover" />
                     }
                     {idx === 0 && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5">Cover</div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-navy/70 text-white text-[9px] text-center py-0.5 font-semibold tracking-wide">
+                        COVER
+                      </div>
                     )}
-                    <button type="button" onClick={() => removeMedia(idx)}
-                      className="absolute top-1 right-1 w-5 h-5 bg-black/60 text-white rounded-full text-xs leading-none opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      ×
-                    </button>
+                    {/* Controls overlay */}
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                      {/* Reorder arrows */}
+                      <div className="flex gap-1">
+                        <button type="button" onClick={() => moveMedia(idx, idx - 1)} disabled={idx === 0}
+                          className="w-5 h-5 bg-white/20 hover:bg-white/40 text-white rounded text-xs disabled:opacity-30 flex items-center justify-center">
+                          ←
+                        </button>
+                        <button type="button" onClick={() => moveMedia(idx, idx + 1)} disabled={idx === form.mediaUrls.length - 1}
+                          className="w-5 h-5 bg-white/20 hover:bg-white/40 text-white rounded text-xs disabled:opacity-30 flex items-center justify-center">
+                          →
+                        </button>
+                      </div>
+                      {idx !== 0 && (
+                        <button type="button" onClick={() => setCover(idx)}
+                          className="text-[9px] text-white/90 bg-navy/60 hover:bg-navy px-1.5 py-0.5 rounded font-semibold tracking-wide">
+                          Set Cover
+                        </button>
+                      )}
+                      <button type="button" onClick={() => removeMedia(idx)}
+                        className="text-[9px] text-white/80 hover:text-red-300">
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

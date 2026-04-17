@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import AiChatButton from "@/components/dashboard/AiChatButton";
 
 const NAV = [
   {
@@ -210,6 +211,7 @@ export default function DashboardLayout({ children }) {
 
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
+      <AiChatButton />
     </div>
   );
 }

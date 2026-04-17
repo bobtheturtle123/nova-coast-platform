@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import ClassicTemplate from "./ClassicTemplate";
+import LuxuryTemplate from "./LuxuryTemplate";
+import { resolveTheme } from "./templateConfig";
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 function Lightbox({ images, startIndex, onClose }) {
@@ -203,6 +206,15 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
   const [lightboxIdx, setLightboxIdx] = useState(null);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
 
+  // Track page view (fire-and-forget)
+  useEffect(() => {
+    fetch(`/api/${tenantSlug}/property-view`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId }),
+    }).catch(() => {});
+  }, [tenantSlug, bookingId]);
+
   const address   = pw.customName || pw.address || booking.fullAddress || booking.address || "Property";
   const heroImg   = pw.heroImageUrl || images[0]?.url || null;
   const branded   = pw.branded !== false; // default branded
@@ -238,6 +250,48 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
   const mapQuery = encodeURIComponent(pw.address || booking.fullAddress || booking.address || "");
   const mapEmbedUrl = mapQuery ? `https://maps.google.com/maps?q=${mapQuery}&output=embed&z=16` : null;
 
+  // Resolve template + color theme
+  const theme    = resolveTheme(pw, branding);
+  const template = pw.template || "modern";
+
+  // Shared contact form — each template renders this
+  function ContactFormComponent() {
+    return <ContactForm pw={pw} address={address} branding={branding} bookingId={bookingId} tenantSlug={tenantSlug} />;
+  }
+
+  // Shared props for all templates
+  const templateProps = {
+    pw, booking, images, videos, address, heroImg, stats, details,
+    mapEmbedUrl, displayImages, showAllPhotos, setShowAllPhotos,
+    setLightboxIdx, branding, theme, tenantSlug,
+    ContactFormComponent,
+  };
+
+  // Dispatch to non-Modern templates
+  if (template === "classic") {
+    return (
+      <>
+        <ClassicTemplate {...templateProps} />
+        {lightboxIdx !== null && (
+          <Lightbox images={images} startIndex={lightboxIdx} onClose={() => setLightboxIdx(null)} />
+        )}
+        <ChatWidget pw={pw} address={address} branding={{ ...branding, primary: theme.primary }} bookingId={bookingId} tenantSlug={tenantSlug} />
+      </>
+    );
+  }
+  if (template === "luxury") {
+    return (
+      <>
+        <LuxuryTemplate {...templateProps} />
+        {lightboxIdx !== null && (
+          <Lightbox images={images} startIndex={lightboxIdx} onClose={() => setLightboxIdx(null)} />
+        )}
+        <ChatWidget pw={pw} address={address} branding={{ ...branding, primary: theme.primary }} bookingId={bookingId} tenantSlug={tenantSlug} />
+      </>
+    );
+  }
+
+  // Default: Modern template
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Inter', sans-serif" }}>
 
@@ -249,14 +303,14 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
               {branding.logo ? (
                 <img src={branding.logo} alt={branding.bizName} className="h-7 w-auto object-contain" />
               ) : (
-                <span className="font-bold text-lg tracking-tight" style={{ color: branding.primary }}>
+                <span className="font-bold text-lg tracking-tight" style={{ color: theme.primary }}>
                   {branding.bizName}
                 </span>
               )}
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ background: branding.primary }} />
+              <div className="w-2 h-2 rounded-full" style={{ background: theme.primary }} />
               <span className="text-sm font-medium text-gray-500">Property Listing</span>
             </div>
           )}
@@ -269,7 +323,7 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
             {pw.agentPhone && (
               <a href={`tel:${pw.agentPhone}`}
                 className="hidden sm:flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full border transition-colors"
-                style={{ borderColor: branding.primary, color: branding.primary }}>
+                style={{ borderColor: theme.primary, color: theme.primary }}>
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
                 </svg>
@@ -396,7 +450,7 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {pw.features.map((f, i) => (
                     <li key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
-                      <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: branding.accent }}>
+                      <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: theme.accent }}>
                         <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
                           <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
@@ -442,8 +496,8 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
             {/* Property details card */}
             {details.length > 0 && (
               <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
-                <div className="px-5 py-4" style={{ background: branding.primary }}>
-                  <p className="text-xs uppercase tracking-widest font-semibold mb-0.5" style={{ color: branding.accent }}>
+                <div className="px-5 py-4" style={{ background: theme.primary }}>
+                  <p className="text-xs uppercase tracking-widest font-semibold mb-0.5" style={{ color: theme.accent }}>
                     Property Details
                   </p>
                   {pw.price && <p className="text-white text-2xl font-bold">{pw.price}</p>}
@@ -469,7 +523,7 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
                       className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100" />
                   ) : (
                     <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold ring-2 ring-gray-100"
-                      style={{ background: branding.primary }}>
+                      style={{ background: theme.primary }}>
                       {pw.agentName?.[0]?.toUpperCase() || "?"}
                     </div>
                   )}
@@ -478,11 +532,17 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
                     {pw.agentBrokerage && <p className="text-xs text-gray-500">{pw.agentBrokerage}</p>}
                   </div>
                 </div>
+                {pw.agentLogoUrl && (
+                  <div className="mb-4 pb-4 border-b border-gray-100">
+                    <img src={pw.agentLogoUrl} alt={pw.agentBrokerage || "Brokerage"}
+                      className="h-8 max-w-full object-contain" />
+                  </div>
+                )}
                 <div className="space-y-2 mb-4">
                   {pw.agentPhone && (
                     <a href={`tel:${pw.agentPhone}`}
                       className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-70"
-                      style={{ color: branding.primary }}>
+                      style={{ color: theme.primary }}>
                       <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
                       </svg>
@@ -492,7 +552,7 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
                   {pw.agentEmail && (
                     <a href={`mailto:${pw.agentEmail}`}
                       className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-70"
-                      style={{ color: branding.primary }}>
+                      style={{ color: theme.primary }}>
                       <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                       </svg>
@@ -514,7 +574,7 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
               <div className="text-center py-2">
                 <p className="text-xs text-gray-400">
                   Photography by{" "}
-                  <span className="font-semibold" style={{ color: branding.primary }}>{branding.bizName}</span>
+                  <span className="font-semibold" style={{ color: theme.primary }}>{branding.bizName}</span>
                 </p>
               </div>
             )}

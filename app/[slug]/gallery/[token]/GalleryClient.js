@@ -133,6 +133,17 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
 
       <main className="max-w-6xl mx-auto px-4 py-8">
 
+        {/* Preview-only notice */}
+        {!unlocked && balance <= 0 && (
+          <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 rounded-sm text-sm text-amber-800 flex items-center gap-2">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <span>You're viewing a <strong>preview</strong> of this gallery. Downloads are not available in preview mode.</span>
+          </div>
+        )}
+
         {/* Balance gate */}
         {!unlocked && balance > 0 && (
           <div className="bg-white rounded-sm border border-gray-200 p-6 mb-8 max-w-lg">
@@ -224,12 +235,43 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {images.map((m, i) => (
                     <div key={i} className="group relative rounded-sm overflow-hidden bg-gray-200 aspect-[4/3]">
-                      <img src={m.url} alt={m.fileName || `Photo ${i + 1}`}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                      <img
+                        src={m.url}
+                        alt={m.fileName || `Photo ${i + 1}`}
+                        draggable={false}
+                        onContextMenu={(e) => { if (!unlocked) e.preventDefault(); }}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 select-none"
+                        style={!unlocked ? { pointerEvents: "none" } : {}}
+                      />
 
+                      {/* Watermark overlay — visible when not paid */}
                       {!unlocked && (
-                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                          <span className="text-white text-2xl">🔒</span>
+                        <div
+                          className="absolute inset-0 pointer-events-none select-none overflow-hidden"
+                          style={{ userSelect: "none", WebkitUserSelect: "none" }}
+                        >
+                          {/* Repeating diagonal watermark text */}
+                          {Array.from({ length: 5 }).map((_, row) =>
+                            Array.from({ length: 3 }).map((_, col) => (
+                              <span
+                                key={`${row}-${col}`}
+                                className="absolute text-white/40 font-bold uppercase tracking-widest pointer-events-none select-none"
+                                style={{
+                                  fontSize: "10px",
+                                  top: `${row * 22 + 8}%`,
+                                  left: `${col * 38 - 8}%`,
+                                  transform: "rotate(-30deg)",
+                                  whiteSpace: "nowrap",
+                                  letterSpacing: "0.2em",
+                                  textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+                                }}
+                              >
+                                PREVIEW ONLY
+                              </span>
+                            ))
+                          )}
+                          {/* Subtle dark tint */}
+                          <div className="absolute inset-0 bg-black/10" />
                         </div>
                       )}
 

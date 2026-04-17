@@ -1,9 +1,111 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
+
+// ─── Agent Image Field (upload file OR paste URL) ────────────────────────────
+function AgentImageField({ label, value, onChange, folder, placeholder, hint, preview }) {
+  const [mode,       setMode]       = useState("url");   // "url" | "upload"
+  const [uploading,  setUploading]  = useState(false);
+  const [uploadErr,  setUploadErr]  = useState("");
+  const fileRef = useRef(null);
+
+  async function handleFile(file) {
+    if (!file) return;
+    setUploading(true);
+    setUploadErr("");
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/dashboard/upload-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, folder }),
+      });
+      if (!res.ok) { setUploadErr("Upload failed. Check storage config."); return; }
+      const { uploadUrl, publicUrl } = await res.json();
+      await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+      onChange(publicUrl);
+    } catch {
+      setUploadErr("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="label-field">{label}</label>
+        <div className="flex gap-3 text-xs">
+          <button type="button" onClick={() => setMode("url")}
+            className={`transition-colors ${mode === "url" ? "text-navy font-semibold" : "text-gray-400 hover:text-gray-600"}`}>
+            Paste URL
+          </button>
+          <button type="button" onClick={() => setMode("upload")}
+            className={`transition-colors ${mode === "upload" ? "text-navy font-semibold" : "text-gray-400 hover:text-gray-600"}`}>
+            Upload File
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-3">
+        {/* Preview */}
+        {value ? (
+          preview === "circle" ? (
+            <img src={value} alt={label} className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100 flex-shrink-0" />
+          ) : (
+            <img src={value} alt={label} className="h-12 max-w-[120px] object-contain rounded border border-gray-100 bg-gray-50 p-1 flex-shrink-0" />
+          )
+        ) : (
+          <div className={`flex-shrink-0 bg-gray-100 rounded flex items-center justify-center text-gray-400 ${preview === "circle" ? "w-12 h-12 rounded-full" : "h-12 w-20"}`}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+        )}
+
+        <div className="flex-1">
+          {mode === "url" ? (
+            <input
+              type="url"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder={placeholder}
+              className="input-field w-full text-sm"
+            />
+          ) : (
+            <>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                className="hidden"
+                onChange={(e) => handleFile(e.target.files?.[0])}
+              />
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => fileRef.current?.click()}
+                className="w-full border-2 border-dashed border-gray-200 rounded-sm py-3 text-sm text-gray-500 hover:border-navy/30 hover:text-navy transition-colors disabled:opacity-50">
+                {uploading ? "Uploading…" : value ? "Replace image" : "Click to choose image"}
+              </button>
+              {uploadErr && <p className="text-xs text-red-500 mt-1">{uploadErr}</p>}
+            </>
+          )}
+          {value && (
+            <button type="button" onClick={() => onChange("")}
+              className="text-xs text-gray-400 hover:text-red-500 transition-colors mt-1">
+              Remove
+            </button>
+          )}
+        </div>
+      </div>
+      {hint && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
+    </div>
+  );
+}
 
 // ─── Date/Time Picker ────────────────────────────────────────────────────────
 const TIME_OPTIONS = [
@@ -119,6 +221,13 @@ export default function ListingDetailPage() {
   const [propSiteMsg,   setPropSiteMsg]   = useState({ text: "", type: "" });
   const [tenantSlug,    setTenantSlug]    = useState("");
 
+  // Marketing tab state
+  const [analytics,        setAnalytics]        = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [captions,         setCaptions]         = useState(null);
+  const [captionsLoading,  setCaptionsLoading]  = useState(false);
+  const [listingUrl,       setListingUrl]        = useState("");
+
   useEffect(() => {
     load();
   }, [id]);
@@ -136,6 +245,7 @@ export default function ListingDetailPage() {
       const { tenant } = await tRes.json();
       if (tenant?.slug) {
         setTenantSlug(tenant.slug);
+        setListingUrl(`${window.location.origin}/${tenant.slug}/property/${id}`);
         const catRes = await fetch(`/api/tenant-public/${tenant.slug}/catalog`);
         if (catRes.ok) setCatalog(await catRes.json());
       }
@@ -248,6 +358,32 @@ export default function ListingDetailPage() {
     setPropSite((p) => ({ ...p, [field]: value }));
   }
 
+  async function loadAnalytics() {
+    setAnalyticsLoading(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/listings/${id}/analytics`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) setAnalytics(await res.json());
+    } catch {}
+    finally { setAnalyticsLoading(false); }
+  }
+
+  async function generateCaptions() {
+    setCaptionsLoading(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/listings/${id}/social-captions`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) setCaptions(data.captions);
+    } catch {}
+    finally { setCaptionsLoading(false); }
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
@@ -335,8 +471,9 @@ export default function ListingDetailPage() {
             { id: "overview",  label: "Overview" },
             { id: "orders",    label: "Orders" },
             { id: "property",  label: "Property Site" },
+            { id: "marketing", label: "Marketing" },
           ].map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)}
+            <button key={t.id} onClick={() => { setTab(t.id); if (t.id === "marketing" && !analytics) loadAnalytics(); }}
               className={`px-4 py-3.5 text-sm font-medium border-b-2 transition-colors ${
                 tab === t.id
                   ? "border-charcoal text-charcoal"
@@ -662,6 +799,100 @@ export default function ListingDetailPage() {
               }`}>{propSiteMsg.text}</div>
             )}
 
+            {/* Template + Color Scheme */}
+            <div className="bg-white rounded-sm border border-gray-200 p-6">
+              <h3 className="font-display text-navy text-base mb-1">Template & Style</h3>
+              <p className="text-xs text-gray-400 mb-5">Choose a layout and color scheme for the public property website.</p>
+
+              {/* Template selector */}
+              <div className="mb-5">
+                <label className="label-field mb-2">Layout Template</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { id: "modern",  label: "Modern",  desc: "Full-bleed hero, dark overlays" },
+                    { id: "classic", label: "Classic", desc: "Clean white, contained hero" },
+                    { id: "luxury",  label: "Luxury",  desc: "Editorial split, dark panels" },
+                  ].map((t) => (
+                    <button key={t.id} type="button"
+                      onClick={() => { setPropField("template", t.id); setPropField("colorPreset", "preset1"); }}
+                      className={`text-left p-3 rounded-lg border-2 transition-all ${
+                        (propSite.template || "modern") === t.id
+                          ? "border-navy bg-navy/5"
+                          : "border-gray-200 hover:border-navy/30"
+                      }`}>
+                      <p className={`text-sm font-semibold ${(propSite.template || "modern") === t.id ? "text-navy" : "text-charcoal"}`}>{t.label}</p>
+                      <p className="text-xs text-gray-400 mt-0.5 leading-snug">{t.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Color preset */}
+              {(() => {
+                const PRESETS = {
+                  modern:  [{ id: "preset1", label: "Navy & Gold",        primary: "#0b2a55", accent: "#c9a96e" }, { id: "preset2", label: "Charcoal & Emerald", primary: "#1a1a2e", accent: "#10b981" }],
+                  classic: [{ id: "preset1", label: "Blue & Brass",       primary: "#1e3a5f", accent: "#b08d57" }, { id: "preset2", label: "Forest & Gold",      primary: "#1a3a2a", accent: "#c8a96e" }],
+                  luxury:  [{ id: "preset1", label: "Obsidian & Champagne",primary: "#0d0d0d", accent: "#d4af8a" }, { id: "preset2", label: "Slate & Rose Gold",  primary: "#1e2433", accent: "#c9848a" }],
+                };
+                const tmpl   = propSite.template || "modern";
+                const presets = PRESETS[tmpl] || PRESETS.modern;
+                const current = propSite.colorPreset || "preset1";
+                return (
+                  <div>
+                    <label className="label-field mb-2">Color Scheme</label>
+                    <div className="flex flex-wrap gap-2">
+                      {presets.map((p) => (
+                        <button key={p.id} type="button"
+                          onClick={() => setPropField("colorPreset", p.id)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm transition-all ${
+                            current === p.id ? "border-navy" : "border-gray-200 hover:border-navy/30"
+                          }`}>
+                          <span className="flex gap-1">
+                            <span className="w-4 h-4 rounded-full border border-white/30 shadow-sm" style={{ background: p.primary }} />
+                            <span className="w-4 h-4 rounded-full border border-white/30 shadow-sm" style={{ background: p.accent }} />
+                          </span>
+                          <span className={current === p.id ? "font-semibold text-navy" : "text-gray-600"}>{p.label}</span>
+                        </button>
+                      ))}
+                      <button type="button"
+                        onClick={() => setPropField("colorPreset", "custom")}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm transition-all ${
+                          current === "custom" ? "border-navy" : "border-gray-200 hover:border-navy/30"
+                        }`}>
+                        <span className={current === "custom" ? "font-semibold text-navy" : "text-gray-600"}>Custom…</span>
+                      </button>
+                    </div>
+                    {current === "custom" && (
+                      <div className="flex gap-4 mt-3">
+                        <div>
+                          <label className="label-field text-xs">Primary Color</label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <input type="color" value={propSite.customPrimary || "#0b2a55"}
+                              onChange={(e) => setPropField("customPrimary", e.target.value)}
+                              className="w-9 h-9 rounded cursor-pointer border border-gray-200" />
+                            <input type="text" value={propSite.customPrimary || "#0b2a55"}
+                              onChange={(e) => setPropField("customPrimary", e.target.value)}
+                              className="input-field w-28 text-xs font-mono" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="label-field text-xs">Accent Color</label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <input type="color" value={propSite.customAccent || "#c9a96e"}
+                              onChange={(e) => setPropField("customAccent", e.target.value)}
+                              className="w-9 h-9 rounded cursor-pointer border border-gray-200" />
+                            <input type="text" value={propSite.customAccent || "#c9a96e"}
+                              onChange={(e) => setPropField("customAccent", e.target.value)}
+                              className="input-field w-28 text-xs font-mono" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+
             {/* Display settings */}
             <div className="bg-white rounded-sm border border-gray-200 p-6">
               <h3 className="font-display text-navy text-base mb-5">Website Settings</h3>
@@ -825,7 +1056,7 @@ export default function ListingDetailPage() {
                       className="input-field w-full" placeholder={booking?.clientName} />
                   </div>
                   <div>
-                    <label className="label-field">Brokerage</label>
+                    <label className="label-field">Brokerage / Company</label>
                     <input type="text" value={propSite.agentBrokerage || ""}
                       onChange={(e) => setPropField("agentBrokerage", e.target.value)}
                       className="input-field w-full" placeholder="RE/MAX" />
@@ -845,6 +1076,27 @@ export default function ListingDetailPage() {
                       className="input-field w-full" placeholder={booking?.clientEmail} />
                   </div>
                 </div>
+
+                {/* Agent headshot */}
+                <AgentImageField
+                  label="Agent Headshot"
+                  value={propSite.agentPhoto || ""}
+                  onChange={(url) => setPropField("agentPhoto", url)}
+                  folder="agent-photos"
+                  placeholder="https://..."
+                  preview="circle"
+                />
+
+                {/* Company / brokerage logo */}
+                <AgentImageField
+                  label="Brokerage Logo"
+                  value={propSite.agentLogoUrl || ""}
+                  onChange={(url) => setPropField("agentLogoUrl", url)}
+                  folder="agent-logos"
+                  placeholder="https://... or upload"
+                  hint="Shown on the property website and brochure next to the agent card."
+                  preview="rect"
+                />
               </div>
             </div>
 
@@ -863,6 +1115,205 @@ export default function ListingDetailPage() {
                 </a>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ── MARKETING TAB ─────────────────────────────────────────────────── */}
+        {tab === "marketing" && (
+          <div className="max-w-3xl space-y-6">
+
+            {/* Listing URL */}
+            {listingUrl && propSite.published && (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+                <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Listing URL</p>
+                <div className="flex gap-2 items-center">
+                  <input readOnly value={listingUrl}
+                    className="flex-1 input-field text-sm bg-gray-50 text-gray-600" />
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(listingUrl); }}
+                    className="px-4 py-2 text-sm font-medium rounded-sm bg-navy text-white hover:bg-navy/90 transition-colors flex-shrink-0">
+                    Copy
+                  </button>
+                  <a href={listingUrl} target="_blank" rel="noopener noreferrer"
+                    className="px-4 py-2 text-sm font-medium rounded-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex-shrink-0">
+                    ↗ Open
+                  </a>
+                </div>
+                {!propSite.published && (
+                  <p className="text-xs text-amber-600 mt-2">Publish the property website first to get a shareable URL.</p>
+                )}
+              </div>
+            )}
+
+            {/* Analytics */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs uppercase tracking-wide text-gray-400">Listing Analytics</p>
+                <button onClick={loadAnalytics} disabled={analyticsLoading}
+                  className="text-xs text-navy hover:underline disabled:opacity-50">
+                  {analyticsLoading ? "Loading…" : "↻ Refresh"}
+                </button>
+              </div>
+              {analyticsLoading && !analytics ? (
+                <div className="flex justify-center py-6">
+                  <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-3xl font-bold text-navy">{analytics?.views ?? "—"}</p>
+                    <p className="text-xs text-gray-500 mt-1">Page Views</p>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-3xl font-bold text-navy">{analytics?.inquiries?.length ?? "—"}</p>
+                    <p className="text-xs text-gray-500 mt-1">Inquiries</p>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-3xl font-bold text-navy">
+                      {analytics?.views && analytics?.inquiries?.length
+                        ? `${((analytics.inquiries.length / analytics.views) * 100).toFixed(1)}%`
+                        : "—"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Conversion</p>
+                  </div>
+                </div>
+              )}
+              {analytics?.lastViewedAt && (
+                <p className="text-xs text-gray-400">
+                  Last viewed: {new Date(analytics.lastViewedAt).toLocaleString()}
+                </p>
+              )}
+            </div>
+
+            {/* QR Code + Brochure row */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              {/* QR Code */}
+              {listingUrl && (
+                <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">QR Code</p>
+                  <div className="flex items-start gap-4">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(listingUrl)}&size=120x120&margin=4`}
+                      alt="QR Code"
+                      className="w-24 h-24 border border-gray-100 rounded-lg"
+                    />
+                    <div className="flex-1 space-y-2">
+                      <p className="text-sm text-gray-600 leading-snug">Perfect for yard signs, flyers, and business cards.</p>
+                      <a
+                        href={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(listingUrl)}&size=600x600&margin=10`}
+                        download="listing-qr.png"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block text-xs font-medium text-navy hover:underline">
+                        ↓ Download high-res QR
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Brochure */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+                <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Print Brochure</p>
+                <p className="text-sm text-gray-600 mb-4 leading-snug">One-page property brochure with photos, stats, agent info, and QR code. Ready to print or save as PDF.</p>
+                {tenantSlug ? (
+                  <a
+                    href={`/${tenantSlug}/property/${id}/brochure`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-sm bg-navy text-white hover:bg-navy/90 transition-colors">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Open Brochure →
+                  </a>
+                ) : (
+                  <p className="text-xs text-gray-400">Save the property website first to generate a brochure.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Social captions generator */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-400">AI Marketing Captions</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Instagram, Facebook, and email subject — generated instantly</p>
+                </div>
+                <button onClick={generateCaptions} disabled={captionsLoading}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-sm bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
+                  {captionsLoading ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      Generating…
+                    </>
+                  ) : (
+                    <>✨ {captions ? "Regenerate" : "Generate Captions"}</>
+                  )}
+                </button>
+              </div>
+
+              {captions ? (
+                <div className="space-y-4">
+                  {[
+                    { label: "Instagram", icon: "📸", key: "instagram", rows: 3 },
+                    { label: "Facebook",  icon: "📘", key: "facebook",  rows: 3 },
+                    { label: "Email Subject", icon: "✉️", key: "emailSubject", rows: 1 },
+                  ].map(({ label, icon, key, rows }) => (
+                    captions[key] && (
+                      <div key={key}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-xs font-semibold text-gray-500">{icon} {label}</p>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(captions[key])}
+                            className="text-xs text-navy hover:underline">
+                            Copy
+                          </button>
+                        </div>
+                        <textarea readOnly value={captions[key]} rows={rows}
+                          className="w-full text-sm px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg resize-none text-gray-700 leading-relaxed" />
+                      </div>
+                    )
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-sm text-gray-400">
+                  Click "Generate Captions" to create ready-to-post marketing copy for this listing.
+                </div>
+              )}
+            </div>
+
+            {/* Inquiries */}
+            {analytics?.inquiries?.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+                <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
+                  Inquiries ({analytics.inquiries.length})
+                </p>
+                <div className="divide-y divide-gray-100">
+                  {analytics.inquiries.map((inq) => (
+                    <div key={inq.id} className="py-3 grid grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <p className="font-medium text-charcoal">{inq.name}</p>
+                        <a href={`mailto:${inq.email}`} className="text-xs text-navy hover:underline">{inq.email}</a>
+                        {inq.phone && <p className="text-xs text-gray-400">{inq.phone}</p>}
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-gray-600 leading-snug">{inq.message}</p>
+                        {inq.createdAt && (
+                          <p className="text-xs text-gray-400 mt-1">{new Date(inq.createdAt).toLocaleString()}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {analytics && analytics.inquiries?.length === 0 && (
+              <div className="text-center py-6 text-sm text-gray-400 bg-white rounded-xl border border-gray-200">
+                No inquiries yet. Share the listing URL to start getting leads.
+              </div>
+            )}
           </div>
         )}
       </div>
