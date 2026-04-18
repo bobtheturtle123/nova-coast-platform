@@ -7,14 +7,5 @@
       "maxDuration": 30
     }
   },
-  "crons": [
-    {
-      "path": "/api/cron/shoot-reminders",
-      "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/gallery-deliveries",
-      "schedule": "0 15 * * *"
-    }
-  ]
+  "crons": []
 }
