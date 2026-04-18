@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
+import { useToast } from "@/components/Toast";
 
 // ─── Staff Access Section ─────────────────────────────────────────────────────
 function StaffAccessSection() {
@@ -337,6 +338,18 @@ function QuickBooksSection() {
       {msg && (
         <div className={`text-sm px-3 py-2 rounded mb-4 ${msg.includes("success") || msg.includes("connected") ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
           {msg}
+          {msg.includes("QUICKBOOKS_CLIENT_ID") && (
+            <div className="mt-2 text-xs space-y-1">
+              <p className="font-semibold">Setup steps:</p>
+              <ol className="list-decimal pl-4 space-y-1">
+                <li>Go to <a href="https://developer.intuit.com" target="_blank" rel="noopener noreferrer" className="underline">developer.intuit.com</a> → Sign in → Create an App</li>
+                <li>Choose "QuickBooks Online and Payments" → set redirect URI to: <code className="bg-amber-100 px-1 rounded font-mono">{typeof window !== "undefined" ? window.location.origin : ""}/api/dashboard/quickbooks/callback</code></li>
+                <li>Copy Client ID and Client Secret from the Keys tab</li>
+                <li>Add to Vercel: <code className="bg-amber-100 px-1 rounded font-mono">QUICKBOOKS_CLIENT_ID</code>, <code className="bg-amber-100 px-1 rounded font-mono">QUICKBOOKS_CLIENT_SECRET</code>, <code className="bg-amber-100 px-1 rounded font-mono">QUICKBOOKS_SANDBOX=false</code></li>
+                <li>Redeploy, then come back here to connect</li>
+              </ol>
+            </div>
+          )}
         </div>
       )}
 
@@ -593,10 +606,10 @@ const DEFAULT_TIERS = [
 ];
 
 export default function SettingsPage() {
+  const toast = useToast();
   const [tenant,  setTenant]  = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
-  const [msg,     setMsg]     = useState({ text: "", type: "" });
 
   const [form, setForm] = useState({
     businessName: "", phone: "", fromZip: "",
@@ -753,8 +766,7 @@ export default function SettingsPage() {
   }
 
   function showMsg(text, type = "success") {
-    setMsg({ text, type });
-    setTimeout(() => setMsg({ text: "", type: "" }), 3000);
+    toast(text, type === "success" ? "success" : "error");
   }
 
   async function saveBranding(e) {
@@ -1075,13 +1087,6 @@ export default function SettingsPage() {
         <h1 className="font-semibold text-xl text-charcoal mb-1">Settings</h1>
         <p className="text-gray-400 text-sm">Manage your business profile, branding, and pricing.</p>
       </div>
-
-      {msg.text && (
-        <div className={`text-sm px-4 py-2 rounded-sm mb-6 ${
-          msg.type === "success" ? "bg-green-50 border border-green-200 text-green-700"
-          : "bg-red-50 border border-red-200 text-red-700"
-        }`}>{msg.text}</div>
-      )}
 
       <div className="flex gap-8 items-start">
         {/* Sticky side nav */}

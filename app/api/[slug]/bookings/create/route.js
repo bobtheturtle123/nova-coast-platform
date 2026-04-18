@@ -4,8 +4,15 @@ import { calculateTenantPrice } from "@/lib/catalogUtils";
 import { createConnectedPaymentIntent } from "@/lib/stripe";
 import { sendBookingConfirmation } from "@/lib/email";
 import { v4 as uuidv4 } from "uuid";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req, { params }) {
+  // 5 booking attempts per IP per hour
+  const rl = await rateLimit(req, `booking-create:${params.slug}`, 5, 3600);
+  if (rl.limited) {
+    return Response.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+  }
+
   try {
     const tenant = await getTenantBySlug(params.slug);
     if (!tenant) return Response.json({ error: "Business not found" }, { status: 404 });

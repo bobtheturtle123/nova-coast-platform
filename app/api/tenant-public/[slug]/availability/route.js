@@ -1,5 +1,6 @@
 import { getTenantBySlug } from "@/lib/tenants";
 import { adminDb } from "@/lib/firebase-admin";
+import { rateLimit } from "@/lib/rateLimit";
 
 /**
  * GET /api/tenant-public/[slug]/availability?date=YYYY-MM-DD
@@ -8,6 +9,10 @@ import { adminDb } from "@/lib/firebase-admin";
  * availability config (mode: "slots" | "real").
  */
 export async function GET(req, { params }) {
+  // 60 requests per IP per hour (normal calendar browsing won't hit this)
+  const rl = await rateLimit(req, `availability:${params.slug}`, 60, 3600);
+  if (rl.limited) return Response.json({ error: "Too many requests" }, { status: 429 });
+
   const { slug } = params;
   const url  = new URL(req.url);
   const date = url.searchParams.get("date"); // "YYYY-MM-DD"

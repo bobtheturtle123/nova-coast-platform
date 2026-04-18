@@ -1,8 +1,15 @@
 import { adminAuth } from "@/lib/firebase-admin";
 import { createTenant, toSlug, isSlugTaken } from "@/lib/tenants";
 import { sendWelcomeEmail } from "@/lib/email";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req) {
+  // 3 registrations per IP per hour — prevents account spam
+  const rl = await rateLimit(req, "tenant-register", 3, 3600);
+  if (rl.limited) {
+    return Response.json({ error: "Too many registration attempts. Please try again later." }, { status: 429 });
+  }
+
   try {
     const { uid, email, businessName } = await req.json();
 

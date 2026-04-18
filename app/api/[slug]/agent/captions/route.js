@@ -1,7 +1,7 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || process.env.GROQ_API_KEY;
 
 export async function GET(req, { params }) {
   const { searchParams } = new URL(req.url);
@@ -37,7 +37,7 @@ export async function GET(req, { params }) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!GROQ_API_KEY) {
+  if (!DEEPSEEK_API_KEY) {
     return Response.json({ error: "AI not configured" }, { status: 503 });
   }
 
@@ -56,11 +56,11 @@ export async function GET(req, { params }) {
   ].filter(Boolean).join("\n");
 
   try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method:  "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROQ_API_KEY}` },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_API_KEY}` },
       body: JSON.stringify({
-        model:       "llama-3.1-8b-instant",
+        model:       "deepseek-chat",
         max_tokens:  700,
         temperature: 0.8,
         messages: [{

@@ -6,9 +6,9 @@ import { sendShootReminderSms, mergeSmsPrefs } from "@/lib/sms";
 export const dynamic = "force-dynamic";
 
 export async function GET(req) {
-  // Verify cron secret so only Vercel (or your own scheduler) can call this
+  // Verify cron secret — fail closed: if the env var is not set, block all access
   const authHeader = req.headers.get("authorization");
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response("Unauthorized", { status: 401 });
   }
 

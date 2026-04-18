@@ -6,6 +6,7 @@ import Link from "next/link";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import AiChatButton from "@/components/dashboard/AiChatButton";
+import { ToastProvider } from "@/components/Toast";
 
 const NAV = [
   {
@@ -182,6 +183,7 @@ export default function DashboardLayout({ children }) {
   );
 
   return (
+  <ToastProvider>
     <div className="min-h-screen bg-cream flex">
       {/* Desktop sidebar */}
       <div className="hidden md:flex flex-col flex-shrink-0 w-56 sticky top-0 h-screen">
@@ -213,5 +215,6 @@ export default function DashboardLayout({ children }) {
       </div>
       <AiChatButton />
     </div>
+  </ToastProvider>
   );
 }

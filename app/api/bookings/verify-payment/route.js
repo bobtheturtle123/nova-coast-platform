@@ -1,17 +1,27 @@
 import { stripe } from "@/lib/stripe";
 import { adminDb } from "@/lib/firebase-admin";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req) {
+  // 20 attempts per IP per hour — prevents payment intent probing
+  const rl = await rateLimit(req, "verify-payment", 20, 3600);
+  if (rl.limited) return Response.json({ error: "Too many requests" }, { status: 429 });
+
   try {
     const { bookingId, paymentIntentId } = await req.json();
     if (!bookingId || !paymentIntentId) {
       return Response.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Retrieve from Stripe — server-authoritative, can't be spoofed
+    // Validate IDs look reasonable before hitting Stripe
+    if (!/^[a-zA-Z0-9_-]{5,100}$/.test(bookingId) || !/^pi_[a-zA-Z0-9_]{10,}$/.test(paymentIntentId)) {
+      return Response.json({ error: "Invalid parameters" }, { status: 400 });
+    }
+
+    // Retrieve from Stripe — server-authoritative, metadata was set server-side
     const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-    // Verify PI belongs to this booking
+    // Verify PI belongs to this exact booking (set when PI was created)
     if (pi.metadata?.bookingId !== bookingId) {
       return Response.json({ error: "Payment intent mismatch" }, { status: 400 });
     }

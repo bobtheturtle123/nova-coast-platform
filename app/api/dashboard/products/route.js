@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { v4 as uuidv4 } from "uuid";
+import { stripTags } from "@/lib/rateLimit";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -58,14 +59,16 @@ export async function POST(req) {
 
 function sanitizeItem(body, type) {
   const base = {
-    name:        (body.name || "").slice(0, 100),
-    description: (body.description || "").slice(0, 1000),
-    price:       Number(body.price) || 0,
-    active:      body.active !== false,
-    thumbnailUrl: body.thumbnailUrl || "",
+    name:         stripTags(body.name        || "").slice(0, 100),
+    description:  stripTags(body.description || "").slice(0, 1000),
+    price:        Number(body.price) || 0,
+    active:       body.active !== false,
+    thumbnailUrl: typeof body.thumbnailUrl === "string" && body.thumbnailUrl.startsWith("https://")
+      ? body.thumbnailUrl.slice(0, 500)
+      : "",
   };
 
-  // Tier pricing
+  // Tier pricing — all numeric, no injection risk
   if (body.priceTiers && typeof body.priceTiers === "object") {
     base.priceTiers = {
       Tiny:   Number(body.priceTiers.Tiny)   || 0,
@@ -79,10 +82,12 @@ function sanitizeItem(body, type) {
 
   // Package-specific
   if (type === "packages") {
-    base.tagline       = (body.tagline || "").slice(0, 200);
-    base.deliverables  = (body.deliverables || "").slice(0, 300);
-    base.includes      = Array.isArray(body.includes) ? body.includes : [];
-    base.featured      = !!body.featured;
+    base.tagline      = stripTags(body.tagline     || "").slice(0, 200);
+    base.deliverables = stripTags(body.deliverables || "").slice(0, 300);
+    base.includes     = Array.isArray(body.includes)
+      ? body.includes.map((s) => stripTags(String(s)).slice(0, 100))
+      : [];
+    base.featured = !!body.featured;
   }
 
   return base;

@@ -1,10 +1,14 @@
 import { getTenantBySlug } from "@/lib/tenants";
+import { rateLimit } from "@/lib/rateLimit";
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || process.env.GROQ_API_KEY;
 
 // POST /api/[slug]/property-chat
 // AI chatbot for the public property website (Groq free tier)
 export async function POST(req, { params }) {
+  const rl = await rateLimit(req, `property-chat:${params.slug}`, 20, 3600);
+  if (rl.limited) return Response.json({ reply: "Too many requests. Please try again later." }, { status: 429 });
+
   try {
     const tenant = await getTenantBySlug(params.slug);
     if (!tenant) return Response.json({ error: "Not found" }, { status: 404 });
@@ -12,7 +16,7 @@ export async function POST(req, { params }) {
     const { messages, pw } = await req.json();
     if (!messages?.length) return Response.json({ error: "No messages" }, { status: 400 });
 
-    if (!GROQ_API_KEY) {
+    if (!DEEPSEEK_API_KEY) {
       return Response.json({ reply: "AI chat is not configured yet. Please contact the listing agent directly." });
     }
 
@@ -52,14 +56,14 @@ Photographer / Media: ${tenant.businessName || "Professional photography service
       .slice(-8)
       .map((m) => ({ role: m.role, content: String(m.content).slice(0, 1000) }));
 
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method:  "POST",
       headers: {
         "Content-Type":  "application/json",
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
-        model:       "llama-3.1-8b-instant",
+        model:       "deepseek-chat",
         max_tokens:  300,
         temperature: 0.5,
         messages:    [{ role: "system", content: systemPrompt }, ...chatMessages],

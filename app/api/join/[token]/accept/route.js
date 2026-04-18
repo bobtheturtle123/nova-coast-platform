@@ -1,64 +1,98 @@
-import { adminDb } from "@/lib/firebase-admin";
+import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(req, { params }) {
   const { token } = params;
-  const { name, phone, email } = await req.json();
+  const { name, phone, email, password } = await req.json();
 
-  if (!name?.trim()) {
-    return Response.json({ error: "Name is required." }, { status: 400 });
-  }
+  if (!name?.trim()) return Response.json({ error: "Name is required." }, { status: 400 });
+  if (!email?.trim()) return Response.json({ error: "Email is required." }, { status: 400 });
+  if (!password || password.length < 6) return Response.json({ error: "Password must be at least 6 characters." }, { status: 400 });
 
-  // Find the invite across all tenants by doc ID
+  // Find invite via top-level index (O(1) lookup, no collectionGroup traversal)
   let inviteRef = null;
   let tenantId  = null;
+  let inviteData = null;
 
   try {
-    const snap = await adminDb.collectionGroup("invites").get();
-    for (const doc of snap.docs) {
-      if (doc.id === token) {
-        inviteRef = doc.ref;
-        tenantId  = doc.ref.parent.parent.id;
-        const data = doc.data();
-        if (data.accepted) {
-          return Response.json({ error: "This invite has already been used." }, { status: 400 });
-        }
-        const expiresAt = data.expiresAt?.toDate?.() || new Date(data.expiresAt);
-        if (expiresAt < new Date()) {
-          return Response.json({ error: "This invite has expired." }, { status: 400 });
-        }
-        break;
-      }
-    }
-  } catch (err) {
+    const doc = await adminDb.collection("photographerInvites").doc(token).get();
+    if (!doc.exists) return Response.json({ error: "Invite not found." }, { status: 404 });
+    inviteRef  = doc.ref;
+    tenantId   = doc.data().tenantId;
+    inviteData = doc.data();
+    if (inviteData.accepted) return Response.json({ error: "This invite has already been used." }, { status: 400 });
+    const expiresAt = inviteData.expiresAt?.toDate?.() || new Date(inviteData.expiresAt);
+    if (expiresAt < new Date()) return Response.json({ error: "This invite has expired." }, { status: 400 });
+  } catch {
     return Response.json({ error: "Could not verify invite." }, { status: 500 });
   }
 
-  if (!inviteRef || !tenantId) {
-    return Response.json({ error: "Invite not found." }, { status: 404 });
+  if (!inviteRef || !tenantId) return Response.json({ error: "Invite not found." }, { status: 404 });
+
+  // Create or find Firebase Auth user
+  let uid;
+  try {
+    const existing = await adminAuth.getUserByEmail(email.trim().toLowerCase());
+    uid = existing.uid;
+    // Update password if they already have an account
+    await adminAuth.updateUser(uid, { password });
+  } catch {
+    // User doesn't exist — create them
+    try {
+      const newUser = await adminAuth.createUser({
+        email:         email.trim().toLowerCase(),
+        password,
+        displayName:   name.trim(),
+        emailVerified: true,
+      });
+      uid = newUser.uid;
+    } catch (err) {
+      return Response.json({ error: err.message || "Could not create account." }, { status: 400 });
+    }
   }
 
-  // Create team member
-  const memberId = uuidv4();
+  // Create team member in the `team` subcollection
+  const memberId      = uuidv4().replace(/-/g, "").slice(0, 16);
+  const calendarToken = uuidv4().replace(/-/g, "");
   const member = {
-    id:            memberId,
-    name:          name.trim(),
-    email:         email?.trim() || "",
-    phone:         phone?.trim() || "",
-    skills:        [],
-    active:        true,
+    id:              memberId,
+    name:            name.trim(),
+    email:           email.trim().toLowerCase(),
+    phone:           phone?.trim() || "",
+    skills:          [],
+    active:          true,
+    color:           "#0b2a55",
     joinedViaInvite: true,
-    joinedAt:      new Date(),
-    calendarToken: uuidv4(),
+    joinedAt:        new Date(),
+    calendarToken,
+    uid,
+    tenantId,
+    payRate:         0,
   };
 
-  await adminDb
-    .collection("tenants").doc(tenantId)
-    .collection("teamMembers").doc(memberId)
-    .set(member);
+  const batch = adminDb.batch();
+  batch.set(
+    adminDb.collection("tenants").doc(tenantId).collection("team").doc(memberId),
+    member
+  );
+  batch.set(
+    adminDb.collection("calendarTokens").doc(calendarToken),
+    { tenantId, memberId }
+  );
+  await batch.commit();
 
-  // Mark invite as accepted
-  await inviteRef.update({ accepted: true, acceptedAt: new Date(), memberId });
+  // Set custom claims: photographer role
+  await adminAuth.setCustomUserClaims(uid, {
+    tenantId,
+    memberId,
+    role: "photographer",
+  });
 
-  return Response.json({ ok: true, memberId });
+  // Mark invite accepted
+  await inviteRef.update({ accepted: true, acceptedAt: new Date(), memberId, uid });
+
+  // Generate custom token so the client can sign in immediately
+  const customToken = await adminAuth.createCustomToken(uid, { tenantId, memberId, role: "photographer" });
+
+  return Response.json({ ok: true, memberId, customToken });
 }

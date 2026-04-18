@@ -1,10 +1,16 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
+import { rateLimit } from "@/lib/rateLimit";
 
-// Public endpoint — no auth required — used by booking form to prefill returning client info
+// Public endpoint — used by booking form to prefill returning client info
 export async function GET(req, { params }) {
+  // 30 lookups per hour per IP — prevents email enumeration attacks
+  const rl = await rateLimit(req, `agent-lookup:${params.slug}`, 30, 3600);
+  if (rl.limited) return Response.json({ agent: null }, { status: 429 });
+
   const email = new URL(req.url).searchParams.get("email")?.toLowerCase().trim();
-  if (!email || !email.includes("@")) return Response.json({ agent: null });
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email)) return Response.json({ agent: null });
 
   try {
     const tenant = await getTenantBySlug(params.slug);

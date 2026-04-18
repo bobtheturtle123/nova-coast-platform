@@ -41,8 +41,12 @@ export default function DashboardHome() {
     total:     listings.length,
     pending:   listings.filter((l) => l.status === "requested").length,
     confirmed: listings.filter((l) => l.status === "confirmed").length,
-    revenue:   listings.filter((l) => l.depositPaid).reduce((s, l) => s + (l.depositAmount || 0), 0)
-               + listings.filter((l) => l.balancePaid).reduce((s, l) => s + (l.remainingBalance || 0), 0),
+    // Correct formula: paid-in-full → total; deposit only → deposit; else → 0
+    revenue: listings.reduce((s, l) => {
+      if (l.paidInFull || l.balancePaid) return s + (l.totalPrice || 0);
+      if (l.depositPaid)                 return s + (l.depositAmount || 0);
+      return s;
+    }, 0),
   };
 
   const recent = listings.slice(0, 8);
@@ -90,6 +94,53 @@ export default function DashboardHome() {
           </Link>
         </div>
       )}
+
+      {/* Onboarding checklist — shown until all steps done */}
+      {tenant && (() => {
+        const steps = [
+          { done: !!tenant.stripeConnectOnboarded, label: "Connect Stripe to accept payments", href: "/dashboard/billing" },
+          { done: listings.length > 0,             label: "Receive your first booking",        href: null },
+          { done: !!tenant.slug,                   label: "Share your booking page",           href: bookingUrl, external: true },
+          { done: !!tenant.branding?.logoUrl,      label: "Upload your logo in Settings",      href: "/dashboard/settings" },
+        ];
+        const doneCount = steps.filter((s) => s.done).length;
+        if (doneCount === steps.length) return null;
+        return (
+          <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6 shadow-card">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-charcoal">Get started — {doneCount}/{steps.length} complete</p>
+              <div className="flex gap-1">
+                {steps.map((s, i) => (
+                  <div key={i} className={`h-1 w-6 rounded-full ${s.done ? "bg-emerald-500" : "bg-gray-200"}`} />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              {steps.map((s, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                    s.done ? "bg-emerald-500 border-emerald-500" : "border-gray-300"
+                  }`}>
+                    {s.done && (
+                      <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  {s.done || !s.href ? (
+                    <span className={`text-sm ${s.done ? "line-through text-gray-400" : "text-charcoal"}`}>{s.label}</span>
+                  ) : s.external ? (
+                    <a href={s.href} target="_blank" rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline">{s.label}</a>
+                  ) : (
+                    <Link href={s.href} className="text-sm text-blue-600 hover:underline">{s.label}</Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">

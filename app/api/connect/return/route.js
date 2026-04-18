@@ -1,25 +1,28 @@
-import { adminDb } from "@/lib/firebase-admin";
+import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { stripe } from "@/lib/stripe";
-import { redirect } from "next/navigation";
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const accountId = searchParams.get("account");
 
-  if (accountId) {
-    // Verify onboarding completion
+  // Require a valid Firebase session — prevents unauthenticated CSRF-style calls
+  const authHeader = req.headers.get("Authorization")?.replace("Bearer ", "");
+  let tenantId = null;
+  if (authHeader) {
+    try {
+      const decoded = await adminAuth.verifyIdToken(authHeader);
+      tenantId = decoded.tenantId || null;
+    } catch { /* invalid token — continue without tenantId */ }
+  }
+
+  if (accountId && tenantId) {
     try {
       const account = await stripe.accounts.retrieve(accountId);
       if (account.details_submitted) {
-        // Find tenant by connect account id and mark as onboarded
-        const snap = await adminDb
-          .collection("tenants")
-          .where("stripeConnectAccountId", "==", accountId)
-          .limit(1)
-          .get();
-
-        if (!snap.empty) {
-          await snap.docs[0].ref.update({ stripeConnectOnboarded: true });
+        // Verify this account belongs to the authenticated tenant before updating
+        const tenantDoc = await adminDb.collection("tenants").doc(tenantId).get();
+        if (tenantDoc.exists && tenantDoc.data().stripeConnectAccountId === accountId) {
+          await tenantDoc.ref.update({ stripeConnectOnboarded: true });
         }
       }
     } catch (err) {
@@ -27,7 +30,5 @@ export async function GET(req) {
     }
   }
 
-  return Response.redirect(
-    new URL("/dashboard/billing?connect=complete", req.url)
-  );
+  return Response.redirect(new URL("/dashboard/billing?connect=complete", req.url));
 }

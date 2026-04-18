@@ -17,7 +17,10 @@ export async function GET(req) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   if (!isConfigured()) {
-    return Response.json({ error: "QuickBooks integration not configured on this server." }, { status: 503 });
+    return Response.json({
+      error: "QuickBooks is not configured. Add QUICKBOOKS_CLIENT_ID and QUICKBOOKS_CLIENT_SECRET to your Vercel environment variables. Get credentials at developer.intuit.com → Create an App → Production keys.",
+      setupRequired: true,
+    }, { status: 503 });
   }
 
   const url = getAuthUrl(ctx.tenantId);

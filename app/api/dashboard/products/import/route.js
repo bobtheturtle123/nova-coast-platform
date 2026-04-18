@@ -1,6 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || process.env.GROQ_API_KEY;
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -18,8 +18,8 @@ export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!GROQ_API_KEY) {
-    return Response.json({ error: "AI not configured. Set GROQ_API_KEY to enable pricing import." }, { status: 503 });
+  if (!DEEPSEEK_API_KEY) {
+    return Response.json({ error: "AI not configured. Set DEEPSEEK_API_KEY to enable pricing import." }, { status: 503 });
   }
 
   const { mode, content, targetType = "services" } = await req.json();
@@ -70,11 +70,11 @@ Rules:
 - Return at least 1 item if you find any pricing at all`;
 
   try {
-    const aiRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const aiRes = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method:  "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROQ_API_KEY}` },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_API_KEY}` },
       body: JSON.stringify({
-        model:       "llama-3.1-8b-instant",
+        model:       "deepseek-chat",
         max_tokens:  1500,
         temperature: 0.2,
         messages: [{ role: "user", content: prompt }],

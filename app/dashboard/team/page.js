@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { auth } from "@/lib/firebase";
+import { useToast } from "@/components/Toast";
 
 const SKILL_LABELS = {
   classicDaytime:         "Classic Daytime",
@@ -41,12 +42,13 @@ function isSameDay(a, b) {
 // ─── Member form modal ────────────────────────────────────────────────────────
 function MemberForm({ member, products, onSave, onDelete, onClose }) {
   const [form, setForm] = useState({
-    name:   member?.name   || "",
-    email:  member?.email  || "",
-    phone:  member?.phone  || "",
-    skills: member?.skills || [],
-    color:  member?.color  || COLORS[0],
-    active: member?.active !== false,
+    name:    member?.name    || "",
+    email:   member?.email   || "",
+    phone:   member?.phone   || "",
+    skills:  member?.skills  || [],
+    color:   member?.color   || COLORS[0],
+    active:  member?.active  !== false,
+    payRate: member?.payRate ?? "",
   });
   const [saving,   setSaving]   = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -129,6 +131,14 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
                 ))}
               </div>
             )}
+          </div>
+
+          <div>
+            <label className="label-field">Contractor Pay Rate (per shoot, $)</label>
+            <input type="number" min="0" step="0.01" value={form.payRate}
+              onChange={(e) => setForm((f) => ({...f, payRate: e.target.value === "" ? "" : parseFloat(e.target.value)}))}
+              className="input-field w-full" placeholder="e.g. 150" />
+            <p className="text-xs text-gray-400 mt-0.5">Visible to the photographer in their portal. Not shown to clients.</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -445,6 +455,7 @@ function BlockTimeModal({ members, onSave, onClose, timeBlocks, onDeleteBlock })
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function TeamPage() {
+  const toast = useToast();
   const [members,       setMembers]       = useState([]);
   const [bookings,      setBookings]      = useState([]);
   const [products,      setProducts]      = useState({ services: [], packages: [], addons: [] });
@@ -453,7 +464,6 @@ export default function TeamPage() {
   const [anchor,        setAnchor]        = useState(new Date());
   const [filterMember,  setFilterMember]  = useState("all");
   const [calModal,      setCalModal]      = useState(null);
-  const [flashMsg,      setFlashMsg]      = useState("");
   const [calView,       setCalView]       = useState("week"); // "week" | "month" | "day"
   const [inviteEmail,   setInviteEmail]   = useState("");
   const [showInvite,    setShowInvite]    = useState(false);
@@ -469,13 +479,11 @@ export default function TeamPage() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("calSuccess")) {
-      setFlashMsg("Google Calendar connected successfully!");
+      toast("Google Calendar connected successfully!");
       window.history.replaceState({}, "", "/dashboard/team");
-      setTimeout(() => setFlashMsg(""), 4000);
     } else if (params.get("calError")) {
-      setFlashMsg("Calendar connection failed: " + params.get("calError"));
+      toast("Calendar connection failed: " + params.get("calError"), "error");
       window.history.replaceState({}, "", "/dashboard/team");
-      setTimeout(() => setFlashMsg(""), 6000);
     }
   }, []);
 
@@ -508,22 +516,28 @@ export default function TeamPage() {
 
   async function saveMember(form) {
     const token = await getToken();
-    if (editing === "new") {
-      const res  = await fetch("/api/dashboard/team", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      setMembers((m) => [...m, data.member]);
-    } else {
-      await fetch(`/api/dashboard/team/${editing.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(form),
-      });
-      setMembers((m) => m.map((x) => x.id === editing.id ? { ...x, ...form } : x));
-    }
+    try {
+      if (editing === "new") {
+        const res  = await fetch("/api/dashboard/team", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(form),
+        });
+        const data = await res.json();
+        if (!res.ok) { toast(data.error || "Failed to add member.", "error"); return; }
+        setMembers((m) => [...m, data.member]);
+        toast("Team member added.");
+      } else {
+        const res = await fetch(`/api/dashboard/team/${editing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(form),
+        });
+        if (!res.ok) { toast("Failed to save.", "error"); return; }
+        setMembers((m) => m.map((x) => x.id === editing.id ? { ...x, ...form } : x));
+        toast("Team member saved.");
+      }
+    } catch { toast("Something went wrong.", "error"); }
     setEditing(null);
   }
 
@@ -623,8 +637,14 @@ export default function TeamPage() {
   // Map confirmed/completed bookings that have a shootDate to calendar
   const calendarEvents = useMemo(() => {
     return bookings
-      .filter((b) => b.shootDate && ["confirmed", "completed"].includes(b.status))
-      .map((b) => ({ ...b, shootDateObj: new Date(b.shootDate) }));
+      .filter((b) => b.shootDate && ["confirmed", "completed", "requested"].includes(b.status))
+      .map((b) => {
+        // Add T12:00:00 so date-only strings parse in local time, not UTC midnight
+        const ds = typeof b.shootDate === "string" && b.shootDate.length === 10
+          ? b.shootDate + "T12:00:00"
+          : b.shootDate;
+        return { ...b, shootDateObj: new Date(ds) };
+      });
   }, [bookings]);
 
   // Bookings with no photographer assigned (needs scheduling)
@@ -663,14 +683,6 @@ export default function TeamPage() {
           </button>
         </div>
       </div>
-
-      {flashMsg && (
-        <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${
-          flashMsg.includes("failed") || flashMsg.includes("Error")
-            ? "bg-red-50 border-red-200 text-red-700"
-            : "bg-green-50 border-green-200 text-green-700"
-        }`}>{flashMsg}</div>
-      )}
 
       {/* Team member cards */}
       {members.length > 0 && (

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
+import { useToast } from "@/components/Toast";
 
 // ─── Agent Image Field (upload file OR paste URL) ────────────────────────────
 function AgentImageField({ label, value, onChange, folder, placeholder, hint, preview }) {
@@ -199,6 +200,7 @@ const STATUS_COLORS = {
 export default function ListingDetailPage() {
   const { id }  = useParams();
   const router  = useRouter();
+  const toast   = useToast();
 
   const [booking,    setBooking]   = useState(null);
   const [gallery,    setGallery]   = useState(null);
@@ -206,7 +208,6 @@ export default function ListingDetailPage() {
   const [loading,    setLoading]   = useState(true);
   const [saving,     setSaving]    = useState(false);
   const [tab,        setTab]       = useState("overview");
-  const [msg,        setMsg]       = useState({ text: "", type: "" });
   const [showDeliver, setShowDeliver]   = useState(false);
   const [delivering,  setDelivering]   = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
@@ -278,7 +279,6 @@ export default function ListingDetailPage() {
 
   async function patchBooking(fields) {
     setSaving(true);
-    setMsg({ text: "", type: "" });
     try {
       const token = await auth.currentUser.getIdToken();
       const res = await fetch(`/api/dashboard/bookings/${id}`, {
@@ -288,11 +288,11 @@ export default function ListingDetailPage() {
       });
       if (res.ok) {
         setBooking((b) => ({ ...b, ...fields }));
-        setMsg({ text: "Saved.", type: "success" });
+        toast("Saved.");
       } else {
-        setMsg({ text: "Failed to save.", type: "error" });
+        toast("Failed to save.", "error");
       }
-    } catch { setMsg({ text: "Something went wrong.", type: "error" }); }
+    } catch { toast("Something went wrong.", "error"); }
     finally { setSaving(false); }
   }
 
@@ -372,9 +372,9 @@ export default function ListingDetailPage() {
     setShowDeliver(false);
     if (res.ok) {
       setGallery((g) => ({ ...g, delivered: true }));
-      setMsg({ text: "Gallery delivered to client.", type: "success" });
+      toast("Gallery delivered to client.");
     } else {
-      setMsg({ text: "Failed to deliver.", type: "error" });
+      toast("Failed to deliver.", "error");
     }
   }
 
@@ -542,16 +542,6 @@ export default function ListingDetailPage() {
       </div>
 
       <div className="p-6 max-w-5xl">
-        {msg.text && (
-          <div className={`text-sm px-4 py-2.5 rounded-sm mb-4 ${
-            msg.type === "success"
-              ? "bg-green-50 border border-green-200 text-green-700"
-              : "bg-red-50 border border-red-200 text-red-700"
-          }`}>
-            {msg.text}
-          </div>
-        )}
-
         {/* ── OVERVIEW TAB ─────────────────────────────────────────────────── */}
         {tab === "overview" && (
           <div className="grid md:grid-cols-2 gap-6">

@@ -97,13 +97,12 @@ function buildICal(member, bookings, tenantName) {
     // Summary line
     const summary = b.address || "Shoot";
 
-    // Description
+    // Description — intentionally omits client phone/email to prevent PII leaking
+    // into third-party calendar services (Google, iCloud, Outlook).
     const descParts = [];
-    if (b.clientName)  descParts.push(`Client: ${b.clientName}`);
-    if (b.clientPhone) descParts.push(`Phone: ${b.clientPhone}`);
-    if (b.clientEmail) descParts.push(`Email: ${b.clientEmail}`);
-    if (b.packageId)   descParts.push(`Package: ${b.packageId}`);
-    if (b.preferredTime) descParts.push(`Time pref: ${b.preferredTime}`);
+    if (b.clientName)    descParts.push(`Client: ${b.clientName}`);
+    if (b.packageId)     descParts.push(`Package: ${b.packageId}`);
+    if (b.preferredTime) descParts.push(`Time: ${b.preferredTime}`);
     const description = descParts.join("\\n");
 
     lines.push(

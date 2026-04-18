@@ -255,11 +255,12 @@ export default function GalleryDetailPage() {
   const [emailNote,    setEmailNote]    = useState(""); // HTML string
 
   // Category state
-  const [showCatPanel,  setShowCatPanel]  = useState(false);
-  const [newCatName,    setNewCatName]    = useState("");
+  const [showCatPanel,    setShowCatPanel]    = useState(false);
+  const [newCatName,      setNewCatName]      = useState("");
   // categories: { catName: [mediaKey, ...] }
-  const [categories,    setCategories]    = useState({});
-  const [savingCats,    setSavingCats]    = useState(false);
+  const [categories,      setCategories]      = useState({});
+  const [savingCats,      setSavingCats]      = useState(false);
+  const [pastCatNames,    setPastCatNames]    = useState([]);
 
   // Bulk selection state
   const [selectedKeys,    setSelectedKeys]    = useState(new Set());
@@ -710,7 +711,14 @@ export default function GalleryDetailPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowCatPanel(true)} className="btn-outline text-xs px-3 py-1.5">
+            <button onClick={async () => {
+              setShowCatPanel(true);
+              if (pastCatNames.length === 0) {
+                const token = await auth.currentUser?.getIdToken();
+                const res = await fetch("/api/dashboard/galleries/category-names", { headers: { Authorization: `Bearer ${token}` } });
+                if (res.ok) { const d = await res.json(); setPastCatNames(d.names || []); }
+              }
+            }} className="btn-outline text-xs px-3 py-1.5">
               📁 Categories ({catNames.length})
             </button>
             <button onClick={toggleUnlock} className="btn-outline text-xs px-3 py-1.5">
@@ -1070,6 +1078,21 @@ export default function GalleryDetailPage() {
                   placeholder="Category name (e.g. Exterior)" className="input-field flex-1" />
                 <button onClick={addCategory} className="btn-primary px-4 py-2.5 text-sm whitespace-nowrap">Add</button>
               </div>
+              {/* Previous folder name suggestions */}
+              {pastCatNames.filter((n) => !categories[n]).length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-400 mb-1.5">Previous folders used:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {pastCatNames.filter((n) => !categories[n]).map((n) => (
+                      <button key={n} type="button"
+                        onClick={() => { setNewCatName(""); setCategories((prev) => ({ ...prev, [n]: [] })); }}
+                        className="text-xs px-2.5 py-1 border border-gray-200 rounded-full hover:border-navy/40 hover:bg-navy/5 text-gray-600 transition-colors">
+                        + {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {catNames.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-4">No categories yet.</p>
               ) : (

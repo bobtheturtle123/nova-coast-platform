@@ -1,6 +1,6 @@
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || process.env.GROQ_API_KEY;
 
 // POST /api/dashboard/listings/[id]/social-captions
 // AI-generated Instagram, Facebook, and email subject for a listing (Groq free tier)
@@ -12,9 +12,9 @@ export async function POST(req, { params }) {
     const decoded = await adminAuth.verifyIdToken(token);
     if (!decoded.tenantId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!GROQ_API_KEY) {
+    if (!DEEPSEEK_API_KEY) {
       return Response.json(
-        { error: "AI not configured. Add GROQ_API_KEY to enable." },
+        { error: "AI not configured. Add DEEPSEEK_API_KEY to enable." },
         { status: 503 }
       );
     }
@@ -43,14 +43,14 @@ export async function POST(req, { params }) {
       pw.agentBrokerage && `Brokerage: ${pw.agentBrokerage}`,
     ].filter(Boolean).join("\n");
 
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method:  "POST",
       headers: {
         "Content-Type":  "application/json",
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
-        model:       "llama-3.1-8b-instant",
+        model:       "deepseek-chat",
         max_tokens:  700,
         temperature: 0.8,
         messages: [{

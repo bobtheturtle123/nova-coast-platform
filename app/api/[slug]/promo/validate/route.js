@@ -1,10 +1,17 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
+import { rateLimit } from "@/lib/rateLimit";
 
 // POST /api/[slug]/promo/validate
 // Body: { code: string, subtotal: number }
 // Returns: { valid, discount, type, value, finalTotal, message }
 export async function POST(req, { params }) {
+  // 10 attempts per IP per hour — prevents brute-force of promo codes
+  const rl = await rateLimit(req, `promo-validate:${params.slug}`, 10, 3600);
+  if (rl.limited) {
+    return Response.json({ valid: false, message: "Too many attempts. Try again later." }, { status: 429 });
+  }
+
   try {
     const { code, subtotal = 0 } = await req.json();
 

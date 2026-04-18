@@ -1,16 +1,28 @@
 import { getTenantBySlug } from "@/lib/tenants";
 import { adminDb } from "@/lib/firebase-admin";
 import { Resend } from "resend";
+import { rateLimit, stripTags } from "@/lib/rateLimit";
 
 // POST /api/[slug]/property-inquiry
 // Contact form submission from a property website
 export async function POST(req, { params }) {
+  const rl = await rateLimit(req, `property-inquiry:${params.slug}`, 10, 3600);
+  if (rl.limited) return Response.json({ error: "Too many requests" }, { status: 429 });
+
   try {
     const tenant = await getTenantBySlug(params.slug);
     if (!tenant) return Response.json({ error: "Not found" }, { status: 404 });
 
-    const { name, email, phone, message, bookingId, address } = await req.json();
-    if (!name || !email || !message) {
+    const body = await req.json();
+    const name    = stripTags(String(body.name    || "")).slice(0, 100);
+    const email   = String(body.email   || "").toLowerCase().trim().slice(0, 200);
+    const phone   = String(body.phone   || "").replace(/[^0-9+\-().x ]/g, "").slice(0, 30);
+    const message = stripTags(String(body.message || "")).slice(0, 2000);
+    const bookingId = body.bookingId ? String(body.bookingId).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64) : null;
+    const address = stripTags(String(body.address || "")).slice(0, 300);
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!name || !email || !emailRegex.test(email) || !message) {
       return Response.json({ error: "Name, email, and message required" }, { status: 400 });
     }
 

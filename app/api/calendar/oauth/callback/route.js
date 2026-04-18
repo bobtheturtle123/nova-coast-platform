@@ -1,7 +1,7 @@
 import { adminDb } from "@/lib/firebase-admin";
 
 export async function GET(req) {
-  const url  = new URL(req.url);
+  const url   = new URL(req.url);
   const code  = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const error = url.searchParams.get("error");
@@ -13,7 +13,23 @@ export async function GET(req) {
   }
 
   try {
-    const { tenantId, memberId } = JSON.parse(Buffer.from(state, "base64url").toString());
+    // Decode state and extract nonce
+    const { nonce } = JSON.parse(Buffer.from(state, "base64url").toString());
+    if (!nonce) throw new Error("Invalid state");
+
+    // Verify nonce against server-side store (prevents state forgery)
+    const nonceDoc = await adminDb.collection("oauthNonces").doc(nonce).get();
+    if (!nonceDoc.exists) throw new Error("Invalid or expired OAuth state");
+
+    const { tenantId, memberId, expiresAt } = nonceDoc.data();
+    const expiry = expiresAt?.toDate?.() || new Date(expiresAt);
+    if (new Date() > expiry) {
+      await nonceDoc.ref.delete();
+      throw new Error("OAuth state expired. Please try again.");
+    }
+
+    // Consume the nonce (one-time use)
+    await nonceDoc.ref.delete();
 
     const clientId     = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -35,7 +51,7 @@ export async function GET(req) {
     const tokens = await tokenRes.json();
     if (tokens.error) throw new Error(tokens.error_description || tokens.error);
 
-    // Store tokens on the team member doc
+    // Store tokens scoped to the verified tenant + member
     await adminDb
       .collection("tenants").doc(tenantId)
       .collection("team").doc(memberId)

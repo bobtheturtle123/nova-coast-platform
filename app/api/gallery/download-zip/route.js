@@ -1,7 +1,6 @@
 import archiver from "archiver";
 import sharp from "sharp";
 import { adminDb } from "@/lib/firebase-admin";
-import { getTenantBySlug } from "@/lib/tenants";
 
 export const dynamic = "force-dynamic";
 
@@ -11,24 +10,24 @@ const WEB_QUALITY = 85;
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const token  = searchParams.get("token");
-  const slug   = searchParams.get("slug");
   const format = searchParams.get("format") || "web"; // "web" | "print"
 
-  if (!token || !slug) return new Response("Missing params", { status: 400 });
+  if (!token) return new Response("Missing params", { status: 400 });
 
-  const tenant = await getTenantBySlug(slug);
-  if (!tenant) return new Response("Not found", { status: 404 });
+  // Resolve gallery via top-level index (avoids cross-tenant token collision)
+  const tokenDoc = await adminDb.collection("galleryTokens").doc(token).get();
+  if (!tokenDoc.exists) return new Response("Gallery not found", { status: 404 });
 
-  const snap = await adminDb
-    .collection("tenants").doc(tenant.id)
-    .collection("galleries")
-    .where("accessToken", "==", token)
-    .limit(1)
+  const { tenantId, galleryId } = tokenDoc.data();
+  const galleryDoc = await adminDb
+    .collection("tenants").doc(tenantId)
+    .collection("galleries").doc(galleryId)
     .get();
 
-  if (snap.empty) return new Response("Gallery not found", { status: 404 });
+  if (!galleryDoc.exists) return new Response("Gallery not found", { status: 404 });
 
-  const gallery = snap.docs[0].data();
+  const gallery = galleryDoc.data();
+  if (gallery.accessToken !== token) return new Response("Gallery not found", { status: 404 });
   if (!gallery.unlocked) return new Response("Gallery is locked", { status: 403 });
 
   const images = (gallery.media || []).filter(

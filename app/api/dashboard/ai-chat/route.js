@@ -1,9 +1,9 @@
 import { adminAuth } from "@/lib/firebase-admin";
 
-// Uses Groq's free API tier (llama-3.1-8b-instant) — no per-token cost.
-// Sign up free at console.groq.com and set GROQ_API_KEY in your env vars.
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL   = "llama-3.1-8b-instant"; // fast, free
+// Uses DeepSeek API (deepseek-chat model).
+// Sign up at platform.deepseek.com and set DEEPSEEK_API_KEY in your env vars.
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || process.env.GROQ_API_KEY; // Groq fallback
+const DEEPSEEK_MODEL = "deepseek-chat"; // fast, free
 
 const SYSTEM_PROMPT = `You are a helpful assistant built into ShootFlow, a SaaS platform for real estate photography businesses.
 
@@ -67,9 +67,9 @@ export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!GROQ_API_KEY) {
+  if (!DEEPSEEK_API_KEY) {
     return Response.json({
-      reply: "The AI assistant isn't configured yet. Add GROQ_API_KEY to your environment variables to enable it (free at console.groq.com). In the meantime, reach support at support@shootflow.com.",
+      reply: "The AI assistant isn't configured yet. Add DEEPSEEK_API_KEY to your Vercel environment variables (get a key at platform.deepseek.com). In the meantime, reach support at support@shootflow.com.",
     });
   }
 
@@ -89,14 +89,14 @@ export async function POST(req) {
   }));
 
   try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method:  "POST",
       headers: {
         "Content-Type":  "application/json",
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
       },
       body: JSON.stringify({
-        model:       GROQ_MODEL,
+        model:       DEEPSEEK_MODEL,
         max_tokens:  512,
         messages:    [{ role: "system", content: systemPrompt }, ...trimmedMessages],
         temperature: 0.7,
