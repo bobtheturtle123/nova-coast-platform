@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { auth } from "@/lib/firebase";
+import { useToast } from "@/components/Toast";
 
 async function uploadProductMedia(file) {
   const token = await auth.currentUser.getIdToken();
@@ -48,9 +49,10 @@ function ProductForm({ item, type, allServices, teamMembers, pricingConfig, onSa
     includes:     item?.includes     || [],
     assignedPhotographers: item?.assignedPhotographers || [],
   }));
-  const [saving,    setSaving]    = useState(false);
-  const [deleting,  setDeleting]  = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [saving,      setSaving]      = useState(false);
+  const [deleting,    setDeleting]    = useState(false);
+  const [uploading,   setUploading]   = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef(null);
 
   function field(key) {
@@ -90,7 +92,7 @@ function ProductForm({ item, type, allServices, teamMembers, pricingConfig, onSa
       const urls = await Promise.all(files.map((f) => uploadProductMedia(f)));
       setForm((f) => ({ ...f, mediaUrls: [...f.mediaUrls, ...urls] }));
     } catch (err) {
-      alert("Upload failed: " + err.message);
+      setUploadError("Upload failed: " + err.message);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -240,6 +242,7 @@ function ProductForm({ item, type, allServices, teamMembers, pricingConfig, onSa
               }
             </button>
             <p className="text-xs text-gray-400 mt-1">First image is the cover. Images and videos only.</p>
+            {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
           </div>
 
           {/* Package-specific: tagline, deliverables, featured */}
@@ -533,11 +536,11 @@ function ImportPricingButton({ onImport, activeType }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function ProductsPage() {
+  const toast = useToast();
   const [activeType,  setActiveType]  = useState("packages");
   const [items,       setItems]       = useState({ packages: [], services: [], addons: [] });
   const [loading,     setLoading]     = useState(true);
   const [editing,     setEditing]     = useState(null);
-  const [msg,         setMsg]         = useState("");
   const [teamMembers, setTeamMembers] = useState([]);
   const [pricingConfig, setPricingConfig] = useState(null);
 
@@ -595,8 +598,7 @@ export default function ProductsPage() {
     }
 
     setEditing(null);
-    setMsg("Saved successfully.");
-    setTimeout(() => setMsg(""), 3000);
+    toast("Saved successfully.");
   }
 
   async function deleteItem() {
@@ -608,8 +610,7 @@ export default function ProductsPage() {
     });
     setItems((prev) => ({ ...prev, [type]: prev[type].filter((i) => i.id !== item.id) }));
     setEditing(null);
-    setMsg("Product deleted.");
-    setTimeout(() => setMsg(""), 3000);
+    toast("Product deleted.");
   }
 
   async function duplicateItem(item, type) {
@@ -623,8 +624,7 @@ export default function ProductsPage() {
     });
     const data = await res.json();
     setItems((prev) => ({ ...prev, [type]: [...prev[type], data.item] }));
-    setMsg("Product duplicated.");
-    setTimeout(() => setMsg(""), 3000);
+    toast("Product duplicated.");
   }
 
   async function toggleActive(item, type) {
@@ -671,11 +671,7 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {msg && (
-        <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-2 rounded-sm mb-4">
-          {msg}
-        </div>
-      )}
+
 
       {/* Type tabs */}
       <div className="flex gap-1 mb-6 border-b border-gray-200">

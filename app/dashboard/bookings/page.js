@@ -242,6 +242,7 @@ export default function BookingsPage() {
   const [bookings,    setBookings]    = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [filter,      setFilter]      = useState("all");
+  const [search,      setSearch]      = useState("");
   const [showCreate,  setShowCreate]  = useState(false);
   const [form,        setForm]        = useState(EMPTY_FORM);
   const [saving,      setSaving]      = useState(false);
@@ -493,7 +494,17 @@ export default function BookingsPage() {
     setSaving(false);
   }
 
-  const filtered = filter === "all" ? bookings : bookings.filter((b) => b.status === filter);
+  const filtered = bookings.filter((b) => {
+    if (filter !== "all" && b.status !== filter) return false;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      const name    = (b.clientName || "").toLowerCase();
+      const addr    = (b.fullAddress || b.address || "").toLowerCase();
+      const email   = (b.clientEmail || "").toLowerCase();
+      if (!name.includes(q) && !addr.includes(q) && !email.includes(q)) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="p-8">
@@ -507,15 +518,29 @@ export default function BookingsPage() {
         </div>
       </div>
 
-      {/* Filter pills */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        {["all", "requested", "confirmed", "completed", "cancelled"].map((s) => (
-          <button key={s} onClick={() => setFilter(s)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors
-              ${filter === s ? "bg-navy text-white border-navy" : "text-gray-500 border-gray-200 hover:border-navy/40 hover:text-navy"}`}>
-            {s === "all" ? "All" : STATUS_LABELS[s]?.label || s}
-          </button>
-        ))}
+      {/* Filter pills + search */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="flex gap-2 flex-wrap">
+          {["all", "requested", "confirmed", "completed", "cancelled"].map((s) => (
+            <button key={s} onClick={() => setFilter(s)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors
+                ${filter === s ? "bg-navy text-white border-navy" : "text-gray-500 border-gray-200 hover:border-navy/40 hover:text-navy"}`}>
+              {s === "all" ? "All" : STATUS_LABELS[s]?.label || s}
+            </button>
+          ))}
+        </div>
+        <div className="relative ml-auto">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, address…"
+            className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-full bg-white focus:outline-none focus:ring-1 focus:ring-navy/30 w-52"
+          />
+        </div>
       </div>
 
       {/* Bookings list */}

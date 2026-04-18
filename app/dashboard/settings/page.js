@@ -655,6 +655,7 @@ export default function SettingsPage() {
   const [availMode,        setAvailMode]        = useState("slots"); // "slots" | "real"
   const [availStart,       setAvailStart]       = useState("08:00");
   const [availEnd,         setAvailEnd]         = useState("18:00");
+  const [availDays,        setAvailDays]        = useState(["mon","tue","wed","thu","fri"]);
   const [availInterval,    setAvailInterval]    = useState(30);
   const [availDuration,    setAvailDuration]    = useState(120);
   const [availBuffer,      setAvailBuffer]      = useState(30);
@@ -732,6 +733,7 @@ export default function SettingsPage() {
             if (av.mode)             setAvailMode(av.mode);
             if (av.businessHours?.start) setAvailStart(av.businessHours.start);
             if (av.businessHours?.end)   setAvailEnd(av.businessHours.end);
+            if (av.businessHours?.days?.length) setAvailDays(av.businessHours.days);
             if (av.intervalMinutes)  setAvailInterval(av.intervalMinutes);
             if (av.defaultDuration)  setAvailDuration(av.defaultDuration);
             if (av.bufferMinutes)    setAvailBuffer(av.bufferMinutes);
@@ -890,7 +892,7 @@ export default function SettingsPage() {
       privacy:      privacyText,
       availability: {
         mode:           availMode,
-        businessHours:  { start: availStart, end: availEnd },
+        businessHours:  { start: availStart, end: availEnd, days: availDays },
         intervalMinutes: Number(availInterval) || 30,
         defaultDuration: Number(availDuration) || 120,
         bufferMinutes:   Number(availBuffer)   || 30,
@@ -1528,6 +1530,23 @@ export default function SettingsPage() {
         {/* Business hours — shown for time grid + real availability */}
         <div className={`mb-5 ${availMode === "named" ? "hidden" : ""}`}>
           <h3 className="text-sm font-semibold text-charcoal mb-3">Business Hours</h3>
+          <div className="mb-3">
+            <label className="label-field mb-2">Working Days</label>
+            <div className="flex gap-1.5 flex-wrap">
+              {[["mon","Mon"],["tue","Tue"],["wed","Wed"],["thu","Thu"],["fri","Fri"],["sat","Sat"],["sun","Sun"]].map(([val, label]) => {
+                const active = availDays.includes(val);
+                return (
+                  <button key={val} type="button"
+                    onClick={() => setAvailDays((d) => active ? d.filter((x) => x !== val) : [...d, val])}
+                    className={`px-3 py-1.5 rounded text-xs font-semibold border transition-colors ${
+                      active ? "bg-navy text-white border-navy" : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
+                    }`}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="flex items-center gap-4">
             <div>
               <label className="label-field">Start time</label>

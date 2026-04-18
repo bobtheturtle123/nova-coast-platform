@@ -75,11 +75,11 @@ export async function GET(req) {
     });
   }
 
-  // Sort by shootDate desc (upcoming first)
+  // Sort by shootDate asc — soonest upcoming first
   bookings.sort((a, b) => {
     const da = a.shootDate || a.preferredDate || "";
     const db_ = b.shootDate || b.preferredDate || "";
-    return db_.localeCompare(da);
+    return da.localeCompare(db_);
   });
 
   return Response.json({ bookings });

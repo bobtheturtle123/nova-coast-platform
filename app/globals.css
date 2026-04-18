@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,17 +9,19 @@
     font-family: "Inter", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.011em;
   }
 
   body {
-    @apply bg-cream text-charcoal;
+    @apply bg-[#F8F9FB] text-[#0F172A];
+    font-size: 14px;
+    line-height: 1.6;
   }
 
-  h1, h2, h3, h4 {
-    font-family: "Inter", system-ui, sans-serif;
-    letter-spacing: -0.02em;
-  }
+  h1 { @apply text-2xl font-semibold tracking-tight text-[#0F172A]; line-height: 1.25; }
+  h2 { @apply text-xl font-semibold tracking-tight text-[#0F172A]; line-height: 1.3; }
+  h3 { @apply text-base font-semibold tracking-tight text-[#0F172A]; }
+  h4 { @apply text-sm font-semibold text-[#0F172A]; }
 
   * {
     -webkit-tap-highlight-color: transparent;
@@ -27,125 +29,177 @@
 }
 
 @layer components {
-  /* ── Buttons ──────────────────────────────────────────────────────────── */
+
+  /* ── Buttons ─────────────────────────────────────────────────────────────
+     Philosophy: intentional, weighted, minimal. Primary is ink-dark with
+     precise padding. Outline is ghost-like — border only, no fill fill.
+     ──────────────────────────────────────────────────────────────────── */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
-           bg-charcoal text-white font-medium
-           px-5 py-2.5 rounded-lg text-sm tracking-tight
-           hover:bg-navy-light transition-all duration-150
-           disabled:opacity-40 disabled:cursor-not-allowed;
+           bg-[#0F172A] text-white font-medium
+           px-4 py-2 rounded-lg text-[13px] tracking-tight
+           hover:bg-[#1E293B] active:bg-[#020617]
+           transition-all duration-200
+           disabled:opacity-35 disabled:cursor-not-allowed;
+    letter-spacing: -0.01em;
   }
 
   .btn-outline {
     @apply inline-flex items-center justify-center gap-2
-           border border-gray-200 text-charcoal bg-white font-medium
-           px-5 py-2.5 rounded-lg text-sm tracking-tight
-           hover:border-gray-300 hover:bg-gray-50 transition-all duration-150;
+           border border-gray-200 text-[#374151] bg-white font-medium
+           px-4 py-2 rounded-lg text-[13px] tracking-tight
+           hover:border-gray-300 hover:bg-gray-50/80
+           active:bg-gray-100
+           transition-all duration-200;
+    letter-spacing: -0.01em;
   }
 
   .btn-gold {
     @apply inline-flex items-center justify-center gap-2
-           bg-gold text-white font-semibold
-           px-5 py-2.5 rounded-lg text-sm tracking-tight
-           hover:bg-gold-dark transition-all duration-150
-           disabled:opacity-40 disabled:cursor-not-allowed;
+           bg-[#C9A96E] text-white font-medium
+           px-4 py-2 rounded-lg text-[13px] tracking-tight
+           hover:bg-[#A8843F]
+           transition-all duration-200
+           disabled:opacity-35 disabled:cursor-not-allowed;
+    letter-spacing: -0.01em;
   }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2
-           text-gray-500 hover:text-charcoal font-medium
-           px-3 py-2 rounded-lg text-sm
-           hover:bg-gray-100 transition-all duration-150;
+           text-gray-500 hover:text-[#0F172A] font-medium
+           px-3 py-1.5 rounded-lg text-[13px]
+           hover:bg-gray-100/80
+           transition-all duration-200;
   }
 
-  /* ── Inputs ───────────────────────────────────────────────────────────── */
+  /* ── Inputs ──────────────────────────────────────────────────────────────
+     Clean, unfussy. Border is the only decoration.
+     ──────────────────────────────────────────────────────────────────── */
   .input-field {
     @apply w-full border border-gray-200 bg-white
-           px-3.5 py-2.5 rounded-lg
-           text-sm text-charcoal placeholder-gray-400
-           focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100
+           px-3.5 py-2 rounded-lg
+           text-sm text-[#0F172A] placeholder-gray-400
+           focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100/80
            transition-colors duration-150;
   }
 
   textarea.input-field {
-    @apply py-3;
+    @apply py-2.5 leading-relaxed;
   }
 
-  /* ── Cards ────────────────────────────────────────────────────────────── */
+  select.input-field {
+    @apply cursor-pointer;
+  }
+
+  /* ── Cards ───────────────────────────────────────────────────────────────
+     Light enough to not feel like boxes. Structure comes from spacing.
+     ──────────────────────────────────────────────────────────────────── */
   .card {
-    @apply bg-white border border-gray-200 rounded-xl p-5 shadow-card;
+    @apply bg-white border border-gray-100 rounded-xl p-6;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
   }
 
   .card-flat {
-    @apply bg-white border border-gray-200 rounded-xl p-5;
+    @apply bg-white border border-gray-100 rounded-xl p-6;
   }
 
-  /* ── Booking flow ─────────────────────────────────────────────────────── */
+  .card-section {
+    @apply bg-white border border-gray-100 rounded-xl overflow-hidden;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  }
+
+  /* ── Booking flow ──────────────────────────────────────────────────── */
   .step-container {
     @apply max-w-3xl mx-auto px-4 py-10 animate-fade-up;
   }
 
   .section-label {
-    @apply text-xs font-semibold tracking-widest uppercase text-gold;
+    @apply text-[11px] font-semibold tracking-[0.08em] uppercase text-[#C9A96E];
   }
 
   .price-display {
-    @apply text-3xl font-semibold text-charcoal;
+    @apply text-3xl font-semibold text-[#0F172A] tracking-tight;
   }
 
-  /* ── Form labels ──────────────────────────────────────────────────────── */
+  /* ── Form labels ─────────────────────────────────────────────────────── */
   .label-field {
-    @apply block text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5;
+    @apply block text-[11px] font-semibold text-gray-500 uppercase tracking-[0.07em] mb-1.5;
   }
 
-  /* ── Divider ──────────────────────────────────────────────────────────── */
+  /* ── Divider ─────────────────────────────────────────────────────────── */
   .divider {
     @apply border-t border-gray-100;
   }
 
-  /* ── Status tags ──────────────────────────────────────────────────────── */
+  /* ── Status tags ─────────────────────────────────────────────────────── */
   .tag-green {
-    @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full
-           bg-emerald-50 text-emerald-700 border border-emerald-100;
+    @apply inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full
+           bg-emerald-50 text-emerald-700;
   }
 
   .tag-amber {
-    @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full
-           bg-amber-50 text-amber-700 border border-amber-100;
+    @apply inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full
+           bg-amber-50 text-amber-700;
   }
 
   .tag-red {
-    @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full
-           bg-red-50 text-red-600 border border-red-100;
+    @apply inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full
+           bg-red-50 text-red-600;
   }
 
   .tag-gray {
-    @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full
-           bg-gray-100 text-gray-500 border border-gray-200;
+    @apply inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full
+           bg-gray-100 text-gray-500;
   }
 
   .tag-blue {
-    @apply inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full
-           bg-blue-50 text-blue-700 border border-blue-100;
+    @apply inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full
+           bg-blue-50 text-blue-600;
+  }
+
+  /* ── Page layout helpers ─────────────────────────────────────────────── */
+  .page-header {
+    @apply mb-8;
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold tracking-tight text-[#0F172A];
+    line-height: 1.2;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-gray-500 mt-1;
+  }
+
+  /* ── Data table rows ─────────────────────────────────────────────────── */
+  .table-row {
+    @apply flex items-center gap-4 px-5 py-3.5 border-b border-gray-50
+           hover:bg-gray-50/60 transition-colors cursor-pointer;
+  }
+
+  .table-row:last-child {
+    @apply border-b-0;
   }
 }
 
-/* Smooth scroll */
-html {
-  scroll-behavior: smooth;
-}
+/* ── Scrollbar ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e2e4e8; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #c8cad1; }
 
-/* Selection color */
+/* Smooth scroll */
+html { scroll-behavior: smooth; }
+
+/* Selection */
 ::selection {
   background: #0F172A;
   color: #fff;
 }
 
-/* Print / PDF styles for reports */
+/* Print */
 @media print {
   body { background: white !important; }
   nav, aside, header, .print\:hidden { display: none !important; }
   #reports-print-area { padding: 0 !important; }
-  .bg-white { background: white !important; }
-  .border { border-color: #e5e7eb !important; }
 }

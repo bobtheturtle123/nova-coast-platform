@@ -7,12 +7,12 @@ import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 
 const STEPS = [
-  { id: "business",    label: "Business",    icon: "🏢" },
-  { id: "branding",    label: "Branding",    icon: "🎨" },
-  { id: "stripe",      label: "Payments",    icon: "💳" },
-  { id: "team",        label: "Invite Team", icon: "👥" },
-  { id: "areas",       label: "Service Areas", icon: "🗺️" },
-  { id: "done",        label: "Go Live",     icon: "🚀" },
+  { id: "business",  label: "Business",    icon: "🏢" },
+  { id: "services",  label: "Services",    icon: "💼" },
+  { id: "stripe",    label: "Payments",    icon: "💳" },
+  { id: "team",      label: "Invite Team", icon: "👥" },
+  { id: "areas",     label: "Service Areas", icon: "🗺️" },
+  { id: "done",      label: "Go Live",     icon: "🚀" },
 ];
 
 export default function OnboardingPage() {
@@ -24,8 +24,9 @@ export default function OnboardingPage() {
   const [error,  setError]  = useState("");
 
   // Step state
-  const [business,  setBusiness]  = useState({ phone: "", fromZip: "" });
-  const [branding,  setBranding]  = useState({ primaryColor: "#0b2a55", accentColor: "#c9a96e", tagline: "" });
+  const [business,    setBusiness]    = useState({ phone: "", fromZip: "" });
+  const [newService,  setNewService]  = useState({ name: "", price: "", type: "services" });
+  const [serviceSaved, setServiceSaved] = useState(false);
   const [inviteEmails, setInviteEmails] = useState([""]);
   const [inviteSent, setInviteSent] = useState(false);
   const [slug, setSlug] = useState("");
@@ -72,17 +73,24 @@ export default function OnboardingPage() {
     finally { setSaving(false); }
   }
 
-  async function saveBranding() {
+  async function saveService() {
+    if (!newService.name.trim()) { next(); return; }
     setSaving(true); setError("");
     try {
       const token = await user.getIdToken(true);
-      await fetch("/api/tenants/update", {
-        method: "PATCH",
+      const res = await fetch(`/api/dashboard/products?type=${newService.type}`, {
+        method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ branding }),
+        body: JSON.stringify({
+          name:   newService.name.trim(),
+          price:  Number(newService.price) || 0,
+          active: true,
+        }),
       });
-      next();
-    } catch { setError("Failed to save."); }
+      if (!res.ok) throw new Error("Failed to save");
+      setServiceSaved(true);
+      setTimeout(() => next(), 900);
+    } catch { setError("Failed to save. You can add services later in Products."); next(); }
     finally { setSaving(false); }
   }
 
@@ -200,46 +208,44 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── STEP 1: Branding ───────────────────────────────────────────────── */}
+        {/* ── STEP 1: First Service ──────────────────────────────────────────── */}
         {step === 1 && (
           <div>
-            <h1 className="font-display text-3xl text-navy mb-2">Customize your branding</h1>
-            <p className="text-gray-500 mb-8">Your booking page will use these colors and tagline.</p>
+            <h1 className="font-display text-3xl text-navy mb-2">Add your first service</h1>
+            <p className="text-gray-600 mb-2">This is what clients will see when they book. You can add more packages and services later.</p>
+            <p className="text-xs text-gray-500 mb-6">Example: "Real Estate Photography" — $299</p>
             <div className="bg-white rounded-sm border border-gray-200 p-6 space-y-5">
               <div>
-                <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">Tagline</label>
-                <input type="text" value={branding.tagline}
-                  onChange={(e) => setBranding((b) => ({ ...b, tagline: e.target.value }))}
-                  className="input-field w-full" placeholder="Professional real estate photography" />
+                <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">Service Name</label>
+                <input type="text" value={newService.name}
+                  onChange={(e) => setNewService((s) => ({ ...s, name: e.target.value }))}
+                  className="input-field w-full" placeholder="Real Estate Photography" autoFocus />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                {[["Primary Color", "primaryColor"], ["Accent Color", "accentColor"]].map(([label, key]) => (
-                  <div key={key}>
-                    <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">{label}</label>
-                    <div className="flex gap-2 items-center">
-                      <input type="color" value={branding[key]}
-                        onChange={(e) => setBranding((b) => ({ ...b, [key]: e.target.value }))}
-                        className="w-10 h-10 rounded cursor-pointer border border-gray-200" />
-                      <input type="text" value={branding[key]}
-                        onChange={(e) => setBranding((b) => ({ ...b, [key]: e.target.value }))}
-                        className="input-field flex-1 font-mono text-sm" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="rounded-sm overflow-hidden border border-gray-200">
-                <div style={{ background: branding.primaryColor }} className="px-4 py-3">
-                  <span style={{ color: branding.accentColor }} className="font-display text-sm tracking-widest uppercase">Your Business</span>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">Price ($)</label>
+                  <input type="number" value={newService.price} min={0} step={1}
+                    onChange={(e) => setNewService((s) => ({ ...s, price: e.target.value }))}
+                    className="input-field w-full" placeholder="299" />
                 </div>
-                <div className="px-4 py-3 bg-white text-xs text-gray-500">{branding.tagline || "Your tagline appears here"}</div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">Type</label>
+                  <select value={newService.type} onChange={(e) => setNewService((s) => ({ ...s, type: e.target.value }))}
+                    className="input-field w-full">
+                    <option value="services">Individual Service</option>
+                    <option value="packages">Package / Bundle</option>
+                    <option value="addons">Add-on</option>
+                  </select>
+                </div>
               </div>
+              {serviceSaved && <p className="text-sm text-green-700">Service saved!</p>}
             </div>
-            <div className="flex gap-3 mt-6">
+            <p className="text-xs text-gray-500 mt-3">You can customize pricing tiers, descriptions, and add more from <strong>Dashboard → Products</strong>.</p>
+            <div className="flex gap-3 mt-4">
               <button onClick={prev} className="btn-outline px-6 py-3">← Back</button>
-              <button onClick={saveBranding} disabled={saving} className="btn-primary px-8 py-3 flex-1">
-                {saving ? "Saving…" : "Continue →"}
+              <button onClick={saveService} disabled={saving} className="btn-primary px-8 py-3 flex-1">
+                {saving ? "Saving…" : newService.name.trim() ? "Save & Continue →" : "Skip for now →"}
               </button>
-              <button onClick={skip} className="btn-outline px-6 py-3 text-gray-400">Skip</button>
             </div>
           </div>
         )}
@@ -311,45 +317,35 @@ export default function OnboardingPage() {
         {step === 4 && (
           <div>
             <h1 className="font-display text-3xl text-navy mb-2">Define where you work</h1>
-            <p className="text-gray-500 mb-6">
-              Service areas are the geographic zones where your company operates. You can draw multiple zones on a map, optionally block bookings from outside those zones, and assign specific team members (photographers, videographers) to each region.
+            <p className="text-gray-600 mb-6">
+              Service areas let you draw coverage zones on a map, block bookings from outside those zones, and assign photographers to specific regions.
             </p>
             <div className="bg-white rounded-sm border border-gray-200 p-6 mb-4">
               <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-lg flex-shrink-0">🗺️</div>
-                  <div>
-                    <p className="font-medium text-charcoal text-sm">Draw your coverage zones</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Use the map tool to draw the areas you cover. You can have multiple zones.</p>
+                {[
+                  { icon: "🗺️", color: "bg-blue-50",  title: "Draw coverage zones", desc: "Use the map tool to draw polygons around the areas you serve. Multiple zones are supported." },
+                  { icon: "📸", color: "bg-green-50", title: "Assign team members per zone", desc: "Route shoots to the right photographer based on where the property is located." },
+                  { icon: "🚫", color: "bg-amber-50",  title: "Block outside bookings (optional)", desc: "Turn on \"Require Service Area\" in Settings → Booking to prevent clients from booking outside your zones." },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-start gap-3">
+                    <div className={`w-8 h-8 ${item.color} rounded-lg flex items-center justify-center text-lg flex-shrink-0`}>{item.icon}</div>
+                    <div>
+                      <p className="font-medium text-charcoal text-sm">{item.title}</p>
+                      <p className="text-xs text-gray-600 mt-0.5">{item.desc}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center text-lg flex-shrink-0">📸</div>
-                  <div>
-                    <p className="font-medium text-charcoal text-sm">Assign team members per zone</p>
-                    <p className="text-xs text-gray-500 mt-0.5">If you're a photographer or videographer yourself, you can assign yourself to a zone. Team members you've invited can also be assigned.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-lg flex-shrink-0">🚫</div>
-                  <div>
-                    <p className="font-medium text-charcoal text-sm">Optionally block outside bookings</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Enable "Require Service Area" in settings to prevent clients from booking outside your zones.</p>
-                  </div>
-                </div>
+                ))}
               </div>
-              <div className="mt-5 pt-5 border-t border-gray-100">
-                <a href="/dashboard/service-areas" target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 btn-primary text-sm px-5 py-2.5">
-                  Open Map in new tab ↗
-                </a>
-                <p className="text-xs text-gray-400 mt-2">The map opens in a new tab — come back here when you're done to continue.</p>
+              <div className="mt-5 pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-600">
+                  You can set up service areas anytime from <strong>Dashboard → Settings → Service Areas</strong>. It only takes a couple of minutes.
+                </p>
               </div>
             </div>
             <div className="flex gap-3 mt-2">
               <button onClick={prev} className="btn-outline px-6 py-3">← Back</button>
-              <button onClick={next} className="btn-primary px-8 py-3 flex-1">I'm done → Continue</button>
-              <button onClick={skip} className="btn-outline px-6 py-3 text-gray-400">Skip for now</button>
+              <button onClick={next} className="btn-primary px-8 py-3 flex-1">Continue →</button>
+              <button onClick={skip} className="btn-outline px-6 py-3 text-gray-400">Skip</button>
             </div>
           </div>
         )}
@@ -401,20 +397,15 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3 mb-8">
-              {[
-                { href: "/dashboard", label: "Go to Dashboard", primary: true },
-                { href: "/dashboard/products", label: "Edit Services & Pricing", primary: false },
-                { href: "/dashboard/team", label: "Manage Team", primary: false },
-                { href: "/dashboard/settings", label: "Finish Settings", primary: false },
-              ].map((item) => (
-                <Link key={item.href} href={item.href}
-                  className={`py-3 px-4 rounded-sm text-sm font-medium text-center transition-colors ${
-                    item.primary ? "bg-navy text-white hover:bg-navy/90" : "border border-gray-200 text-charcoal hover:bg-gray-50"
-                  }`}>
-                  {item.label}
-                </Link>
-              ))}
+            <div className="flex flex-col gap-3 mb-8">
+              <Link href="/dashboard"
+                className="py-3.5 px-6 rounded-sm text-sm font-semibold text-center bg-navy text-white hover:bg-navy/90 transition-colors">
+                Go to Dashboard →
+              </Link>
+              <Link href="/dashboard/products"
+                className="py-3 px-6 rounded-sm text-sm font-medium text-center border border-gray-200 text-charcoal hover:bg-gray-50 transition-colors">
+                Set Up Services & Pricing
+              </Link>
             </div>
           </div>
         )}

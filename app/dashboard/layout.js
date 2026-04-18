@@ -140,44 +140,49 @@ export default function DashboardLayout({ children }) {
   }
 
   const Sidebar = () => (
-    <aside className="w-56 bg-[#0F172A] flex flex-col h-full">
+    <aside className="w-52 flex flex-col h-full" style={{ background: "#0C1524" }}>
       {/* Brand */}
-      <div className="px-5 pt-5 pb-4 border-b border-white/5">
-        <p className="font-semibold text-white text-sm tracking-tight">NovaOS</p>
+      <div className="px-5 pt-6 pb-5">
+        <p className="font-semibold text-white text-[13px] tracking-tight leading-none">ShootFlow</p>
         {tenantName && (
-          <p className="text-white/40 text-xs mt-0.5 truncate">{tenantName}</p>
+          <p className="text-white/35 text-[11px] mt-1.5 truncate leading-none">{tenantName}</p>
         )}
       </div>
 
       {/* Nav */}
-      <nav className="px-2.5 py-3 space-y-0.5 flex-1 overflow-y-auto">
+      <nav className="px-3 flex-1 overflow-y-auto space-y-px">
         {NAV.map((item) => {
           const active = isActive(item);
           return (
             <Link key={item.href} href={item.href}
               onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-100 ${
+              className={`relative flex items-center gap-2.5 pl-3 pr-3 py-[7px] rounded-md text-[12.5px] font-medium transition-all duration-150 group ${
                 active
-                  ? "bg-white/15 text-white"
-                  : "text-white/65 hover:text-white hover:bg-white/8"
+                  ? "text-white bg-white/10"
+                  : "text-white/50 hover:text-white/85 hover:bg-white/[0.06]"
               }`}>
-              <span className={`flex-shrink-0 ${active ? "opacity-100" : "opacity-75"}`}>
+              {active && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-white/70 rounded-full" />
+              )}
+              <span className={`flex-shrink-0 transition-opacity ${active ? "opacity-90" : "opacity-50 group-hover:opacity-75"}`}>
                 {item.icon}
               </span>
-              <span>{item.label}</span>
+              <span className="tracking-tight">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
       {/* Footer */}
-      <div className="px-3 py-3 border-t border-white/5">
-        <p className="text-[11px] text-white/40 truncate px-2 mb-1">{user?.email}</p>
-        <button
-          onClick={() => auth.signOut().then(() => router.push("/auth/login"))}
-          className="w-full text-left text-[12px] text-white/50 hover:text-white/80 transition-colors px-2 py-1 rounded hover:bg-white/5">
-          Sign out
-        </button>
+      <div className="px-3 py-4 mt-2">
+        <div className="border-t border-white/[0.07] pt-3">
+          <p className="text-[10.5px] text-white/30 truncate px-1 mb-1.5">{user?.email}</p>
+          <button
+            onClick={() => auth.signOut().then(() => router.push("/auth/login"))}
+            className="w-full text-left text-[12px] text-white/40 hover:text-white/70 transition-colors px-1 py-1 rounded">
+            Sign out
+          </button>
+        </div>
       </div>
     </aside>
   );
@@ -186,15 +191,15 @@ export default function DashboardLayout({ children }) {
   <ToastProvider>
     <div className="min-h-screen bg-cream flex">
       {/* Desktop sidebar */}
-      <div className="hidden md:flex flex-col flex-shrink-0 w-56 sticky top-0 h-screen">
+      <div className="hidden md:flex flex-col flex-shrink-0 w-52 sticky top-0 h-screen">
         <Sidebar />
       </div>
 
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 flex md:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <div className="relative w-56 flex flex-col">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
+          <div className="relative w-52 flex flex-col">
             <Sidebar />
           </div>
         </div>
@@ -202,13 +207,13 @@ export default function DashboardLayout({ children }) {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile top bar */}
-        <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-[#0F172A] border-b border-white/10">
+        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-white/10" style={{ background: "#0C1524" }}>
           <button onClick={() => setSidebarOpen(true)} className="text-white/60 hover:text-white">
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="font-semibold text-white text-sm tracking-tight">NovaOS</span>
+          <span className="font-semibold text-white text-[13px] tracking-tight">ShootFlow</span>
         </div>
 
         <main className="flex-1 overflow-auto">{children}</main>

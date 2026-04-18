@@ -42,14 +42,18 @@ function isSameDay(a, b) {
 // ─── Member form modal ────────────────────────────────────────────────────────
 function MemberForm({ member, products, onSave, onDelete, onClose }) {
   const [form, setForm] = useState({
-    name:    member?.name    || "",
-    email:   member?.email   || "",
-    phone:   member?.phone   || "",
-    skills:  member?.skills  || [],
-    color:   member?.color   || COLORS[0],
-    active:  member?.active  !== false,
-    payRate: member?.payRate ?? "",
+    name:         member?.name         || "",
+    email:        member?.email        || "",
+    phone:        member?.phone        || "",
+    skills:       member?.skills       || [],
+    color:        member?.color        || COLORS[0],
+    active:       member?.active       !== false,
+    payRate:      member?.payRate      ?? "",
+    serviceRates: member?.serviceRates || {},
   });
+  const [showServiceRates, setShowServiceRates] = useState(
+    Object.keys(member?.serviceRates || {}).length > 0
+  );
   const [saving,   setSaving]   = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -134,11 +138,67 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
           </div>
 
           <div>
-            <label className="label-field">Contractor Pay Rate (per shoot, $)</label>
+            <label className="label-field">Default Pay Rate (per shoot, $)</label>
             <input type="number" min="0" step="0.01" value={form.payRate}
               onChange={(e) => setForm((f) => ({...f, payRate: e.target.value === "" ? "" : parseFloat(e.target.value)}))}
               className="input-field w-full" placeholder="e.g. 150" />
-            <p className="text-xs text-gray-400 mt-0.5">Visible to the photographer in their portal. Not shown to clients.</p>
+            <p className="text-xs text-gray-500 mt-0.5">Used when no per-service rate is set. Visible in their photographer portal.</p>
+
+            {form.skills.length > 0 && (
+              <div className="mt-3">
+                <button type="button" onClick={() => setShowServiceRates((v) => !v)}
+                  className="text-xs text-navy underline hover:no-underline">
+                  {showServiceRates ? "Hide per-service rates" : "Set per-service rates (optional)"}
+                </button>
+                {showServiceRates && (
+                  <div className="mt-2 border border-gray-200 rounded-sm divide-y divide-gray-100">
+                    {form.skills.map((skillId) => {
+                      const product = allProducts.find((p) => p.id === skillId);
+                      if (!product) return null;
+                      const hasTiers = product.priceTiers && Object.values(product.priceTiers).some((v) => v > 0);
+                      return (
+                        <div key={skillId} className="px-3 py-2">
+                          <p className="text-xs font-semibold text-charcoal mb-1.5">{product.name}</p>
+                          {hasTiers ? (
+                            <div className="grid grid-cols-3 gap-2">
+                              {Object.keys(product.priceTiers).map((tier) => (
+                                <div key={tier}>
+                                  <label className="text-[10px] text-gray-500 uppercase tracking-wide block mb-1">{tier}</label>
+                                  <input type="number" min="0" step="1" placeholder={String(form.payRate || "")}
+                                    value={form.serviceRates?.[skillId]?.[tier] ?? ""}
+                                    onChange={(e) => {
+                                      const val = e.target.value === "" ? undefined : Number(e.target.value);
+                                      setForm((f) => ({
+                                        ...f,
+                                        serviceRates: {
+                                          ...f.serviceRates,
+                                          [skillId]: { ...(f.serviceRates?.[skillId] || {}), [tier]: val },
+                                        },
+                                      }));
+                                    }}
+                                    className="input-field w-full text-xs py-1.5 px-2" />
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <input type="number" min="0" step="1" placeholder={String(form.payRate || "Default")}
+                              value={typeof form.serviceRates?.[skillId] === "number" ? form.serviceRates[skillId] : ""}
+                              onChange={(e) => setForm((f) => ({
+                                ...f,
+                                serviceRates: {
+                                  ...f.serviceRates,
+                                  [skillId]: e.target.value === "" ? undefined : Number(e.target.value),
+                                },
+                              }))}
+                              className="input-field w-full text-xs py-1.5 px-2" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -919,26 +979,43 @@ export default function TeamPage() {
               {monthDates.map((d, i) => {
                 if (!d) return <div key={`empty-${i}`} className="border-r last:border-r-0 border-b border-gray-100 min-h-20 bg-gray-50/30" />;
                 const isToday = isSameDay(d, today);
+                const dayStr  = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
                 const dayEvents = calendarEvents.filter((e) => isSameDay(e.shootDateObj, d));
                 const visibleDayEvents = filterMember === "all"
                   ? dayEvents
                   : dayEvents.filter((e) => e.photographerId === filterMember);
+                const dayBlocks = timeBlocks.filter((b) => {
+                  const startStr = (b.startDate || "").slice(0, 10);
+                  const endStr   = (b.endDate   || "").slice(0, 10);
+                  const memberMatch = filterMember === "all" ? (!b.memberId || true) : (!b.memberId || b.memberId === filterMember);
+                  return dayStr >= startStr && dayStr <= endStr && memberMatch;
+                });
+                const hasBlocks = dayBlocks.length > 0;
                 return (
-                  <div key={d.toISOString()} className={`border-r last:border-r-0 border-b border-gray-100 min-h-20 p-1 ${isToday ? "bg-blue-50/30" : ""}`}>
-                    <p className={`text-xs font-bold mb-1 w-6 h-6 flex items-center justify-center rounded-full ${isToday ? "bg-navy text-white" : "text-charcoal"}`}>
+                  <div key={d.toISOString()} className={`border-r last:border-r-0 border-b border-gray-100 min-h-20 p-1 relative ${isToday ? "bg-blue-50/30" : ""}`}>
+                    {hasBlocks && (
+                      <div className="absolute inset-0 pointer-events-none rounded-sm"
+                        style={{ background: "repeating-linear-gradient(-45deg, #fee2e2, #fee2e2 3px, transparent 3px, transparent 10px)", opacity: 0.5 }} />
+                    )}
+                    <p className={`text-xs font-bold mb-1 w-6 h-6 flex items-center justify-center rounded-full relative z-10 ${isToday ? "bg-navy text-white" : "text-charcoal"}`}>
                       {d.getDate()}
                     </p>
+                    {dayBlocks.slice(0, 2).map((bl) => (
+                      <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1 py-0.5 rounded-sm mb-0.5 truncate relative z-10">
+                        <span className="text-red-600 font-medium">{bl.reason || "Blocked"}</span>
+                      </div>
+                    ))}
                     {visibleDayEvents.slice(0, 3).map((ev) => {
                       const member = members.find((m) => m.id === ev.photographerId);
                       return (
                         <div key={ev.id} style={{ background: (member?.color || "#0b2a55") + "22", borderLeftColor: member?.color || "#0b2a55" }}
-                          className="text-xs border-l-2 px-1 py-0.5 rounded-sm mb-0.5 truncate">
+                          className="text-xs border-l-2 px-1 py-0.5 rounded-sm mb-0.5 truncate relative z-10">
                           <span style={{ color: member?.color || "#0b2a55" }} className="font-medium">{ev.address?.split(",")[0]}</span>
                         </div>
                       );
                     })}
                     {visibleDayEvents.length > 3 && (
-                      <p className="text-xs text-gray-400">+{visibleDayEvents.length - 3} more</p>
+                      <p className="text-xs text-gray-500 relative z-10">+{visibleDayEvents.length - 3} more</p>
                     )}
                   </div>
                 );

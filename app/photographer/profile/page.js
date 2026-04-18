@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
+import { useToast } from "@/components/Toast";
 
 export default function PhotographerProfilePage() {
+  const toast = useToast();
   const [member,  setMember]  = useState(null);
   const [branding, setBranding] = useState(null);
   const [form,    setForm]    = useState({ name: "", phone: "" });
   const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
   const [loading, setLoading] = useState(true);
 
   const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
@@ -36,8 +37,7 @@ export default function PhotographerProfilePage() {
       body: JSON.stringify({ name: form.name, phone: form.phone }),
     });
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    toast("Profile saved.");
   }
 
   if (loading) return (
@@ -92,7 +92,6 @@ export default function PhotographerProfilePage() {
             <button type="submit" disabled={saving} className="btn-primary px-6 py-2 text-sm">
               {saving ? "Saving…" : "Save Changes"}
             </button>
-            {saved && <p className="text-sm text-green-600 font-medium">Saved!</p>}
           </div>
         </form>
       </div>

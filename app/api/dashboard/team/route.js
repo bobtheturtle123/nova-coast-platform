@@ -43,10 +43,12 @@ export async function POST(req) {
     name:          (body.name || "").slice(0, 80),
     email:         (body.email || "").toLowerCase(),
     phone:         body.phone || "",
-    skills:        Array.isArray(body.skills) ? body.skills.filter((s) => ALL_SKILLS.includes(s)) : [],
+    skills:        Array.isArray(body.skills) ? body.skills.map(String).slice(0, 50) : [],
     color:         body.color || "#0b2a55",
     active:        body.active !== false,
-    calendarToken, // used to authenticate iCal feed URL
+    payRate:       body.payRate != null ? Number(body.payRate) || 0 : 0,
+    serviceRates:  body.serviceRates && typeof body.serviceRates === "object" ? body.serviceRates : {},
+    calendarToken,
     tenantId:      ctx.tenantId,
   };
 

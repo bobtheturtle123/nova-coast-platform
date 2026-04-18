@@ -7,9 +7,11 @@ import { sendBookingConfirmedSms } from "@/lib/sms";
 async function getAuthContext(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
   if (!auth) return null;
-  const decoded = await adminAuth.verifyIdToken(auth);
-  if (!decoded.tenantId) return null;
-  return { uid: decoded.uid, tenantId: decoded.tenantId };
+  try {
+    const decoded = await adminAuth.verifyIdToken(auth);
+    if (!decoded.tenantId) return null;
+    return { uid: decoded.uid, tenantId: decoded.tenantId };
+  } catch { return null; }
 }
 
 export async function POST(req) {

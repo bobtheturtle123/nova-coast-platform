@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { ToastProvider } from "@/components/Toast";
 
 const NAV = [
   {
@@ -121,6 +122,7 @@ export default function PhotographerLayout({ children }) {
   );
 
   return (
+  <ToastProvider>
     <div className="min-h-screen bg-gray-50 flex">
       <div className="hidden md:flex flex-col flex-shrink-0 w-56 sticky top-0 h-screen">
         <Sidebar />
@@ -145,5 +147,6 @@ export default function PhotographerLayout({ children }) {
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>
+  </ToastProvider>
   );
 }

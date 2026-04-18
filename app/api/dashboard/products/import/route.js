@@ -1,6 +1,12 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || process.env.GROQ_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+const GROQ_API_KEY     = process.env.GROQ_API_KEY;
+const AI_KEY           = DEEPSEEK_API_KEY || GROQ_API_KEY;
+const AI_URL           = DEEPSEEK_API_KEY
+  ? "https://api.deepseek.com/v1/chat/completions"
+  : "https://api.groq.com/openai/v1/chat/completions";
+const AI_MODEL         = DEEPSEEK_API_KEY ? "deepseek-chat" : "llama3-70b-8192";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -18,14 +24,27 @@ export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!DEEPSEEK_API_KEY) {
-    return Response.json({ error: "AI not configured. Set DEEPSEEK_API_KEY to enable pricing import." }, { status: 503 });
+  if (!AI_KEY) {
+    return Response.json({ error: "AI not configured. Set DEEPSEEK_API_KEY or GROQ_API_KEY to enable pricing import." }, { status: 503 });
   }
 
   const { mode, content, targetType = "services" } = await req.json();
   if (!content) return Response.json({ error: "content required" }, { status: 400 });
 
   let text = content;
+
+  function stripHtml(html) {
+    return html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/\s{3,}/g, "\n")
+      .trim();
+  }
 
   // If URL mode, fetch the page content
   if (mode === "url") {
@@ -34,17 +53,16 @@ export async function POST(req) {
         headers: { "User-Agent": "Mozilla/5.0 (compatible; ShootFlow/1.0)" },
         signal:  AbortSignal.timeout(8000),
       });
-      const html    = await res.text();
-      // Strip HTML tags to get just text
-      text = html
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-        .replace(/<[^>]+>/g, " ")
-        .replace(/\s{3,}/g, "\n")
-        .slice(0, 6000);
+      const html = await res.text();
+      text = stripHtml(html).slice(0, 6000);
     } catch {
       return Response.json({ error: "Could not fetch URL. Try pasting the pricing text instead." }, { status: 400 });
     }
+  }
+
+  // If text mode contains HTML (user pasted HTML source), strip tags
+  if (mode !== "url" && (text.includes("</") || text.trimStart().startsWith("<"))) {
+    text = stripHtml(text);
   }
 
   const prompt = `You are parsing real estate photography pricing from a website or document.
@@ -70,11 +88,11 @@ Rules:
 - Return at least 1 item if you find any pricing at all`;
 
   try {
-    const aiRes = await fetch("https://api.deepseek.com/v1/chat/completions", {
+    const aiRes = await fetch(AI_URL, {
       method:  "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${DEEPSEEK_API_KEY}` },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${AI_KEY}` },
       body: JSON.stringify({
-        model:       "deepseek-chat",
+        model:       AI_MODEL,
         max_tokens:  1500,
         temperature: 0.2,
         messages: [{ role: "user", content: prompt }],
@@ -97,7 +115,7 @@ Rules:
 
     for (const item of parsed.slice(0, 20)) {
       const type = ["packages", "services", "addons"].includes(item.type) ? item.type : "services";
-      const ref  = tenantRef.collection("products").doc();
+      const ref  = tenantRef.collection(type).doc();
       const doc  = {
         id:           ref.id,
         type,

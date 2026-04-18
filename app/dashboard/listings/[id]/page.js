@@ -208,10 +208,12 @@ export default function ListingDetailPage() {
   const [loading,    setLoading]   = useState(true);
   const [saving,     setSaving]    = useState(false);
   const [tab,        setTab]       = useState("overview");
-  const [showDeliver, setShowDeliver]   = useState(false);
-  const [delivering,  setDelivering]   = useState(false);
+  const [showDeliver,  setShowDeliver]  = useState(false);
+  const [delivering,   setDelivering]  = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailNote,    setEmailNote]   = useState("");
+  const [deliveryMode, setDeliveryMode] = useState("now"); // "now" | "later"
+  const [scheduledAt,  setScheduledAt]  = useState("");
   const [shootDate, setShootDate] = useState("");
   const [shootTime, setShootTime] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -361,20 +363,49 @@ export default function ListingDetailPage() {
 
   async function deliverGallery() {
     if (!gallery) return;
+    if (deliveryMode === "later" && !scheduledAt) { toast("Pick a date and time.", "error"); return; }
+    if (deliveryMode === "later" && new Date(scheduledAt) <= new Date()) {
+      toast("Scheduled time must be in the future.", "error"); return;
+    }
     setDelivering(true);
     const token = await auth.currentUser.getIdToken();
+    const body  = {
+      subject: emailSubject,
+      note:    emailNote,
+      ...(deliveryMode === "later" ? { scheduledAt: new Date(scheduledAt).toISOString() } : {}),
+    };
     const res = await fetch(`/api/dashboard/galleries/${gallery.id}/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ subject: emailSubject, note: emailNote }),
+      body: JSON.stringify(body),
     });
     setDelivering(false);
     setShowDeliver(false);
     if (res.ok) {
-      setGallery((g) => ({ ...g, delivered: true }));
-      toast("Gallery delivered to client.");
+      if (deliveryMode === "later") {
+        toast(`Delivery scheduled for ${new Date(scheduledAt).toLocaleString()}.`);
+        setGallery((g) => ({ ...g, scheduledDelivery: { scheduledAt: new Date(scheduledAt), status: "pending" } }));
+      } else {
+        setGallery((g) => ({ ...g, delivered: true, scheduledDelivery: null }));
+        toast("Gallery delivered to client.");
+      }
     } else {
       toast("Failed to deliver.", "error");
+    }
+  }
+
+  async function cancelScheduledDelivery() {
+    if (!gallery) return;
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(`/api/dashboard/galleries/${gallery.id}/send`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      toast("Scheduled delivery cancelled.");
+      setGallery((g) => ({ ...g, scheduledDelivery: null }));
+    } else {
+      toast("Failed to cancel.", "error");
     }
   }
 
@@ -510,7 +541,7 @@ export default function ListingDetailPage() {
                 Upload Media
               </button>
               {gallery && (
-                <button onClick={() => setShowDeliver(true)}
+                <button onClick={() => { setDeliveryMode("now"); setScheduledAt(""); setShowDeliver(true); }}
                   className="px-4 py-2 text-sm font-semibold rounded-sm bg-gold text-navy hover:bg-gold/90 transition-colors">
                   Deliver →
                 </button>
@@ -542,6 +573,26 @@ export default function ListingDetailPage() {
       </div>
 
       <div className="p-6 max-w-5xl">
+        {/* Scheduled delivery banner */}
+        {gallery?.scheduledDelivery?.status === "pending" && (
+          <div className="mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-blue-900">
+                Gallery delivery scheduled for{" "}
+                {new Date(gallery.scheduledDelivery.scheduledAt?.toDate?.() || gallery.scheduledDelivery.scheduledAt)
+                  .toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+              </p>
+              <p className="text-xs text-blue-600 mt-0.5">Email will send automatically at that time.</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setDeliveryMode("later"); setShowDeliver(true); }}
+                className="text-xs font-medium text-blue-700 hover:underline">Edit</button>
+              <button onClick={cancelScheduledDelivery}
+                className="text-xs font-medium text-red-500 hover:underline">Cancel</button>
+            </div>
+          </div>
+        )}
+
         {/* ── OVERVIEW TAB ─────────────────────────────────────────────────── */}
         {tab === "overview" && (
           <div className="grid md:grid-cols-2 gap-6">
@@ -1438,8 +1489,8 @@ export default function ListingDetailPage() {
       {/* Deliver modal */}
       {showDeliver && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-sm shadow-xl w-full max-w-lg">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
               <h2 className="font-display text-navy text-lg">Deliver Gallery</h2>
               <button onClick={() => setShowDeliver(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
             </div>
@@ -1460,19 +1511,54 @@ export default function ListingDetailPage() {
                   placeholder="Great shoot today! Let me know if you need anything adjusted."
                   className="input-field w-full resize-none" />
               </div>
-              {/* Preview */}
-              <div className="bg-gray-50 rounded-sm p-4 text-sm text-gray-600 space-y-2">
-                <p className="font-medium text-gray-700 text-xs uppercase tracking-wide mb-2">Preview</p>
-                <p>Hi {booking.clientName?.split(" ")[0] || "there"},</p>
-                {emailNote && <p className="italic text-gray-500">{emailNote}</p>}
-                <p>Your media for <strong>{address}</strong> is ready to view and download.</p>
-                <p className="text-navy underline text-xs">[ View Gallery → ]</p>
+
+              {/* When to send */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">When to Send</label>
+                <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+                  {[["now", "Send Now"], ["later", "Schedule"]].map(([val, label]) => (
+                    <button key={val} type="button" onClick={() => setDeliveryMode(val)}
+                      className={`flex-1 py-2 font-medium transition-colors ${
+                        deliveryMode === val ? "bg-navy text-white" : "bg-white text-gray-500 hover:bg-gray-50"
+                      }`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {deliveryMode === "later" && (
+                  <div className="mt-3">
+                    <input
+                      type="datetime-local"
+                      value={scheduledAt}
+                      min={(() => { const d = new Date(); d.setMinutes(d.getMinutes() + 15); return d.toISOString().slice(0,16); })()}
+                      onChange={(e) => setScheduledAt(e.target.value)}
+                      className="input-field w-full"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Email delivers automatically at this time. You can cancel it before then.</p>
+                  </div>
+                )}
               </div>
+
+              {/* Preview */}
+              {deliveryMode === "now" && (
+                <div className="bg-gray-50 rounded-sm p-4 text-sm text-gray-600 space-y-2">
+                  <p className="font-medium text-gray-700 text-xs uppercase tracking-wide mb-2">Preview</p>
+                  <p>Hi {booking.clientName?.split(" ")[0] || "there"},</p>
+                  {emailNote && <p className="italic text-gray-500">{emailNote}</p>}
+                  <p>Your media for <strong>{address}</strong> is ready to view and download.</p>
+                  <p className="text-navy underline text-xs">[ View Gallery → ]</p>
+                </div>
+              )}
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 sticky bottom-0 bg-white">
               <button onClick={() => setShowDeliver(false)} className="btn-outline px-4 py-2 text-sm">Cancel</button>
-              <button onClick={deliverGallery} disabled={delivering} className="btn-primary px-6 py-2 text-sm">
-                {delivering ? "Sending…" : "Deliver →"}
+              <button
+                onClick={deliverGallery}
+                disabled={delivering || (deliveryMode === "later" && !scheduledAt)}
+                className="btn-primary px-6 py-2 text-sm">
+                {delivering
+                  ? (deliveryMode === "later" ? "Scheduling…" : "Sending…")
+                  : deliveryMode === "later" ? "Schedule Delivery →" : "Deliver →"}
               </button>
             </div>
           </div>

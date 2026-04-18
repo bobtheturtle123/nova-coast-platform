@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
+import { useToast } from "@/components/Toast";
 
 const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -235,12 +236,12 @@ function RichTextEditor({ value, onChange, placeholder }) {
 
 // ─── Main gallery page ────────────────────────────────────────────────────────
 export default function GalleryDetailPage() {
-  const { id } = useParams();
+  const { id }   = useParams();
+  const toast    = useToast();
   const [gallery,      setGallery]      = useState(null);
   const [loading,      setLoading]      = useState(true);
   const [uploading,    setUploading]    = useState(false);
   const [progress,     setProgress]     = useState(0);
-  const [msg,          setMsg]          = useState({ text: "", type: "" });
   const [showDeliver,  setShowDeliver]  = useState(false);
   const [delivering,   setDelivering]   = useState(false);
   const [activeTab,    setActiveTab]    = useState("all");
@@ -249,10 +250,12 @@ export default function GalleryDetailPage() {
   const fileRef = useRef(null);
 
   // Email state
-  const [emailSubject, setEmailSubject] = useState("");
-  const [emailTo,      setEmailTo]      = useState([]);
-  const [emailCc,      setEmailCc]      = useState([]);
-  const [emailNote,    setEmailNote]    = useState(""); // HTML string
+  const [emailSubject,  setEmailSubject]  = useState("");
+  const [emailTo,       setEmailTo]       = useState([]);
+  const [emailCc,       setEmailCc]       = useState([]);
+  const [emailNote,     setEmailNote]     = useState(""); // HTML string
+  const [deliveryMode,  setDeliveryMode]  = useState("now"); // "now" | "later"
+  const [scheduledAt,   setScheduledAt]   = useState(""); // datetime-local value
 
   // Category state
   const [showCatPanel,    setShowCatPanel]    = useState(false);
@@ -323,7 +326,7 @@ export default function GalleryDetailPage() {
 
   // ─── Upload ──────────────────────────────────────────────────────────────
   async function uploadFiles(files) {
-    setUploading(true); setProgress(0); setMsg({ text: "", type: "" });
+    setUploading(true); setProgress(0);
     const token = await auth.currentUser.getIdToken();
     const total = files.length;
     let done = 0;
@@ -385,12 +388,11 @@ export default function GalleryDetailPage() {
     setUploading(false);
 
     if (done > 0 && errors.length === 0) {
-      setMsg({ text: `${done} file${done !== 1 ? "s" : ""} uploaded.`, type: "success" });
+      toast(`${done} file${done !== 1 ? "s" : ""} uploaded.`);
     } else if (done > 0 && errors.length > 0) {
-      setMsg({ text: `${done} uploaded, ${errors.length} failed: ${errors[0]}`, type: "error" });
+      toast(`${done} uploaded, ${errors.length} failed: ${errors[0]}`, "error");
     } else {
-      // All failed — show the first error clearly
-      setMsg({ text: errors[0] || "Upload failed. Check R2 env vars in Vercel.", type: "error" });
+      toast(errors[0] || "Upload failed. Check R2 env vars in Vercel.", "error");
     }
   }
 
@@ -419,7 +421,7 @@ export default function GalleryDetailPage() {
       body: JSON.stringify({ media: gallery.media }),
     });
     setSavingOrder(false);
-    setMsg({ text: "Order saved.", type: "success" });
+    toast("Order saved.");
   }
 
   // ─── Category helpers ─────────────────────────────────────────────────────
@@ -488,13 +490,13 @@ export default function GalleryDetailPage() {
         const keySet = new Set(keys);
         setGallery((g) => ({ ...g, media: (g.media || []).filter((m) => !keySet.has(m.key)) }));
         setSelectedKeys((prev) => { const next = new Set(prev); keys.forEach((k) => next.delete(k)); return next; });
-        setMsg({ text: `Deleted ${keys.length} item${keys.length !== 1 ? "s" : ""}.`, type: "success" });
+        toast(`Deleted ${keys.length} item${keys.length !== 1 ? "s" : ""}.`);
       } else {
         const d = await res.json();
-        setMsg({ text: d.error || "Delete failed.", type: "error" });
+        toast(d.error || "Delete failed.", "error");
       }
     } catch {
-      setMsg({ text: "Delete failed.", type: "error" });
+      toast("Delete failed.", "error");
     } finally {
       setDeleting(false);
     }
@@ -511,7 +513,7 @@ export default function GalleryDetailPage() {
       return next;
     });
     clearSelection();
-    setMsg({ text: `Assigned ${selectedKeys.size} photos to "${bulkCatTarget}".`, type: "success" });
+    toast(`Assigned ${selectedKeys.size} photos to "${bulkCatTarget}".`);
   }
 
   function addCategory() {
@@ -539,23 +541,57 @@ export default function GalleryDetailPage() {
     });
     setSavingCats(false);
     setGallery((g) => ({ ...g, categories }));
-    setMsg({ text: "Categories saved.", type: "success" });
+    toast("Categories saved.");
     setShowCatPanel(false);
   }
 
   // ─── Deliver ──────────────────────────────────────────────────────────────
   async function deliverGallery() {
-    if (emailTo.length === 0) { setMsg({ text: "Add at least one recipient.", type: "error" }); setShowDeliver(false); return; }
+    if (emailTo.length === 0) { toast("Add at least one recipient.", "error"); return; }
+    if (deliveryMode === "later" && !scheduledAt) { toast("Pick a date and time.", "error"); return; }
+    if (deliveryMode === "later" && new Date(scheduledAt) <= new Date()) {
+      toast("Scheduled time must be in the future.", "error"); return;
+    }
     setDelivering(true);
     const token = await auth.currentUser.getIdToken();
+    const body  = {
+      subject: emailSubject,
+      note:    emailNote,
+      to:      emailTo,
+      cc:      emailCc,
+      ...(deliveryMode === "later" ? { scheduledAt: new Date(scheduledAt).toISOString() } : {}),
+    };
     const res = await fetch(`/api/dashboard/galleries/${id}/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ subject: emailSubject, note: emailNote, to: emailTo, cc: emailCc }),
+      body: JSON.stringify(body),
     });
     setDelivering(false); setShowDeliver(false);
-    if (res.ok) { setMsg({ text: "Gallery delivered.", type: "success" }); setGallery((g) => ({ ...g, delivered: true })); }
-    else setMsg({ text: "Failed to send email.", type: "error" });
+    if (res.ok) {
+      if (deliveryMode === "later") {
+        toast(`Delivery scheduled for ${new Date(scheduledAt).toLocaleString()}.`);
+        setGallery((g) => ({ ...g, scheduledDelivery: { scheduledAt: new Date(scheduledAt), status: "pending" } }));
+      } else {
+        toast("Gallery delivered.");
+        setGallery((g) => ({ ...g, delivered: true, scheduledDelivery: null }));
+      }
+    } else {
+      toast("Failed — check settings and try again.", "error");
+    }
+  }
+
+  async function cancelScheduledDelivery() {
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(`/api/dashboard/galleries/${id}/send`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      toast("Scheduled delivery cancelled.");
+      setGallery((g) => ({ ...g, scheduledDelivery: null }));
+    } else {
+      toast("Failed to cancel.", "error");
+    }
   }
 
   async function toggleUnlock() {
@@ -578,7 +614,7 @@ export default function GalleryDetailPage() {
       body: JSON.stringify({ matterportUrl, videoUrl, virtualLinks, floorPlans, attachedFiles }),
     });
     setSavingExtras(false);
-    setMsg({ text: "Saved.", type: "success" });
+    toast("Saved.");
   }
 
   async function uploadToR2(file, subfolder) {
@@ -605,7 +641,7 @@ export default function GalleryDetailPage() {
         const result = await uploadToR2(file, "floorplans");
         results.push(result);
       } catch (err) {
-        setMsg({ text: `Floor plan upload failed: ${err.message}`, type: "error" });
+        toast(`Floor plan upload failed: ${err.message}`, "error");
       }
     }
     const updated = [...floorPlans, ...results];
@@ -618,7 +654,7 @@ export default function GalleryDetailPage() {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ floorPlans: updated }),
     });
-    if (results.length) setMsg({ text: `${results.length} floor plan${results.length !== 1 ? "s" : ""} added.`, type: "success" });
+    if (results.length) toast(`${results.length} floor plan${results.length !== 1 ? "s" : ""} added.`);
   }
 
   async function uploadAttachedFile(files) {
@@ -629,7 +665,7 @@ export default function GalleryDetailPage() {
         const result = await uploadToR2(file, "attachments");
         results.push(result);
       } catch (err) {
-        setMsg({ text: `File upload failed: ${err.message}`, type: "error" });
+        toast(`File upload failed: ${err.message}`, "error");
       }
     }
     const updated = [...attachedFiles, ...results];
@@ -641,7 +677,7 @@ export default function GalleryDetailPage() {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ attachedFiles: updated }),
     });
-    if (results.length) setMsg({ text: `${results.length} file${results.length !== 1 ? "s" : ""} attached.`, type: "success" });
+    if (results.length) toast(`${results.length} file${results.length !== 1 ? "s" : ""} attached.`);
   }
 
   function addVirtualLink() {
@@ -724,17 +760,33 @@ export default function GalleryDetailPage() {
             <button onClick={toggleUnlock} className="btn-outline text-xs px-3 py-1.5">
               {gallery.unlocked ? "🔓 Unlocked" : "🔒 Locked"}
             </button>
-            <button onClick={() => setShowDeliver(true)} className="btn-primary text-sm px-5 py-2">
+            <button onClick={() => { setDeliveryMode("now"); setScheduledAt(""); setShowDeliver(true); }}
+              className="btn-primary text-sm px-5 py-2">
               Deliver to Client
             </button>
           </div>
         </div>
 
-        {msg.text && (
-          <div className={`text-sm px-4 py-2.5 rounded-sm mb-4 ${
-            msg.type === "success" ? "bg-green-50 border border-green-200 text-green-700"
-            : "bg-red-50 border border-red-200 text-red-700"
-          }`}>{msg.text}</div>
+        {/* Scheduled delivery banner */}
+        {gallery.scheduledDelivery?.status === "pending" && (
+          <div className="mx-6 mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-blue-900">
+                Delivery scheduled for{" "}
+                {new Date(gallery.scheduledDelivery.scheduledAt?.toDate?.() || gallery.scheduledDelivery.scheduledAt)
+                  .toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+              </p>
+              <p className="text-xs text-blue-600 mt-0.5">Email will send automatically at that time.</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setDeliveryMode("later"); setShowDeliver(true); }}
+                className="text-xs font-medium text-blue-700 hover:underline">Edit</button>
+              <button
+                onClick={cancelScheduledDelivery}
+                className="text-xs font-medium text-red-500 hover:underline">Cancel</button>
+            </div>
+          </div>
         )}
 
         {/* Upload zone */}
@@ -1143,29 +1195,67 @@ export default function GalleryDetailPage() {
                   placeholder="Great shoot today! Let me know if you need anything adjusted." />
               </div>
 
-              {/* Email preview */}
-              <div className="bg-gray-50 border border-gray-200 rounded-sm p-4 text-sm text-gray-600 space-y-2">
-                <p className="font-medium text-xs text-gray-400 uppercase tracking-wide mb-3">Email preview</p>
-                <p>Hi <strong>{gallery.clientName || "there"}</strong>,</p>
-                {emailNote && (
-                  <div className="text-gray-600" dangerouslySetInnerHTML={{ __html: emailNote }} />
+              {/* Send time */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">When to Send</label>
+                <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+                  {[["now", "Send Now"], ["later", "Schedule"]].map(([val, label]) => (
+                    <button key={val} type="button" onClick={() => setDeliveryMode(val)}
+                      className={`flex-1 py-2 font-medium transition-colors ${
+                        deliveryMode === val
+                          ? "bg-navy text-white"
+                          : "bg-white text-gray-500 hover:bg-gray-50"
+                      }`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {deliveryMode === "later" && (
+                  <div className="mt-3">
+                    <input
+                      type="datetime-local"
+                      value={scheduledAt}
+                      min={(() => { const d = new Date(); d.setMinutes(d.getMinutes() + 15); return d.toISOString().slice(0,16); })()}
+                      onChange={(e) => setScheduledAt(e.target.value)}
+                      className="input-field w-full"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Email delivers automatically at this time. You can cancel it before then.</p>
+                  </div>
                 )}
-                <p>Your media for <strong>{gallery.bookingAddress}</strong> is ready to view and download.</p>
-                {galleryUrl ? (
-                  <a href={galleryUrl} target="_blank" rel="noopener noreferrer"
-                    className="inline-block text-navy font-semibold underline hover:text-navy-light">
-                    [ View Gallery → ]
-                  </a>
-                ) : (
-                  <p className="text-navy font-semibold">[ View Gallery ]</p>
-                )}
-                <p className="text-gray-400 text-xs mt-3">— {gallery.tenantName || "Your photographer"}</p>
               </div>
+
+              {/* Email preview */}
+              {deliveryMode === "now" && (
+                <div className="bg-gray-50 border border-gray-200 rounded-sm p-4 text-sm text-gray-600 space-y-2">
+                  <p className="font-medium text-xs text-gray-400 uppercase tracking-wide mb-3">Email preview</p>
+                  <p>Hi <strong>{gallery.clientName || "there"}</strong>,</p>
+                  {emailNote && (
+                    <div className="text-gray-600" dangerouslySetInnerHTML={{ __html: emailNote }} />
+                  )}
+                  <p>Your media for <strong>{gallery.bookingAddress}</strong> is ready to view and download.</p>
+                  {galleryUrl ? (
+                    <a href={galleryUrl} target="_blank" rel="noopener noreferrer"
+                      className="inline-block text-navy font-semibold underline hover:text-navy-light">
+                      [ View Gallery → ]
+                    </a>
+                  ) : (
+                    <p className="text-navy font-semibold">[ View Gallery ]</p>
+                  )}
+                  <p className="text-gray-400 text-xs mt-3">— {gallery.tenantName || "Your photographer"}</p>
+                </div>
+              )}
             </div>
             <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 sticky bottom-0 bg-white">
               <button onClick={() => setShowDeliver(false)} className="btn-outline px-4 py-2 text-sm">Cancel</button>
-              <button onClick={deliverGallery} disabled={delivering || emailTo.length === 0} className="btn-primary px-6 py-2 text-sm">
-                {delivering ? "Sending…" : `Deliver to ${emailTo.length + emailCc.length} →`}
+              <button
+                onClick={deliverGallery}
+                disabled={delivering || emailTo.length === 0 || (deliveryMode === "later" && !scheduledAt)}
+                className="btn-primary px-6 py-2 text-sm">
+                {delivering
+                  ? (deliveryMode === "later" ? "Scheduling…" : "Sending…")
+                  : deliveryMode === "later"
+                    ? "Schedule Delivery →"
+                    : `Deliver to ${emailTo.length + emailCc.length} →`}
               </button>
             </div>
           </div>

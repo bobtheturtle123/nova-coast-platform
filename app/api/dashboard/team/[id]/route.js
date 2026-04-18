@@ -17,13 +17,25 @@ export async function PATCH(req, { params }) {
 
   const body = await req.json();
   const update = {
-    name:   (body.name || "").slice(0, 80),
-    email:  (body.email || "").toLowerCase(),
-    phone:  body.phone || "",
-    // Accept any skill/service IDs — both legacy camelCase keys and product UUIDs from catalog
-    skills: Array.isArray(body.skills) ? body.skills.map(String).slice(0, 50) : [],
-    color:  body.color || "#0b2a55",
-    active: body.active !== false,
+    name:    (body.name || "").slice(0, 80),
+    email:   (body.email || "").toLowerCase(),
+    phone:   body.phone || "",
+    skills:  Array.isArray(body.skills) ? body.skills.map(String).slice(0, 50) : [],
+    color:   body.color || "#0b2a55",
+    active:  body.active !== false,
+    payRate: body.payRate != null ? Number(body.payRate) || 0 : 0,
+    serviceRates: body.serviceRates && typeof body.serviceRates === "object"
+      ? Object.fromEntries(
+          Object.entries(body.serviceRates)
+            .slice(0, 100)
+            .map(([k, v]) => [
+              String(k).slice(0, 64),
+              typeof v === "object" && v !== null
+                ? Object.fromEntries(Object.entries(v).map(([t, r]) => [String(t).slice(0, 20), Number(r) || 0]))
+                : (Number(v) || 0),
+            ])
+        )
+      : {},
   };
 
   const memberRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(params.id);
@@ -62,10 +74,19 @@ export async function DELETE(req, { params }) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  await adminDb
-    .collection("tenants").doc(ctx.tenantId)
-    .collection("team").doc(params.id)
-    .delete();
+  const memberRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(params.id);
+  const memberDoc = await memberRef.get();
 
+  const batch = adminDb.batch();
+  batch.delete(memberRef);
+
+  if (memberDoc.exists) {
+    const calToken = memberDoc.data().calendarToken;
+    if (calToken) {
+      batch.delete(adminDb.collection("calendarTokens").doc(calToken));
+    }
+  }
+
+  await batch.commit();
   return Response.json({ ok: true });
 }
