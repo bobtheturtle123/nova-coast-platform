@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/cron/gallery-deliveries",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 * * * *"
     }
   ]
 }
