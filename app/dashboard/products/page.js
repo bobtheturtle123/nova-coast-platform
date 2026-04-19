@@ -49,6 +49,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
     priceTiers:   item?.priceTiers || {},
     includes:     item?.includes     || [],
     showWith:     item?.showWith     || [],
+    isTwilight:   item?.isTwilight   || false,
     assignedPhotographers: item?.assignedPhotographers || [],
   }));
   const [saving,      setSaving]      = useState(false);
@@ -141,6 +142,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
       ...(form.tiered ? { priceTiers: form.priceTiers } : { priceTiers: null }),
       ...(type === "packages" ? { tagline: form.tagline, deliverables: form.deliverables, featured: form.featured, includes: form.includes } : {}),
       ...(type === "addons" ? { showWith: form.showWith } : {}),
+      ...((type === "services" || type === "packages") ? { isTwilight: form.isTwilight } : {}),
     };
     await onSave(payload, type);
     setSaving(false);
@@ -420,6 +422,18 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Twilight flag — for services/packages */}
+          {(type === "services" || type === "packages") && (
+            <div className="flex items-center gap-3 pt-1">
+              <input type="checkbox" id="isTwilight" checked={form.isTwilight || false}
+                onChange={(e) => setForm((f) => ({ ...f, isTwilight: e.target.checked }))}
+                className="rounded" />
+              <label htmlFor="isTwilight" className="text-sm text-charcoal cursor-pointer">
+                Twilight service — triggers sunset-timed second appointment on booking
+              </label>
             </div>
           )}
 

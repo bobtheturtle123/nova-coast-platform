@@ -127,6 +127,8 @@ export default function TenantPropertyPage() {
                       city:    parts.city,
                       state:   parts.state,
                       zip:     parts.zip,
+                      lat:     parts.lat,
+                      lng:     parts.lng,
                     });
                     setZoneError(null);
                     setGeocodeError(false);

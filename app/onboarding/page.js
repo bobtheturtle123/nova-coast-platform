@@ -212,36 +212,23 @@ export default function OnboardingPage() {
         {step === 1 && (
           <div>
             <h1 className="font-display text-3xl text-navy mb-2">Add your first service</h1>
-            <p className="text-gray-600 mb-2">This is what clients will see when they book. You can add more packages and services later.</p>
-            <p className="text-xs text-gray-500 mb-6">Example: "Real Estate Photography" — $299</p>
-            <div className="bg-white rounded-sm border border-gray-200 p-6 space-y-5">
+            <p className="text-gray-500 mb-6">Just give it a name and a starting price — you can customize tiers, descriptions, and add more later from Products.</p>
+            <div className="bg-white rounded-sm border border-gray-200 p-6 space-y-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">Service Name</label>
                 <input type="text" value={newService.name}
                   onChange={(e) => setNewService((s) => ({ ...s, name: e.target.value }))}
                   className="input-field w-full" placeholder="Real Estate Photography" autoFocus />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">Price ($)</label>
-                  <input type="number" value={newService.price} min={0} step={1}
-                    onChange={(e) => setNewService((s) => ({ ...s, price: e.target.value }))}
-                    className="input-field w-full" placeholder="299" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">Type</label>
-                  <select value={newService.type} onChange={(e) => setNewService((s) => ({ ...s, type: e.target.value }))}
-                    className="input-field w-full">
-                    <option value="services">Individual Service</option>
-                    <option value="packages">Package / Bundle</option>
-                    <option value="addons">Add-on</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">Starting Price ($)</label>
+                <input type="number" value={newService.price} min={0} step={1}
+                  onChange={(e) => setNewService((s) => ({ ...s, price: e.target.value }))}
+                  className="input-field w-full" placeholder="299" />
               </div>
-              {serviceSaved && <p className="text-sm text-green-700">Service saved!</p>}
+              {serviceSaved && <p className="text-sm text-green-700">✓ Service saved!</p>}
             </div>
-            <p className="text-xs text-gray-500 mt-3">You can customize pricing tiers, descriptions, and add more from <strong>Dashboard → Products</strong>.</p>
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-3 mt-5">
               <button onClick={prev} className="btn-outline px-6 py-3">← Back</button>
               <button onClick={saveService} disabled={saving} className="btn-primary px-8 py-3 flex-1">
                 {saving ? "Saving…" : newService.name.trim() ? "Save & Continue →" : "Skip for now →"}

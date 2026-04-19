@@ -659,8 +659,10 @@ export default function SettingsPage() {
   const [availInterval,    setAvailInterval]    = useState(30);
   const [availDuration,    setAvailDuration]    = useState(120);
   const [availBuffer,      setAvailBuffer]      = useState(30);
-  const [savingAvail,      setSavingAvail]      = useState(false);
-  const [showWeather,      setShowWeather]      = useState(true);
+  const [savingAvail,               setSavingAvail]               = useState(false);
+  const [showWeather,               setShowWeather]               = useState(true);
+  const [twilightOffsetMinutes,     setTwilightOffsetMinutes]     = useState(60);
+  const [allowAgentPhotographerSel, setAllowAgentPhotographerSel] = useState(false);
 
   // Terms of service state
   const [termsText,    setTermsText]    = useState("");
@@ -738,6 +740,8 @@ export default function SettingsPage() {
             if (av.defaultDuration)  setAvailDuration(av.defaultDuration);
             if (av.bufferMinutes)    setAvailBuffer(av.bufferMinutes);
             if (av.showWeather !== undefined) setShowWeather(av.showWeather);
+            if (av.twilightOffsetMinutes !== undefined) setTwilightOffsetMinutes(av.twilightOffsetMinutes);
+            if (av.allowAgentPhotographerSelection !== undefined) setAllowAgentPhotographerSel(av.allowAgentPhotographerSelection);
           }
         }
         if (data.tenant.emailTemplate) {
@@ -897,6 +901,8 @@ export default function SettingsPage() {
         defaultDuration: Number(availDuration) || 120,
         bufferMinutes:   Number(availBuffer)   || 30,
         showWeather,
+        twilightOffsetMinutes: Number(twilightOffsetMinutes) || 60,
+        allowAgentPhotographerSelection: allowAgentPhotographerSel,
       },
     };
   }
@@ -1627,6 +1633,37 @@ export default function SettingsPage() {
               <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${showWeather ? "left-5" : "left-0.5"}`} />
             </button>
             <span className="text-sm text-charcoal">{showWeather ? "Weather widget enabled" : "Weather widget disabled"}</span>
+          </label>
+        </div>
+
+        {/* Twilight Offset */}
+        <div className="pt-4 border-t border-gray-100">
+          <h3 className="text-sm font-semibold text-charcoal mb-1">Twilight Shoot Offset</h3>
+          <p className="text-xs text-gray-400 mb-3">
+            When a twilight service is booked, the suggested twilight start time is this many minutes before the real sunset for the property's location.
+          </p>
+          <div className="flex items-center gap-3">
+            <input type="number" value={twilightOffsetMinutes} min={0} max={180} step={5}
+              onChange={(e) => setTwilightOffsetMinutes(e.target.value)}
+              className="input-field w-24 text-sm" />
+            <span className="text-sm text-gray-500">minutes before sunset</span>
+          </div>
+        </div>
+
+        {/* Agent Photographer Selection */}
+        <div className="pt-4 border-t border-gray-100">
+          <h3 className="text-sm font-semibold text-charcoal mb-1">Agent Photographer Selection</h3>
+          <p className="text-xs text-gray-400 mb-3">
+            Allow agents to choose their preferred photographer or videographer when booking. Off by default — your team assigns photographers.
+          </p>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <button type="button" onClick={() => setAllowAgentPhotographerSel((v) => !v)}
+              className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${allowAgentPhotographerSel ? "bg-navy" : "bg-gray-200"}`}>
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${allowAgentPhotographerSel ? "left-5" : "left-0.5"}`} />
+            </button>
+            <span className="text-sm text-charcoal">
+              {allowAgentPhotographerSel ? "Agents can select their photographer" : "Team assigns photographer (default)"}
+            </span>
           </label>
         </div>
 

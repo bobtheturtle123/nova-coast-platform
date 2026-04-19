@@ -19,6 +19,8 @@ const INITIAL_STATE = {
   city:          "",
   state:         "CA",
   zip:           "",
+  lat:           null,
+  lng:           null,
   squareFootage: "",
   propertyType:  "residential",
   notes:         "",
@@ -31,6 +33,7 @@ const INITIAL_STATE = {
   preferredDate:         "",
   preferredTime:         "morning",
   preferredTimeSpecific: null,
+  twilightTime:          null,
   photographerId:        null,
 
   // Custom fields (from admin config)

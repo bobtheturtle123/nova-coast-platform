@@ -183,8 +183,9 @@ export default function TenantPaymentPage() {
   const {
     pricing, packageId, serviceIds, addonIds,
     address, city, state, zip, squareFootage, propertyType, notes,
-    preferredDate, preferredTime, preferredTimeSpecific, travelFee,
+    preferredDate, preferredTime, preferredTimeSpecific, twilightTime, travelFee,
     clientName, clientEmail, clientPhone, customFields,
+    photographerId,
     setClientInfo, setBookingResult,
   } = store;
 
@@ -263,13 +264,13 @@ export default function TenantPaymentPage() {
         body: JSON.stringify({
           packageId, serviceIds, addonIds,
           address, city, state, zip, squareFootage, propertyType, notes,
-          preferredDate, preferredTime,
+          preferredDate, preferredTime, preferredTimeSpecific, twilightTime,
           clientName, clientEmail, clientPhone,
           travelFee, pricing,
           payFull: effectivePayFull,
           tipAmount: tip,
-          preferredTimeSpecific,
           customFields: customFields || {},
+          photographerId: photographerId || null,
         }),
       });
       const data = await res.json();

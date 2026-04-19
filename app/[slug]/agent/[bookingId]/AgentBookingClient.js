@@ -37,6 +37,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
     { id: "overview",  label: "Overview" },
     { id: "marketing", label: "Marketing" },
     ...(galleryUrl ? [{ id: "gallery", label: `Gallery${gallery?.imageCount > 0 ? ` (${gallery.imageCount})` : ""}` }] : []),
+    ...(pw?.published ? [{ id: "website", label: "Property Website" }] : []),
   ];
 
   return (
@@ -111,7 +112,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
               </a>
             )}
 
-            {pw && (
+            {pw?.published && (
               <a href={brochureUrl} target="_blank" rel="noopener noreferrer"
                 className="flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all text-center">
                 <span className="text-2xl">📋</span>
@@ -176,7 +177,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
           )}
 
           {/* Brochure */}
-          {pw && (
+          {pw?.published && (
             <div className="bg-white border border-gray-200 rounded-xl p-5">
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Print Brochure</p>
               <p className="text-sm text-gray-500 mb-3">One-page printable PDF with photos, property details, and agent info.</p>
@@ -244,6 +245,64 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
           {gallery.coverUrl && (
             <div className="rounded-xl overflow-hidden border border-gray-200">
               <img src={gallery.coverUrl} alt="Gallery preview" className="w-full h-48 object-cover" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── PROPERTY WEBSITE TAB ───────────────────────────────────── */}
+      {tab === "website" && pw?.published && (
+        <div className="space-y-4">
+          {/* Live URL */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Your Property Website</p>
+            <div className="flex items-center gap-2 mb-4">
+              <code className="text-sm text-navy flex-1 truncate bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                {listingUrl}
+              </code>
+              <button onClick={() => copy(listingUrl, "url")}
+                className="text-xs px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0">
+                {captionsCopied === "url" ? "✓ Copied" : "Copy Link"}
+              </button>
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              <a href={listingUrl} target="_blank" rel="noopener noreferrer"
+                className="text-sm font-medium px-4 py-2 rounded-lg text-white inline-block transition-colors"
+                style={{ background: branding.primary }}>
+                View Live Site →
+              </a>
+              <a href={brochureUrl} target="_blank" rel="noopener noreferrer"
+                className="text-sm font-medium px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 inline-block transition-colors text-gray-700">
+                Print Brochure →
+              </a>
+            </div>
+          </div>
+
+          {/* QR Code */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">QR Code</p>
+            <div className="flex items-center gap-5">
+              <img src={qrUrl} alt="QR Code" className="w-24 h-24 rounded-lg border border-gray-100" />
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Share this QR code at open houses or in print materials.</p>
+                <a href={qrUrl} download="property-qr.png"
+                  className="text-xs font-medium px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors inline-block">
+                  ↓ Download QR
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Property details preview */}
+          {(pw.beds || pw.baths || pw.sqft || pw.price) && (
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Property Details</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {pw.price && <div><p className="text-xs text-gray-400">Price</p><p className="font-semibold text-gray-800">{pw.price}</p></div>}
+                {pw.beds  && <div><p className="text-xs text-gray-400">Beds</p><p className="font-semibold text-gray-800">{pw.beds}</p></div>}
+                {pw.baths && <div><p className="text-xs text-gray-400">Baths</p><p className="font-semibold text-gray-800">{pw.baths}</p></div>}
+                {pw.sqft  && <div><p className="text-xs text-gray-400">Sq Ft</p><p className="font-semibold text-gray-800">{Number(pw.sqft).toLocaleString()}</p></div>}
+              </div>
             </div>
           )}
         </div>

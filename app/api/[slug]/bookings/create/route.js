@@ -26,9 +26,10 @@ export async function POST(req, { params }) {
     const {
       packageId, serviceIds, addonIds,
       address, city, state, zip, squareFootage, propertyType, notes,
-      preferredDate, preferredTime, preferredTimeSpecific,
+      preferredDate, preferredTime, preferredTimeSpecific, twilightTime,
       clientName, clientEmail, clientPhone,
       travelFee, tipAmount: rawTip, payFull, customFields,
+      photographerId: preferredPhotographerId,
     } = body;
 
     if (!clientName || !clientEmail || !clientPhone) {
@@ -116,8 +117,9 @@ export async function POST(req, { params }) {
         preferredDate:         preferredDate || null,
         preferredTime:         preferredTime || "morning",
         preferredTimeSpecific: preferredTimeSpecific || null,
-        customFields:          customFields || {},
-        photographerId:        null,
+        twilightTime:          twilightTime  || null,
+        customFields:          customFields  || {},
+        photographerId:        preferredPhotographerId || null,
         shootDate:             null,
         galleryId:             null,
         galleryUnlocked:       false,
