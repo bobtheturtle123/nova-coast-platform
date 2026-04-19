@@ -32,7 +32,7 @@ export async function POST(req, { params }) {
     return Response.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const { address } = body;
+  const { address, lat: bLat, lng: bLng } = body;
   if (!address?.trim()) {
     return Response.json({ error: "Address is required" }, { status: 400 });
   }
@@ -47,33 +47,43 @@ export async function POST(req, { params }) {
     return Response.json({ covered: true, assignedPhotographers: [], zoneName: null, contact });
   }
 
-  // Geocode the address
-  const mapsKey = process.env.GOOGLE_MAPS_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-  if (!mapsKey) {
-    // Fail open — don't block bookings if key isn't configured
-    console.warn("[check-service-area] No GOOGLE_MAPS_KEY configured; skipping zone check");
-    return Response.json({ covered: true, assignedPhotographers: [], zoneName: null, contact });
-  }
+  // Geocode the address using LocationIQ
+  const liqKey = process.env.LOCATIONIQ_KEY || process.env.NEXT_PUBLIC_LOCATIONIQ_KEY;
+
+  // Also accept pre-geocoded coords in body to avoid an API call entirely
+  const bodyLat = body.lat ? parseFloat(body.lat) : null;
+  const bodyLng = body.lng ? parseFloat(body.lng) : null;
 
   let lat, lng;
-  try {
-    const geoRes = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${mapsKey}`
-    );
-    const geoData = await geoRes.json();
-    if (geoData.status !== "OK" || !geoData.results?.[0]) {
-      return Response.json({
-        covered: false,
-        geocodeError: true,
-        assignedPhotographers: [],
-        zoneName: null,
-        contact,
-      });
+
+  if (bodyLat != null && bodyLng != null && !isNaN(bodyLat) && !isNaN(bodyLng)) {
+    lat = bodyLat;
+    lng = bodyLng;
+  } else {
+    if (!liqKey) {
+      console.warn("[check-service-area] No LOCATIONIQ_KEY configured; skipping zone check");
+      return Response.json({ covered: true, assignedPhotographers: [], zoneName: null, contact });
     }
-    ({ lat, lng } = geoData.results[0].geometry.location);
-  } catch (err) {
-    console.error("[check-service-area] Geocode error:", err);
-    return Response.json({ covered: true, assignedPhotographers: [], zoneName: null, contact });
+    try {
+      const geoRes  = await fetch(
+        `https://us1.locationiq.com/v1/search.php?key=${liqKey}&q=${encodeURIComponent(address)}&format=json&limit=1&countrycodes=us`
+      );
+      const geoData = await geoRes.json();
+      if (!Array.isArray(geoData) || !geoData[0]) {
+        return Response.json({
+          covered: false,
+          geocodeError: true,
+          assignedPhotographers: [],
+          zoneName: null,
+          contact,
+        });
+      }
+      lat = parseFloat(geoData[0].lat);
+      lng = parseFloat(geoData[0].lon);
+    } catch (err) {
+      console.error("[check-service-area] Geocode error:", err);
+      return Response.json({ covered: true, assignedPhotographers: [], zoneName: null, contact });
+    }
   }
 
   // Load service zones

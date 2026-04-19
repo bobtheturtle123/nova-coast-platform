@@ -78,7 +78,7 @@ const ADDONS = [
   { name: "Additional team member", price: "$10/mo per seat", desc: "Add photographers or staff one at a time." },
   {
     name: "Bring Your Own Payments (BYOP)", price: "$79/mo",
-    desc: "Remove the platform transaction fee. You handle payments manually outside ShootFlow — no automatic deposits, no 'Pay Now' buttons, no payment automation. For advanced users with existing external payment workflows.",
+    desc: "Remove the platform transaction fee. You handle payments manually outside ShootFlow, no automatic deposits, no 'Pay Now' buttons, no payment automation. For advanced users with existing external payment workflows.",
     warning: true,
   },
 ];
@@ -189,7 +189,7 @@ export default function PricingSection() {
                 </p>
                 {addon.warning && (
                   <p className="text-xs text-amber-600 font-medium mt-2">
-                    Not recommended for most users — Stripe Connect is faster and fully automated.
+                    Not recommended for most users, Stripe Connect is faster and fully automated.
                   </p>
                 )}
               </div>

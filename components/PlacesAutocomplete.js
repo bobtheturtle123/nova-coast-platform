@@ -1,36 +1,31 @@
 "use client";
 
-/**
- * Google Places address autocomplete.
- * Requires NEXT_PUBLIC_GOOGLE_MAPS_KEY env var.
- * Falls back to a plain text input if key is not set.
- *
- * Props:
- *   value        — current address string
- *   onSelect(parts) — called with { address, city, state, zip, lat, lng, fullAddress }
- *   onChange(val)   — called on every keystroke (for controlled input)
- *   placeholder, required, className
- */
+import { useEffect, useRef, useState, useCallback } from "react";
 
-import { useEffect, useRef, useState } from "react";
+const LOCATIONIQ_KEY = process.env.NEXT_PUBLIC_LOCATIONIQ_KEY;
 
-const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
 
-let scriptLoaded = false;
-let scriptLoading = false;
-const callbacks = [];
-
-function loadGoogleMaps(cb) {
-  if (typeof window === "undefined") return;
-  if (window.google?.maps?.places) { cb(); return; }
-  callbacks.push(cb);
-  if (scriptLoading) return;
-  scriptLoading = true;
-  const script = document.createElement("script");
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places&loading=async`;
-  script.async = true;
-  script.onload = () => { scriptLoaded = true; callbacks.forEach((fn) => fn()); };
-  document.head.appendChild(script);
+function parseResult(result) {
+  const a = result.address || {};
+  const streetNum  = a.house_number || "";
+  const streetName = a.road || a.pedestrian || "";
+  const address    = [streetNum, streetName].filter(Boolean).join(" ") || result.display_name?.split(",")[0] || "";
+  const city       = a.city || a.town || a.village || a.county || "";
+  const state      = a.state || "";
+  const zip        = a.postcode || "";
+  return {
+    address,
+    city,
+    state,
+    zip,
+    fullAddress: result.display_name || address,
+    lat: parseFloat(result.lat) || null,
+    lng: parseFloat(result.lon) || null,
+  };
 }
 
 export default function PlacesAutocomplete({
@@ -42,78 +37,105 @@ export default function PlacesAutocomplete({
   className,
   label,
 }) {
-  const inputRef  = useRef(null);
-  const acRef     = useRef(null);
-  const [ready, setReady] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [open,        setOpen]        = useState(false);
+  const [inputVal,    setInputVal]    = useState(value || "");
+  const containerRef  = useRef(null);
+  const activeRef     = useRef(false);
 
+  // Keep inputVal in sync with external value changes
+  useEffect(() => { setInputVal(value || ""); }, [value]);
+
+  // Close dropdown on outside click
   useEffect(() => {
-    if (!MAPS_KEY) return; // no key — plain input fallback
-    loadGoogleMaps(() => setReady(true));
+    function handleClick(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  useEffect(() => {
-    if (!ready || !inputRef.current || acRef.current) return;
+  const fetchSuggestions = useCallback(
+    debounce(async (q) => {
+      if (!q || q.length < 3 || !LOCATIONIQ_KEY) { setSuggestions([]); return; }
+      try {
+        const url = `https://api.locationiq.com/v1/autocomplete?key=${LOCATIONIQ_KEY}&q=${encodeURIComponent(q)}&limit=6&countrycodes=us&dedupe=1&normalizecity=1&addressdetails=1`;
+        const res  = await fetch(url);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setSuggestions(data.slice(0, 6));
+          setOpen(true);
+        }
+      } catch {
+        setSuggestions([]);
+      }
+    }, 280),
+    []
+  );
 
-    const ac = new window.google.maps.places.Autocomplete(inputRef.current, {
-      types: ["address"],
-      componentRestrictions: { country: "us" },
-      fields: ["address_components", "formatted_address", "geometry"],
-    });
+  function handleChange(e) {
+    const val = e.target.value;
+    setInputVal(val);
+    onChange?.(val);
+    activeRef.current = true;
+    fetchSuggestions(val);
+  }
 
-    ac.addListener("place_changed", () => {
-      const place = ac.getPlace();
-      if (!place.address_components) return;
+  function handleSelect(result) {
+    const parsed = parseResult(result);
+    setInputVal(parsed.fullAddress);
+    setSuggestions([]);
+    setOpen(false);
+    activeRef.current = false;
+    onChange?.(parsed.fullAddress);
+    onSelect?.(parsed);
+  }
 
-      const get = (type) =>
-        place.address_components.find((c) => c.types.includes(type));
-
-      const streetNum = get("street_number")?.short_name || "";
-      const streetName = get("route")?.short_name || "";
-      const city  = get("locality")?.long_name || get("sublocality")?.long_name || "";
-      const state = get("administrative_area_level_1")?.short_name || "";
-      const zip   = get("postal_code")?.short_name || "";
-      const address = [streetNum, streetName].filter(Boolean).join(" ");
-
-      onSelect?.({
-        address,
-        city,
-        state,
-        zip,
-        fullAddress: place.formatted_address || address,
-        lat: place.geometry?.location?.lat?.() ?? null,
-        lng: place.geometry?.location?.lng?.() ?? null,
-      });
-    });
-
-    acRef.current = ac;
-
-    // Prevent form submit on Enter while autocomplete dropdown is open
-    inputRef.current.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") e.preventDefault();
-    });
-  }, [ready]);
+  function handleKeyDown(e) {
+    if (e.key === "Escape") { setOpen(false); setSuggestions([]); }
+  }
 
   return (
-    <div>
+    <div ref={containerRef} className="relative">
       {label && (
         <label className="label-field">
           {label}{required && " *"}
         </label>
       )}
       <input
-        ref={inputRef}
         type="text"
-        defaultValue={value}
-        onChange={(e) => onChange?.(e.target.value)}
+        value={inputVal}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onFocus={() => suggestions.length > 0 && setOpen(true)}
         placeholder={placeholder}
         required={required}
         autoComplete="new-password"
         className={className || "input-field w-full"}
       />
-      {!MAPS_KEY && (
+
+      {!LOCATIONIQ_KEY && (
         <p className="text-[10px] text-amber-500 mt-0.5">
-          Add NEXT_PUBLIC_GOOGLE_MAPS_KEY for address autocomplete.
+          Add NEXT_PUBLIC_LOCATIONIQ_KEY for address autocomplete.
         </p>
+      )}
+
+      {open && suggestions.length > 0 && (
+        <ul className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+          {suggestions.map((s, i) => (
+            <li key={i}>
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); handleSelect(s); }}
+                className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
+                <span className="font-medium">{s.display_name?.split(",")[0]}</span>
+                <span className="text-gray-400 text-xs ml-1">{s.display_name?.split(",").slice(1, 3).join(",")}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

@@ -2,9 +2,9 @@ import Link from "next/link";
 import PricingSection from "@/components/PricingSection";
 
 export const metadata = {
-  title: "NovaOS — The all-in-one platform for real estate photographers",
+  title: "ShootFlow: Business software built for real estate photographers",
   description:
-    "Booking, payments, and gallery delivery built for real estate photographers. Replace Aryeo in minutes.",
+    "Booking, payments, and media delivery built for real estate photography businesses. Get paid faster, deliver faster, grow faster.",
 };
 
 export default function MarketingPage() {
@@ -13,9 +13,10 @@ export default function MarketingPage() {
       {/* NAV */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="font-display text-navy text-xl tracking-wide">NovaOS</span>
+          <span className="font-display text-navy text-xl tracking-wide">ShootFlow</span>
           <nav className="hidden md:flex items-center gap-8 text-sm text-gray-600">
             <a href="#features" className="hover:text-navy transition-colors">Features</a>
+            <a href="#how-it-works" className="hover:text-navy transition-colors">How it works</a>
             <a href="#pricing" className="hover:text-navy transition-colors">Pricing</a>
           </nav>
           <div className="flex items-center gap-3">
@@ -34,33 +35,39 @@ export default function MarketingPage() {
       <section className="bg-navy text-white pt-24 pb-32 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-gold text-xs tracking-[0.2em] uppercase font-body mb-4">
-            Built for photographers who want to scale
+            Built for real estate photographers and media teams
           </p>
           <h1 className="font-display text-5xl md:text-6xl leading-tight mb-6">
-            Increase your revenue<br />on every shoot.
+            Run your business.<br />Get paid faster.
           </h1>
           <p className="text-white/70 text-lg max-w-2xl mx-auto mb-10">
-            Turn your booking flow into a revenue engine with built-in upsells,
-            deposits, and payment unlocks — all in one platform.
+            ShootFlow handles booking, deposits, media delivery, and payment collection,
+            so you spend less time on admin and more time shooting.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth/register"
               className="bg-gold text-navy font-semibold px-8 py-4 rounded-sm hover:bg-gold/90 transition-colors text-center">
               Start your 14-day free trial
             </Link>
-            <a href="#pricing"
+            <a href="#features"
               className="border border-white/30 text-white px-8 py-4 rounded-sm hover:bg-white/5 transition-colors text-center">
-              See pricing
+              See how it works
             </a>
           </div>
           <p className="text-white/40 text-xs mt-4">No credit card required · Cancel anytime</p>
         </div>
       </section>
 
-      {/* SOCIAL PROOF BAR */}
+      {/* TRUST BAR */}
       <div className="bg-cream border-y border-gray-100 py-6 px-6">
         <div className="max-w-4xl mx-auto flex flex-wrap justify-center gap-8 text-center text-sm text-gray-500">
-          {["Branded booking pages", "Deposits accepted at booking", "Secure media galleries", "Balance payment on delivery", "Stripe Connect payouts"].map((f) => (
+          {[
+            "Branded booking pages",
+            "Deposits collected at booking",
+            "Media locked until payment",
+            "Automatic balance collection",
+            "Direct Stripe payouts",
+          ].map((f) => (
             <span key={f} className="flex items-center gap-2">
               <span className="text-gold">✓</span> {f}
             </span>
@@ -71,13 +78,13 @@ export default function MarketingPage() {
       {/* REVENUE PITCH */}
       <section className="py-20 px-6 bg-white">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="font-display text-4xl text-navy mb-6">Make more on every booking.</h2>
+          <h2 className="font-display text-4xl text-navy mb-6">Every booking should work harder for you.</h2>
           <p className="text-gray-500 text-lg max-w-2xl mx-auto leading-relaxed">
-            Most platforms just manage your business. NovaOS helps you grow it.
+            Most tools track your work. ShootFlow is designed to increase the value of it.
           </p>
           <p className="text-gray-500 text-lg max-w-2xl mx-auto leading-relaxed mt-3">
-            Clients select services and add-ons through a guided booking flow designed to
-            increase order value automatically.
+            A guided booking flow walks clients through packages, add-ons, and payment,
+            raising your average order without any extra effort on your end.
           </p>
         </div>
       </section>
@@ -87,16 +94,16 @@ export default function MarketingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-display text-4xl text-navy mb-4">
-              Everything you need. Nothing you don't.
+              The complete operating system for your photography business.
             </h2>
             <p className="text-gray-500 max-w-xl mx-auto">
-              Built specifically for real estate photographers who want to look professional
-              and get paid on time — without paying Aryeo prices.
+              Built from the ground up for real estate photographers and media teams,
+              not adapted from generic software.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {FEATURES.map((f) => (
-              <div key={f.title} className="p-8 border border-gray-100 rounded-sm hover:border-gold/30 transition-colors">
+              <div key={f.title} className="p-8 border border-gray-100 rounded-sm hover:border-gold/30 transition-colors bg-white">
                 <div className="text-3xl mb-4">{f.icon}</div>
                 <h3 className="font-display text-xl text-navy mb-3">{f.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
@@ -107,10 +114,13 @@ export default function MarketingPage() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="bg-cream py-24 px-6">
+      <section id="how-it-works" className="bg-white py-24 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display text-4xl text-navy mb-4">Live in under 10 minutes</h2>
+            <h2 className="font-display text-4xl text-navy mb-4">Up and running in minutes.</h2>
+            <p className="text-gray-500 max-w-lg mx-auto">
+              No lengthy onboarding. No setup fees. Your booking page goes live the day you sign up.
+            </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {STEPS.map((s, i) => (
@@ -119,7 +129,7 @@ export default function MarketingPage() {
                   {i + 1}
                 </div>
                 <h3 className="font-display text-lg text-navy mb-2">{s.title}</h3>
-                <p className="text-gray-500 text-sm">{s.desc}</p>
+                <p className="text-gray-500 text-sm leading-relaxed">{s.desc}</p>
               </div>
             ))}
           </div>
@@ -132,13 +142,13 @@ export default function MarketingPage() {
       {/* CTA */}
       <section className="bg-navy py-20 px-6 text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="font-display text-4xl text-white mb-4">Start increasing your revenue per shoot.</h2>
-          <p className="text-white/60 mb-8">
-            Set up your booking page in minutes. Starts at $39/mo after your free trial.
+          <h2 className="font-display text-4xl text-white mb-4">Your business, running on autopilot.</h2>
+          <p className="text-white/60 mb-8 text-lg">
+            Booking, payment collection, and media delivery, fully automated, starting at $39/mo.
           </p>
           <Link href="/auth/register"
             className="inline-block bg-gold text-navy font-semibold px-10 py-4 rounded-sm hover:bg-gold/90 transition-colors">
-            Get started free
+            Start free, no credit card needed
           </Link>
         </div>
       </section>
@@ -146,11 +156,11 @@ export default function MarketingPage() {
       {/* FOOTER */}
       <footer className="bg-navy border-t border-white/10 py-8 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-white/40 text-xs">
-          <span>© {new Date().getFullYear()} NovaOS. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} ShootFlow. All rights reserved.</span>
           <div className="flex gap-6">
             <a href="#" className="hover:text-white/70 transition-colors">Privacy</a>
             <a href="#" className="hover:text-white/70 transition-colors">Terms</a>
-            <a href="mailto:hello@nova-os.app" className="hover:text-white/70 transition-colors">Support</a>
+            <a href="mailto:hello@shootflow.app" className="hover:text-white/70 transition-colors">Support</a>
           </div>
         </div>
       </footer>
@@ -159,17 +169,49 @@ export default function MarketingPage() {
 }
 
 const FEATURES = [
-  { icon: "📅", title: "Booking that increases order value", desc: "Clients move through a guided flow — package, add-ons, property details, and payment — designed to maximize what they spend." },
-  { icon: "💳", title: "Get paid upfront, every time", desc: "Collect a deposit the moment a client books. Configurable per shoot type. Funds go directly to your Stripe account." },
-  { icon: "🖼️", title: "Get paid before clients download", desc: "Media stays locked until the balance is paid. One click to deliver and collect — no chasing invoices." },
-  { icon: "✉️", title: "Automated Email Workflows", desc: "Booking confirmations, shoot approvals, gallery delivery, and payment reminders — all sent automatically." },
-  { icon: "📊", title: "Booking Dashboard", desc: "Track every shoot from requested → confirmed → delivered. Know exactly what's outstanding at a glance." },
-  { icon: "⚡", title: "Fast Payouts via Stripe", desc: "Stripe Connect routes client payments straight to your bank. No manual invoicing. No waiting." },
+  {
+    icon: "📅",
+    title: "Booking that sells for you",
+    desc: "Clients move through a guided flow, packages, add-ons, property details, payment, designed to raise average order value without any extra selling on your part.",
+  },
+  {
+    icon: "💳",
+    title: "Deposits collected at booking",
+    desc: "Every booking locks in a deposit the moment it's confirmed. Configurable per service type. Funds route directly to your Stripe account.",
+  },
+  {
+    icon: "🖼️",
+    title: "Media locked until balance is paid",
+    desc: "Clients can preview their gallery but can't download until the balance clears. One click to deliver, payment collected automatically.",
+  },
+  {
+    icon: "✉️",
+    title: "Automated communication",
+    desc: "Confirmations, reminders, delivery notices, and balance-due emails go out automatically, all branded to your business.",
+  },
+  {
+    icon: "📊",
+    title: "Full shoot visibility",
+    desc: "Every shoot moves through a clear status pipeline: requested → confirmed → shot → delivered. Nothing falls through the cracks.",
+  },
+  {
+    icon: "🏡",
+    title: "Client marketing tools, built in",
+    desc: "Every delivered shoot includes a private portal for your client, property website, digital brochure, and AI-generated social captions, ready to share.",
+  },
 ];
 
 const STEPS = [
-  { title: "Create your account", desc: "Sign up with your business name and email. Your booking page is created instantly." },
-  { title: "Connect Stripe", desc: "Link your Stripe account so client deposits and balances flow directly to you." },
-  { title: "Share your booking link", desc: "Send agents your unique link. They book, pay a deposit, and you confirm the shoot." },
+  {
+    title: "Create your account",
+    desc: "Sign up with your business name and email. Your branded booking page is live immediately.",
+  },
+  {
+    title: "Connect Stripe",
+    desc: "Link your Stripe account in minutes. Deposits and balances flow directly to your bank, no manual transfers.",
+  },
+  {
+    title: "Start taking bookings",
+    desc: "Share your booking link. Clients choose their services, pay a deposit, and you get notified instantly.",
+  },
 ];
-

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import { getSqftTier, getItemPrice, calculateTenantPrice, getActiveTiers, formatPrice } from "@/lib/catalogUtils";
+import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 
 const STATUS_LABELS = {
   pending_payment: { label: "Awaiting payment", cls: "bg-gray-50 text-gray-500" },
@@ -263,59 +264,12 @@ export default function BookingsPage() {
   const tenantSlugRef = useRef(null);
   const [zonePhotographers, setZonePhotographers] = useState(null); // null=unchecked []=[ids]
   const [zoneName,          setZoneName]          = useState(null);
-  const addressInputRef = useRef(null);
-  const autocompleteRef = useRef(null);
   const zoneDebounceRef = useRef(null);
 
   useEffect(() => {
     loadBookings();
     loadCatalog();
   }, []);
-
-  // Google Maps Places autocomplete for address
-  useEffect(() => {
-    if (!showCreate) { autocompleteRef.current = null; return; }
-    const timer = setTimeout(() => {
-      function initAC() {
-        if (!addressInputRef.current || autocompleteRef.current) return;
-        if (!window.google?.maps?.places) return;
-        const ac = new window.google.maps.places.Autocomplete(addressInputRef.current, {
-          types: ["address"],
-          componentRestrictions: { country: "us" },
-        });
-        ac.addListener("place_changed", () => {
-          const place = ac.getPlace();
-          if (!place.address_components) return;
-          const get = (t) => place.address_components.find((c) => c.types.includes(t));
-          const street = [get("street_number")?.long_name, get("route")?.long_name].filter(Boolean).join(" ");
-          const city   = get("locality")?.long_name || get("sublocality_level_1")?.long_name || "";
-          const state  = get("administrative_area_level_1")?.short_name || "";
-          const zip    = get("postal_code")?.long_name || "";
-          setForm((p) => ({ ...p, address: street || p.address, city, state, zip }));
-          checkZonePhotographers(street, city, state, zip);
-        });
-        autocompleteRef.current = ac;
-      }
-      const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-      if (!key) return;
-      if (window.google?.maps?.places) {
-        initAC();
-      } else if (!document.getElementById("gmap-booking-script")) {
-        const s = document.createElement("script");
-        s.id    = "gmap-booking-script";
-        s.src   = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&loading=async`;
-        s.async = true;
-        s.onload = initAC;
-        document.head.appendChild(s);
-      } else {
-        const retry = setInterval(() => {
-          if (window.google?.maps?.places) { clearInterval(retry); initAC(); }
-        }, 200);
-        setTimeout(() => clearInterval(retry), 10000);
-      }
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [showCreate]);
 
   // Debounce zone check on manual address entry
   useEffect(() => {
@@ -763,19 +717,15 @@ export default function BookingsPage() {
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Property</p>
                     <div className="space-y-3">
                       <div className="relative">
-                        <input
-                          ref={addressInputRef}
-                          type="text"
-                          value={form.address} onChange={(e) => setField("address", e.target.value)}
+                        <PlacesAutocomplete
+                          value={form.address}
+                          onChange={(val) => setField("address", val)}
+                          onSelect={(parts) => {
+                            setForm((p) => ({ ...p, address: parts.address, city: parts.city, state: parts.state, zip: parts.zip }));
+                            checkZonePhotographers(parts.address, parts.city, parts.state, parts.zip);
+                          }}
                           placeholder="Street address *"
-                          className="input-field w-full"
-                          autoComplete="off"
                         />
-                        {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY && (
-                          <p className="text-xs text-amber-600 mt-1">
-                            Address autocomplete requires NEXT_PUBLIC_GOOGLE_MAPS_KEY in your environment variables.
-                          </p>
-                        )}
                       </div>
                       <input
                         type="text"
