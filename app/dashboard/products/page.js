@@ -34,8 +34,9 @@ const TYPE_META = {
 };
 
 // ─── Product edit form ────────────────────────────────────────────────────────
-function ProductForm({ item, type, allServices, teamMembers, pricingConfig, onSave, onDelete, onClose }) {
-  const [form,    setForm]    = useState(() => ({
+function ProductForm({ item, type: initialType, allServices, allPackages, teamMembers, pricingConfig, onSave, onDelete, onClose }) {
+  const [type, setType] = useState(initialType);
+  const [form, setForm] = useState(() => ({
     name:         item?.name         || "",
     description:  item?.description  || "",
     mediaUrls:    item?.mediaUrls    || (item?.thumbnailUrl ? [item.thumbnailUrl] : []),
@@ -47,6 +48,7 @@ function ProductForm({ item, type, allServices, teamMembers, pricingConfig, onSa
     tiered:       !!(item?.priceTiers),
     priceTiers:   item?.priceTiers || {},
     includes:     item?.includes     || [],
+    showWith:     item?.showWith     || [],
     assignedPhotographers: item?.assignedPhotographers || [],
   }));
   const [saving,      setSaving]      = useState(false);
@@ -72,6 +74,15 @@ function ProductForm({ item, type, allServices, teamMembers, pricingConfig, onSa
       includes: f.includes.includes(svcId)
         ? f.includes.filter((id) => id !== svcId)
         : [...f.includes, svcId],
+    }));
+  }
+
+  function toggleShowWith(id) {
+    setForm((f) => ({
+      ...f,
+      showWith: f.showWith.includes(id)
+        ? f.showWith.filter((x) => x !== id)
+        : [...f.showWith, id],
     }));
   }
 
@@ -129,8 +140,9 @@ function ProductForm({ item, type, allServices, teamMembers, pricingConfig, onSa
       assignedPhotographers: form.assignedPhotographers,
       ...(form.tiered ? { priceTiers: form.priceTiers } : { priceTiers: null }),
       ...(type === "packages" ? { tagline: form.tagline, deliverables: form.deliverables, featured: form.featured, includes: form.includes } : {}),
+      ...(type === "addons" ? { showWith: form.showWith } : {}),
     };
-    await onSave(payload);
+    await onSave(payload, type);
     setSaving(false);
   }
 
@@ -146,12 +158,31 @@ function ProductForm({ item, type, allServices, teamMembers, pricingConfig, onSa
       <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
           <h2 className="font-display text-navy text-lg">
-            {item ? `Edit ${TYPE_META[type].singular}` : `New ${TYPE_META[type].singular}`}
+            {item ? `Edit ${TYPE_META[type].singular}` : "New Item"}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
 
         <div className="p-6 space-y-5">
+          {/* Type selector — only when creating new */}
+          {!item && (
+            <div>
+              <label className="label-field">Item Type</label>
+              <div className="flex gap-2">
+                {Object.entries(TYPE_META).map(([t, meta]) => (
+                  <button key={t} type="button" onClick={() => setType(t)}
+                    className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      type === t
+                        ? "border-navy bg-navy text-white"
+                        : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                    }`}>
+                    {meta.singular}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Preview */}
           <div className="flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div className="w-20 h-20 rounded-lg bg-gray-200 overflow-hidden flex-shrink-0">
@@ -277,6 +308,44 @@ function ProductForm({ item, type, allServices, teamMembers, pricingConfig, onSa
                 </label>
               </div>
             </>
+          )}
+
+          {/* Addon dependencies — shown only for add-ons type */}
+          {type === "addons" && (allServices.length > 0 || allPackages?.length > 0) && (
+            <div>
+              <label className="label-field">Show only when these are selected</label>
+              <p className="text-xs text-gray-400 mb-2">Leave blank to always show this add-on.</p>
+              <div className="border border-gray-200 rounded-sm divide-y divide-gray-100">
+                {allPackages?.length > 0 && (
+                  <div className="px-4 py-2 bg-gray-50">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Packages</p>
+                    <div className="space-y-1">
+                      {allPackages.map((pkg) => (
+                        <label key={pkg.id} className="flex items-center gap-2.5 cursor-pointer py-0.5">
+                          <input type="checkbox" checked={form.showWith.includes(pkg.id)}
+                            onChange={() => toggleShowWith(pkg.id)} className="rounded" />
+                          <span className="text-sm text-charcoal">{pkg.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {allServices.length > 0 && (
+                  <div className="px-4 py-2">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Services</p>
+                    <div className="space-y-1">
+                      {allServices.map((svc) => (
+                        <label key={svc.id} className="flex items-center gap-2.5 cursor-pointer py-0.5">
+                          <input type="checkbox" checked={form.showWith.includes(svc.id)}
+                            onChange={() => toggleShowWith(svc.id)} className="rounded" />
+                          <span className="text-sm text-charcoal">{svc.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {/* Pricing */}
@@ -571,24 +640,23 @@ export default function ProductsPage() {
     auth.currentUser?.getIdToken().then(() => load());
   }, []);
 
-  async function saveItem(payload) {
+  async function saveItem(payload, formType) {
     const token = await getToken();
-    const { item, type } = editing;
+    const { item, type: editingType } = editing;
+    const type = formType || editingType;
 
     if (item) {
-      // update
-      await fetch(`/api/dashboard/products/${item.id}?type=${type}`, {
+      await fetch(`/api/dashboard/products/${item.id}?type=${editingType}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       });
       setItems((prev) => ({
         ...prev,
-        [type]: prev[type].map((i) => (i.id === item.id ? { ...i, ...payload, id: item.id } : i)),
+        [editingType]: prev[editingType].map((i) => (i.id === item.id ? { ...i, ...payload, id: item.id } : i)),
       }));
     } else {
-      // create
-      const res  = await fetch(`/api/dashboard/products?type=${type}`, {
+      const res = await fetch(`/api/dashboard/products?type=${type}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
@@ -666,7 +734,7 @@ export default function ProductsPage() {
             className="btn-primary text-sm px-5 py-2 flex items-center gap-2"
           >
             <span className="text-lg leading-none">+</span>
-            New {TYPE_META[activeType].singular}
+            New Item
           </button>
         </div>
       </div>
@@ -724,6 +792,7 @@ export default function ProductsPage() {
           item={editing.item}
           type={editing.type}
           allServices={items.services}
+          allPackages={items.packages}
           teamMembers={teamMembers}
           pricingConfig={pricingConfig}
           onSave={saveItem}
