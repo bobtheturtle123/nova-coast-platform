@@ -94,6 +94,51 @@ function WeatherWidget({ booking }) {
   );
 }
 
+function SignedAgreementPanel({ booking }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const signedAt = booking.contractSignedAt
+    ? new Date(booking.contractSignedAt._seconds
+        ? booking.contractSignedAt._seconds * 1000
+        : booking.contractSignedAt
+      ).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })
+    : null;
+
+  return (
+    <div className="bg-white rounded-sm border border-green-200 p-5 mb-6">
+      <div className="flex items-start justify-between mb-3">
+        <h3 className="text-xs uppercase tracking-wide text-gray-400">Signed Service Agreement</h3>
+        <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5 font-medium">Executed</span>
+      </div>
+      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+        <div>
+          <p className="text-xs text-gray-400 mb-0.5">Client Signature</p>
+          <p className="font-medium text-charcoal italic">{booking.contractSignerName}</p>
+          {signedAt && <p className="text-xs text-gray-400 mt-0.5">{signedAt}</p>}
+        </div>
+        <div>
+          <p className="text-xs text-gray-400 mb-0.5">Counter-signed by</p>
+          <p className="font-medium text-charcoal">{booking.contractCounterSignedBy}</p>
+          <p className="text-xs text-gray-400 mt-0.5">Auto-confirmed</p>
+        </div>
+      </div>
+      {booking.contractText && (
+        <div>
+          <button type="button" onClick={() => setExpanded((v) => !v)}
+            className="text-xs text-navy hover:underline mb-2">
+            {expanded ? "Hide agreement text ▲" : "View agreement text ▼"}
+          </button>
+          {expanded && (
+            <pre className="text-xs text-gray-600 font-mono leading-relaxed bg-gray-50 border border-gray-100 rounded-sm p-3 whitespace-pre-wrap max-h-64 overflow-y-auto">
+              {booking.contractText}
+            </pre>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BookingDetailPage() {
   const { id }   = useParams();
   const router   = useRouter();
@@ -346,6 +391,11 @@ export default function BookingDetailPage() {
 
       {/* Weather */}
       {showWeather && <WeatherWidget booking={booking} />}
+
+      {/* Signed Service Agreement */}
+      {booking.contractSigned && (
+        <SignedAgreementPanel booking={booking} />
+      )}
 
       {/* Job Costs */}
       {(() => {

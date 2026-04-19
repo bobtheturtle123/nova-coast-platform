@@ -220,6 +220,28 @@ export default function AgentsPage() {
     if (res.ok) { const data = await res.json(); setAgents(data.agents); }
   }
 
+  function exportCustomersCSV() {
+    const headers = ["Name","Email","Phone","Company","Total Orders","Total Spent","First Order","Last Order"];
+    const rows = agents.map((a) => [
+      a.name || "",
+      a.email || "",
+      a.phone || "",
+      a.company || "",
+      a.totalOrders ?? 0,
+      a.totalSpent ?? 0,
+      a.firstOrderAt ? new Date(a.firstOrderAt._seconds ? a.firstOrderAt._seconds * 1000 : a.firstOrderAt).toLocaleDateString() : "",
+      a.lastOrderAt  ? new Date(a.lastOrderAt._seconds  ? a.lastOrderAt._seconds  * 1000 : a.lastOrderAt).toLocaleDateString()  : "",
+    ]);
+    const csv = [headers, ...rows]
+      .map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = `customers-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function handleSaved(updated) {
     if (editing) {
       setAgents((prev) => prev.map((a) => a.id === updated.id ? updated : a));
@@ -295,11 +317,18 @@ export default function AgentsPage() {
             {agents.length} customer{agents.length !== 1 ? "s" : ""} · ${totalRevenue.toLocaleString()} total revenue
           </p>
         </div>
-        <button
-          onClick={() => activeTab === "teams" ? (setEditingTeam(null), setShowTeamModal(true)) : (setEditing(null), setShowModal(true))}
-          className="btn-primary text-sm px-4 py-2">
-          {activeTab === "teams" ? "+ New Team" : "+ New Customer"}
-        </button>
+        <div className="flex items-center gap-2">
+          {activeTab === "customers" && agents.length > 0 && (
+            <button onClick={exportCustomersCSV} className="btn-outline text-sm px-4 py-2">
+              Export CSV
+            </button>
+          )}
+          <button
+            onClick={() => activeTab === "teams" ? (setEditingTeam(null), setShowTeamModal(true)) : (setEditing(null), setShowModal(true))}
+            className="btn-primary text-sm px-4 py-2">
+            {activeTab === "teams" ? "+ New Team" : "+ New Customer"}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

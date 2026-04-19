@@ -200,6 +200,9 @@ export default function TenantPaymentPage() {
   const [tip,          setTip]           = useState(0);
   const [customTip,    setCustomTip]     = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  // Service agreement signing
+  const [contractSignerName, setContractSignerName] = useState("");
+  const [contractSigned,     setContractSigned]     = useState(false);
   const initLoadingRef = useRef(false);
 
   const depositConfig = catalog?.bookingConfig?.deposit;
@@ -248,12 +251,16 @@ export default function TenantPaymentPage() {
   }
 
   async function initPayment() {
-    const hasTerms = !!catalog?.bookingConfig?.terms;
+    const hasTerms     = !!catalog?.bookingConfig?.terms;
+    const hasAgreement = !!catalog?.bookingConfig?.serviceAgreement?.enabled;
     const valid = validate();
     if (hasTerms && !agreedToTerms) {
       setFieldErrors((e) => ({ ...e, terms: "You must agree to the Terms of Service to continue." }));
     }
-    if (!valid || (hasTerms && !agreedToTerms) || clientSecret || initLoadingRef.current) return;
+    if (hasAgreement && !contractSigned) {
+      setFieldErrors((e) => ({ ...e, contract: "Please read and sign the Service Agreement below to continue." }));
+    }
+    if (!valid || (hasTerms && !agreedToTerms) || (hasAgreement && !contractSigned) || clientSecret || initLoadingRef.current) return;
     initLoadingRef.current = true;
     setInitLoading(true);
     setInitError(null);
@@ -271,6 +278,7 @@ export default function TenantPaymentPage() {
           tipAmount: tip,
           customFields: customFields || {},
           photographerId: photographerId || null,
+          contractSignerName: contractSigned ? contractSignerName.trim() : null,
         }),
       });
       const data = await res.json();
@@ -466,6 +474,56 @@ export default function TenantPaymentPage() {
                       </label>
                       {fieldErrors.terms && (
                         <p className="text-xs text-red-500 ml-7">{fieldErrors.terms}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Service Agreement signing */}
+                  {catalog?.bookingConfig?.serviceAgreement?.enabled && (
+                    <div className="space-y-3 border border-gray-200 rounded-sm p-4">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Service Agreement</p>
+                      {!contractSigned ? (
+                        <>
+                          <div className="h-48 overflow-y-auto bg-gray-50 border border-gray-200 rounded-sm p-3 text-xs text-gray-600 font-mono leading-relaxed whitespace-pre-wrap">
+                            {catalog.bookingConfig.serviceAgreement.text}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-charcoal mb-1.5">
+                              Type your full name to sign <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={contractSignerName}
+                              onChange={(e) => setContractSignerName(e.target.value)}
+                              placeholder="Your full legal name"
+                              className="input-field"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            disabled={!contractSignerName.trim()}
+                            onClick={() => {
+                              if (!contractSignerName.trim()) return;
+                              setContractSigned(true);
+                              setFieldErrors((e) => { const n = {...e}; delete n.contract; return n; });
+                            }}
+                            className="btn-primary w-full py-2.5">
+                            I agree and electronically sign this agreement
+                          </button>
+                          {fieldErrors.contract && (
+                            <p className="text-xs text-red-500">{fieldErrors.contract}</p>
+                          )}
+                        </>
+                      ) : (
+                        <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-sm p-3">
+                          <span className="text-green-600 text-lg leading-none">✓</span>
+                          <div>
+                            <p className="text-sm font-medium text-green-800">Agreement signed</p>
+                            <p className="text-xs text-green-700 mt-0.5">Signed as: <strong>{contractSignerName}</strong></p>
+                            <button type="button" onClick={() => { setContractSigned(false); }}
+                              className="text-xs text-green-600 underline mt-1">Undo</button>
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}

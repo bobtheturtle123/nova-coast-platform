@@ -664,6 +664,11 @@ export default function SettingsPage() {
   const [twilightOffsetMinutes,     setTwilightOffsetMinutes]     = useState(60);
   const [allowAgentPhotographerSel, setAllowAgentPhotographerSel] = useState(false);
 
+  // Service agreement (contract) state
+  const [serviceAgreementEnabled, setServiceAgreementEnabled] = useState(false);
+  const [serviceAgreementText,    setServiceAgreementText]    = useState("");
+  const [savingAgreement,         setSavingAgreement]         = useState(false);
+
   // Terms of service state
   const [termsText,    setTermsText]    = useState("");
   const [savingTerms,  setSavingTerms]  = useState(false);
@@ -728,6 +733,10 @@ export default function SettingsPage() {
           if (bc.customFields?.length) setCustomFields(bc.customFields);
           if (bc.enableApn !== undefined) setEnableApn(bc.enableApn);
           if (bc.requireServiceArea !== undefined) setRequireServiceArea(bc.requireServiceArea);
+          if (bc.serviceAgreement) {
+            setServiceAgreementEnabled(bc.serviceAgreement.enabled || false);
+            setServiceAgreementText(bc.serviceAgreement.text || "");
+          }
           if (bc.terms)   setTermsText(bc.terms);
           if (bc.privacy) setPrivacyText(bc.privacy);
           if (bc.availability) {
@@ -892,6 +901,7 @@ export default function SettingsPage() {
       customFields,
       enableApn,
       requireServiceArea,
+      serviceAgreement: { enabled: serviceAgreementEnabled, text: serviceAgreementText },
       terms:        termsText,
       privacy:      privacyText,
       availability: {
@@ -965,6 +975,21 @@ export default function SettingsPage() {
       else showMsg("Failed to save.", "error");
     } catch { showMsg("Something went wrong.", "error"); }
     setSavingPrivacy(false);
+  }
+
+  async function saveAgreement() {
+    setSavingAgreement(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/tenants/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ bookingConfig: buildBookingConfig() }),
+      });
+      if (res.ok) showMsg("Service agreement saved.");
+      else showMsg("Failed to save.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    setSavingAgreement(false);
   }
 
   async function saveTerms() {
@@ -1083,6 +1108,7 @@ export default function SettingsPage() {
     { id: "travel",        label: "Travel Fees" },
     { id: "staff-access",  label: "Staff Access" },
     { id: "promos",        label: "Promo Codes" },
+    { id: "agreement",     label: "Service Agreement" },
     { id: "terms",         label: "Terms & Privacy" },
     { id: "email",         label: "Email Templates" },
     { id: "sms",           label: "SMS Alerts" },
@@ -1684,6 +1710,58 @@ export default function SettingsPage() {
           <a href="/dashboard/service-areas" className="btn-outline text-sm px-4 py-2">
             Manage Service Areas →
           </a>
+        </div>
+      </div>
+
+      {/* ─── Service Agreement ───────────────────────────────────────────────── */}
+      <div id="settings-agreement" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+        <div className="flex items-start justify-between mb-1">
+          <div>
+            <h2 className="font-semibold text-charcoal text-base">Service Agreement</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Require clients to read and electronically sign a service agreement before completing a booking.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setServiceAgreementEnabled((v) => !v)}
+            className={`relative w-10 h-6 rounded-full flex-shrink-0 transition-colors ml-4 ${serviceAgreementEnabled ? "bg-charcoal" : "bg-gray-200"}`}>
+            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${serviceAgreementEnabled ? "translate-x-5" : "translate-x-1"}`} />
+          </button>
+        </div>
+
+        {!serviceAgreementEnabled && (
+          <p className="text-xs text-gray-400 mb-4">Toggle on to require clients to sign a contract during checkout.</p>
+        )}
+
+        {serviceAgreementEnabled && (
+          <div className="mt-4 space-y-3">
+            <div className="flex items-start gap-2 text-xs bg-blue-50 border border-blue-100 text-blue-800 px-3 py-2.5 rounded">
+              <span>ℹ️</span>
+              <span>
+                When enabled, clients must type their full name and click "I agree" to proceed with payment.
+                The signed agreement, timestamp, and client name are recorded on the booking. Admin counter-signature is applied automatically.
+                <strong className="block mt-1">This is not a legally binding e-signature service. Consult your attorney for compliance requirements.</strong>
+              </span>
+            </div>
+            <label className="label-field">Agreement Text</label>
+            <textarea
+              value={serviceAgreementText}
+              onChange={(e) => setServiceAgreementText(e.target.value)}
+              rows={16}
+              placeholder={`REAL ESTATE MEDIA SERVICES AGREEMENT\n\nThis agreement is entered into between [Your Business Name] ("Photographer") and the client ("Client") as identified at the time of booking.\n\n1. SCOPE OF SERVICES\n...\n\n2. PAYMENT TERMS\n...\n\nBy clicking "I agree" below, Client acknowledges they have read and agree to the terms of this agreement.`}
+              className="input-field w-full text-sm font-mono leading-relaxed resize-y"
+            />
+            <p className="text-xs text-gray-400">
+              Clients will see this text in full, must scroll through it, and type their name to confirm before payment is processed.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-4 flex items-center gap-4">
+          <button onClick={saveAgreement} disabled={savingAgreement} className="btn-primary px-8 py-3">
+            {savingAgreement ? "Saving…" : "Save Agreement Settings"}
+          </button>
         </div>
       </div>
 

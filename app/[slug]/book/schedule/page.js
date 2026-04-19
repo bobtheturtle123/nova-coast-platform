@@ -82,7 +82,11 @@ export default function TenantSchedulePage() {
     if (!catalog) return false;
     const selServices = (catalog.services || []).filter((s) => serviceIds.includes(s.id));
     const selPackage  = (catalog.packages || []).find((p) => p.id === packageId);
-    const all = [...selServices, ...(selPackage ? [selPackage] : [])];
+    // Also check services included inside the selected package
+    const pkgIncludedServices = selPackage?.includes?.length
+      ? (catalog.services || []).filter((s) => selPackage.includes.includes(s.id))
+      : [];
+    const all = [...selServices, ...(selPackage ? [selPackage] : []), ...pkgIncludedServices];
     return all.some((s) => s.isTwilight || s.name?.toLowerCase().includes("twilight"));
   }, [catalog, serviceIds, packageId]);
 

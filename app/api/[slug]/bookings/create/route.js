@@ -30,6 +30,7 @@ export async function POST(req, { params }) {
       clientName, clientEmail, clientPhone,
       travelFee, tipAmount: rawTip, payFull, customFields,
       photographerId: preferredPhotographerId,
+      contractSignerName,
     } = body;
 
     if (!clientName || !clientEmail || !clientPhone) {
@@ -128,6 +129,15 @@ export async function POST(req, { params }) {
         shootDate:             null,
         galleryId:             null,
         galleryUnlocked:       false,
+
+        // Service agreement
+        contractSigned:            !!contractSignerName,
+        contractSignerName:        contractSignerName || null,
+        contractSignedAt:          contractSignerName ? new Date() : null,
+        contractText:              contractSignerName ? (catalog.bookingConfig?.serviceAgreement?.text || null) : null,
+        contractCounterSigned:     !!contractSignerName,
+        contractCounterSignedAt:   contractSignerName ? new Date() : null,
+        contractCounterSignedBy:   contractSignerName ? (tenant.businessName || "Business") : null,
       });
 
     // Upsert agent record (keyed by email so repeat clients accumulate history)

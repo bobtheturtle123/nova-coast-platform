@@ -340,6 +340,38 @@ export default function BookingsPage() {
     setLoading(false);
   }
 
+  function exportBookingsCSV() {
+    const headers = ["ID","Client Name","Email","Phone","Address","City","State","Zip","Date","Time","Package/Services","Total","Deposit Paid","Balance Paid","Status","Twilight Time","Notes","Created At"];
+    const rows = bookings.map((b) => [
+      b.id,
+      b.clientName || "",
+      b.clientEmail || "",
+      b.clientPhone || "",
+      b.address || "",
+      b.city || "",
+      b.state || "",
+      b.zip || "",
+      b.preferredDate || b.shootDate || "",
+      b.preferredTime || "",
+      [b.packageId, ...(b.serviceIds || [])].filter(Boolean).join("; "),
+      b.totalPrice ?? "",
+      b.depositPaid ? "Yes" : "No",
+      b.balancePaid ? "Yes" : "No",
+      b.status || "",
+      b.twilightTime || "",
+      (b.notes || "").replace(/\n/g, " "),
+      b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "",
+    ]);
+    const csv = [headers, ...rows]
+      .map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = `bookings-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function setField(f, val) {
     setForm((p) => ({ ...p, [f]: val }));
   }
@@ -497,6 +529,12 @@ export default function BookingsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display text-2xl text-navy">Bookings</h1>
         <div className="flex items-center gap-2">
+          {bookings.length > 0 && (
+            <button onClick={exportBookingsCSV}
+              className="btn-outline px-4 py-2 text-sm flex items-center gap-1.5">
+              Export CSV
+            </button>
+          )}
           <Link href="/dashboard/bookings/create" className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5">
             + New Booking
           </Link>
