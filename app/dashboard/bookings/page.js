@@ -303,7 +303,7 @@ export default function BookingsPage() {
       } else if (!document.getElementById("gmap-booking-script")) {
         const s = document.createElement("script");
         s.id    = "gmap-booking-script";
-        s.src   = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+        s.src   = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&loading=async`;
         s.async = true;
         s.onload = initAC;
         document.head.appendChild(s);

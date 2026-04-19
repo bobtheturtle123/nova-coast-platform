@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/components/Toast";
 
@@ -453,7 +453,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
 }
 
 // ─── Product row ──────────────────────────────────────────────────────────────
-function ProductRow({ item, type, onEdit, onToggleActive, onDuplicate }) {
+function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate }) {
   const tierVals = item.priceTiers ? Object.values(item.priceTiers).filter(v => v > 0) : [];
   const fromPrice = item.priceTiers
     ? tierVals.length > 0 ? `From $${Math.min(...tierVals).toLocaleString()}` : "Tier pricing"
@@ -481,6 +481,13 @@ function ProductRow({ item, type, onEdit, onToggleActive, onDuplicate }) {
         </div>
         {item.description && (
           <p className="text-xs text-gray-400 truncate mt-0.5">{item.description}</p>
+        )}
+      </div>
+
+      {/* Extra info column */}
+      <div className="w-32 flex-shrink-0 text-right">
+        {extraInfo && (
+          <span className="text-xs text-gray-400">{extraInfo}</span>
         )}
       </div>
 
@@ -610,6 +617,7 @@ export default function ProductsPage() {
   const [items,       setItems]       = useState({ packages: [], services: [], addons: [] });
   const [loading,     setLoading]     = useState(true);
   const [editing,     setEditing]     = useState(null);
+  const [search,      setSearch]      = useState("");
   const [teamMembers, setTeamMembers] = useState([]);
   const [pricingConfig, setPricingConfig] = useState(null);
 
@@ -715,7 +723,46 @@ export default function ProductsPage() {
     </div>
   );
 
-  const current = items[activeType] || [];
+  // Cross-reference counts for the info column
+  const serviceUsage = useMemo(() => {
+    const map = {};
+    items.services.forEach((svc) => {
+      map[svc.id] = items.packages.filter((p) => p.includes?.includes(svc.id)).length;
+    });
+    return map;
+  }, [items]);
+
+  const addonTriggerLabel = (addon) => {
+    const count = addon.showWith?.length || 0;
+    if (count === 0) return "Always shown";
+    return `${count} trigger${count !== 1 ? "s" : ""}`;
+  };
+
+  const packageServicesLabel = (pkg) => {
+    const count = pkg.includes?.length || 0;
+    return count > 0 ? `${count} service${count !== 1 ? "s" : ""}` : null;
+  };
+
+  const getExtraInfo = (item) => {
+    if (activeType === "services") {
+      const n = serviceUsage[item.id] || 0;
+      return n > 0 ? `${n} package${n !== 1 ? "s" : ""}` : "Not in packages";
+    }
+    if (activeType === "addons") return addonTriggerLabel(item);
+    if (activeType === "packages") return packageServicesLabel(item);
+    return null;
+  };
+
+  const current = useMemo(() => {
+    const list = items[activeType] || [];
+    if (!search.trim()) return list;
+    const q = search.toLowerCase();
+    return list.filter((i) =>
+      i.name?.toLowerCase().includes(q) ||
+      i.description?.toLowerCase().includes(q) ||
+      i.tagline?.toLowerCase().includes(q)
+    );
+  }, [items, activeType, search]);
 
   return (
     <div className="p-6">
@@ -742,9 +789,9 @@ export default function ProductsPage() {
 
 
       {/* Type tabs */}
-      <div className="flex gap-1 mb-6 border-b border-gray-200">
+      <div className="flex gap-1 mb-4 border-b border-gray-200">
         {Object.entries(TYPE_META).map(([type, meta]) => (
-          <button key={type} onClick={() => setActiveType(type)}
+          <button key={type} onClick={() => { setActiveType(type); setSearch(""); }}
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeType === type ? "border-navy text-navy" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}>
@@ -754,26 +801,51 @@ export default function ProductsPage() {
         ))}
       </div>
 
+      {/* Search */}
+      <div className="relative mb-4 max-w-sm">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="text"
+          placeholder={`Search ${TYPE_META[activeType].label.toLowerCase()}…`}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input-field pl-9 text-sm"
+        />
+      </div>
+
       {/* Product list */}
       <div className="bg-white border border-gray-200 rounded-sm divide-y divide-gray-50">
         {/* Header */}
-        <div className="grid grid-cols-12 px-4 py-2 text-xs text-gray-400 uppercase tracking-wide font-medium">
-          <div className="col-span-1" />
-          <div className="col-span-5">Product</div>
-          <div className="col-span-2 text-right">Price</div>
-          <div className="col-span-2 text-center">Active</div>
-          <div className="col-span-2 text-right">Actions</div>
+        <div className="flex items-center gap-4 px-4 py-2 text-xs text-gray-400 uppercase tracking-wide font-medium">
+          <div className="w-12 flex-shrink-0" />
+          <div className="flex-1">Product</div>
+          <div className="w-32 flex-shrink-0 text-right">
+            {activeType === "services" ? "In packages" : activeType === "addons" ? "Triggers" : "Services"}
+          </div>
+          <div className="w-28 flex-shrink-0 text-right">Price</div>
+          <div className="w-9 flex-shrink-0 text-center">Active</div>
+          <div className="w-24 flex-shrink-0 text-right">Actions</div>
         </div>
 
         {current.length === 0 ? (
           <div className="p-12 text-center text-gray-400">
             <p className="text-3xl mb-2">📦</p>
-            <p className="font-medium text-gray-500">No {TYPE_META[activeType].label.toLowerCase()} yet</p>
-            <p className="text-sm mt-1">Click "New {TYPE_META[activeType].singular}" to add one.</p>
+            {search ? (
+              <p className="font-medium text-gray-500">No results for "{search}"</p>
+            ) : (
+              <>
+                <p className="font-medium text-gray-500">No {TYPE_META[activeType].label.toLowerCase()} yet</p>
+                <p className="text-sm mt-1">Click "+ New Item" to add one.</p>
+              </>
+            )}
           </div>
         ) : (
           current.map((item) => (
             <ProductRow key={item.id} item={item} type={activeType}
+              extraInfo={getExtraInfo(item)}
               onEdit={(i) => setEditing({ item: i, type: activeType })}
               onToggleActive={(i) => toggleActive(i, activeType)}
               onDuplicate={(i) => duplicateItem(i, activeType)}

@@ -9,7 +9,6 @@ import { rateLimit } from "@/lib/rateLimit";
  * availability config (mode: "slots" | "real").
  */
 export async function GET(req, { params }) {
-  // 60 requests per IP per hour (normal calendar browsing won't hit this)
   const rl = await rateLimit(req, `availability:${params.slug}`, 60, 3600);
   if (rl.limited) return Response.json({ error: "Too many requests" }, { status: 429 });
 
@@ -23,18 +22,46 @@ export async function GET(req, { params }) {
   if (!tenant) return Response.json({ error: "Tenant not found" }, { status: 404 });
 
   const avail = tenant.bookingConfig?.availability || {};
-  const mode           = avail.mode           || "slots";
-  const start          = avail.businessHours?.start || "08:00";
-  const end            = avail.businessHours?.end   || "18:00";
-  const intervalMin    = Number(avail.intervalMinutes) || 30;
-  const durationMin    = Number(avail.defaultDuration) || 120;
-  const bufferMin      = Number(avail.bufferMinutes)   || 30;
+  const mode        = avail.mode           || "slots";
+  const start       = avail.businessHours?.start || "08:00";
+  const end         = avail.businessHours?.end   || "18:00";
+  const intervalMin = Number(avail.intervalMinutes) || 30;
+  const durationMin = Number(avail.defaultDuration) || 120;
+  const bufferMin   = Number(avail.bufferMinutes)   || 30;
 
   // Build all candidate slots within business hours
   const allSlots = buildSlots(start, end, intervalMin);
 
+  // ── Check admin time blocks (always, regardless of mode) ─────────────────
+  const blocksSnap = await adminDb
+    .collection("tenants")
+    .doc(tenant.id)
+    .collection("timeBlocks")
+    .where("startDate", "<=", date)
+    .get();
+
+  const dayBlocks = blocksSnap.docs
+    .map((d) => d.data())
+    .filter((b) => !b.endDate || b.endDate >= date);
+
+  // Any full-day block → no slots at all
+  if (dayBlocks.some((b) => !b.startTime || !b.endTime)) {
+    return Response.json({ slots: [] });
+  }
+
+  // Time-ranged blocks: build blocked windows to subtract from slots
+  const timedBlocks = dayBlocks
+    .filter((b) => b.startTime && b.endTime)
+    .map((b) => ({ start: timeToMinutes(b.startTime), end: timeToMinutes(b.endTime) }));
+
   if (mode === "slots") {
-    return Response.json({ slots: allSlots });
+    if (timedBlocks.length === 0) return Response.json({ slots: allSlots });
+    const available = allSlots.filter((slot) => {
+      const slotMin = timeToMinutes(slot);
+      const slotEnd = slotMin + durationMin;
+      return !timedBlocks.some((b) => slotMin < b.end && slotEnd > b.start);
+    });
+    return Response.json({ slots: available });
   }
 
   // "real" mode: fetch confirmed/requested bookings on this date and block taken slots
@@ -46,9 +73,8 @@ export async function GET(req, { params }) {
     .where("status", "in", ["confirmed", "requested", "completed"])
     .get();
 
-  const blocked = bookingsSnap.docs.map((d) => {
+  const blockedByBookings = bookingsSnap.docs.map((d) => {
     const b = d.data();
-    // preferredTime might be a "HH:MM" string (new) or a label like "morning"
     const time = parseTime(b.preferredTime || b.shootTime);
     if (time === null) return null;
     return { start: time, end: time + durationMin + bufferMin };
@@ -57,8 +83,9 @@ export async function GET(req, { params }) {
   const available = allSlots.filter((slot) => {
     const slotMin = timeToMinutes(slot);
     const slotEnd = slotMin + durationMin;
-    // Slot is available if it doesn't overlap any blocked range
-    return !blocked.some((b) => slotMin < b.end && slotEnd > b.start);
+    const overlapsBooking = blockedByBookings.some((b) => slotMin < b.end && slotEnd > b.start);
+    const overlapsBlock   = timedBlocks.some((b) => slotMin < b.end && slotEnd > b.start);
+    return !overlapsBooking && !overlapsBlock;
   });
 
   return Response.json({ slots: available });
@@ -91,9 +118,7 @@ function minutesToTime(min) {
 
 function parseTime(val) {
   if (!val) return null;
-  // If it's already "HH:MM" format
   if (/^\d{1,2}:\d{2}$/.test(val)) return timeToMinutes(val);
-  // Generic labels — map to an approximate start time
   if (val === "morning")   return timeToMinutes("08:00");
   if (val === "afternoon") return timeToMinutes("12:00");
   return null;

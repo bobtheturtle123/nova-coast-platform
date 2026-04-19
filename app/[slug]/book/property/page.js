@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
 import StepProgress from "@/components/booking/StepProgress";
 import PriceSummary from "@/components/booking/PriceSummary";
+import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 
 const PROPERTY_TYPES = [
   { value: "residential", label: "Residential" },
@@ -117,8 +118,21 @@ export default function TenantPropertyPage() {
                 <label className="block text-sm font-medium text-charcoal mb-1.5">
                   Street Address <span className="text-red-400">*</span>
                 </label>
-                <input name="address" value={address} onChange={handleChange}
-                  placeholder="123 Sunset Blvd" className="input-field" />
+                <PlacesAutocomplete
+                  value={address}
+                  onChange={(val) => setProperty({ address: val })}
+                  onSelect={(parts) => {
+                    setProperty({
+                      address: parts.address,
+                      city:    parts.city,
+                      state:   parts.state,
+                      zip:     parts.zip,
+                    });
+                    setZoneError(null);
+                    setGeocodeError(false);
+                  }}
+                  placeholder="123 Sunset Blvd"
+                />
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div className="col-span-2 sm:col-span-1">
