@@ -3,6 +3,7 @@ import { getTenantById } from "@/lib/tenants";
 import { sendBookingCreatedNotifications } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendBookingConfirmedSms } from "@/lib/sms";
+import { getListingLimit } from "@/lib/plans";
 
 async function getAuthContext(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -35,6 +36,28 @@ export async function POST(req) {
 
     if (!clientName || !clientEmail || !address) {
       return Response.json({ error: "Client name, email, and address are required." }, { status: 400 });
+    }
+
+    // Enforce plan listing limit — count active (non-cancelled) bookings
+    const tenantForLimit = await getTenantById(ctx.tenantId);
+    if (tenantForLimit) {
+      const limit = getListingLimit(
+        tenantForLimit.subscriptionPlan || "solo",
+        tenantForLimit.addonListings || 0
+      );
+      const activeSnap = await adminDb
+        .collection("tenants").doc(ctx.tenantId)
+        .collection("bookings")
+        .where("status", "!=", "cancelled")
+        .count()
+        .get();
+      const activeCount = activeSnap.data().count || 0;
+      if (activeCount >= limit) {
+        return Response.json(
+          { error: `Listing limit reached (${limit} active listings on your plan). Archive completed listings or upgrade to add more.` },
+          { status: 403 }
+        );
+      }
     }
 
     const bookingId  = adminDb.collection("tmp").doc().id;

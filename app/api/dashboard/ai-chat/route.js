@@ -1,4 +1,5 @@
 import { adminAuth } from "@/lib/firebase-admin";
+import { rateLimitTenant } from "@/lib/rateLimit";
 
 // Uses DeepSeek API (deepseek-chat model).
 // Sign up at platform.deepseek.com and set DEEPSEEK_API_KEY in your env vars.
@@ -66,6 +67,12 @@ async function getCtx(req) {
 export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  // 30 AI chat messages per tenant per hour — generous for normal use, blocks abuse
+  const rl = await rateLimitTenant(ctx.tenantId, "ai-chat", 30, 3600);
+  if (rl.limited) {
+    return Response.json({ reply: "You've sent a lot of messages recently. Please wait a moment before trying again." });
+  }
 
   if (!DEEPSEEK_API_KEY) {
     return Response.json({

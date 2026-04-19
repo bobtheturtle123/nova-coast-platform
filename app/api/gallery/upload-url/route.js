@@ -1,6 +1,13 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { adminAuth } from "@/lib/firebase-admin";
+import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { rateLimitTenant } from "@/lib/rateLimit";
+
+// Hard cap on files per gallery — prevents unlimited storage accumulation.
+// 1000 covers portrait photographers with large shoot volumes; normal shoots are 50-200 photos.
+const MAX_FILES_PER_GALLERY = 1000;
+// Max upload URL requests per tenant per hour
+const UPLOAD_URL_HOURLY_LIMIT = 120;
 
 const s3 = new S3Client({
   region:   "auto",
@@ -19,14 +26,44 @@ export async function POST(req) {
     const decoded = await adminAuth.verifyIdToken(authHeader);
     if (!decoded.tenantId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+    // Per-tenant hourly rate limit — one tenant can't hammer storage with bulk requests
+    const rl = await rateLimitTenant(decoded.tenantId, "gallery-upload-url", UPLOAD_URL_HOURLY_LIMIT, 3600);
+    if (rl.limited) {
+      return Response.json({ error: "Upload limit reached. Please try again later." }, { status: 429 });
+    }
+
     const { fileName, fileType, galleryId } = await req.json();
     if (!fileName || !galleryId) {
       return Response.json({ error: "fileName and galleryId required" }, { status: 400 });
     }
 
+    // Validate file type — only allow image and video types
+    const ALLOWED_TYPES = [
+      "image/jpeg", "image/jpg", "image/png", "image/webp", "image/tiff", "image/heic",
+      "video/mp4", "video/mov", "video/quicktime", "video/webm",
+    ];
+    if (fileType && !ALLOWED_TYPES.includes(fileType.toLowerCase())) {
+      return Response.json({ error: "File type not allowed" }, { status: 400 });
+    }
+
     if (!process.env.R2_ENDPOINT || !process.env.R2_ACCESS_KEY || !process.env.R2_BUCKET) {
       console.error("R2 not configured");
-      return Response.json({ error: "Storage not configured. Add R2_ENDPOINT, R2_ACCESS_KEY, R2_SECRET_KEY, R2_BUCKET to Vercel env vars." }, { status: 500 });
+      return Response.json({ error: "Storage not configured." }, { status: 500 });
+    }
+
+    // Enforce per-gallery file cap before issuing a new URL
+    const galleryDoc = await adminDb
+      .collection("tenants").doc(decoded.tenantId)
+      .collection("galleries").doc(galleryId)
+      .get();
+    if (galleryDoc.exists) {
+      const existing = (galleryDoc.data().media || []).length;
+      if (existing >= MAX_FILES_PER_GALLERY) {
+        return Response.json(
+          { error: `Gallery limit reached (${MAX_FILES_PER_GALLERY} files max).` },
+          { status: 400 }
+        );
+      }
     }
 
     const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");

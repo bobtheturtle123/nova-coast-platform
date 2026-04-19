@@ -1,6 +1,7 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { adminAuth } from "@/lib/firebase-admin";
+import { rateLimitTenant } from "@/lib/rateLimit";
 
 const s3 = new S3Client({
   region:   "auto",
@@ -21,6 +22,12 @@ export async function POST(req) {
 
     const decoded = await adminAuth.verifyIdToken(authHeader);
     if (!decoded.tenantId) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+    // 20 image uploads per tenant per hour (logos, branding assets, etc.)
+    const rl = await rateLimitTenant(decoded.tenantId, "upload-image", 20, 3600);
+    if (rl.limited) {
+      return Response.json({ error: "Upload limit reached. Please try again later." }, { status: 429 });
+    }
 
     const { fileName, fileType, folder = "misc" } = await req.json();
     if (!fileName) return Response.json({ error: "fileName required" }, { status: 400 });

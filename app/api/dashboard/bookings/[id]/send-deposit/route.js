@@ -32,6 +32,13 @@ export async function POST(req, { params }) {
     return Response.json({ error: "Deposit already collected" }, { status: 400 });
   }
 
+  // Return the existing checkout URL if one was recently generated (within 4 hours)
+  // rather than creating a new Stripe session every time the button is clicked.
+  const lastSent = booking.emailCooldowns?.deposit?.toDate?.() || booking.emailCooldowns?.deposit;
+  if (lastSent && Date.now() - new Date(lastSent).getTime() < 4 * 60 * 60 * 1000 && booking.depositCheckoutUrl) {
+    return Response.json({ url: booking.depositCheckoutUrl, cached: true });
+  }
+
   const tenant = await getTenantById(ctx.tenantId);
   if (!tenant) return Response.json({ error: "Tenant not found" }, { status: 404 });
 
@@ -80,11 +87,15 @@ export async function POST(req, { params }) {
     session = await stripe.checkout.sessions.create(sessionParams);
   }
 
-  // Store the checkout session ID so webhook can mark deposit paid
+  // Store the checkout session ID and cooldown timestamp
   await adminDb
     .collection("tenants").doc(ctx.tenantId)
     .collection("bookings").doc(params.id)
-    .update({ depositCheckoutSessionId: session.id, depositCheckoutUrl: session.url });
+    .update({
+      depositCheckoutSessionId: session.id,
+      depositCheckoutUrl: session.url,
+      "emailCooldowns.deposit": new Date(),
+    });
 
   return Response.json({ url: session.url, sessionId: session.id });
 }

@@ -1,4 +1,5 @@
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { rateLimitTenant } from "@/lib/rateLimit";
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || process.env.GROQ_API_KEY;
 
@@ -17,6 +18,12 @@ export async function POST(req, { params }) {
         { error: "AI not configured. Add DEEPSEEK_API_KEY to enable." },
         { status: 503 }
       );
+    }
+
+    // 10 caption generations per tenant per hour
+    const rl = await rateLimitTenant(decoded.tenantId, "social-captions", 10, 3600);
+    if (rl.limited) {
+      return Response.json({ error: "Caption generation limit reached. Try again in an hour." }, { status: 429 });
     }
 
     const bookingDoc = await adminDb

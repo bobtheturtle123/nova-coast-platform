@@ -1,4 +1,5 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { rateLimitTenant } from "@/lib/rateLimit";
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const GROQ_API_KEY     = process.env.GROQ_API_KEY;
@@ -26,6 +27,12 @@ export async function POST(req) {
 
   if (!AI_KEY) {
     return Response.json({ error: "AI not configured. Set DEEPSEEK_API_KEY or GROQ_API_KEY to enable pricing import." }, { status: 503 });
+  }
+
+  // 5 AI import runs per tenant per hour — this endpoint fetches external URLs + calls AI
+  const rl = await rateLimitTenant(ctx.tenantId, "products-import", 5, 3600);
+  if (rl.limited) {
+    return Response.json({ error: "Import limit reached. Please wait before running another import." }, { status: 429 });
   }
 
   const { mode, content, targetType = "services" } = await req.json();

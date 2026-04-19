@@ -1,4 +1,7 @@
 import { adminAuth } from "@/lib/firebase-admin";
+import { rateLimitTenant } from "@/lib/rateLimit";
+
+const MAX_MATRIX_POINTS = 10; // max origins or destinations per request
 
 const LOCATIONIQ_KEY = process.env.LOCATIONIQ_KEY || process.env.NEXT_PUBLIC_LOCATIONIQ_KEY;
 
@@ -50,8 +53,16 @@ export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { origins, destinations } = await req.json();
-  if (!origins?.length || !destinations?.length) {
+  // 60 travel-time lookups per tenant per hour — enough for a busy booking day
+  const rl = await rateLimitTenant(ctx.tenantId, "travel-time", 60, 3600);
+  if (rl.limited) {
+    return Response.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+  }
+
+  const body = await req.json();
+  const origins      = (body.origins      || []).slice(0, MAX_MATRIX_POINTS);
+  const destinations = (body.destinations || []).slice(0, MAX_MATRIX_POINTS);
+  if (!origins.length || !destinations.length) {
     return Response.json({ error: "origins and destinations required" }, { status: 400 });
   }
 

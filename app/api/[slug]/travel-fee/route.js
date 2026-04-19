@@ -1,8 +1,13 @@
 import { getTenantBySlug } from "@/lib/tenants";
 import { getTravelFee } from "@/lib/travelFee";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req, { params }) {
   try {
+    // 30 travel-fee lookups per IP per hour — enough for a booking session
+    const rl = await rateLimit(req, `travel-fee:${params.slug}`, 30, 3600);
+    if (rl.limited) return Response.json({ travelFee: 0, miles: 0, withinRange: true });
+
     const tenant = await getTenantBySlug(params.slug);
     if (!tenant) return Response.json({ travelFee: 0, miles: 0, withinRange: true });
 

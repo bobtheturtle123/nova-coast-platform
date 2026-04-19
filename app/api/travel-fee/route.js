@@ -1,7 +1,11 @@
 import { getTravelFee } from "@/lib/travelFee";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req) {
   try {
+    const rl = await rateLimit(req, "travel-fee-global", 30, 3600);
+    if (rl.limited) return Response.json({ fee: 0 });
+
     const { address } = await req.json();
 
     if (!address) {

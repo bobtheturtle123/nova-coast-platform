@@ -1,6 +1,7 @@
 import archiver from "archiver";
 import sharp from "sharp";
 import { adminDb } from "@/lib/firebase-admin";
+import { rateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,10 @@ export async function GET(req) {
   const format = searchParams.get("format") || "web"; // "web" | "print"
 
   if (!token) return new Response("Missing params", { status: 400 });
+
+  // 5 zip downloads per token per IP per hour — prevents bulk scraping
+  const rl = await rateLimit(req, `zip-dl:${token}`, 5, 3600);
+  if (rl.limited) return new Response("Too many download requests. Please try again later.", { status: 429 });
 
   // Resolve gallery via top-level index (avoids cross-tenant token collision)
   const tokenDoc = await adminDb.collection("galleryTokens").doc(token).get();

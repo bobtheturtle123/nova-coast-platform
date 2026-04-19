@@ -3,6 +3,8 @@ import { getTenantById } from "@/lib/tenants";
 import { sendInvoiceEmail } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 
+const EMAIL_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours between invoice sends
+
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
   if (!auth) return null;
@@ -27,6 +29,13 @@ export async function POST(req, { params }) {
   if (!bookingDoc.exists) return Response.json({ error: "Booking not found" }, { status: 404 });
 
   const booking = bookingDoc.data();
+
+  // Cooldown: prevent spamming invoice emails to the same client
+  const lastSent = booking.emailCooldowns?.invoice?.toDate?.() || booking.emailCooldowns?.invoice;
+  if (lastSent && Date.now() - new Date(lastSent).getTime() < EMAIL_COOLDOWN_MS) {
+    return Response.json({ error: "Invoice was recently sent. Please wait before resending." }, { status: 429 });
+  }
+
   const tenant  = await getTenantById(ctx.tenantId);
   if (!tenant) return Response.json({ error: "Tenant not found" }, { status: 404 });
 
@@ -87,6 +96,12 @@ export async function POST(req, { params }) {
   }
 
   await sendInvoiceEmail({ booking, paymentUrl, tenant });
+
+  // Stamp cooldown timestamp so rapid re-sends are blocked
+  await adminDb
+    .collection("tenants").doc(ctx.tenantId)
+    .collection("bookings").doc(params.id)
+    .update({ "emailCooldowns.invoice": new Date() });
 
   return Response.json({ ok: true });
 }

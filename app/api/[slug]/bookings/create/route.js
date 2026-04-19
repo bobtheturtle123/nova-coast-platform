@@ -5,6 +5,7 @@ import { createConnectedPaymentIntent } from "@/lib/stripe";
 import { sendBookingConfirmation } from "@/lib/email";
 import { v4 as uuidv4 } from "uuid";
 import { rateLimit } from "@/lib/rateLimit";
+import { getListingLimit } from "@/lib/plans";
 
 export async function POST(req, { params }) {
   // 5 booking attempts per IP per hour
@@ -20,6 +21,21 @@ export async function POST(req, { params }) {
     // Check subscription allows new bookings
     if (tenant.subscriptionStatus === "canceled") {
       return Response.json({ error: "This booking page is currently unavailable." }, { status: 403 });
+    }
+
+    // Enforce plan listing limit — silently soft-block at plan cap
+    const listingLimit = getListingLimit(
+      tenant.subscriptionPlan || "solo",
+      tenant.addonListings || 0
+    );
+    const activeSnap = await adminDb
+      .collection("tenants").doc(tenant.id)
+      .collection("bookings")
+      .where("status", "!=", "cancelled")
+      .count()
+      .get();
+    if ((activeSnap.data().count || 0) >= listingLimit) {
+      return Response.json({ error: "This booking page is temporarily unavailable." }, { status: 503 });
     }
 
     const body = await req.json();

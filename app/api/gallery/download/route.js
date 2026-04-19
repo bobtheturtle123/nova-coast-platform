@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { rateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,12 @@ export async function GET(req) {
   if (!key) {
     return new Response("Missing key", { status: 400 });
   }
+
+  // 100 individual image downloads per IP per hour — allows normal browsing and MLS exports
+  // but blocks automated bulk scraping. Print format redirects to R2 directly so allow more.
+  const dlLimit = format === "print" ? 200 : 100;
+  const rl = await rateLimit(req, "img-dl", dlLimit, 3600);
+  if (rl.limited) return new Response("Too many download requests. Please try again later.", { status: 429 });
 
   const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
   if (!r2PublicUrl) {

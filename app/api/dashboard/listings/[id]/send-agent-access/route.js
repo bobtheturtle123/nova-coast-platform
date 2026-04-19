@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
+import { rateLimitTenant } from "@/lib/rateLimit";
 import { Resend } from "resend";
 import { v4 as uuidv4 } from "uuid";
 
@@ -20,6 +21,10 @@ async function getCtx(req) {
 export async function POST(req, { params }) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  // 10 agent portal emails per tenant per hour
+  const rl = await rateLimitTenant(ctx.tenantId, "send-agent-access", 10, 3600);
+  if (rl.limited) return Response.json({ error: "Too many requests. Please wait before sending more portal emails." }, { status: 429 });
 
   const { sendEmail = true } = await req.json().catch(() => ({}));
 

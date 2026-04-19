@@ -2,6 +2,8 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
 import { sendBookingApproved } from "@/lib/email";
 
+const EMAIL_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours between sends of same type
+
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
   if (!auth) return null;
@@ -16,21 +18,28 @@ export async function POST(req, { params }) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const doc = await adminDb
+  const bookingRef = adminDb
     .collection("tenants").doc(ctx.tenantId)
-    .collection("bookings").doc(params.id)
-    .get();
+    .collection("bookings").doc(params.id);
+  const doc = await bookingRef.get();
 
   if (!doc.exists) return Response.json({ error: "Not found" }, { status: 404 });
 
   const booking = doc.data();
-  const tenant  = await getTenantById(ctx.tenantId);
+
+  // Cooldown: prevent re-sending confirmation within 4 hours
+  const lastSent = booking.emailCooldowns?.confirmation?.toDate?.() || booking.emailCooldowns?.confirmation;
+  if (lastSent && Date.now() - new Date(lastSent).getTime() < EMAIL_COOLDOWN_MS) {
+    return Response.json({ error: "Confirmation was recently sent. Please wait before resending." }, { status: 429 });
+  }
+
+  const tenant = await getTenantById(ctx.tenantId);
 
   await sendBookingApproved({ booking, tenant });
-  await adminDb
-    .collection("tenants").doc(ctx.tenantId)
-    .collection("bookings").doc(params.id)
-    .update({ status: "confirmed" });
+  await bookingRef.update({
+    status: "confirmed",
+    "emailCooldowns.confirmation": new Date(),
+  });
 
   return Response.json({ ok: true });
 }

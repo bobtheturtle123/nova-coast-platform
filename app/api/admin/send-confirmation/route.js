@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { sendBookingApproved } from "@/lib/email";
+import { getTenantById } from "@/lib/tenants";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -26,7 +27,10 @@ export async function POST(req) {
 
     if (!snap.exists) return Response.json({ error: "Booking not found" }, { status: 404 });
 
-    await sendBookingApproved({ booking: snap.data() });
+    const tenant = await getTenantById(ctx.tenantId);
+    if (!tenant) return Response.json({ error: "Tenant not found" }, { status: 404 });
+
+    await sendBookingApproved({ booking: snap.data(), tenant });
     return Response.json({ ok: true });
   } catch (err) {
     console.error(err);

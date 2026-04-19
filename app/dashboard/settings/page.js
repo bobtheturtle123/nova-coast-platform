@@ -677,10 +677,18 @@ export default function SettingsPage() {
   const [privacyText,   setPrivacyText]   = useState("");
   const [savingPrivacy, setSavingPrivacy] = useState(false);
 
-  // Email template state
+  // Email template state — gallery delivery (existing)
   const [emailTplSubject, setEmailTplSubject] = useState("Your listing media is ready — {{address}}");
   const [emailTplBody,    setEmailTplBody]    = useState("");
+  // Email templates — other transactional emails
+  const [bookingReceivedSubject, setBookingReceivedSubject] = useState("");
+  const [bookingReceivedBody,    setBookingReceivedBody]    = useState("");
+  const [bookingApprovedSubject, setBookingApprovedSubject] = useState("");
+  const [bookingApprovedBody,    setBookingApprovedBody]    = useState("");
+  const [paymentReminderSubject, setPaymentReminderSubject] = useState("");
+  const [paymentReminderBody,    setPaymentReminderBody]    = useState("");
   const [savingTemplate,  setSavingTemplate]  = useState(false);
+  const [emailTab,        setEmailTab]        = useState("gallery");
 
   // Promo codes state
   const [promoCodes,    setPromoCodes]    = useState([]);
@@ -756,6 +764,15 @@ export default function SettingsPage() {
         if (data.tenant.emailTemplate) {
           if (data.tenant.emailTemplate.subject) setEmailTplSubject(data.tenant.emailTemplate.subject);
           if (data.tenant.emailTemplate.body)    setEmailTplBody(data.tenant.emailTemplate.body);
+        }
+        if (data.tenant.emailTemplates) {
+          const t = data.tenant.emailTemplates;
+          if (t.bookingReceived?.subject) setBookingReceivedSubject(t.bookingReceived.subject);
+          if (t.bookingReceived?.body)    setBookingReceivedBody(t.bookingReceived.body);
+          if (t.bookingApproved?.subject) setBookingApprovedSubject(t.bookingApproved.subject);
+          if (t.bookingApproved?.body)    setBookingApprovedBody(t.bookingApproved.body);
+          if (t.paymentReminder?.subject) setPaymentReminderSubject(t.paymentReminder.subject);
+          if (t.paymentReminder?.body)    setPaymentReminderBody(t.paymentReminder.body);
         }
         // Load cost rates
         if (data.tenant.costRates) {
@@ -1038,9 +1055,16 @@ export default function SettingsPage() {
       const res = await fetch("/api/tenants/update", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ emailTemplate: { subject: emailTplSubject, body: emailTplBody } }),
+        body: JSON.stringify({
+          emailTemplate: { subject: emailTplSubject, body: emailTplBody },
+          emailTemplates: {
+            bookingReceived:  { subject: bookingReceivedSubject, body: bookingReceivedBody },
+            bookingApproved:  { subject: bookingApprovedSubject, body: bookingApprovedBody },
+            paymentReminder:  { subject: paymentReminderSubject, body: paymentReminderBody },
+          },
+        }),
       });
-      if (res.ok) showMsg("Email template saved.");
+      if (res.ok) showMsg("Email templates saved.");
       else showMsg("Failed to save.", "error");
     } catch { showMsg("Something went wrong.", "error"); }
     setSavingTemplate(false);
@@ -1098,21 +1122,51 @@ export default function SettingsPage() {
     custom: { unit: "Value",   gate: "Custom value" },
   };
 
-  const SECTIONS = [
-    { id: "branding",      label: "Branding" },
-    { id: "pricing",       label: "Pricing Tiers" },
-    { id: "booking",       label: "Booking" },
-    { id: "cost-rates",    label: "Cost Rates" },
-    { id: "availability",  label: "Availability" },
-    { id: "service-areas", label: "Service Areas" },
-    { id: "travel",        label: "Travel Fees" },
-    { id: "staff-access",  label: "Staff Access" },
-    { id: "promos",        label: "Promo Codes" },
-    { id: "agreement",     label: "Service Agreement" },
-    { id: "terms",         label: "Terms & Privacy" },
-    { id: "email",         label: "Email Templates" },
-    { id: "sms",           label: "SMS Alerts" },
-    { id: "integrations",  label: "Integrations" },
+  const SECTION_GROUPS = [
+    {
+      group: "Business",
+      items: [
+        { id: "branding", label: "Branding" },
+      ],
+    },
+    {
+      group: "Booking",
+      items: [
+        { id: "booking",       label: "Booking" },
+        { id: "pricing",       label: "Pricing Tiers" },
+        { id: "availability",  label: "Availability" },
+        { id: "travel",        label: "Travel Fees" },
+        { id: "service-areas", label: "Service Areas" },
+        { id: "promos",        label: "Promo Codes" },
+      ],
+    },
+    {
+      group: "Communications",
+      items: [
+        { id: "email", label: "Email Templates" },
+        { id: "sms",   label: "SMS Alerts" },
+      ],
+    },
+    {
+      group: "Legal",
+      items: [
+        { id: "agreement", label: "Service Agreement" },
+        { id: "terms",     label: "Terms & Privacy" },
+      ],
+    },
+    {
+      group: "Team",
+      items: [
+        { id: "cost-rates",   label: "Cost Rates" },
+        { id: "staff-access", label: "Staff Access" },
+      ],
+    },
+    {
+      group: "Integrations",
+      items: [
+        { id: "integrations", label: "Integrations" },
+      ],
+    },
   ];
 
   return (
@@ -1123,15 +1177,21 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex gap-8 items-start">
-        {/* Sticky side nav */}
-        <nav className="hidden lg:block w-40 flex-shrink-0 sticky top-6">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2 px-2">Sections</p>
-          <div className="space-y-0.5">
-            {SECTIONS.map((s) => (
-              <a key={s.id} href={`#settings-${s.id}`}
-                className="block text-sm text-gray-500 hover:text-navy py-1.5 px-2 rounded hover:bg-navy/5 transition-colors">
-                {s.label}
-              </a>
+        {/* Sticky side nav — grouped */}
+        <nav className="hidden lg:block w-44 flex-shrink-0 sticky top-6">
+          <div className="space-y-4">
+            {SECTION_GROUPS.map((grp) => (
+              <div key={grp.group}>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1 px-2">{grp.group}</p>
+                <div className="space-y-0.5">
+                  {grp.items.map((s) => (
+                    <a key={s.id} href={`#settings-${s.id}`}
+                      className="block text-sm text-gray-500 hover:text-navy py-1.5 px-2 rounded hover:bg-navy/5 transition-colors">
+                      {s.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </nav>
@@ -2094,49 +2154,114 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* ─── Email Template ──────────────────────────────────────────────────── */}
+      {/* ─── Email Templates ─────────────────────────────────────────────────── */}
       <div id="settings-email" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
-        <h2 className="font-semibold text-charcoal text-base mb-1">Gallery Delivery Email Template</h2>
+        <h2 className="font-semibold text-charcoal text-base mb-1">Email Templates</h2>
         <p className="text-sm text-gray-500 mb-4">
-          Default email content used when delivering a gallery to a client. You can override
-          per-delivery in the gallery editor. Use <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{address}}"}</code> and{" "}
-          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{clientName}}"}</code> as placeholders.
+          Customize the emails clients receive. Leave fields blank to use the default text.
+          Available placeholders: <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{clientName}}"}</code>{" "}
+          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{address}}"}</code>{" "}
+          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{date}}"}</code>{" "}
+          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{balance}}"}</code>
         </p>
 
         <div className="bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-5 text-xs text-amber-700">
-          <strong>Email setup required:</strong> Emails are sent via Resend. You must set{" "}
-          <code className="font-mono">RESEND_API_KEY</code> in your Vercel environment variables{" "}
-          and verify your domain (<code className="font-mono">nova-os.app</code>) in the Resend dashboard.
-          Without this, no emails will be delivered.
+          <strong>Email setup required:</strong> Emails are sent via Resend. Set <code className="font-mono">RESEND_API_KEY</code> in your Vercel environment variables and verify your sending domain in the Resend dashboard.
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="label-field">Default Subject Line</label>
-            <input
-              type="text"
-              value={emailTplSubject}
-              onChange={(e) => setEmailTplSubject(e.target.value)}
-              className="input-field w-full"
-              placeholder="Your listing media is ready — {{address}}"
-            />
-          </div>
-          <div>
-            <label className="label-field">Default Message Body</label>
-            <textarea
-              value={emailTplBody}
-              onChange={(e) => setEmailTplBody(e.target.value)}
-              rows={8}
-              placeholder={"Hi {{clientName}},\n\nGreat working on this shoot! Your media is ready to view and download.\n\nLet me know if you need any adjustments.\n\nBest,\n" + (tenant?.businessName || "Your Photographer")}
-              className="input-field w-full text-sm leading-relaxed resize-y"
-            />
-            <p className="text-xs text-gray-400 mt-1">Plain text. This appears before the gallery button in the email.</p>
-          </div>
+        {/* Email type tabs */}
+        <div className="flex gap-1 mb-6 border-b border-gray-100">
+          {[
+            { id: "gallery",   label: "Gallery Delivery" },
+            { id: "received",  label: "Booking Received" },
+            { id: "approved",  label: "Shoot Confirmed" },
+            { id: "reminder",  label: "Payment Reminder" },
+          ].map((t) => (
+            <button key={t.id} onClick={() => setEmailTab(t.id)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                emailTab === t.id
+                  ? "border-navy text-navy"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
+              }`}>
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        <div className="mt-4">
+        {emailTab === "gallery" && (
+          <div className="space-y-4">
+            <p className="text-xs text-gray-400 mb-2">Sent when you deliver a gallery. Can be overridden per-delivery in the gallery editor.</p>
+            <div>
+              <label className="label-field">Subject Line</label>
+              <input type="text" value={emailTplSubject} onChange={(e) => setEmailTplSubject(e.target.value)}
+                className="input-field w-full" placeholder="Your listing media is ready — {{address}}" />
+            </div>
+            <div>
+              <label className="label-field">Message Body</label>
+              <textarea value={emailTplBody} onChange={(e) => setEmailTplBody(e.target.value)} rows={7}
+                placeholder={"Hi {{clientName}},\n\nYour media for {{address}} is ready to view and download.\n\nLet me know if you need any adjustments.\n\nBest,\n" + (tenant?.businessName || "Your Photographer")}
+                className="input-field w-full text-sm leading-relaxed resize-y" />
+              <p className="text-xs text-gray-400 mt-1">Appears above the gallery button in the email.</p>
+            </div>
+          </div>
+        )}
+
+        {emailTab === "received" && (
+          <div className="space-y-4">
+            <p className="text-xs text-gray-400 mb-2">Sent automatically when a client submits a booking and pays their deposit.</p>
+            <div>
+              <label className="label-field">Subject Line</label>
+              <input type="text" value={bookingReceivedSubject} onChange={(e) => setBookingReceivedSubject(e.target.value)}
+                className="input-field w-full" placeholder={`Booking received — {{address}}`} />
+            </div>
+            <div>
+              <label className="label-field">Message Body</label>
+              <textarea value={bookingReceivedBody} onChange={(e) => setBookingReceivedBody(e.target.value)} rows={7}
+                placeholder={"Hi {{clientName}},\n\nThanks for booking with us! Your shoot request for {{address}} is under review. We'll confirm within 24 hours.\n\nLooking forward to it,\n" + (tenant?.businessName || "Your Photographer")}
+                className="input-field w-full text-sm leading-relaxed resize-y" />
+              <p className="text-xs text-gray-400 mt-1">Appears above the booking details table in the email.</p>
+            </div>
+          </div>
+        )}
+
+        {emailTab === "approved" && (
+          <div className="space-y-4">
+            <p className="text-xs text-gray-400 mb-2">Sent when you approve a booking and assign a shoot date.</p>
+            <div>
+              <label className="label-field">Subject Line</label>
+              <input type="text" value={bookingApprovedSubject} onChange={(e) => setBookingApprovedSubject(e.target.value)}
+                className="input-field w-full" placeholder={`Shoot confirmed — {{address}}`} />
+            </div>
+            <div>
+              <label className="label-field">Message Body</label>
+              <textarea value={bookingApprovedBody} onChange={(e) => setBookingApprovedBody(e.target.value)} rows={7}
+                placeholder={"Hi {{clientName}},\n\nGreat news — your shoot at {{address}} is confirmed for {{date}}. We'll be in touch with any details beforehand.\n\nSee you then,\n" + (tenant?.businessName || "Your Photographer")}
+                className="input-field w-full text-sm leading-relaxed resize-y" />
+            </div>
+          </div>
+        )}
+
+        {emailTab === "reminder" && (
+          <div className="space-y-4">
+            <p className="text-xs text-gray-400 mb-2">Sent manually from the Orders tab when a client has an outstanding balance after gallery delivery.</p>
+            <div>
+              <label className="label-field">Subject Line</label>
+              <input type="text" value={paymentReminderSubject} onChange={(e) => setPaymentReminderSubject(e.target.value)}
+                className="input-field w-full" placeholder={`Friendly reminder — balance due for {{address}}`} />
+            </div>
+            <div>
+              <label className="label-field">Message Body</label>
+              <textarea value={paymentReminderBody} onChange={(e) => setPaymentReminderBody(e.target.value)} rows={7}
+                placeholder={"Hi {{clientName}},\n\nJust a quick reminder that your remaining balance of ${{balance}} is due for {{address}}. You can pay directly from your gallery — it only takes a minute.\n\nThanks!\n" + (tenant?.businessName || "Your Photographer")}
+                className="input-field w-full text-sm leading-relaxed resize-y" />
+              <p className="text-xs text-gray-400 mt-1">Appears above the Pay &amp; Download button in the email.</p>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6">
           <button onClick={saveEmailTemplate} disabled={savingTemplate} className="btn-primary px-8 py-3">
-            {savingTemplate ? "Saving…" : "Save Email Template"}
+            {savingTemplate ? "Saving…" : "Save Email Templates"}
           </button>
         </div>
       </div>

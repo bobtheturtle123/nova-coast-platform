@@ -244,6 +244,10 @@ export default function ListingDetailPage() {
   const [sendingInvoice, setSendingInvoice] = useState(false);
   const [invoiceMsg,     setInvoiceMsg]     = useState("");
 
+  // Payment reminder state
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [reminderMsg,     setReminderMsg]     = useState("");
+
   useEffect(() => {
     load();
   }, [id]);
@@ -938,6 +942,46 @@ export default function ListingDetailPage() {
                 {invoiceMsg && (
                   <p className={`mt-3 text-xs ${invoiceMsg.startsWith("Invoice sent") ? "text-green-600" : "text-red-500"}`}>
                     {invoiceMsg}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Send Payment Reminder button — only when gallery delivered and balance outstanding */}
+            {booking.depositPaid && !booking.paidInFull && !booking.balancePaid && booking.galleryId && (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+                <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Payment Reminder</p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Send the client a reminder to pay their remaining balance of <strong>${booking.remainingBalance}</strong>.
+                  Includes a link to their gallery where they can pay.
+                </p>
+                <button
+                  disabled={sendingReminder}
+                  onClick={async () => {
+                    setSendingReminder(true);
+                    setReminderMsg("");
+                    try {
+                      const token = await auth.currentUser?.getIdToken(true);
+                      const res = await fetch(`/api/dashboard/bookings/${id}/send-reminder`, {
+                        method: "POST",
+                        headers: { Authorization: `Bearer ${token}` },
+                      });
+                      if (res.ok) {
+                        setReminderMsg("Reminder sent to " + booking.clientEmail);
+                      } else {
+                        const d = await res.json();
+                        setReminderMsg(d.error || "Failed to send reminder.");
+                      }
+                    } catch { setReminderMsg("Failed to send reminder."); }
+                    finally { setSendingReminder(false); }
+                  }}
+                  className="btn-secondary text-sm px-5 py-2 disabled:opacity-50"
+                >
+                  {sendingReminder ? "Sending…" : "Send Payment Reminder"}
+                </button>
+                {reminderMsg && (
+                  <p className={`mt-3 text-xs ${reminderMsg.startsWith("Reminder sent") ? "text-green-600" : "text-red-500"}`}>
+                    {reminderMsg}
                   </p>
                 )}
               </div>
