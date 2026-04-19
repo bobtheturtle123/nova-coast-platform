@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "NovaOS — Real Estate Photography Platform",
-  description: "The all-in-one booking, payment, and gallery platform for real estate photographers.",
+  title: "ShootFlow: Business software for real estate photographers",
+  description: "Booking, payments, and media delivery built for real estate photography businesses.",
 };
 
 export default function RootLayout({ children }) {

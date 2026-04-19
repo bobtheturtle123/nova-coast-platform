@@ -37,7 +37,7 @@ export default function MarketingPage() {
           <p className="text-gold text-xs tracking-[0.2em] uppercase font-body mb-4">
             Built for real estate photographers and media teams
           </p>
-          <h1 className="font-display text-5xl md:text-6xl leading-tight mb-6">
+          <h1 className="font-serif text-5xl md:text-6xl leading-tight mb-6 font-normal">
             Run your business.<br />Get paid faster.
           </h1>
           <p className="text-white/70 text-lg max-w-2xl mx-auto mb-10">
@@ -76,9 +76,9 @@ export default function MarketingPage() {
       </div>
 
       {/* REVENUE PITCH */}
-      <section className="py-20 px-6 bg-white">
+      <section className="py-28 px-6 bg-white">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="font-display text-4xl text-navy mb-6">Every booking should work harder for you.</h2>
+          <h2 className="font-serif text-4xl text-navy mb-6 font-normal">Every booking should work harder for you.</h2>
           <p className="text-gray-500 text-lg max-w-2xl mx-auto leading-relaxed">
             Most tools track your work. ShootFlow is designed to increase the value of it.
           </p>
@@ -90,10 +90,10 @@ export default function MarketingPage() {
       </section>
 
       {/* FEATURES */}
-      <section id="features" className="py-24 px-6 bg-cream">
+      <section id="features" className="py-32 px-6 bg-cream">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display text-4xl text-navy mb-4">
+            <h2 className="font-serif text-4xl text-navy mb-4 font-normal">
               The complete operating system for your photography business.
             </h2>
             <p className="text-gray-500 max-w-xl mx-auto">
@@ -101,11 +101,11 @@ export default function MarketingPage() {
               not adapted from generic software.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6">
             {FEATURES.map((f) => (
-              <div key={f.title} className="p-8 border border-gray-100 rounded-sm hover:border-gold/30 transition-colors bg-white">
-                <div className="text-3xl mb-4">{f.icon}</div>
-                <h3 className="font-display text-xl text-navy mb-3">{f.title}</h3>
+              <div key={f.title} className="p-8 border border-transparent rounded-sm hover:border-gray-200 hover:bg-white transition-all duration-300 bg-cream/60">
+                <div className="text-2xl mb-5">{f.icon}</div>
+                <h3 className="font-serif text-xl text-navy mb-3 font-normal">{f.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
               </div>
             ))}
@@ -114,10 +114,10 @@ export default function MarketingPage() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section id="how-it-works" className="bg-white py-24 px-6">
+      <section id="how-it-works" className="bg-white py-32 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="font-display text-4xl text-navy mb-4">Up and running in minutes.</h2>
+            <h2 className="font-serif text-4xl text-navy mb-4 font-normal">Up and running in minutes.</h2>
             <p className="text-gray-500 max-w-lg mx-auto">
               No lengthy onboarding. No setup fees. Your booking page goes live the day you sign up.
             </p>
@@ -128,7 +128,7 @@ export default function MarketingPage() {
                 <div className="w-10 h-10 bg-navy text-white rounded-full flex items-center justify-center text-sm font-bold mx-auto mb-4">
                   {i + 1}
                 </div>
-                <h3 className="font-display text-lg text-navy mb-2">{s.title}</h3>
+                <h3 className="font-serif text-lg text-navy mb-2 font-normal">{s.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{s.desc}</p>
               </div>
             ))}
@@ -140,9 +140,9 @@ export default function MarketingPage() {
       <PricingSection />
 
       {/* CTA */}
-      <section className="bg-navy py-20 px-6 text-center">
+      <section className="bg-navy py-28 px-6 text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="font-display text-4xl text-white mb-4">Your business, running on autopilot.</h2>
+          <h2 className="font-serif text-4xl text-white mb-4 font-normal">Your business, running on autopilot.</h2>
           <p className="text-white/60 mb-8 text-lg">
             Booking, payment collection, and media delivery, fully automated, starting at $39/mo.
           </p>

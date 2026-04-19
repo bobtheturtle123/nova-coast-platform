@@ -87,11 +87,11 @@ export default function PricingSection() {
   const [yearly, setYearly] = useState(false);
 
   return (
-    <section id="pricing" className="py-24 px-6">
+    <section id="pricing" className="py-32 px-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h2 className="font-display text-4xl text-navy mb-4">Simple, transparent pricing</h2>
+        <div className="text-center mb-14">
+          <h2 className="font-serif text-4xl text-navy mb-4 font-normal">Simple, transparent pricing</h2>
           <p className="text-gray-500 mb-6">All plans include a 14-day free trial. No credit card required to start.</p>
 
           {/* Billing toggle */}
@@ -115,18 +115,18 @@ export default function PricingSection() {
         </div>
 
         {/* Plan cards */}
-        <div className="grid md:grid-cols-4 gap-5 mb-8">
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
           {PLANS.map((plan) => {
             const price = yearly ? plan.yearlyMonthly : plan.monthlyPrice;
             return (
               <div key={plan.id}
-                className={`rounded-sm border p-6 flex flex-col ${
-                  plan.featured ? "border-navy bg-navy text-white" : "border-gray-200 bg-white"
+                className={`rounded-sm border p-7 flex flex-col ${
+                  plan.featured ? "border-navy bg-navy text-white shadow-md" : "border-gray-100 bg-white hover:border-gray-200 transition-colors"
                 }`}>
                 {plan.featured && (
-                  <span className="text-xs text-gold tracking-widest uppercase block mb-2">Most Popular</span>
+                  <span className="text-xs text-gold tracking-widest uppercase block mb-3">Most Popular</span>
                 )}
-                <h3 className={`font-display text-2xl mb-1 ${plan.featured ? "text-white" : "text-navy"}`}>
+                <h3 className={`font-serif text-2xl mb-1 font-normal ${plan.featured ? "text-white" : "text-navy"}`}>
                   {plan.name}
                 </h3>
                 <div className="flex items-end gap-1 my-3">
@@ -169,13 +169,13 @@ export default function PricingSection() {
         {/* Add-ons */}
         <div className="border-t border-gray-100 pt-12">
           <div className="text-center mb-8">
-            <h3 className="font-display text-2xl text-navy mb-2">Scale with your business</h3>
+            <h3 className="font-serif text-2xl text-navy mb-2 font-normal">Scale with your business</h3>
             <p className="text-gray-500 text-sm">Add capacity any time. Cancel or change add-ons as your needs shift.</p>
           </div>
           <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
             {ADDONS.map((addon) => (
               <div key={addon.name}
-                className={`p-5 rounded-sm border ${addon.warning ? "border-amber-200 bg-amber-50" : "border-gray-200 bg-white"}`}>
+                className={`p-6 rounded-sm border ${addon.warning ? "border-amber-200 bg-amber-50" : "border-gray-100 bg-white"}`}>
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <p className={`font-semibold text-sm ${addon.warning ? "text-amber-900" : "text-navy"}`}>
                     {addon.name}

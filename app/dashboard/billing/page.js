@@ -5,13 +5,15 @@ import { useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 
 const PLANS = [
-  { id: "starter", name: "Starter", price: 39,  desc: "Up to 30 bookings/month · 1 team member" },
-  { id: "pro",     name: "Pro",     price: 79,  desc: "Up to 150 bookings/month · 5 team members · Custom domain" },
-  { id: "studio",  name: "Studio",  price: 149, desc: "Unlimited bookings · 25 team members · White-label" },
+  { id: "solo",   name: "Solo",   price: 39,  feePct: "2.0%", desc: "25 active listings · 1 team member · 6-month archive" },
+  { id: "studio", name: "Studio", price: 89,  feePct: "1.5%", desc: "75 active listings · Up to 5 team members · 12-month archive" },
+  { id: "pro",    name: "Pro",    price: 179, feePct: "1.25%", desc: "150 active listings · Up to 15 team members · 18-month archive" },
+  { id: "scale",  name: "Scale",  price: 349, feePct: "1.0%", desc: "300+ active listings · Unlimited team members · 24-month archive" },
 ];
 
-const PLAN_NAMES  = { starter: "Starter", pro: "Pro", studio: "Studio", agency: "Studio" };
-const PLAN_PRICES = { starter: 39, pro: 79, studio: 149, agency: 149 };
+const PLAN_NAMES  = { solo: "Solo", studio: "Studio", pro: "Pro", scale: "Scale", starter: "Solo" };
+const PLAN_PRICES = { solo: 39, studio: 89, pro: 179, scale: 349, starter: 39 };
+const PLAN_LIMITS = { solo: 25, studio: 75, pro: 150, scale: 300, starter: 25 };
 
 function isStripeNotConfigured(errorMsg) {
   if (!errorMsg) return false;
@@ -122,11 +124,10 @@ export default function BillingPage() {
   const status     = tenant?.subscriptionStatus || "trialing";
   const subscribed = !!tenant?.stripeSubscriptionId;
 
-  // Listing limits per plan (yearly)
-  const LISTING_LIMITS = { starter: 50, pro: 150, studio: Infinity, agency: Infinity };
-  const listingLimit   = LISTING_LIMITS[plan] || 50;
+  const addonListings  = tenant?.addonListings || 0;
+  const listingLimit   = (PLAN_LIMITS[plan] || 25) + addonListings;
   const listingsUsed   = listingsThisYear;
-  const listingPct     = listingLimit === Infinity ? 0 : Math.min(100, Math.round((listingsUsed / listingLimit) * 100));
+  const listingPct     = Math.min(100, Math.round((listingsUsed / listingLimit) * 100));
 
   const msgStyles = {
     success: "bg-green-50 border border-green-300 text-green-800",
@@ -202,30 +203,25 @@ export default function BillingPage() {
 
       {/* Listings usage */}
       <div className="bg-white rounded-sm border border-gray-200 p-6 mb-6">
-        <h2 className="font-display text-navy text-base mb-4">Listings Usage</h2>
+        <h2 className="font-display text-navy text-base mb-4">Active Listings</h2>
         <div className="flex items-end justify-between mb-2">
-          <p className="text-sm text-gray-500">Listings this year</p>
+          <p className="text-sm text-gray-500">Currently active</p>
           <p className="text-sm font-semibold text-charcoal">
-            {listingsUsed.toLocaleString()}
-            {listingLimit !== Infinity && ` / ${listingLimit.toLocaleString()}`}
-            {listingLimit === Infinity && " (unlimited)"}
+            {listingsUsed.toLocaleString()} / {listingLimit.toLocaleString()}
+            {addonListings > 0 && <span className="text-xs text-gray-400 ml-1">(+{addonListings} add-on)</span>}
           </p>
         </div>
-        {listingLimit !== Infinity && (
-          <>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${listingPct >= 90 ? "bg-red-500" : listingPct >= 70 ? "bg-amber-400" : "bg-navy"}`}
-                style={{ width: `${listingPct}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-400 mt-1.5">{listingPct}% of your yearly allowance used</p>
-            {listingPct >= 90 && (
-              <p className="text-xs text-red-600 mt-1 font-medium">Approaching limit — consider upgrading to avoid interruptions.</p>
-            )}
-          </>
+        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${listingPct >= 90 ? "bg-red-500" : listingPct >= 70 ? "bg-amber-400" : "bg-navy"}`}
+            style={{ width: `${listingPct}%` }}
+          />
+        </div>
+        <p className="text-xs text-gray-400 mt-1.5">{listingPct}% of your plan limit used</p>
+        {listingPct >= 90 && (
+          <p className="text-xs text-red-600 mt-1 font-medium">Approaching limit. Upgrade your plan or add a listings add-on.</p>
         )}
-        <p className="text-xs text-gray-400 mt-3">Resets on January 1st each year.</p>
+        <p className="text-xs text-gray-400 mt-3">Active listings are published property websites. Archiving a listing frees up a slot.</p>
       </div>
 
       {/* Plan cards — always shown */}
@@ -255,6 +251,7 @@ export default function BillingPage() {
                   <div>
                     <p className={`font-medium text-sm ${isCurrent ? "text-navy" : "text-gray-600"}`}>{p.name}</p>
                     <p className="text-xs text-gray-500">{p.desc}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">+ {p.feePct} platform fee per transaction</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0 ml-4">
@@ -298,7 +295,7 @@ export default function BillingPage() {
           <div>
             <p className="text-sm text-gray-600 mb-4">
               Connect your Stripe account to accept client deposits and balance payments.
-              Funds go directly to you. We take a 1.5% platform fee.
+              Funds go directly to you minus the platform fee for your plan ({PLAN_PRICES[plan] ? `${PLANS.find(p => p.id === plan)?.feePct || "2.0%"}` : "2.0%"}).
             </p>
             <button onClick={startConnect} disabled={working}
               className="btn-primary px-6 py-2 text-sm">

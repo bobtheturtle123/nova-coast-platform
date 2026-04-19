@@ -731,13 +731,7 @@ export default function ProductsPage() {
     }));
   }
 
-  if (loading) return (
-    <div className="p-8 flex justify-center h-64 items-center">
-      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
-    </div>
-  );
-
-  // Cross-reference counts for the info column
+  // All hooks must be before any early return
   const serviceUsage = useMemo(() => {
     const map = {};
     items.services.forEach((svc) => {
@@ -745,6 +739,23 @@ export default function ProductsPage() {
     });
     return map;
   }, [items]);
+
+  const current = useMemo(() => {
+    const list = items[activeType] || [];
+    if (!search.trim()) return list;
+    const q = search.toLowerCase();
+    return list.filter((i) =>
+      i.name?.toLowerCase().includes(q) ||
+      i.description?.toLowerCase().includes(q) ||
+      i.tagline?.toLowerCase().includes(q)
+    );
+  }, [items, activeType, search]);
+
+  if (loading) return (
+    <div className="p-8 flex justify-center h-64 items-center">
+      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+    </div>
+  );
 
   const addonTriggerLabel = (addon) => {
     const count = addon.showWith?.length || 0;
@@ -766,17 +777,6 @@ export default function ProductsPage() {
     if (activeType === "packages") return packageServicesLabel(item);
     return null;
   };
-
-  const current = useMemo(() => {
-    const list = items[activeType] || [];
-    if (!search.trim()) return list;
-    const q = search.toLowerCase();
-    return list.filter((i) =>
-      i.name?.toLowerCase().includes(q) ||
-      i.description?.toLowerCase().includes(q) ||
-      i.tagline?.toLowerCase().includes(q)
-    );
-  }, [items, activeType, search]);
 
   return (
     <div className="p-6">

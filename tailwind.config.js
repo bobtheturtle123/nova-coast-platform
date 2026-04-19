@@ -44,6 +44,7 @@ module.exports = {
       fontFamily: {
         display: ["Inter", "system-ui", "sans-serif"],
         body:    ["Inter", "system-ui", "sans-serif"],
+        serif:   ['"Playfair Display"', "Georgia", "serif"],
       },
       borderRadius: {
         "sm": "6px",
@@ -59,9 +60,9 @@ module.exports = {
         "popover":    "0 8px 24px -4px rgb(0 0 0 / 0.12), 0 0 0 1px rgb(0 0 0 / 0.06)",
       },
       animation: {
-        "fade-up": "fadeUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards",
-        "fade-in": "fadeIn 0.22s ease-out forwards",
-        "slide-down": "slideDown 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "fade-up":    "fadeUp 0.48s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "fade-in":    "fadeIn 0.32s ease-out forwards",
+        "slide-down": "slideDown 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards",
       },
       keyframes: {
         fadeUp: {
