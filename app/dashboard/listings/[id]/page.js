@@ -240,6 +240,10 @@ export default function ListingDetailPage() {
   const [qbSyncing, setQbSyncing] = useState(false);
   const [qbMsg,     setQbMsg]     = useState("");
 
+  // Invoice state
+  const [sendingInvoice, setSendingInvoice] = useState(false);
+  const [invoiceMsg,     setInvoiceMsg]     = useState("");
+
   useEffect(() => {
     load();
   }, [id]);
@@ -727,29 +731,56 @@ export default function ListingDetailPage() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
-                    Confirm Shoot Date &amp; Time
-                  </label>
-                  <button type="button" onClick={() => setShowDatePicker(true)}
-                    className="input-field w-full text-left flex items-center gap-2 mb-2">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
-                      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                    <span className={shootDate ? "text-charcoal text-sm" : "text-gray-400 text-sm"}>
-                      {shootDate
-                        ? `${new Date(shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}${shootTime ? ` · ${valToLabel(shootTime)}` : ""}`
-                        : "Pick date & time"}
-                    </span>
-                  </button>
-                  <button onClick={() => patchBooking({ shootDate, shootTime })} disabled={saving || !shootDate}
-                    className="btn-primary w-full py-2 text-xs">
-                    {saving ? "Saving…" : "Save Shoot Date"}
-                  </button>
-                  {booking.shootDate && (
-                    <p className="text-xs text-green-600 mt-1.5 flex items-center gap-1">
-                      <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                      Confirmed: {shootDateDisplay}{booking.shootTime ? ` at ${booking.shootTime}` : ""}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Scheduled Shoot
+                    </label>
+                    <button type="button" onClick={() => setShowDatePicker((v) => !v)}
+                      className="text-xs text-navy hover:underline">
+                      {showDatePicker ? "Cancel" : booking.shootDate ? "Edit" : "Set date"}
+                    </button>
+                  </div>
+                  {booking.shootDate && !showDatePicker ? (
+                    <p className="text-sm font-medium text-charcoal flex items-center gap-1.5">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500 flex-shrink-0">
+                        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                      {shootDateDisplay}{booking.shootTime ? ` · ${booking.shootTime}` : ""}
                     </p>
+                  ) : !showDatePicker ? (
+                    <p className="text-sm text-gray-400">No shoot date set</p>
+                  ) : null}
+                  {showDatePicker && (
+                    <div className="space-y-2 mt-1">
+                      <button type="button" onClick={() => setShowDatePicker(true)}
+                        className="input-field w-full text-left flex items-center gap-2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
+                          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        <span className={shootDate ? "text-charcoal text-sm" : "text-gray-400 text-sm"}>
+                          {shootDate
+                            ? `${new Date(shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}${shootTime ? ` · ${valToLabel(shootTime)}` : ""}`
+                            : "Pick date & time"}
+                        </span>
+                      </button>
+                      <button onClick={() => { patchBooking({ shootDate, shootTime }); setShowDatePicker(false); }} disabled={saving || !shootDate}
+                        className="btn-primary w-full py-2 text-xs">
+                        {saving ? "Saving…" : "Save Shoot Date"}
+                      </button>
+                    </div>
+                  )}
+                  {/* Additional appointments */}
+                  {(booking.additionalAppointments || []).length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {(booking.additionalAppointments || []).map((appt, i) => (
+                        <p key={i} className="text-xs text-gray-500 flex items-center gap-1.5">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                          </svg>
+                          Appt {i + 2}: {appt.date ? new Date(appt.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "TBD"}{appt.time ? ` · ${appt.time}` : ""}
+                        </p>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -872,6 +903,45 @@ export default function ListingDetailPage() {
                 )}
               </div>
             </div>
+
+            {/* Send Invoice button */}
+            {!booking.paidInFull && !booking.balancePaid && (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+                <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Send Invoice</p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Email the client a payment link for their {booking.depositPaid ? "remaining balance" : "deposit"}.
+                </p>
+                <button
+                  disabled={sendingInvoice}
+                  onClick={async () => {
+                    setSendingInvoice(true);
+                    setInvoiceMsg("");
+                    try {
+                      const token = await auth.currentUser?.getIdToken(true);
+                      const res = await fetch(`/api/dashboard/bookings/${id}/send-invoice`, {
+                        method: "POST",
+                        headers: { Authorization: `Bearer ${token}` },
+                      });
+                      if (res.ok) {
+                        setInvoiceMsg("Invoice sent to " + booking.clientEmail);
+                      } else {
+                        const d = await res.json();
+                        setInvoiceMsg(d.error || "Failed to send invoice.");
+                      }
+                    } catch { setInvoiceMsg("Failed to send invoice."); }
+                    finally { setSendingInvoice(false); }
+                  }}
+                  className="btn-primary text-sm px-5 py-2 disabled:opacity-50"
+                >
+                  {sendingInvoice ? "Sending…" : "Send Invoice Email"}
+                </button>
+                {invoiceMsg && (
+                  <p className={`mt-3 text-xs ${invoiceMsg.startsWith("Invoice sent") ? "text-green-600" : "text-red-500"}`}>
+                    {invoiceMsg}
+                  </p>
+                )}
+              </div>
+            )}
 
             {booking.stripeDepositIntentId && (
               <div className="bg-gray-50 rounded-sm border border-gray-100 p-4 text-xs text-gray-500 space-y-1">

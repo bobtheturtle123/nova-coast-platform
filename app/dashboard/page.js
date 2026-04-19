@@ -98,10 +98,11 @@ export default function DashboardHome() {
       {/* Onboarding checklist — shown until all steps done */}
       {tenant && (() => {
         const steps = [
-          { done: !!tenant.stripeConnectOnboarded, label: "Connect Stripe to accept payments", href: "/dashboard/billing" },
-          { done: listings.length > 0,             label: "Receive your first booking",        href: null },
-          { done: !!tenant.slug,                   label: "Share your booking page",           href: bookingUrl, external: true },
-          { done: !!tenant.branding?.logoUrl,      label: "Upload your logo in Settings",      href: "/dashboard/settings" },
+          { done: !!tenant.phone,                  label: "Complete your profile (phone & location)", href: "/onboarding" },
+          { done: !!tenant.branding?.logoUrl,      label: "Upload your logo & branding",              href: "/dashboard/settings" },
+          { done: !!tenant.stripeConnectOnboarded, label: "Connect Stripe to accept payments",        href: "/dashboard/billing" },
+          { done: !!tenant.slug,                   label: "Add services & share your booking page",   href: bookingUrl, external: true, action: "Copy link & add to Products" },
+          { done: listings.length > 0,             label: "Receive your first booking",               href: null },
         ];
         const doneCount = steps.filter((s) => s.done).length;
         if (doneCount === steps.length) return null;
@@ -115,10 +116,10 @@ export default function DashboardHome() {
                 ))}
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {steps.map((s, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                <div key={i} className="flex items-start gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
                     s.done ? "bg-emerald-500 border-emerald-500" : "border-gray-300"
                   }`}>
                     {s.done && (
@@ -127,16 +128,26 @@ export default function DashboardHome() {
                       </svg>
                     )}
                   </div>
-                  {s.done || !s.href ? (
-                    <span className={`text-sm ${s.done ? "line-through text-gray-400" : "text-charcoal"}`}>{s.label}</span>
-                  ) : s.external ? (
-                    <a href={s.href} target="_blank" rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:underline">{s.label}</a>
-                  ) : (
-                    <Link href={s.href} className="text-sm text-blue-600 hover:underline">{s.label}</Link>
-                  )}
+                  <div className="min-w-0">
+                    {s.done || !s.href ? (
+                      <span className={`text-sm ${s.done ? "line-through text-gray-400" : "text-charcoal"}`}>{s.label}</span>
+                    ) : s.external ? (
+                      <a href={s.href} target="_blank" rel="noopener noreferrer"
+                        className="text-sm text-navy hover:underline font-medium">{s.label}</a>
+                    ) : (
+                      <Link href={s.href} className="text-sm text-navy hover:underline font-medium">{s.label}</Link>
+                    )}
+                  </div>
                 </div>
               ))}
+              {/* Quick links row */}
+              {doneCount < steps.length && (
+                <div className="pt-2 mt-1 border-t border-gray-100 flex flex-wrap gap-3">
+                  <Link href="/dashboard/products" className="text-xs text-gray-500 hover:text-navy transition-colors">→ Add services & pricing</Link>
+                  <Link href="/dashboard/settings" className="text-xs text-gray-500 hover:text-navy transition-colors">→ Review booking settings</Link>
+                  <Link href="/dashboard/team" className="text-xs text-gray-500 hover:text-navy transition-colors">→ Invite a photographer</Link>
+                </div>
+              )}
             </div>
           </div>
         );

@@ -156,6 +156,7 @@ export async function POST(req, { params }) {
         contractSigned:            !!contractSignerName,
         contractSignerName:        contractSignerName || null,
         contractSignedAt:          contractSignerName ? new Date() : null,
+        contractSignerIp:          contractSignerName ? (req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null) : null,
         contractText:              contractSignerName ? (catalog.bookingConfig?.serviceAgreement?.text || null) : null,
         contractCounterSigned:     !!contractSignerName,
         contractCounterSignedAt:   contractSignerName ? new Date() : null,

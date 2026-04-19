@@ -71,6 +71,7 @@ export default function CreateBookingPage() {
     address: "", unit: "", city: "", state: "CA", zip: "", lat: null, lng: null,
     sqft: "", notes: "",
     shootDate: "", shootTime: "",
+    additionalAppointments: [],    // [{date, time}]
     packageId: "", serviceIds: [], addonIds: [],
     customLineItems: [],          // [{label, price}]
     depositPaid: false,
@@ -559,6 +560,43 @@ export default function CreateBookingPage() {
               </select>
             </div>
           </div>
+
+          {/* Additional appointments */}
+          {form.additionalAppointments.map((appt, i) => (
+            <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200 relative">
+              <div className="absolute top-2 right-2">
+                <button type="button" onClick={() => setForm((f) => ({
+                  ...f, additionalAppointments: f.additionalAppointments.filter((_, idx) => idx !== i)
+                }))} className="text-gray-400 hover:text-red-500 text-sm">✕</button>
+              </div>
+              <div>
+                <label className="label-field">Appt {i + 2} Date</label>
+                <input type="date" value={appt.date}
+                  onChange={(e) => setForm((f) => {
+                    const arr = [...f.additionalAppointments];
+                    arr[i] = { ...arr[i], date: e.target.value };
+                    return { ...f, additionalAppointments: arr };
+                  })} className="input-field w-full" />
+              </div>
+              <div>
+                <label className="label-field">Appt {i + 2} Time</label>
+                <select value={appt.time}
+                  onChange={(e) => setForm((f) => {
+                    const arr = [...f.additionalAppointments];
+                    arr[i] = { ...arr[i], time: e.target.value };
+                    return { ...f, additionalAppointments: arr };
+                  })} className="input-field w-full">
+                  <option value="">— Select time —</option>
+                  {TIME_OPTIONS.map((t) => <option key={t} value={timeToVal(t)}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+          ))}
+          <button type="button"
+            onClick={() => setForm((f) => ({ ...f, additionalAppointments: [...f.additionalAppointments, { date: "", time: "" }] }))}
+            className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5 transition-colors mb-5">
+            + Add Another Appointment
+          </button>
 
           {/* Team availability */}
           {form.shootDate && team.length > 0 && (

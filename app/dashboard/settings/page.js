@@ -1540,28 +1540,31 @@ export default function SettingsPage() {
         </p>
 
         {/* Mode toggle */}
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold text-charcoal mb-3">Availability Mode</h3>
-          <div className="grid grid-cols-3 gap-3">
+        <div className="mb-5">
+          <label className="label-field mb-2">Booking Mode</label>
+          <div className="flex gap-2">
             {[
-              { value: "slots",  label: "Time Grid",          desc: "Show fixed intervals within business hours. Client picks an exact time." },
-              { value: "real",   label: "Real Availability",  desc: "Only show times not already booked (respects buffer between shoots)." },
-              { value: "named",  label: "Named Time Slots",   desc: "Client chooses a named window like Morning, Afternoon, or Flexible." },
+              { value: "slots", label: "Time Grid" },
+              { value: "real",  label: "Live Availability" },
+              { value: "named", label: "Named Slots" },
             ].map((m) => (
               <button key={m.value} type="button" onClick={() => setAvailMode(m.value)}
-                className={`p-3 border rounded-sm text-left transition-colors ${
-                  availMode === m.value ? "border-navy bg-navy/5" : "border-gray-200 hover:border-navy/30"
+                className={`px-4 py-2 border rounded text-sm font-medium transition-colors ${
+                  availMode === m.value ? "border-navy bg-navy text-white" : "border-gray-200 text-gray-600 hover:border-navy/40"
                 }`}>
-                <p className={`text-sm font-semibold ${availMode === m.value ? "text-navy" : "text-charcoal"}`}>{m.label}</p>
-                <p className="text-xs text-gray-400 mt-0.5 leading-snug">{m.desc}</p>
+                {m.label}
               </button>
             ))}
           </div>
+          <p className="text-xs text-gray-400 mt-1.5">
+            {availMode === "slots"  && "Fixed intervals within business hours — client picks an exact time."}
+            {availMode === "real"   && "Only shows times not already booked, respecting shoot duration and buffer."}
+            {availMode === "named"  && "Client picks a named window: Morning, Afternoon, or Flexible."}
+          </p>
         </div>
 
         {/* Business hours — shown for time grid + real availability */}
         <div className={`mb-5 ${availMode === "named" ? "hidden" : ""}`}>
-          <h3 className="text-sm font-semibold text-charcoal mb-3">Business Hours</h3>
           <div className="mb-3">
             <label className="label-field mb-2">Working Days</label>
             <div className="flex gap-1.5 flex-wrap">
@@ -1596,38 +1599,34 @@ export default function SettingsPage() {
 
         {/* Slot interval — shown for time grid + real availability */}
         <div className={`mb-5 ${availMode === "named" ? "hidden" : ""}`}>
-          <h3 className="text-sm font-semibold text-charcoal mb-3">Slot Interval & Durations</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <label className="label-field mb-2">Timing</label>
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="label-field">Slot interval (min)</label>
+              <label className="label-field text-[11px]">Slot interval</label>
               <select value={availInterval} onChange={(e) => setAvailInterval(e.target.value)} className="input-field w-full text-sm">
                 <option value={15}>15 min</option>
                 <option value={30}>30 min</option>
                 <option value={60}>60 min</option>
               </select>
-              <p className="text-xs text-gray-400 mt-1">How often slots appear (e.g. 8:00, 8:30, 9:00…)</p>
             </div>
             <div>
-              <label className="label-field">Default shoot duration (min)</label>
+              <label className="label-field text-[11px]">Shoot duration</label>
               <input type="number" value={availDuration} min={30} step={15}
                 onChange={(e) => setAvailDuration(e.target.value)}
                 className="input-field w-full text-sm" />
-              <p className="text-xs text-gray-400 mt-1">How long a typical shoot lasts</p>
             </div>
             <div>
-              <label className="label-field">Buffer between shoots (min)</label>
+              <label className="label-field text-[11px]">Buffer between shoots</label>
               <input type="number" value={availBuffer} min={0} step={15}
                 onChange={(e) => setAvailBuffer(e.target.value)}
                 className="input-field w-full text-sm" />
-              <p className="text-xs text-gray-400 mt-1">Travel/reset time after each shoot</p>
             </div>
           </div>
         </div>
 
         {/* Named time slots — only shown when "named" mode is selected */}
         <div className={`mb-5 ${availMode !== "named" ? "hidden" : ""}`}>
-          <h3 className="text-sm font-semibold text-charcoal mb-1">Named Time Slot Options</h3>
-          <p className="text-xs text-gray-400 mb-3">Toggle each slot on or off and rename them. Clients will see only the enabled ones.</p>
+          <label className="label-field mb-2">Named Time Slot Options</label>
           <div className="space-y-2">
             {timeSlots.map((slot) => (
               <div key={slot.value} className={`border rounded-sm px-3 py-2.5 flex items-center gap-3 ${slot.enabled ? "border-gray-200 bg-white" : "border-dashed border-gray-200 bg-gray-50 opacity-60"}`}>
@@ -1739,9 +1738,9 @@ export default function SettingsPage() {
             <div className="flex items-start gap-2 text-xs bg-blue-50 border border-blue-100 text-blue-800 px-3 py-2.5 rounded">
               <span>ℹ️</span>
               <span>
-                When enabled, clients must type their full name and click "I agree" to proceed with payment.
-                The signed agreement, timestamp, and client name are recorded on the booking. Admin counter-signature is applied automatically.
-                <strong className="block mt-1">This is not a legally binding e-signature service. Consult your attorney for compliance requirements.</strong>
+                When enabled, clients must read the agreement, type their full legal name, and click "I agree and electronically sign" to complete booking.
+                The signed agreement text, client name, timestamp, and IP address are recorded on the booking. Your counter-signature is applied automatically.
+                Electronic consent collected this way is generally enforceable — have your attorney review the agreement text to ensure it covers your jurisdiction's requirements.
               </span>
             </div>
             <label className="label-field">Agreement Text</label>

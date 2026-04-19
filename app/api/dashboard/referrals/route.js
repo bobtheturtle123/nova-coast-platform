@@ -1,4 +1,5 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { generateReferralCode } from "@/lib/referral";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -25,7 +26,19 @@ export async function GET(req) {
   ]);
 
   if (!tenantDoc.exists) return Response.json({ error: "Not found" }, { status: 404 });
-  const tenant = tenantDoc.data();
+  let tenant = tenantDoc.data();
+
+  // Auto-generate referral code for tenants that pre-date the referral system
+  if (!tenant.referralCode) {
+    const code = generateReferralCode(tenant.businessName || ctx.tenantId);
+    await adminDb.collection("tenants").doc(ctx.tenantId).update({
+      referralCode:             code,
+      referralCredits:          0,
+      referralRewardsThisMonth: 0,
+      referralRewardCap:        20000,
+    });
+    tenant = { ...tenant, referralCode: code };
+  }
 
   const referrals = referralsSnap.docs.map((d) => {
     const data = d.data();

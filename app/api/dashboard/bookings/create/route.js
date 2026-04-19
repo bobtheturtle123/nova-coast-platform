@@ -29,6 +29,7 @@ export async function POST(req) {
       packageId = null, serviceIds = [], addonIds = [], customLineItems = [],
       photographerId = null, photographerEmail = "", photographerName = "", photographerPhone = "",
       shootDate = "", shootTime = "",
+      additionalAppointments = [],
       sendNotification = true,
     } = await req.json();
 
@@ -74,8 +75,9 @@ export async function POST(req) {
       photographerId:    photographerId    || null,
       photographerEmail: photographerEmail || null,
       photographerName:  photographerName  || null,
-      shootDate:         shootDate         || null,
-      shootTime:         shootTime         || null,
+      shootDate:              shootDate              || null,
+      shootTime:              shootTime              || null,
+      additionalAppointments: additionalAppointments || [],
       createdAt:       new Date(),
       createdBy:       ctx.uid,
       stripeDepositIntentId:  null,

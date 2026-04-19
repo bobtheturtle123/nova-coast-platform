@@ -736,7 +736,7 @@ export default function TeamPage() {
   const visibleMembers = filterMember === "all" ? members : members.filter((m) => m.id === filterMember);
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-7xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -844,9 +844,9 @@ export default function TeamPage() {
             {weekDates.map((d) => {
               const isToday = isSameDay(d, today);
               return (
-                <div key={d.toISOString()} className={`px-2 py-2 text-center border-r last:border-r-0 border-gray-100 ${isToday ? "bg-navy/4" : ""}`}>
+                <div key={d.toISOString()} className={`px-2 py-3 text-center border-r last:border-r-0 border-gray-100 ${isToday ? "bg-navy/4" : ""}`}>
                   <p className="text-xs text-gray-400 uppercase tracking-wide">{DAYS_SHORT[d.getDay()]}</p>
-                  <p className={`text-sm font-bold mt-0.5 ${isToday ? "w-7 h-7 rounded-full bg-navy text-white flex items-center justify-center mx-auto" : "text-charcoal"}`}>
+                  <p className={`text-base font-bold mt-0.5 ${isToday ? "w-8 h-8 rounded-full bg-navy text-white flex items-center justify-center mx-auto" : "text-charcoal"}`}>
                     {d.getDate()}
                   </p>
                 </div>
@@ -875,7 +875,7 @@ export default function TeamPage() {
                         {(member.skills || []).length > 4 && <span className="text-xs text-gray-400">+{member.skills.length - 4} more</span>}
                       </div>
                     </div>
-                    <div className="grid grid-cols-7 min-h-12">
+                    <div className="grid grid-cols-7 min-h-20">
                       {weekDates.map((d) => {
                         const dayEvents = memberEvents.filter((e) => isSameDay(e.shootDateObj, d));
                         const isToday = isSameDay(d, today);
@@ -887,11 +887,12 @@ export default function TeamPage() {
                           return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
                         });
                         return (
-                          <div key={d.toISOString()} className={`p-1 border-r last:border-r-0 border-gray-100 min-h-12 relative ${isToday ? "bg-navy/2" : ""}`}>
+                          <div key={d.toISOString()} className={`p-1.5 border-r last:border-r-0 border-gray-100 min-h-20 relative ${isToday ? "bg-navy/2" : ""}`}>
                             {dayBlocks.length > 0 && (
                               <div className="absolute inset-0 pointer-events-none"
-                                style={{ background: "repeating-linear-gradient(-45deg, #fee2e2, #fee2e2 3px, transparent 3px, transparent 10px)", opacity: 0.7 }} />
+                                style={{ background: "repeating-linear-gradient(-45deg, #fee2e2, #fee2e2 3px, transparent 3px, transparent 10px)", opacity: 0.5 }} />
                             )}
+                            <div className="relative z-10">
                             {dayBlocks.map((bl) => (
                               <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1.5 py-0.5 rounded-sm mb-1 group">
                                 <div className="flex items-center justify-between">
@@ -911,6 +912,7 @@ export default function TeamPage() {
                                 {ev.preferredTime && <p className="text-gray-400 capitalize">{ev.preferredTime}</p>}
                               </div>
                             ))}
+                            </div>
                           </div>
                         );
                       })}
@@ -1009,7 +1011,7 @@ export default function TeamPage() {
                 });
                 const hasBlocks = dayBlocks.length > 0;
                 return (
-                  <div key={d.toISOString()} className={`border-r last:border-r-0 border-b border-gray-100 min-h-20 p-1 relative ${isToday ? "bg-blue-50/30" : ""}`}>
+                  <div key={d.toISOString()} className={`border-r last:border-r-0 border-b border-gray-100 min-h-28 p-1.5 relative ${isToday ? "bg-blue-50/30" : ""}`}>
                     {hasBlocks && (
                       <div className="absolute inset-0 pointer-events-none rounded-sm"
                         style={{ background: "repeating-linear-gradient(-45deg, #fee2e2, #fee2e2 3px, transparent 3px, transparent 10px)", opacity: 0.5 }} />

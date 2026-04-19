@@ -52,11 +52,18 @@ export default async function BrochurePage({ params }) {
           .get();
         if (galleryDoc.exists) {
           images = (galleryDoc.data().media || [])
-            .filter((m) => !m.fileType?.startsWith("video/"))
-            .slice(0, 9);
+            .filter((m) => !m.fileType?.startsWith("video/") && m.url)
+            .slice(0, 9)
+            .map((m) => ({ url: String(m.url) })); // strip Firestore Timestamps / non-serializable fields
         }
       } catch {}
     }
+
+    // Sanitize pw — strip any Firestore Timestamp fields that would fail Next.js serialization
+    const safePw = JSON.parse(JSON.stringify(pw, (_, v) => {
+      if (v && typeof v === "object" && typeof v.toDate === "function") return v.toDate().toISOString();
+      return v;
+    }));
 
     const branding = {
       primary: tenant.branding?.primaryColor  || "#0b2a55",
@@ -77,7 +84,7 @@ export default async function BrochurePage({ params }) {
 
     return (
       <BrochureClient
-        pw={pw}
+        pw={safePw}
         booking={{
           fullAddress: booking.fullAddress,
           address:     booking.address,
