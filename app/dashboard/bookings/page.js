@@ -255,6 +255,9 @@ export default function BookingsPage() {
   const [teamMembers,  setTeamMembers] = useState([]);
   const [agentQuery,   setAgentQuery]  = useState("");
   const [showAgentDD,  setShowAgentDD] = useState(false);
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: "", email: "", phone: "" });
+  const [savingCustomer, setSavingCustomer] = useState(false);
   const [enableApn,         setEnableApn]         = useState(false);
   const [tenantSlug,        setTenantSlug]        = useState(null);
   const tenantSlugRef = useRef(null);
@@ -371,10 +374,15 @@ export default function BookingsPage() {
   }
 
   async function loadBookings() {
-    const token = await auth.currentUser?.getIdToken();
-    if (!token) return;
-    const res = await fetch("/api/dashboard/bookings", { headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) setBookings((await res.json()).bookings);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) { setLoading(false); return; }
+      const res = await fetch("/api/dashboard/bookings", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setBookings(data.bookings || []);
+      }
+    } catch { /* ignore */ }
     setLoading(false);
   }
 
@@ -458,6 +466,29 @@ export default function BookingsPage() {
     if (a) lines.push({ name: `+ ${a.name}`, price: getItemPrice(a, tier) });
   });
   form.customLineItems.forEach((l) => lines.push({ name: l.label, price: l.price }));
+
+  async function saveNewCustomer() {
+    if (!newCustomer.name.trim() || !newCustomer.email.trim()) return;
+    setSavingCustomer(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/dashboard/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(newCustomer),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const created = data.agent || { ...newCustomer, id: Date.now() };
+        setAgents((prev) => [...prev, created]);
+        setForm((p) => ({ ...p, clientName: created.name, clientEmail: created.email, clientPhone: created.phone || "" }));
+        setAgentQuery(created.name);
+        setShowNewCustomer(false);
+        setNewCustomer({ name: "", email: "", phone: "" });
+      }
+    } catch { /* ignore */ }
+    setSavingCustomer(false);
+  }
 
   async function createBooking(e) {
     e.preventDefault();
@@ -664,14 +695,48 @@ export default function BookingsPage() {
                                 const q = agentQuery.toLowerCase();
                                 return a.name?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q);
                               }).length === 0 && (
-                                <p className="px-4 py-3 text-sm text-gray-400 text-center">No matching customers</p>
+                                <div>
+                                  <p className="px-4 py-3 text-sm text-gray-400 text-center">No matching customers</p>
+                                  <button type="button" onMouseDown={() => { setShowNewCustomer(true); setShowAgentDD(false); }}
+                                    className="w-full text-left px-4 py-2.5 text-sm text-navy font-medium hover:bg-navy/5 border-t border-gray-50">
+                                    + Add as new customer
+                                  </button>
+                                </div>
                               )}
                             </div>
                           )}
                         </div>
                       )}
+                      {agents.length === 0 && !showNewCustomer && (
+                        <button type="button" onClick={() => setShowNewCustomer(true)}
+                          className="text-xs text-navy underline hover:no-underline">
+                          + Add new customer
+                        </button>
+                      )}
+                      {showNewCustomer && (
+                        <div className="bg-navy/5 border border-navy/15 rounded-lg p-3 space-y-2">
+                          <p className="text-xs font-semibold text-navy">New Customer</p>
+                          <input type="text" value={newCustomer.name}
+                            onChange={(e) => setNewCustomer((c) => ({ ...c, name: e.target.value }))}
+                            placeholder="Full name *" className="input-field w-full text-sm" autoFocus />
+                          <input type="email" value={newCustomer.email}
+                            onChange={(e) => setNewCustomer((c) => ({ ...c, email: e.target.value }))}
+                            placeholder="Email *" className="input-field w-full text-sm" />
+                          <input type="tel" value={newCustomer.phone}
+                            onChange={(e) => setNewCustomer((c) => ({ ...c, phone: e.target.value }))}
+                            placeholder="Phone (optional)" className="input-field w-full text-sm" />
+                          <div className="flex gap-2">
+                            <button type="button" onClick={saveNewCustomer} disabled={savingCustomer || !newCustomer.name || !newCustomer.email}
+                              className="btn-primary px-3 py-1.5 text-xs">
+                              {savingCustomer ? "Saving…" : "Save & Use"}
+                            </button>
+                            <button type="button" onClick={() => { setShowNewCustomer(false); setNewCustomer({ name: "", email: "", phone: "" }); }}
+                              className="text-xs text-gray-400 hover:text-gray-600 px-3 py-1.5">Cancel</button>
+                          </div>
+                        </div>
+                      )}
                       <input
-                        type="text" autoFocus
+                        type="text" autoFocus={!showNewCustomer}
                         value={form.clientName} onChange={(e) => setField("clientName", e.target.value)}
                         placeholder="Full name *"
                         className="input-field w-full"

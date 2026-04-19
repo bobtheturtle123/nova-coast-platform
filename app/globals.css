@@ -117,6 +117,10 @@
     @apply text-[11px] font-semibold tracking-[0.08em] uppercase text-[#C9A96E];
   }
 
+  .accent-bar {
+    @apply border-l-2 border-[#C9A96E] pl-3;
+  }
+
   .price-display {
     @apply text-3xl font-semibold text-[#0F172A] tracking-tight;
   }
@@ -169,6 +173,30 @@
 
   .page-subtitle {
     @apply text-sm text-gray-500 mt-1;
+  }
+
+  /* ── Stat / metric cards ─────────────────────────────────────────────── */
+  .stat-card {
+    @apply bg-white border border-gray-100 rounded-xl p-5;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  }
+
+  .stat-card-gold {
+    @apply rounded-xl p-5 border border-[#C9A96E]/25;
+    background: linear-gradient(135deg, #fffbf4 0%, #fef9ee 100%);
+    box-shadow: 0 1px 3px 0 rgb(201 169 110 / 0.12);
+  }
+
+  .stat-card-navy {
+    @apply rounded-xl p-5 border border-navy/10;
+    background: linear-gradient(135deg, #f5f7fb 0%, #eef1f8 100%);
+    box-shadow: 0 1px 3px 0 rgb(15 23 42 / 0.07);
+  }
+
+  .stat-card-green {
+    @apply rounded-xl p-5 border border-emerald-100;
+    background: linear-gradient(135deg, #f0fdf6 0%, #ecfdf5 100%);
+    box-shadow: 0 1px 3px 0 rgb(16 185 129 / 0.08);
   }
 
   /* ── Data table rows ─────────────────────────────────────────────────── */

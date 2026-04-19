@@ -40,7 +40,7 @@ export async function POST(req) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { memberId, memberName, startDate, endDate, reason, note } = body;
+  const { memberId, memberName, startDate, endDate, startTime, endTime, reason, note } = body;
 
   if (!startDate || !endDate) {
     return Response.json({ error: "startDate and endDate are required" }, { status: 400 });
@@ -49,10 +49,12 @@ export async function POST(req) {
   const ref = adminDb.collection("tenants").doc(ctx.tenantId).collection("timeBlocks").doc();
   const block = {
     id:          ref.id,
-    memberId:    memberId    || null,  // null = entire team blocked
+    memberId:    memberId    || null,
     memberName:  memberName  || "All Team",
     startDate:   new Date(startDate),
     endDate:     new Date(endDate),
+    startTime:   startTime   || null,
+    endTime:     endTime     || null,
     reason:      reason || "Time Off",
     note:        note   || "",
     createdAt:   new Date(),

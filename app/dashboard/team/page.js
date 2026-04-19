@@ -402,6 +402,8 @@ function BlockTimeModal({ members, onSave, onClose, timeBlocks, onDeleteBlock })
     memberId:   "",
     startDate:  today,
     endDate:    today,
+    startTime:  "",
+    endTime:    "",
     reason:     "Vacation",
     note:       "",
   });
@@ -463,6 +465,18 @@ function BlockTimeModal({ members, onSave, onClose, timeBlocks, onDeleteBlock })
                   onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
                   className="input-field w-full" />
               </div>
+            </div>
+            <div>
+              <label className="label-field">Time Range (optional)</label>
+              <div className="grid grid-cols-2 gap-3">
+                <input type="time" value={form.startTime}
+                  onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value }))}
+                  className="input-field w-full" placeholder="Start time" />
+                <input type="time" value={form.endTime}
+                  onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))}
+                  className="input-field w-full" placeholder="End time" />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Leave blank to block the entire day(s).</p>
             </div>
             <div>
               <label className="label-field">Reason</label>
@@ -697,12 +711,10 @@ export default function TeamPage() {
   // Map confirmed/completed bookings that have a shootDate to calendar
   const calendarEvents = useMemo(() => {
     return bookings
-      .filter((b) => b.shootDate && ["confirmed", "completed", "requested"].includes(b.status))
+      .filter((b) => (b.shootDate || b.preferredDate) && ["confirmed", "completed", "requested"].includes(b.status))
       .map((b) => {
-        // Add T12:00:00 so date-only strings parse in local time, not UTC midnight
-        const ds = typeof b.shootDate === "string" && b.shootDate.length === 10
-          ? b.shootDate + "T12:00:00"
-          : b.shootDate;
+        const raw = b.shootDate || b.preferredDate;
+        const ds = typeof raw === "string" && raw.length === 10 ? raw + "T12:00:00" : raw;
         return { ...b, shootDateObj: new Date(ds) };
       });
   }, [bookings]);
@@ -881,10 +893,15 @@ export default function TeamPage() {
                                 style={{ background: "repeating-linear-gradient(-45deg, #fee2e2, #fee2e2 3px, transparent 3px, transparent 10px)", opacity: 0.7 }} />
                             )}
                             {dayBlocks.map((bl) => (
-                              <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1.5 py-0.5 rounded-sm mb-1 flex items-center justify-between group">
-                                <span className="text-red-600 font-medium truncate">{bl.reason}</span>
-                                <button onClick={() => deleteBlock(bl.id)}
-                                  className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 ml-1 flex-shrink-0 text-[10px]">×</button>
+                              <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1.5 py-0.5 rounded-sm mb-1 group">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-red-600 font-medium truncate">{bl.reason}</span>
+                                  <button onClick={() => deleteBlock(bl.id)}
+                                    className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 ml-1 flex-shrink-0 text-[10px]">×</button>
+                                </div>
+                                {(bl.startTime || bl.endTime) && (
+                                  <p className="text-red-400 text-[10px]">{bl.startTime}{bl.endTime ? ` – ${bl.endTime}` : ""}</p>
+                                )}
                               </div>
                             ))}
                             {dayEvents.map((ev) => (
@@ -1032,26 +1049,48 @@ export default function TeamPage() {
             ) : (
               <div className="space-y-4">
                 {visibleMembers.map((member) => {
+                  const dayStr = `${anchor.getFullYear()}-${String(anchor.getMonth()+1).padStart(2,"0")}-${String(anchor.getDate()).padStart(2,"0")}`;
                   const memberEvents = calendarEvents.filter(
-                    (e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email) && isSameDay(e.shootDateObj, anchor)
+                    (e) => (e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email)) && isSameDay(e.shootDateObj, anchor)
                   );
+                  const dayBlocks = timeBlocks.filter((b) => {
+                    const startStr = (b.startDate || "").slice(0, 10);
+                    const endStr   = (b.endDate   || "").slice(0, 10);
+                    return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
+                  });
+                  const isBlocked = dayBlocks.length > 0;
                   return (
                     <div key={member.id} className="border border-gray-200 rounded-sm overflow-hidden">
                       <div className="flex items-center gap-2 px-4 py-2 bg-gray-50/50 border-b border-gray-100">
                         <div className="w-4 h-4 rounded-full" style={{ background: member.color || "#0b2a55" }} />
                         <p className="text-sm font-semibold text-charcoal">{member.name}</p>
-                        <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${memberEvents.length > 0 ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700"}`}>
-                          {memberEvents.length > 0 ? `${memberEvents.length} shoot${memberEvents.length !== 1 ? "s" : ""}` : "Available"}
+                        <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
+                          isBlocked ? "bg-red-50 text-red-600" :
+                          memberEvents.length > 0 ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700"
+                        }`}>
+                          {isBlocked ? "Blocked" : memberEvents.length > 0 ? `${memberEvents.length} shoot${memberEvents.length !== 1 ? "s" : ""}` : "Available"}
                         </span>
                       </div>
-                      {memberEvents.length === 0 ? (
+                      {dayBlocks.map((bl) => (
+                        <div key={bl.id} className="px-4 py-2 bg-red-50/60 border-b border-red-100 flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-semibold text-red-600">{bl.reason || "Blocked"}</p>
+                            {(bl.startTime || bl.endTime) && (
+                              <p className="text-xs text-red-400">{bl.startTime} – {bl.endTime}</p>
+                            )}
+                            {bl.note && <p className="text-xs text-red-400">{bl.note}</p>}
+                          </div>
+                          <button onClick={() => deleteBlock(bl.id)} className="text-xs text-red-400 hover:text-red-600 ml-3">Remove</button>
+                        </div>
+                      ))}
+                      {memberEvents.length === 0 && !isBlocked ? (
                         <p className="px-4 py-3 text-sm text-gray-400">No shoots scheduled for this day.</p>
                       ) : (
                         <div className="divide-y divide-gray-50">
                           {memberEvents.map((ev) => (
                             <div key={ev.id} className="px-4 py-3">
                               <p className="text-sm font-medium text-charcoal">{ev.address}</p>
-                              <p className="text-xs text-gray-400 mt-0.5">{ev.clientName} · {ev.preferredTime || "Time TBD"}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">{ev.clientName} · {ev.shootTime || ev.preferredTime || "Time TBD"}</p>
                               <a href={`/dashboard/listings/${ev.id}`} className="text-xs text-navy hover:underline">View booking →</a>
                             </div>
                           ))}

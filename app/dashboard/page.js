@@ -144,18 +144,26 @@ export default function DashboardHome() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-        {[
-          { label: "Total Listings",  value: stats.total,     sub: "all time" },
-          { label: "Pending Review",  value: stats.pending,   sub: "need action", alert: stats.pending > 0 },
-          { label: "Active Shoots",   value: stats.confirmed, sub: "confirmed" },
-          { label: "Revenue",         value: `$${stats.revenue.toLocaleString()}`, sub: "collected" },
-        ].map((s) => (
-          <div key={s.label} className={`bg-white rounded-xl border p-5 shadow-card ${s.alert ? "border-amber-200" : "border-gray-200"}`}>
-            <p className="text-[11px] text-gray-400 uppercase tracking-widest mb-3 font-medium">{s.label}</p>
-            <p className={`text-3xl font-semibold leading-none mb-1 ${s.alert ? "text-amber-600" : "text-charcoal"}`}>{s.value}</p>
-            <p className="text-[11px] text-gray-400">{s.sub}</p>
-          </div>
-        ))}
+        <div className="stat-card-navy">
+          <p className="text-[11px] text-navy/50 uppercase tracking-widest mb-3 font-semibold">Total Listings</p>
+          <p className="text-3xl font-semibold leading-none mb-1 text-navy">{stats.total}</p>
+          <p className="text-[11px] text-navy/40">all time</p>
+        </div>
+        <div className={stats.pending > 0 ? "rounded-xl p-5 border border-amber-200 bg-amber-50" : "stat-card"}>
+          <p className={`text-[11px] uppercase tracking-widest mb-3 font-semibold ${stats.pending > 0 ? "text-amber-600" : "text-gray-400"}`}>Pending Review</p>
+          <p className={`text-3xl font-semibold leading-none mb-1 ${stats.pending > 0 ? "text-amber-600" : "text-charcoal"}`}>{stats.pending}</p>
+          <p className={`text-[11px] ${stats.pending > 0 ? "text-amber-500" : "text-gray-400"}`}>need action</p>
+        </div>
+        <div className="stat-card-green">
+          <p className="text-[11px] text-emerald-600/60 uppercase tracking-widest mb-3 font-semibold">Active Shoots</p>
+          <p className="text-3xl font-semibold leading-none mb-1 text-emerald-700">{stats.confirmed}</p>
+          <p className="text-[11px] text-emerald-600/50">confirmed</p>
+        </div>
+        <div className="stat-card-gold">
+          <p className="text-[11px] text-[#A8843F]/60 uppercase tracking-widest mb-3 font-semibold">Revenue</p>
+          <p className="text-3xl font-semibold leading-none mb-1 text-[#A8843F]">${stats.revenue.toLocaleString()}</p>
+          <p className="text-[11px] text-[#A8843F]/50">collected</p>
+        </div>
       </div>
 
       {/* Recent listings */}

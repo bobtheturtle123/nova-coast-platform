@@ -62,7 +62,7 @@ function TeamGroupModal({ group, allAgents, onClose, onSaved }) {
             <label className="label-field">Team Name</label>
             <input type="text" value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="input-field w-full" placeholder="e.g. Barry Team, Miami VIPs" required />
+              className="input-field w-full" placeholder="e.g. RE/MAX Group, Coastal Agents" required />
           </div>
           <div>
             <label className="label-field">Notes</label>
