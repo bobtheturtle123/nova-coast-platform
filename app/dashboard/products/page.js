@@ -51,6 +51,8 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
     showWith:     item?.showWith     || [],
     isTwilight:   item?.isTwilight   || false,
     assignedPhotographers: item?.assignedPhotographers || [],
+    payRate:      item?.payRate      ?? "",
+    payRateTiers: item?.payRateTiers || {},
   }));
   const [saving,      setSaving]      = useState(false);
   const [deleting,    setDeleting]    = useState(false);
@@ -143,6 +145,8 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
       ...(type === "packages" ? { tagline: form.tagline, deliverables: form.deliverables, featured: form.featured, includes: form.includes } : {}),
       ...(type === "addons" ? { showWith: form.showWith } : {}),
       ...((type === "services" || type === "packages") ? { isTwilight: form.isTwilight } : {}),
+      payRate:      form.payRate !== "" ? Number(form.payRate) : null,
+      payRateTiers: form.tiered && Object.keys(form.payRateTiers).length > 0 ? form.payRateTiers : null,
     };
     await onSave(payload, type);
     setSaving(false);
@@ -391,6 +395,43 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                           <span className="text-gray-400 text-sm">$</span>
                           <input type="number" value={form.priceTiers[tier.name] || ""}
                             onChange={(e) => setForm((f) => ({ ...f, priceTiers: { ...f.priceTiers, [tier.name]: Number(e.target.value) || 0 } }))}
+                            min="0" step="1" className="input-field py-1.5 text-sm w-full" placeholder="0" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()
+            )}
+          </div>
+
+          {/* Photographer pay rate */}
+          <div>
+            <label className="label-field">Photographer Pay Rate</label>
+            <p className="text-xs text-gray-500 mb-2">
+              Flat pay per booking for this {TYPE_META[type].singular.toLowerCase()}. Leave blank to use the global hourly rate.
+            </p>
+            {!form.tiered ? (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400">$</span>
+                <input type="number" value={form.payRate} min="0" step="1" placeholder="e.g. 80"
+                  onChange={(e) => setForm((f) => ({ ...f, payRate: e.target.value }))}
+                  className="input-field w-40" />
+                <span className="text-xs text-gray-400">per booking</span>
+              </div>
+            ) : (
+              (() => {
+                const tiers = pricingConfig?.tiers?.length ? pricingConfig.tiers : [];
+                if (tiers.length === 0) return null;
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {tiers.map((tier) => (
+                      <div key={tier.name}>
+                        <label className="block text-xs text-gray-500 mb-1">{tier.label || tier.name}</label>
+                        <div className="flex items-center gap-1">
+                          <span className="text-gray-400 text-sm">$</span>
+                          <input type="number" value={form.payRateTiers[tier.name] || ""}
+                            onChange={(e) => setForm((f) => ({ ...f, payRateTiers: { ...f.payRateTiers, [tier.name]: Number(e.target.value) || 0 } }))}
                             min="0" step="1" className="input-field py-1.5 text-sm w-full" placeholder="0" />
                         </div>
                       </div>

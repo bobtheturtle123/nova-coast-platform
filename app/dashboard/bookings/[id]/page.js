@@ -180,9 +180,14 @@ export default function BookingDetailPage() {
             notes:             bookingData.booking.costs.notes             || "",
           });
         } else if (tenantData?.tenant?.costRates) {
-          // No costs saved yet — seed from global rates
+          // No costs saved yet — seed from global rates + product pay rate
           const cr = tenantData.tenant.costRates;
-          setCosts((prev) => ({ ...prev, otherCosts: cr.otherFlat || 0 }));
+          const suggestedPay = bookingData.booking.suggestedShooterPay;
+          setCosts((prev) => ({
+            ...prev,
+            shooterFee: suggestedPay != null ? suggestedPay : prev.shooterFee,
+            otherCosts: cr.otherFlat || 0,
+          }));
         }
       }
       if (tenantData) {

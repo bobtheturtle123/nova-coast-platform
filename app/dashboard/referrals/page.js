@@ -1,0 +1,214 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { auth } from "@/lib/firebase";
+
+const STATUS_META = {
+  rewarded: { label: "Rewarded",      cls: "bg-green-50 text-green-700 border-green-200" },
+  pending:  { label: "Pending payment", cls: "bg-amber-50 text-amber-600 border-amber-200" },
+  blocked:  { label: "Blocked",        cls: "bg-red-50 text-red-500 border-red-200" },
+};
+
+const BLOCKED_LABELS = {
+  self_referral:       "Self-referral",
+  same_payment_method: "Same payment method",
+  monthly_cap_exceeded: "Monthly cap reached",
+};
+
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+  return (
+    <button onClick={copy}
+      className={`text-xs px-3 py-1.5 rounded-sm border transition-all font-medium flex-shrink-0 ${
+        copied ? "bg-green-50 border-green-200 text-green-700" : "border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy"
+      }`}>
+      {copied ? "Copied!" : "Copy"}
+    </button>
+  );
+}
+
+function ShareButton({ referralUrl }) {
+  const subject = encodeURIComponent("Try ShootFlow — real estate photography business software");
+  const body    = encodeURIComponent(
+    `Hey,\n\nI've been using ShootFlow to manage my real estate photography bookings and payments. Thought you might find it useful too.\n\nSign up with my link and we both get $20 in account credit:\n${referralUrl}\n\nNo credit card required to start.`
+  );
+  return (
+    <a href={`mailto:?subject=${subject}&body=${body}`}
+      className="text-xs px-3 py-1.5 rounded-sm border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium flex-shrink-0">
+      Share via Email
+    </a>
+  );
+}
+
+export default function ReferralsPage() {
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    auth.currentUser?.getIdToken().then(async (token) => {
+      const res = await fetch("/api/dashboard/referrals", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) { const d = await res.json(); setData(d); }
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) return (
+    <div className="p-8 flex justify-center">
+      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+    </div>
+  );
+
+  const appUrl      = typeof window !== "undefined" ? window.location.origin : "https://shootflow.app";
+  const referralUrl = data?.referralCode ? `${appUrl}/ref/${data.referralCode}` : null;
+  const creditsDollars = Math.floor((data?.creditsCents || 0) / 100);
+  const referrals   = data?.referrals || [];
+
+  return (
+    <div className="p-8 max-w-2xl">
+      <div className="mb-8">
+        <h1 className="font-display text-2xl text-navy mb-1">Refer &amp; Earn</h1>
+        <p className="text-gray-500 text-sm">
+          Invite other photographers. When they subscribe, you both get $20 in account credit.
+        </p>
+      </div>
+
+      {/* Credit summary cards */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-white border border-gray-100 rounded-xl p-5">
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Credits Earned</p>
+          <p className="text-2xl font-semibold text-navy">${creditsDollars}</p>
+          <p className="text-xs text-gray-400 mt-0.5">applied to billing</p>
+        </div>
+        <div className="bg-white border border-gray-100 rounded-xl p-5">
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Successful</p>
+          <p className="text-2xl font-semibold text-navy">{data?.totalRewarded ?? 0}</p>
+          <p className="text-xs text-gray-400 mt-0.5">paying referrals</p>
+        </div>
+        <div className="bg-white border border-gray-100 rounded-xl p-5">
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Pending</p>
+          <p className="text-2xl font-semibold text-navy">{data?.totalPending ?? 0}</p>
+          <p className="text-xs text-gray-400 mt-0.5">awaiting payment</p>
+        </div>
+      </div>
+
+      {/* Referral link */}
+      <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
+        <h2 className="font-semibold text-charcoal text-sm mb-1">Your Referral Link</h2>
+        <p className="text-xs text-gray-400 mb-4">
+          Share this link. Credit is applied automatically when the person subscribes.
+        </p>
+
+        {referralUrl ? (
+          <>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex-1 bg-gray-50 border border-gray-200 rounded-sm px-3 py-2.5 font-mono text-sm text-gray-700 truncate">
+                {referralUrl}
+              </div>
+              <CopyButton text={referralUrl} />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <ShareButton referralUrl={referralUrl} />
+              <a
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Running your real estate photography business on ShootFlow. Sign up with my link and we both get $20:\n${referralUrl}`)}`}
+                target="_blank" rel="noopener noreferrer"
+                className="text-xs px-3 py-1.5 rounded-sm border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
+                Share on X
+              </a>
+            </div>
+          </>
+        ) : (
+          <div className="bg-amber-50 border border-amber-200 rounded-sm p-3 text-sm text-amber-700">
+            Your referral link is being generated. Refresh in a moment.
+          </div>
+        )}
+      </div>
+
+      {/* How it works */}
+      <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
+        <h2 className="font-semibold text-charcoal text-sm mb-4">How it works</h2>
+        <div className="space-y-3">
+          {[
+            { n: "1", title: "Share your link",    desc: "Send it to photographers who might benefit from ShootFlow." },
+            { n: "2", title: "They sign up",        desc: "They register using your link. No credit card required to start." },
+            { n: "3", title: "They subscribe",      desc: "When they complete their first paid subscription, the reward triggers." },
+            { n: "4", title: "Both get $20 credit", desc: "Credit is applied automatically to the next invoice. No action needed." },
+          ].map(({ n, title, desc }) => (
+            <div key={n} className="flex items-start gap-3">
+              <div className="w-6 h-6 rounded-full bg-navy text-white flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                {n}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-charcoal">{title}</p>
+                <p className="text-xs text-gray-400">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-400 space-y-1">
+          <p>Credits reduce your next invoice automatically. They cannot be withdrawn as cash.</p>
+          <p>Maximum $200 in credits per month. Credits do not expire.</p>
+        </div>
+      </div>
+
+      {/* Referral history */}
+      {referrals.length > 0 && (
+        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="font-semibold text-charcoal text-sm">Referral History</h2>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {referrals.map((r) => {
+              const meta      = STATUS_META[r.status] || STATUS_META.pending;
+              const date      = r.rewardedAt || r.signedUpAt;
+              const dateLabel = date
+                ? new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                : null;
+              const blockedLabel = r.blockedReason ? BLOCKED_LABELS[r.blockedReason] : null;
+
+              return (
+                <div key={r.id} className="flex items-center justify-between px-6 py-3.5 gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-charcoal font-medium truncate">
+                      {r.refereeEmail || "Unknown"}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {r.status === "rewarded"
+                        ? `Rewarded ${dateLabel}`
+                        : r.status === "blocked" && blockedLabel
+                        ? `Blocked: ${blockedLabel}`
+                        : `Signed up ${dateLabel}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    {r.status === "rewarded" && (
+                      <span className="text-sm font-semibold text-green-700">+$20</span>
+                    )}
+                    <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${meta.cls}`}>
+                      {meta.label}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {referrals.length === 0 && (
+        <div className="bg-gray-50 border border-gray-100 rounded-xl p-8 text-center">
+          <p className="text-3xl mb-3">🔗</p>
+          <p className="text-sm font-medium text-charcoal mb-1">No referrals yet</p>
+          <p className="text-xs text-gray-400">Share your link above to start earning credit.</p>
+        </div>
+      )}
+    </div>
+  );
+}

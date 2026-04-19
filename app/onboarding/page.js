@@ -145,21 +145,7 @@ export default function OnboardingPage() {
         {step === 0 && (
           <div>
             <h1 className="font-display text-3xl text-navy mb-2">Welcome to ShootFlow</h1>
-            <p className="text-gray-500 mb-5">We'll have your real estate photography business ready to take bookings in just a few minutes.</p>
-
-            {/* Quick workflow overview */}
-            <div className="bg-navy/5 border border-navy/10 rounded-sm p-4 mb-6 text-sm text-navy/80">
-              <p className="font-semibold text-navy mb-2 text-xs uppercase tracking-wide">Here's how it works after setup:</p>
-              <ol className="space-y-1 list-decimal list-inside text-xs text-gray-600">
-                <li>Add your <strong>services & pricing</strong> in Products</li>
-                <li>Clients book via your <strong>booking link</strong> (or you create bookings manually)</li>
-                <li>After the shoot, <strong>upload photos</strong> to the gallery</li>
-                <li><strong>Deliver the gallery</strong> — clients get a private link to download their files</li>
-                <li>Agents get built-in <strong>marketing tools</strong>: brochure, social captions, property website</li>
-              </ol>
-            </div>
-
-            <p className="text-gray-500 mb-4 text-sm">First, tell us a bit about your business:</p>
+            <p className="text-gray-500 mb-6">Let's get a few basics in place so we can configure your account correctly.</p>
             <div className="bg-white rounded-sm border border-gray-200 p-6 space-y-5">
               <div>
                 <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">Phone Number</label>
@@ -270,10 +256,15 @@ export default function OnboardingPage() {
                   </div>
                 ))}
               </div>
-              <div className="mt-5 pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-600">
-                  You can set up service areas anytime from <strong>Dashboard → Settings → Service Areas</strong>. It only takes a couple of minutes.
-                </p>
+              <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
+                <p className="text-xs text-gray-500">Opens in a new tab — your progress here is saved.</p>
+                <Link
+                  href="/dashboard/service-areas"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5 transition-colors">
+                  Set Up Service Areas ↗
+                </Link>
               </div>
             </div>
             <div className="flex gap-3 mt-2">
@@ -289,31 +280,9 @@ export default function OnboardingPage() {
           <div className="text-center">
             <div className="text-6xl mb-6">🚀</div>
             <h1 className="font-display text-3xl text-navy mb-3">You&apos;re all set!</h1>
-            <p className="text-gray-500 mb-6">
-              Your booking page is live and ready to share with clients.
+            <p className="text-gray-500 mb-8">
+              Your account is ready. Add your services and share your booking link to start taking jobs.
             </p>
-
-            {/* Workflow overview */}
-            <div className="bg-white border border-gray-200 rounded-sm p-5 mb-6 text-left">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">How ShootFlow works — the typical flow</p>
-              <div className="space-y-3">
-                {[
-                  { step: "1", icon: "⚙️", label: "Set up your services & pricing", desc: "Go to Products → add your packages, services, and add-ons. Clients will choose these during booking." },
-                  { step: "2", icon: "📅", label: "Receive a booking", desc: "Clients book via your booking page link or the embeddable form on your website. Or you can create a manual booking from the dashboard." },
-                  { step: "3", icon: "📸", label: "Shoot the property", desc: "Your team gets notified. After the shoot, upload photos/videos directly to the gallery for that booking." },
-                  { step: "4", icon: "🖼️", label: "Deliver the gallery", desc: "Go to the booking → Open Gallery → upload media → click Deliver to Client. They get an email with their private gallery link." },
-                  { step: "5", icon: "🏡", label: "Agent gets their marketing tools", desc: "Agents can view photos, download for MLS, generate social captions, view the property website, and share a brochure — all from one link." },
-                ].map((item) => (
-                  <div key={item.step} className="flex items-start gap-3">
-                    <div className="w-7 h-7 rounded-full bg-navy/10 text-navy text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{item.step}</div>
-                    <div>
-                      <p className="text-sm font-medium text-charcoal">{item.icon} {item.label}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
 
             {slug && (
               <div className="bg-white border border-gray-200 rounded-sm p-4 mb-6 text-left">

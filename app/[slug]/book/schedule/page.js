@@ -55,6 +55,7 @@ export default function TenantSchedulePage() {
   const [slots,        setSlots]        = useState(null);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [availMode,    setAvailMode]    = useState("slots");
+  const [workingDays,  setWorkingDays]  = useState(["mon","tue","wed","thu","fri"]);
   const [catalog,      setCatalog]      = useState(null);
   const [sunsetTime,   setSunsetTime]   = useState(null);
   const [sunsetLoading,setSunsetLoading]= useState(false);
@@ -73,6 +74,7 @@ export default function TenantSchedulePage() {
         setCatalog(data);
         const av = data.bookingConfig?.availability;
         if (av?.mode) setAvailMode(av.mode);
+        if (av?.businessHours?.days?.length) setWorkingDays(av.businessHours.days);
       })
       .catch(() => {});
   }, [slug]);
@@ -212,16 +214,20 @@ export default function TenantSchedulePage() {
                 if (!day) return <div key={`e-${i}`} />;
                 const cellDate = new Date(calYear, calMonth, day);
                 cellDate.setHours(0, 0, 0, 0);
+                const DAY_KEYS  = ["sun","mon","tue","wed","thu","fri","sat"];
+                const dayKey    = DAY_KEYS[cellDate.getDay()];
                 const isPast     = cellDate < today;
+                const isOffDay   = !workingDays.includes(dayKey);
+                const isDisabled = isPast || isOffDay;
                 const isToday    = cellDate.getTime() === today.getTime();
                 const isSelected = selectedYear === calYear && selectedMonth === calMonth && selectedDay === day;
                 return (
-                  <button key={day} onClick={() => selectDay(day)} disabled={isPast}
+                  <button key={day} onClick={() => selectDay(day)} disabled={isDisabled}
                     className={`relative mx-auto w-9 h-9 rounded-full text-sm transition-all duration-100 font-medium
-                      ${isPast ? "text-gray-200 cursor-not-allowed" : "cursor-pointer"}
+                      ${isDisabled ? "text-gray-200 cursor-not-allowed" : "cursor-pointer"}
                       ${isSelected ? "bg-navy text-white shadow-sm"
                         : isToday  ? "border border-navy/30 text-navy hover:bg-navy/5"
-                        : !isPast  ? "text-charcoal hover:bg-navy/8" : ""}`}>
+                        : !isDisabled ? "text-charcoal hover:bg-navy/8" : ""}`}>
                     {day}
                     {isToday && !isSelected && (
                       <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-navy/40" />

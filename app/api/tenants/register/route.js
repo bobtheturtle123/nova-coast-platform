@@ -2,6 +2,7 @@ import { adminAuth } from "@/lib/firebase-admin";
 import { createTenant, toSlug, isSlugTaken } from "@/lib/tenants";
 import { sendWelcomeEmail } from "@/lib/email";
 import { rateLimit } from "@/lib/rateLimit";
+import { generateReferralCode, getTenantByReferralCode, createReferralRecord } from "@/lib/referral";
 
 export async function POST(req) {
   // 3 registrations per IP per hour — prevents account spam
@@ -31,8 +32,22 @@ export async function POST(req) {
       slug = `${toSlug(businessName)}-${attempt}`;
     }
 
+    // Referral attribution — read cookie set by /ref/[code]
+    const refCode    = req.cookies.get("shootflow_ref")?.value || null;
+    const referrer   = refCode ? await getTenantByReferralCode(refCode).catch(() => null) : null;
+    const referredBy = referrer?.id || null;
+
+    // Generate this new tenant's own referral code
+    const referralCode = generateReferralCode(businessName);
+
     // Create tenant + seed subcollections + set custom claims
-    const tenantId = await createTenant({ uid, email, businessName, slug });
+    const tenantId = await createTenant({ uid, email, businessName, slug, referralCode, referredBy });
+
+    // Record referral relationship (status: pending until first payment)
+    if (referredBy && referredBy !== tenantId) {
+      createReferralRecord({ referrerId: referredBy, refereeId: tenantId, refereeEmail: email })
+        .catch(console.error);
+    }
 
     // Send welcome email (non-blocking)
     sendWelcomeEmail({ email, businessName, slug }).catch(console.error);

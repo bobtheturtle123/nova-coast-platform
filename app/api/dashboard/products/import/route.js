@@ -37,25 +37,40 @@ export async function POST(req) {
     return html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
+      .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, "")
+      .replace(/<\/(?:p|div|li|h[1-6]|section|article|tr|td|th|br)[^>]*>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
       .replace(/&nbsp;/gi, " ")
       .replace(/&amp;/gi, "&")
       .replace(/&lt;/gi, "<")
       .replace(/&gt;/gi, ">")
-      .replace(/\s{3,}/g, "\n")
+      .replace(/&#\d+;/g, " ")
+      .replace(/[ \t]{3,}/g, "  ")
+      .replace(/\n{4,}/g, "\n\n")
       .trim();
   }
 
   // If URL mode, fetch the page content
   if (mode === "url") {
     try {
-      const res = await fetch(content, {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; ShootFlow/1.0)" },
-        signal:  AbortSignal.timeout(8000),
+      const fetchRes = await fetch(content, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+        redirect: "follow",
+        signal: AbortSignal.timeout(10000),
       });
-      const html = await res.text();
-      text = stripHtml(html).slice(0, 6000);
-    } catch {
+      if (!fetchRes.ok) {
+        return Response.json({ error: `Could not fetch URL (HTTP ${fetchRes.status}). Try pasting the pricing text instead.` }, { status: 400 });
+      }
+      const html = await fetchRes.text();
+      text = stripHtml(html).slice(0, 8000);
+      if (text.trim().length < 50) {
+        return Response.json({ error: "Page content too short to parse. Try pasting the pricing text instead." }, { status: 400 });
+      }
+    } catch (err) {
       return Response.json({ error: "Could not fetch URL. Try pasting the pricing text instead." }, { status: 400 });
     }
   }

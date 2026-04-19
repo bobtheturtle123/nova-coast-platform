@@ -1,6 +1,6 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug, getTenantCatalog } from "@/lib/tenants";
-import { calculateTenantPrice } from "@/lib/catalogUtils";
+import { calculateTenantPrice, getSqftTier } from "@/lib/catalogUtils";
 import { createConnectedPaymentIntent } from "@/lib/stripe";
 import { sendBookingConfirmation } from "@/lib/email";
 import { v4 as uuidv4 } from "uuid";
@@ -85,6 +85,27 @@ export async function POST(req, { params }) {
 
     const remainingBalance = isFullPayment ? 0 : pricing.balance;
 
+    // Resolve suggested photographer pay from product pay rates
+    const sqftTier = getSqftTier(squareFootage || 0, catalog.pricingConfig);
+    function getItemPayRate(item) {
+      if (!item) return null;
+      if (item.payRateTiers && sqftTier && item.payRateTiers[sqftTier] != null) return item.payRateTiers[sqftTier];
+      if (item.payRate != null) return item.payRate;
+      return null;
+    }
+    let suggestedShooterPay = null;
+    if (packageId) {
+      const pkg = (catalog.packages || []).find((p) => p.id === packageId);
+      suggestedShooterPay = getItemPayRate(pkg);
+    } else if ((serviceIds || []).length > 0) {
+      const total = (serviceIds || []).reduce((sum, sid) => {
+        const svc = (catalog.services || []).find((s) => s.id === sid);
+        const r = getItemPayRate(svc);
+        return sum + (r != null ? r : 0);
+      }, 0);
+      if (total > 0) suggestedShooterPay = total;
+    }
+
     // Save booking to tenant subcollection
     await adminDb
       .collection("tenants")
@@ -126,6 +147,7 @@ export async function POST(req, { params }) {
         twilightTime:          twilightTime  || null,
         customFields:          customFields  || {},
         photographerId:        preferredPhotographerId || null,
+        suggestedShooterPay:   suggestedShooterPay,
         shootDate:             null,
         galleryId:             null,
         galleryUnlocked:       false,

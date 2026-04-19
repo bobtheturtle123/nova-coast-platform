@@ -5,6 +5,7 @@ import { sendBookingCreatedNotifications } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { syncBookingToQB } from "@/lib/quickbooks";
 import { sendBookingConfirmedSms } from "@/lib/sms";
+import { getTenantByStripeCustomerId, triggerReferralReward } from "@/lib/referral";
 
 export const dynamic = "force-dynamic";
 
@@ -140,6 +141,22 @@ export async function POST(req) {
           .collection("tenants").doc(tenantId)
           .collection("bookings").doc(bookingId)
           .update({ status: "payment_failed" });
+        break;
+      }
+
+      // Referral reward — fires on first successful subscription payment only
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object;
+        if (invoice.billing_reason !== "subscription_create") break;
+        if (!invoice.customer) break;
+        try {
+          const refereeTenant = await getTenantByStripeCustomerId(invoice.customer);
+          if (refereeTenant?.referredBy) {
+            await triggerReferralReward(refereeTenant.id, invoice.payment_intent || invoice.id);
+          }
+        } catch (err) {
+          console.error("Referral reward error:", err.message);
+        }
         break;
       }
 

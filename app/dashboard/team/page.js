@@ -883,7 +883,7 @@ export default function TeamPage() {
                         const dayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
                         const dayBlocks = timeBlocks.filter((b) => {
                           const startStr = (b.startDate || "").slice(0, 10);
-                          const endStr   = (b.endDate   || "").slice(0, 10);
+                          const endStr   = (b.endDate || b.startDate || "").slice(0, 10);
                           return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
                         });
                         return (
@@ -1003,8 +1003,8 @@ export default function TeamPage() {
                   : dayEvents.filter((e) => e.photographerId === filterMember);
                 const dayBlocks = timeBlocks.filter((b) => {
                   const startStr = (b.startDate || "").slice(0, 10);
-                  const endStr   = (b.endDate   || "").slice(0, 10);
-                  const memberMatch = filterMember === "all" ? (!b.memberId || true) : (!b.memberId || b.memberId === filterMember);
+                  const endStr   = (b.endDate || b.startDate || "").slice(0, 10);
+                  const memberMatch = filterMember === "all" ? true : (!b.memberId || b.memberId === filterMember);
                   return dayStr >= startStr && dayStr <= endStr && memberMatch;
                 });
                 const hasBlocks = dayBlocks.length > 0;
@@ -1055,7 +1055,7 @@ export default function TeamPage() {
                   );
                   const dayBlocks = timeBlocks.filter((b) => {
                     const startStr = (b.startDate || "").slice(0, 10);
-                    const endStr   = (b.endDate   || "").slice(0, 10);
+                    const endStr   = (b.endDate || b.startDate || "").slice(0, 10);
                     return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
                   });
                   const isBlocked = dayBlocks.length > 0;

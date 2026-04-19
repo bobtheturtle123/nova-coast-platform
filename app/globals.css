@@ -127,7 +127,7 @@
 
   /* ── Form labels ─────────────────────────────────────────────────────── */
   .label-field {
-    @apply block text-[11px] font-semibold text-gray-500 uppercase tracking-[0.07em] mb-1.5;
+    @apply block text-[11px] font-semibold text-gray-600 uppercase tracking-[0.07em] mb-1.5;
   }
 
   /* ── Divider ─────────────────────────────────────────────────────────── */
@@ -172,7 +172,7 @@
   }
 
   .page-subtitle {
-    @apply text-sm text-gray-500 mt-1;
+    @apply text-sm text-gray-600 mt-1;
   }
 
   /* ── Stat / metric cards ─────────────────────────────────────────────── */

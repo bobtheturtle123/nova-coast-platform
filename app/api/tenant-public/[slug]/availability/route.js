@@ -25,9 +25,17 @@ export async function GET(req, { params }) {
   const mode        = avail.mode           || "slots";
   const start       = avail.businessHours?.start || "08:00";
   const end         = avail.businessHours?.end   || "18:00";
+  const workingDays = avail.businessHours?.days  || ["mon","tue","wed","thu","fri"];
   const intervalMin = Number(avail.intervalMinutes) || 30;
   const durationMin = Number(avail.defaultDuration) || 120;
   const bufferMin   = Number(avail.bufferMinutes)   || 30;
+
+  // Check if the requested date falls on a working day
+  const DAY_KEYS = ["sun","mon","tue","wed","thu","fri","sat"];
+  const requestedDayKey = DAY_KEYS[new Date(date + "T12:00:00").getDay()];
+  if (!workingDays.includes(requestedDayKey)) {
+    return Response.json({ slots: [] });
+  }
 
   // Build all candidate slots within business hours
   const allSlots = buildSlots(start, end, intervalMin);
