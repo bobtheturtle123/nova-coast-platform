@@ -149,10 +149,31 @@ export async function POST(req) {
         const sub = event.data.object;
         const tenantId = sub.metadata?.tenantId;
         if (!tenantId) break;
+
+        const { ADDON_PRICE_IDS } = await import("@/lib/stripe");
+
+        // Tally add-ons from subscription line items
+        let addonListings = 0;
+        let addonSeats    = 0;
+        let hasByop       = false;
+
+        for (const item of sub.items?.data || []) {
+          const priceId = item.price?.id;
+          const qty     = item.quantity || 1;
+          if (!priceId) continue;
+          if (priceId === ADDON_PRICE_IDS.listings25) addonListings += 25 * qty;
+          if (priceId === ADDON_PRICE_IDS.listings50)  addonListings += 50 * qty;
+          if (priceId === ADDON_PRICE_IDS.extraSeat)  addonSeats    += qty;
+          if (priceId === ADDON_PRICE_IDS.byop)        hasByop        = true;
+        }
+
         await adminDb.collection("tenants").doc(tenantId).update({
           stripeSubscriptionId: sub.id,
           subscriptionStatus:   sub.status,
-          subscriptionPlan:     sub.metadata?.plan || "starter",
+          subscriptionPlan:     sub.metadata?.plan || "solo",
+          byop:                 hasByop,
+          addonListings,
+          addonSeats,
         });
         break;
       }
@@ -163,6 +184,9 @@ export async function POST(req) {
         if (!tenantId) break;
         await adminDb.collection("tenants").doc(tenantId).update({
           subscriptionStatus: "canceled",
+          byop:               false,
+          addonListings:      0,
+          addonSeats:         0,
         });
         break;
       }

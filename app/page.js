@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PricingSection from "@/components/PricingSection";
 
 export const metadata = {
   title: "NovaOS — The all-in-one platform for real estate photographers",
@@ -126,55 +127,7 @@ export default function MarketingPage() {
       </section>
 
       {/* PRICING */}
-      <section id="pricing" className="py-24 px-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="font-display text-4xl text-navy mb-4">Simple, transparent pricing</h2>
-            <p className="text-gray-500 mb-2">All plans include a 14-day free trial. No credit card required to start.</p>
-            <p className="text-gold font-medium text-sm">Most photographers cover their subscription with a single booking.</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {PLANS.map((plan) => (
-              <div key={plan.name}
-                className={`p-8 rounded-sm border ${plan.featured
-                  ? "border-navy bg-navy text-white"
-                  : "border-gray-200 bg-white"}`}>
-                {plan.featured && (
-                  <span className="text-xs text-gold tracking-widest uppercase block mb-2">Most Popular</span>
-                )}
-                <h3 className={`font-display text-2xl mb-1 ${plan.featured ? "text-white" : "text-navy"}`}>
-                  {plan.name}
-                </h3>
-                <div className="flex items-end gap-1 my-4">
-                  <span className={`text-4xl font-bold ${plan.featured ? "text-white" : "text-navy"}`}>
-                    ${plan.price}
-                  </span>
-                  <span className={`text-sm mb-1 ${plan.featured ? "text-white/60" : "text-gray-400"}`}>/mo</span>
-                </div>
-                <p className={`text-sm mb-6 ${plan.featured ? "text-white/70" : "text-gray-500"}`}>{plan.desc}</p>
-                <ul className="space-y-2 mb-8">
-                  {plan.features.map((f) => (
-                    <li key={f} className={`text-sm flex items-start gap-2 ${plan.featured ? "text-white/80" : "text-gray-600"}`}>
-                      <span className={plan.featured ? "text-gold" : "text-navy"}>✓</span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/auth/register"
-                  className={`block text-center py-3 px-6 rounded-sm text-sm font-semibold transition-colors
-                    ${plan.featured
-                      ? "bg-gold text-navy hover:bg-gold/90"
-                      : "bg-navy text-white hover:bg-navy/90"}`}>
-                  Start free trial
-                </Link>
-              </div>
-            ))}
-          </div>
-          <p className="text-center text-gray-400 text-sm mt-8">
-            + 1.5% platform fee per booking transaction (covers Stripe Connect processing)
-          </p>
-        </div>
-      </section>
+      <PricingSection />
 
       {/* CTA */}
       <section className="bg-navy py-20 px-6 text-center">
@@ -220,20 +173,3 @@ const STEPS = [
   { title: "Share your booking link", desc: "Send agents your unique link. They book, pay a deposit, and you confirm the shoot." },
 ];
 
-const PLANS = [
-  {
-    name: "Starter", price: 39, featured: false,
-    desc: "Perfect for solo photographers just getting started.",
-    features: ["Up to 30 bookings/month", "1 team member", "Branded booking page", "Stripe Connect payouts", "Media galleries", "Email notifications"],
-  },
-  {
-    name: "Pro", price: 79, featured: true,
-    desc: "For growing photographers who need more capacity.",
-    features: ["Up to 150 bookings/month", "5 team members", "Branded booking page", "Stripe Connect payouts", "Media galleries", "Priority email support", "Custom domain"],
-  },
-  {
-    name: "Studio", price: 149, featured: false,
-    desc: "Multi-photographer studios with unlimited volume.",
-    features: ["Unlimited bookings", "25 team members", "Branded booking page", "Stripe Connect payouts", "Media galleries", "Priority support", "Custom domain", "White-label emails"],
-  },
-];

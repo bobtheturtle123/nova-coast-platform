@@ -8,7 +8,6 @@ import Link from "next/link";
 
 const STEPS = [
   { id: "business",  label: "Business",    icon: "🏢" },
-  { id: "services",  label: "Services",    icon: "💼" },
   { id: "stripe",    label: "Payments",    icon: "💳" },
   { id: "team",      label: "Invite Team", icon: "👥" },
   { id: "areas",     label: "Service Areas", icon: "🗺️" },
@@ -25,8 +24,6 @@ export default function OnboardingPage() {
 
   // Step state
   const [business,    setBusiness]    = useState({ phone: "", fromZip: "" });
-  const [newService,  setNewService]  = useState({ name: "", price: "", type: "services" });
-  const [serviceSaved, setServiceSaved] = useState(false);
   const [inviteEmails, setInviteEmails] = useState([""]);
   const [inviteSent, setInviteSent] = useState(false);
   const [slug, setSlug] = useState("");
@@ -47,7 +44,7 @@ export default function OnboardingPage() {
         const d = await res.json();
         if (d.tenant?.slug) setSlug(d.tenant.slug);
         // Only skip ahead if they've already saved business info (returning user)
-        if (d.tenant?.phone && step === 0) setStep(2);
+        if (d.tenant?.phone && step === 0) setStep(1);
       }
     });
     return unsub;
@@ -70,27 +67,6 @@ export default function OnboardingPage() {
       if (!res.ok) throw new Error("Failed to save");
       next();
     } catch { setError("Failed to save. Please try again."); }
-    finally { setSaving(false); }
-  }
-
-  async function saveService() {
-    if (!newService.name.trim()) { next(); return; }
-    setSaving(true); setError("");
-    try {
-      const token = await user.getIdToken(true);
-      const res = await fetch(`/api/dashboard/products?type=${newService.type}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          name:   newService.name.trim(),
-          price:  Number(newService.price) || 0,
-          active: true,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-      setServiceSaved(true);
-      setTimeout(() => next(), 900);
-    } catch { setError("Failed to save. You can add services later in Products."); next(); }
     finally { setSaving(false); }
   }
 
@@ -208,37 +184,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── STEP 1: First Service ──────────────────────────────────────────── */}
+        {/* ── STEP 1: Stripe ─────────────────────────────────────────────────── */}
         {step === 1 && (
-          <div>
-            <h1 className="font-display text-3xl text-navy mb-2">Add your first service</h1>
-            <p className="text-gray-500 mb-6">Just give it a name and a starting price — you can customize tiers, descriptions, and add more later from Products.</p>
-            <div className="bg-white rounded-sm border border-gray-200 p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">Service Name</label>
-                <input type="text" value={newService.name}
-                  onChange={(e) => setNewService((s) => ({ ...s, name: e.target.value }))}
-                  className="input-field w-full" placeholder="Real Estate Photography" autoFocus />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">Starting Price ($)</label>
-                <input type="number" value={newService.price} min={0} step={1}
-                  onChange={(e) => setNewService((s) => ({ ...s, price: e.target.value }))}
-                  className="input-field w-full" placeholder="299" />
-              </div>
-              {serviceSaved && <p className="text-sm text-green-700">✓ Service saved!</p>}
-            </div>
-            <div className="flex gap-3 mt-5">
-              <button onClick={prev} className="btn-outline px-6 py-3">← Back</button>
-              <button onClick={saveService} disabled={saving} className="btn-primary px-8 py-3 flex-1">
-                {saving ? "Saving…" : newService.name.trim() ? "Save & Continue →" : "Skip for now →"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 2: Stripe ─────────────────────────────────────────────────── */}
-        {step === 2 && (
           <div>
             <h1 className="font-display text-3xl text-navy mb-2">Connect Stripe to get paid</h1>
             <p className="text-gray-500 mb-8">Deposits and balance payments go directly to your bank. We charge a 1.5% platform fee per transaction.</p>
@@ -267,8 +214,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── STEP 3: Invite Team ────────────────────────────────────────────── */}
-        {step === 3 && (
+        {/* ── STEP 2: Invite Team ────────────────────────────────────────────── */}
+        {step === 2 && (
           <div>
             <h1 className="font-display text-3xl text-navy mb-2">Invite your photographers</h1>
             <p className="text-gray-500 mb-8">They'll get a link to join your team and set up calendar sync. You can invite more later.</p>
@@ -300,8 +247,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── STEP 4: Service Areas ──────────────────────────────────────────── */}
-        {step === 4 && (
+        {/* ── STEP 3: Service Areas ──────────────────────────────────────────── */}
+        {step === 3 && (
           <div>
             <h1 className="font-display text-3xl text-navy mb-2">Define where you work</h1>
             <p className="text-gray-600 mb-6">
@@ -337,8 +284,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── STEP 5: Done ───────────────────────────────────────────────────── */}
-        {step === 5 && (
+        {/* ── STEP 4: Done ───────────────────────────────────────────────────── */}
+        {step === 4 && (
           <div className="text-center">
             <div className="text-6xl mb-6">🚀</div>
             <h1 className="font-display text-3xl text-navy mb-3">You&apos;re all set!</h1>
