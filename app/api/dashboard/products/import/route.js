@@ -2,12 +2,12 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { rateLimitTenant } from "@/lib/rateLimit";
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const GROQ_API_KEY     = process.env.GROQ_API_KEY;
-const AI_KEY           = DEEPSEEK_API_KEY || GROQ_API_KEY;
+const OPENAI_API_KEY   = process.env.OPENAI_API_KEY;
+const AI_KEY           = DEEPSEEK_API_KEY || OPENAI_API_KEY;
 const AI_URL           = DEEPSEEK_API_KEY
   ? "https://api.deepseek.com/v1/chat/completions"
-  : "https://api.groq.com/openai/v1/chat/completions";
-const AI_MODEL         = DEEPSEEK_API_KEY ? "deepseek-chat" : "llama3-70b-8192";
+  : "https://api.openai.com/v1/chat/completions";
+const AI_MODEL         = DEEPSEEK_API_KEY ? "deepseek-chat" : "gpt-4o-mini";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");

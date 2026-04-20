@@ -6,6 +6,8 @@ import { rateLimitTenant } from "@/lib/rateLimit";
 // Hard cap on files per gallery — prevents unlimited storage accumulation.
 // 1000 covers portrait photographers with large shoot volumes; normal shoots are 50-200 photos.
 const MAX_FILES_PER_GALLERY = 1000;
+// Per-file size cap: 200 MB. Enforced via presigned URL ContentLengthRange condition.
+const MAX_FILE_SIZE_BYTES = 200 * 1024 * 1024;
 // Max upload URL requests per tenant per hour
 const UPLOAD_URL_HOURLY_LIMIT = 120;
 
@@ -32,9 +34,14 @@ export async function POST(req) {
       return Response.json({ error: "Upload limit reached. Please try again later." }, { status: 429 });
     }
 
-    const { fileName, fileType, galleryId } = await req.json();
+    const { fileName, fileType, galleryId, fileSize } = await req.json();
     if (!fileName || !galleryId) {
       return Response.json({ error: "fileName and galleryId required" }, { status: 400 });
+    }
+
+    // Enforce per-file size limit
+    if (fileSize && fileSize > MAX_FILE_SIZE_BYTES) {
+      return Response.json({ error: `File too large. Maximum size is 200 MB per file.` }, { status: 400 });
     }
 
     // Validate file type — only allow image and video types

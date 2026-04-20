@@ -417,8 +417,9 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 {videos.map((v, i) => (
                   <div key={i} className="rounded-sm overflow-hidden bg-gray-900 aspect-video relative group">
                     <video src={v.url} className="w-full h-full object-cover" controls />
-                    {unlocked && (
-                      <a href={v.url} download={v.fileName}
+                    {unlocked && v.key && (
+                      <a
+                        href={`/api/gallery/video-download?token=${gallery.accessToken}&key=${encodeURIComponent(v.key)}&name=${encodeURIComponent(v.fileName || "video.mp4")}`}
                         className="absolute top-3 right-3 px-3 py-1.5 rounded text-xs font-bold text-white"
                         style={{ background: "#0b2a55" }}>
                         Download

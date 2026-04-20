@@ -100,7 +100,10 @@ export default function CreateBookingPage() {
   const [newItem,       setNewItem]       = useState({ label: "", price: "" });
   const [travelInfo,    setTravelInfo]    = useState({}); // { [memberId]: { durationMinutes, durationText, distanceText, conflict } }
   const [travelLoading, setTravelLoading] = useState(false);
-  const travelTimerRef = useRef(null);
+  const travelTimerRef  = useRef(null);
+  const addressTimerRef = useRef(null);
+  const [travelFee,     setTravelFee]     = useState(null);  // { travelFee, miles, withinRange }
+  const [serviceArea,   setServiceArea]   = useState(null);  // { covered, zoneName }
 
   const getToken = () => auth.currentUser?.getIdToken();
 
@@ -286,6 +289,41 @@ export default function CreateBookingPage() {
     return () => { if (travelTimerRef.current) clearTimeout(travelTimerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.shootDate, form.lat, form.lng, form.address, form.shootTime]);
+
+  // ── Travel fee + service area check ──────────────────────────────────────
+  useEffect(() => {
+    if (addressTimerRef.current) clearTimeout(addressTimerRef.current);
+
+    if (!form.address || (!form.lat && !form.lng)) {
+      setTravelFee(null);
+      setServiceArea(null);
+      return;
+    }
+
+    addressTimerRef.current = setTimeout(async () => {
+      const token = await getToken();
+      const body  = { address: form.address, lat: form.lat, lng: form.lng };
+
+      const [feeRes, areaRes] = await Promise.all([
+        fetch("/api/dashboard/travel-fee", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(body),
+        }),
+        fetch("/api/dashboard/check-service-area", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ lat: form.lat, lng: form.lng }),
+        }),
+      ]);
+
+      if (feeRes.ok)  setTravelFee(await feeRes.json());
+      if (areaRes.ok) setServiceArea(await areaRes.json());
+    }, 600);
+
+    return () => { if (addressTimerRef.current) clearTimeout(addressTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.address, form.lat, form.lng]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function set(key) { return (e) => setForm((f) => ({ ...f, [key]: e.target.value })); }
@@ -483,6 +521,26 @@ export default function CreateBookingPage() {
               <input type="number" value={form.sqft} onChange={set("sqft")} className="input-field w-full" placeholder="2400" />
             </div>
           </div>
+
+          {/* Service area warning */}
+          {serviceArea && !serviceArea.covered && (
+            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+              <strong>Outside service area.</strong> This address is outside your configured service zones. You can still create the booking manually.
+            </div>
+          )}
+          {serviceArea?.covered && serviceArea.zoneName && (
+            <p className="mt-2 text-xs text-green-600">Zone: {serviceArea.zoneName}</p>
+          )}
+
+          {/* Travel fee estimate */}
+          {travelFee != null && travelFee.miles > 0 && (
+            <div className={`mt-3 rounded-lg px-4 py-3 text-sm border ${travelFee.travelFee > 0 ? "bg-blue-50 border-blue-200 text-blue-800" : "bg-gray-50 border-gray-200 text-gray-600"}`}>
+              {travelFee.travelFee > 0
+                ? <>Estimated travel fee: <strong>${travelFee.travelFee}</strong> ({travelFee.miles} mi). Add as a custom line item if needed.</>
+                : <>Travel: <strong>{travelFee.miles} mi</strong> — within free radius, no travel fee.</>
+              }
+            </div>
+          )}
         </div>
 
         {/* ── Services ──────────────────────────────────────── */}

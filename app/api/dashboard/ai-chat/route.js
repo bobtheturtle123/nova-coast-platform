@@ -1,10 +1,10 @@
 import { adminAuth } from "@/lib/firebase-admin";
 import { rateLimitTenant } from "@/lib/rateLimit";
 
-// Uses DeepSeek API (deepseek-chat model).
-// Sign up at platform.deepseek.com and set DEEPSEEK_API_KEY in your env vars.
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || process.env.GROQ_API_KEY; // Groq fallback
-const DEEPSEEK_MODEL = "deepseek-chat"; // fast, free
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+const AI_KEY   = DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
+const AI_URL   = DEEPSEEK_API_KEY ? "https://api.deepseek.com/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
+const AI_MODEL = DEEPSEEK_API_KEY ? "deepseek-chat" : "gpt-4o-mini";
 
 const SYSTEM_PROMPT = `You are a helpful assistant built into ShootFlow, a SaaS platform for real estate photography businesses.
 
@@ -74,9 +74,9 @@ export async function POST(req) {
     return Response.json({ reply: "You've sent a lot of messages recently. Please wait a moment before trying again." });
   }
 
-  if (!DEEPSEEK_API_KEY) {
+  if (!AI_KEY) {
     return Response.json({
-      reply: "The AI assistant isn't configured yet. Add DEEPSEEK_API_KEY to your Vercel environment variables (get a key at platform.deepseek.com). In the meantime, reach support at support@shootflow.com.",
+      reply: "The AI assistant isn't configured yet. Add DEEPSEEK_API_KEY or OPENAI_API_KEY to your Vercel environment variables.",
     });
   }
 
@@ -96,14 +96,14 @@ export async function POST(req) {
   }));
 
   try {
-    const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
+    const res = await fetch(AI_URL, {
       method:  "POST",
       headers: {
         "Content-Type":  "application/json",
-        "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
+        "Authorization": `Bearer ${AI_KEY}`,
       },
       body: JSON.stringify({
-        model:       DEEPSEEK_MODEL,
+        model:       AI_MODEL,
         max_tokens:  512,
         messages:    [{ role: "system", content: systemPrompt }, ...trimmedMessages],
         temperature: 0.7,

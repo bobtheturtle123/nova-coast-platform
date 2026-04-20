@@ -40,8 +40,10 @@ export default function RegisterPage() {
       const cred = await createUserWithEmailAndPassword(auth, form.email, form.password);
 
       // 2. Call server to create tenant + set custom claims
+      // credentials:"include" is required so the referral cookie set by /ref/[code] is sent
       const res = await fetch("/api/tenants/register", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           uid:          cred.user.uid,
