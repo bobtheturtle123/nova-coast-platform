@@ -157,15 +157,27 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   }
 
   const matterportUrl  = gallery.matterportUrl || null;
+  const videoUrl       = gallery.videoUrl      || null;  // YouTube / Vimeo embed URL
   const virtualLinks   = gallery.virtualLinks  || [];
   const floorPlans     = gallery.floorPlans    || [];
   const attachedFiles  = gallery.attachedFiles || [];
   const has3D          = matterportUrl || virtualLinks.length > 0;
   const hasExtras      = has3D || floorPlans.length > 0 || attachedFiles.length > 0;
+  const hasVideos      = videos.length > 0 || !!videoUrl;
+
+  // Convert YouTube/Vimeo watch URLs to embeddable URLs
+  function toEmbedUrl(url) {
+    if (!url) return null;
+    const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+    if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
+    const vi = url.match(/vimeo\.com\/(\d+)/);
+    if (vi) return `https://player.vimeo.com/video/${vi[1]}`;
+    return url;
+  }
 
   const tabs = [
     { id: "images", label: `Photos (${images.length})` },
-    ...(videos.length   > 0 ? [{ id: "videos",     label: `Videos (${videos.length})`       }] : []),
+    ...(hasVideos        ? [{ id: "videos",     label: videos.length > 0 ? `Videos (${videos.length})` : "Video Tour" }] : []),
     ...(floorPlans.length > 0 ? [{ id: "floorplans", label: `Floor Plans (${floorPlans.length})` }] : []),
     ...(has3D            ? [{ id: "3d",          label: "3D Tour"                         }] : []),
     ...(attachedFiles.length > 0 ? [{ id: "files", label: `Files (${attachedFiles.length})` }] : []),
@@ -385,19 +397,37 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
 
         {/* Videos tab */}
         {activeTab === "videos" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {videos.map((v, i) => (
-              <div key={i} className="rounded-sm overflow-hidden bg-gray-900 aspect-video relative group">
-                <video src={v.url} className="w-full h-full object-cover" controls />
-                {unlocked && (
-                  <a href={v.url} download={v.fileName}
-                    className="absolute top-3 right-3 px-3 py-1.5 rounded text-xs font-bold text-white"
-                    style={{ background: "#0b2a55" }}>
-                    Download
-                  </a>
-                )}
+          <div className="space-y-4">
+            {/* YouTube / Vimeo embed */}
+            {videoUrl && (
+              <div className="rounded-sm overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
+                <iframe
+                  src={toEmbedUrl(videoUrl)}
+                  title="Video Tour"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                  style={{ minHeight: 300 }}
+                />
               </div>
-            ))}
+            )}
+            {/* Direct-upload videos */}
+            {videos.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {videos.map((v, i) => (
+                  <div key={i} className="rounded-sm overflow-hidden bg-gray-900 aspect-video relative group">
+                    <video src={v.url} className="w-full h-full object-cover" controls />
+                    {unlocked && (
+                      <a href={v.url} download={v.fileName}
+                        className="absolute top-3 right-3 px-3 py-1.5 rounded text-xs font-bold text-white"
+                        style={{ background: "#0b2a55" }}>
+                        Download
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

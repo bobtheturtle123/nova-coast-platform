@@ -2162,7 +2162,10 @@ export default function SettingsPage() {
           Available placeholders: <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{clientName}}"}</code>{" "}
           <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{address}}"}</code>{" "}
           <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{date}}"}</code>{" "}
-          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{balance}}"}</code>
+          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{balance}}"}</code>{" "}
+          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{websiteUrl}}"}</code>{" "}
+          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{tourUrl}}"}</code>
+          <span className="text-xs text-gray-400 ml-1">(gallery delivery only — auto-included if available)</span>
         </p>
 
         <div className="bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-5 text-xs text-amber-700">

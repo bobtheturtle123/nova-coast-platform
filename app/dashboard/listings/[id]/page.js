@@ -437,7 +437,7 @@ export default function ListingDetailPage() {
       const res = await fetch(`/api/dashboard/bookings/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ propertyWebsite: propSite }),
+        body: JSON.stringify({ propertyWebsite: { ...propSite, features: (propSite.features || []).filter((f) => f.trim()) } }),
       });
       if (res.ok) {
         setBooking((b) => ({ ...b, propertyWebsite: propSite }));
@@ -1288,7 +1288,7 @@ export default function ListingDetailPage() {
                   <label className="label-field">Features (one per line)</label>
                   <textarea
                     value={(propSite.features || []).join("\n")}
-                    onChange={(e) => setPropField("features", e.target.value.split("\n").filter((f) => f.trim()))}
+                    onChange={(e) => setPropField("features", e.target.value.split("\n"))}
                     rows={4}
                     placeholder={"Hardwood floors\nGranite countertops\nAttached 2-car garage"}
                     className="input-field w-full resize-y text-sm"

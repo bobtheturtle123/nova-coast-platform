@@ -19,7 +19,7 @@ export async function POST(req, { params }) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const { subject, note, to, cc, scheduledAt } = body;
+  const { subject, note, to, cc, scheduledAt, websiteUrl, tourUrl } = body;
 
   const galleryRef = adminDb
     .collection("tenants").doc(ctx.tenantId)
@@ -74,7 +74,13 @@ export async function POST(req, { params }) {
   const booking = bookingDoc.data();
   const tenant  = await getTenantById(ctx.tenantId);
 
-  await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken, tenant, subject, note, to, cc });
+  // Auto-include website and 3D tour links from booking if not overridden
+  const resolvedWebsiteUrl = websiteUrl || (booking.propertyWebsite?.published
+    ? `${process.env.NEXT_PUBLIC_APP_URL || ""}/${tenant.slug}/property/${gallery.bookingId}`
+    : null);
+  const resolvedTourUrl = tourUrl || booking.propertyWebsite?.matterportUrl || null;
+
+  await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken, tenant, subject, note, to, cc, websiteUrl: resolvedWebsiteUrl, tourUrl: resolvedTourUrl });
   await galleryRef.update({ delivered: true, deliveredAt: new Date(), scheduledDelivery: null });
 
   // Cancel any pending scheduled delivery for this gallery since we just sent

@@ -38,13 +38,25 @@ export default async function AgentBookingPage({ params, searchParams }) {
     return <ErrorScreen message="You don't have access to this listing." />;
   }
 
+  // Sanitize propertyWebsite — strip any Firestore Timestamps so props serialize cleanly
+  function sanitizePw(obj) {
+    if (!obj || typeof obj !== "object") return obj;
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (v?.toDate) out[k] = v.toDate().toISOString();
+      else if (v && typeof v === "object" && !Array.isArray(v)) out[k] = sanitizePw(v);
+      else out[k] = v;
+    }
+    return out;
+  }
+
   const booking = {
     id:              bookingId,
     address:         bookingData.fullAddress || bookingData.address || "Property",
     clientName:      bookingData.clientName  || "",
     status:          bookingData.status      || "confirmed",
-    shootDate:       bookingData.shootDate?.toDate?.()?.toISOString?.() ?? bookingData.shootDate ?? null,
-    propertyWebsite: bookingData.propertyWebsite || null,
+    shootDate:       bookingData.shootDate?.toDate?.()?.toISOString?.() ?? (typeof bookingData.shootDate === "string" ? bookingData.shootDate : null),
+    propertyWebsite: bookingData.propertyWebsite ? sanitizePw(bookingData.propertyWebsite) : null,
     totalPrice:      bookingData.totalPrice  || 0,
     remainingBalance: bookingData.remainingBalance || 0,
   };
@@ -62,13 +74,15 @@ export default async function AgentBookingPage({ params, searchParams }) {
       const images = media.filter((m) => !m.fileType?.startsWith("video/"));
       const videos = media.filter((m) =>  m.fileType?.startsWith("video/"));
       gallery = {
-        id:          bookingData.galleryId,
-        delivered:   gd.delivered   || false,
-        unlocked:    gd.unlocked    || false,
-        accessToken: gd.accessToken || null,
-        imageCount:  images.length,
-        videoCount:  videos.length,
-        coverUrl:    images[0]?.url || null,
+        id:           bookingData.galleryId,
+        delivered:    gd.delivered    || false,
+        unlocked:     gd.unlocked     || false,
+        accessToken:  gd.accessToken  || null,
+        matterportUrl: gd.matterportUrl || null,
+        videoUrl:     gd.videoUrl     || null,
+        imageCount:   images.length,
+        videoCount:   videos.length,
+        coverUrl:     images[0]?.url || null,
       };
     }
   }

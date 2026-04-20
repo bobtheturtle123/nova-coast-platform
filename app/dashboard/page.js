@@ -99,9 +99,10 @@ export default function DashboardHome() {
       {tenant && (() => {
         const steps = [
           { done: !!tenant.phone,                  label: "Complete your profile (phone & location)", href: "/onboarding" },
-          { done: !!tenant.branding?.logoUrl,      label: "Upload your logo & branding",              href: "/dashboard/settings" },
+          { done: !!(tenant.branding?.primaryColor && tenant.branding?.businessName), label: "Set up your branding & colors", href: "/dashboard/settings#settings-branding" },
+          { done: !!(tenant.bookingConfig || tenant.pricingConfig || tenant.availabilityConfig), label: "Review Settings — configure how your business operates", href: "/dashboard/settings" },
           { done: !!tenant.stripeConnectOnboarded, label: "Connect Stripe to accept payments",        href: "/dashboard/billing" },
-          { done: !!tenant.slug,                   label: "Add services & share your booking page",   href: bookingUrl, external: true, action: "Copy link & add to Products" },
+          { done: !!tenant.slug,                   label: "Add services & share your booking page",   href: bookingUrl, external: true },
           { done: listings.length > 0,             label: "Receive your first booking",               href: null },
         ];
         const doneCount = steps.filter((s) => s.done).length;
