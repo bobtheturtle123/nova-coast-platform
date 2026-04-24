@@ -21,18 +21,25 @@ function PayBadge({ listing }) {
 }
 
 export default function DashboardHome() {
-  const [listings, setListings] = useState([]);
-  const [tenant,   setTenant]   = useState(null);
-  const [loading,  setLoading]  = useState(true);
+  const [listings,    setListings]    = useState([]);
+  const [tenant,      setTenant]      = useState(null);
+  const [hasProducts, setHasProducts] = useState(false);
+  const [loading,     setLoading]     = useState(true);
 
   useEffect(() => {
     auth.currentUser?.getIdToken(true).then(async (token) => {
-      const [listRes, tenantRes] = await Promise.all([
-        fetch("/api/dashboard/listings", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/tenant",   { headers: { Authorization: `Bearer ${token}` } }),
+      const h = { Authorization: `Bearer ${token}` };
+      const [listRes, tenantRes, svcRes, pkgRes] = await Promise.all([
+        fetch("/api/dashboard/listings",          { headers: h }),
+        fetch("/api/dashboard/tenant",            { headers: h }),
+        fetch("/api/dashboard/products?type=services", { headers: h }),
+        fetch("/api/dashboard/products?type=packages", { headers: h }),
       ]);
       if (listRes.ok)   { const d = await listRes.json();   setListings(d.listings || []); }
       if (tenantRes.ok) { const d = await tenantRes.json(); setTenant(d.tenant); }
+      const svcData = svcRes.ok  ? await svcRes.json()  : {};
+      const pkgData = pkgRes.ok  ? await pkgRes.json()  : {};
+      setHasProducts((svcData.items?.length || 0) > 0 || (pkgData.items?.length || 0) > 0);
       setLoading(false);
     });
   }, []);
@@ -102,7 +109,7 @@ export default function DashboardHome() {
           { done: !!(tenant.branding?.primaryColor && tenant.branding?.businessName), label: "Set up your branding & colors", href: "/dashboard/settings#settings-branding" },
           { done: !!(tenant.bookingConfig || tenant.pricingConfig || tenant.availabilityConfig), label: "Review Settings — configure how your business operates", href: "/dashboard/settings" },
           { done: !!tenant.stripeConnectOnboarded, label: "Connect Stripe to accept payments",        href: "/dashboard/billing" },
-          { done: !!tenant.slug,                   label: "Add services & share your booking page",   href: bookingUrl, external: true },
+          { done: hasProducts, label: "Add services & share your booking page", href: "/dashboard/products", external: false },
           { done: listings.length > 0,             label: "Receive your first booking",               href: null },
         ];
         const doneCount = steps.filter((s) => s.done).length;

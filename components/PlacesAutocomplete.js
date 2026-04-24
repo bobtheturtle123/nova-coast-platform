@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 
-const LOCATIONIQ_KEY = process.env.NEXT_PUBLIC_LOCATIONIQ_KEY;
 
 function debounce(fn, ms) {
   let t;
@@ -59,10 +58,9 @@ export default function PlacesAutocomplete({
 
   const fetchSuggestions = useCallback(
     debounce(async (q) => {
-      if (!q || q.length < 3 || !LOCATIONIQ_KEY) { setSuggestions([]); return; }
+      if (!q || q.length < 3) { setSuggestions([]); return; }
       try {
-        const url = `https://api.locationiq.com/v1/autocomplete?key=${LOCATIONIQ_KEY}&q=${encodeURIComponent(q)}&limit=6&countrycodes=us&dedupe=1&normalizecity=1&addressdetails=1`;
-        const res  = await fetch(url);
+        const res  = await fetch(`/api/autocomplete?q=${encodeURIComponent(q)}`);
         const data = await res.json();
         if (Array.isArray(data)) {
           setSuggestions(data.slice(0, 6));
@@ -115,12 +113,6 @@ export default function PlacesAutocomplete({
         autoComplete="new-password"
         className={className || "input-field w-full"}
       />
-
-      {!LOCATIONIQ_KEY && (
-        <p className="text-[10px] text-amber-500 mt-0.5">
-          Add NEXT_PUBLIC_LOCATIONIQ_KEY for address autocomplete.
-        </p>
-      )}
 
       {open && suggestions.length > 0 && (
         <ul className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">

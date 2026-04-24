@@ -128,7 +128,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const accent  = tenant.branding?.accentColor  || "#c9a96e";
   const name    = tenant.branding?.businessName || tenant.businessName;
 
-  const allMedia  = gallery.media || [];
+  const allMedia  = (gallery.media || []).filter((m) => !m.hidden);
   const images    = allMedia.filter((m) => !m.fileType?.startsWith("video/"));
   const videos    = allMedia.filter((m) =>  m.fileType?.startsWith("video/"));
   const balance   = booking?.remainingBalance ?? 0;
@@ -156,11 +156,11 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
     setPayMsg("Payment successful! Downloads unlocked.");
   }
 
-  const matterportUrl  = gallery.matterportUrl || null;
-  const videoUrl       = gallery.videoUrl      || null;  // YouTube / Vimeo embed URL
-  const virtualLinks   = gallery.virtualLinks  || [];
-  const floorPlans     = gallery.floorPlans    || [];
-  const attachedFiles  = gallery.attachedFiles || [];
+  const matterportUrl  = !gallery.matterportHidden ? (gallery.matterportUrl || null) : null;
+  const videoUrl       = !gallery.videoUrlHidden   ? (gallery.videoUrl      || null) : null;
+  const virtualLinks   = (gallery.virtualLinks  || []).filter((l) => !l.hidden);
+  const floorPlans     = (gallery.floorPlans    || []).filter((fp) => !fp.hidden);
+  const attachedFiles  = (gallery.attachedFiles || []).filter((f) => !f.hidden);
   const has3D          = matterportUrl || virtualLinks.length > 0;
   const hasExtras      = has3D || floorPlans.length > 0 || attachedFiles.length > 0;
   const hasVideos      = videos.length > 0 || !!videoUrl;

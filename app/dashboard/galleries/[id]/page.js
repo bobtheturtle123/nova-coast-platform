@@ -11,7 +11,7 @@ const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
 // ─── Image thumbnail with loading/error ───────────────────────────────────────
 function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
   onDragStart, onDragOver, onDrop, onDragEnd, index, onAssignCategory,
-  selected, onSelect, onDelete, selectMode }) {
+  selected, onSelect, onDelete, selectMode, hidden, onToggleHide }) {
   const [loaded,  setLoaded]  = useState(false);
   const [errored, setErrored] = useState(false);
 
@@ -39,7 +39,7 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
         </div>
       )}
       <img src={src} alt={alt} onLoad={() => setLoaded(true)} onError={() => setErrored(true)}
-        className={`w-full h-full object-cover transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`} />
+        className={`w-full h-full object-cover transition-opacity duration-200 ${loaded ? (hidden ? "opacity-30" : "opacity-100") : "opacity-0"}`} />
 
       {/* Selection checkbox — always visible in select mode, hover-only otherwise */}
       <div
@@ -64,6 +64,23 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
+        {/* Hide / show button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleHide?.(); }}
+          className="absolute top-1.5 right-8 w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
+          title={hidden ? "Show in client gallery" : "Hide from client gallery"}
+        >
+          {hidden ? (
+            <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          ) : (
+            <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            </svg>
+          )}
+        </button>
         {/* Category picker */}
         {categories.length > 0 && (
           <select
@@ -81,6 +98,11 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
       {isFirst && !selected && (
         <div className="absolute top-1.5 left-7">
           <span className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-navy text-white">Cover</span>
+        </div>
+      )}
+      {hidden && (
+        <div className="absolute top-1.5 left-7">
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm bg-gray-700/80 text-white">Hidden</span>
         </div>
       )}
       {category && (
@@ -272,8 +294,10 @@ export default function GalleryDetailPage() {
   const [deleting,        setDeleting]        = useState(false);
 
   // 3D / floor plans / files state
-  const [matterportUrl,   setMatterportUrl]   = useState("");
-  const [videoUrl,        setVideoUrl]        = useState(""); // YouTube / Vimeo URL
+  const [matterportUrl,    setMatterportUrl]    = useState("");
+  const [matterportHidden, setMatterportHidden] = useState(false);
+  const [videoUrl,         setVideoUrl]         = useState(""); // YouTube / Vimeo URL
+  const [videoUrlHidden,   setVideoUrlHidden]   = useState(false);
   const [virtualLinks,    setVirtualLinks]    = useState([]); // [{label, url}]
   const [floorPlans,      setFloorPlans]      = useState([]); // [{url, key, fileName}]
   const [attachedFiles,   setAttachedFiles]   = useState([]); // [{url, key, fileName, fileType}]
@@ -314,11 +338,13 @@ export default function GalleryDetailPage() {
         if (data.gallery.clientEmail) setEmailTo([data.gallery.clientEmail]);
 
         // Load extras
-        if (data.gallery.matterportUrl) setMatterportUrl(data.gallery.matterportUrl);
-        if (data.gallery.videoUrl)      setVideoUrl(data.gallery.videoUrl);
-        if (data.gallery.virtualLinks)  setVirtualLinks(data.gallery.virtualLinks);
-        if (data.gallery.floorPlans)    setFloorPlans(data.gallery.floorPlans);
-        if (data.gallery.attachedFiles) setAttachedFiles(data.gallery.attachedFiles);
+        if (data.gallery.matterportUrl)    setMatterportUrl(data.gallery.matterportUrl);
+        if (data.gallery.matterportHidden) setMatterportHidden(data.gallery.matterportHidden);
+        if (data.gallery.videoUrl)         setVideoUrl(data.gallery.videoUrl);
+        if (data.gallery.videoUrlHidden)   setVideoUrlHidden(data.gallery.videoUrlHidden);
+        if (data.gallery.virtualLinks)     setVirtualLinks(data.gallery.virtualLinks);
+        if (data.gallery.floorPlans)       setFloorPlans(data.gallery.floorPlans);
+        if (data.gallery.attachedFiles)    setAttachedFiles(data.gallery.attachedFiles);
       }
       setLoading(false);
     });
@@ -338,7 +364,7 @@ export default function GalleryDetailPage() {
         const urlRes = await fetch("/api/gallery/upload-url", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ fileName: file.name, fileType: file.type, galleryId: id }),
+          body: JSON.stringify({ fileName: file.name, fileType: file.type, galleryId: id, fileSize: file.size }),
         });
         if (!urlRes.ok) {
           const errData = await urlRes.json().catch(() => ({}));
@@ -502,6 +528,22 @@ export default function GalleryDetailPage() {
     }
   }
 
+  async function toggleHideMedia(key) {
+    let updatedMedia;
+    setGallery((g) => {
+      updatedMedia = (g.media || []).map((m) =>
+        m.key === key ? { ...m, hidden: !m.hidden } : m
+      );
+      return { ...g, media: updatedMedia };
+    });
+    const token = await auth.currentUser.getIdToken();
+    await fetch(`/api/dashboard/galleries/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ media: updatedMedia }),
+    });
+  }
+
   function applyBulkCategory() {
     if (!bulkCatTarget) return;
     setCategories((prev) => {
@@ -605,13 +647,13 @@ export default function GalleryDetailPage() {
     setGallery((g) => ({ ...g, unlocked: newVal }));
   }
 
-  async function saveExtras() {
+  async function saveExtras(overrides = {}) {
     setSavingExtras(true);
     const token = await auth.currentUser.getIdToken();
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ matterportUrl, videoUrl, virtualLinks, floorPlans, attachedFiles }),
+      body: JSON.stringify({ matterportUrl, matterportHidden, videoUrl, videoUrlHidden, virtualLinks, floorPlans, attachedFiles, ...overrides }),
     });
     setSavingExtras(false);
     toast("Saved.");
@@ -902,7 +944,7 @@ export default function GalleryDetailPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {displayImages.map((m, i) => (
                     <MediaThumb
                       key={m.key || i}
@@ -921,6 +963,8 @@ export default function GalleryDetailPage() {
                       onSelect={() => m.key && toggleSelect(m.key)}
                       onDelete={() => m.key && deleteMedia([m.key])}
                       selectMode={selectMode}
+                      hidden={!!m.hidden}
+                      onToggleHide={() => m.key && toggleHideMedia(m.key)}
                     />
                   ))}
                 </div>
@@ -930,16 +974,26 @@ export default function GalleryDetailPage() {
             {activeTab === "videos" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {videos.map((v, i) => (
-                  <div key={v.key || i} className="group relative">
+                  <div key={v.key || i} className={`group relative ${v.hidden ? "opacity-50" : ""}`}>
                     <video src={v.url} controls className="w-full rounded-sm" />
                     <div className="flex items-center justify-between mt-1">
-                      <p className="text-xs text-gray-400 truncate">{v.fileName}</p>
-                      <button
-                        onClick={() => v.key && deleteMedia([v.key])}
-                        disabled={deleting}
-                        className="text-xs text-red-400 hover:text-red-600 px-2 py-0.5 flex-shrink-0">
-                        Delete
-                      </button>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="text-xs text-gray-400 truncate">{v.fileName}</p>
+                        {v.hidden && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm bg-gray-200 text-gray-500 flex-shrink-0">Hidden</span>}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => v.key && toggleHideMedia(v.key)}
+                          className="text-xs text-gray-400 hover:text-navy px-2 py-0.5">
+                          {v.hidden ? "Show" : "Hide"}
+                        </button>
+                        <button
+                          onClick={() => v.key && deleteMedia([v.key])}
+                          disabled={deleting}
+                          className="text-xs text-red-400 hover:text-red-600 px-2 py-0.5">
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -981,10 +1035,21 @@ export default function GalleryDetailPage() {
               </button>
             </div>
             {matterportUrl && (
-              <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                3D tour will appear as an interactive embed in the client gallery.
-              </p>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  3D tour will appear as an interactive embed in the client gallery.
+                </p>
+                <button
+                  onClick={() => { const v = !matterportHidden; setMatterportHidden(v); saveExtras({ matterportHidden: v }); }}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors flex-shrink-0 ${
+                    matterportHidden
+                      ? "border-gray-300 text-gray-500 bg-gray-50 hover:bg-white"
+                      : "border-gray-200 text-gray-400 hover:border-navy/30 hover:text-navy"
+                  }`}>
+                  {matterportHidden ? "Hidden from gallery" : "Hide from gallery"}
+                </button>
+              </div>
             )}
           </div>
 
@@ -1014,10 +1079,21 @@ export default function GalleryDetailPage() {
               </button>
             </div>
             {videoUrl && (
-              <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                Video will appear in the client gallery under Property Extras.
-              </p>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  Video will appear in the client gallery under Property Extras.
+                </p>
+                <button
+                  onClick={() => { const v = !videoUrlHidden; setVideoUrlHidden(v); saveExtras({ videoUrlHidden: v }); }}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors flex-shrink-0 ${
+                    videoUrlHidden
+                      ? "border-gray-300 text-gray-500 bg-gray-50 hover:bg-white"
+                      : "border-gray-200 text-gray-400 hover:border-navy/30 hover:text-navy"
+                  }`}>
+                  {videoUrlHidden ? "Hidden from gallery" : "Hide from gallery"}
+                </button>
+              </div>
             )}
           </div>
 
@@ -1047,7 +1123,7 @@ export default function GalleryDetailPage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {floorPlans.map((fp, i) => (
-                  <div key={fp.key || i} className="relative group rounded-sm overflow-hidden border border-gray-100 bg-gray-50">
+                  <div key={fp.key || i} className={`relative group rounded-sm overflow-hidden border border-gray-100 bg-gray-50 ${fp.hidden ? "opacity-50" : ""}`}>
                     {fp.fileType?.includes("pdf") ? (
                       <a href={fp.url} target="_blank" rel="noopener noreferrer"
                         className="flex items-center gap-2 p-3 text-xs text-navy font-medium hover:bg-gray-100 transition-colors">
@@ -1059,6 +1135,26 @@ export default function GalleryDetailPage() {
                     ) : (
                       <img src={fp.url} alt={fp.fileName} className="w-full aspect-[4/3] object-cover" />
                     )}
+                    {fp.hidden && (
+                      <div className="absolute top-1 left-1">
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm bg-gray-700/80 text-white">Hidden</span>
+                      </div>
+                    )}
+                    {/* Hide toggle */}
+                    <button
+                      onClick={async () => {
+                        const updated = floorPlans.map((p, idx) => idx === i ? { ...p, hidden: !p.hidden } : p);
+                        setFloorPlans(updated);
+                        const token = await auth.currentUser.getIdToken();
+                        await fetch(`/api/dashboard/galleries/${id}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                          body: JSON.stringify({ floorPlans: updated }),
+                        });
+                      }}
+                      className="absolute bottom-1 left-1 text-[10px] px-1.5 py-0.5 bg-black/60 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                      {fp.hidden ? "Show" : "Hide"}
+                    </button>
                     <button onClick={() => setFloorPlans((p) => p.filter((_, idx) => idx !== i))}
                       className="absolute top-1 right-1 w-5 h-5 bg-black/60 text-white rounded-full text-xs leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       ×
@@ -1095,13 +1191,28 @@ export default function GalleryDetailPage() {
             ) : (
               <div className="space-y-1.5">
                 {attachedFiles.map((f, i) => (
-                  <div key={f.key || i} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-sm group">
+                  <div key={f.key || i} className={`flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-sm group ${f.hidden ? "opacity-50" : ""}`}>
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 flex-shrink-0">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
                     <a href={f.url} target="_blank" rel="noopener noreferrer"
                       className="text-xs text-navy hover:underline truncate flex-1">{f.fileName}</a>
+                    {f.hidden && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm bg-gray-200 text-gray-500 flex-shrink-0">Hidden</span>}
                     <span className="text-[10px] text-gray-300 flex-shrink-0">{f.fileType?.split("/")[1]?.toUpperCase() || "FILE"}</span>
+                    <button
+                      onClick={async () => {
+                        const updated = attachedFiles.map((af, idx) => idx === i ? { ...af, hidden: !af.hidden } : af);
+                        setAttachedFiles(updated);
+                        const token = await auth.currentUser.getIdToken();
+                        await fetch(`/api/dashboard/galleries/${id}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                          body: JSON.stringify({ attachedFiles: updated }),
+                        });
+                      }}
+                      className="text-[10px] text-gray-400 hover:text-navy opacity-0 group-hover:opacity-100 transition-opacity px-1">
+                      {f.hidden ? "Show" : "Hide"}
+                    </button>
                     <button onClick={() => setAttachedFiles((p) => p.filter((_, idx) => idx !== i))}
                       className="text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-base leading-none ml-1">
                       ×
