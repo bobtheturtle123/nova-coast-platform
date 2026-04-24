@@ -20,7 +20,6 @@ export async function GET(req) {
     adminDb
       .collection("referrals")
       .where("referrerId", "==", ctx.tenantId)
-      .orderBy("signedUpAt", "desc")
       .limit(50)
       .get(),
   ]);
@@ -40,17 +39,19 @@ export async function GET(req) {
     tenant = { ...tenant, referralCode: code };
   }
 
-  const referrals = referralsSnap.docs.map((d) => {
-    const data = d.data();
-    return {
-      id:            d.id,
-      refereeEmail:  data.refereeEmail,
-      status:        data.status,
-      blockedReason: data.blockedReason || null,
-      signedUpAt:    data.signedUpAt?.toDate?.()?.toISOString() || null,
-      rewardedAt:    data.rewardedAt?.toDate?.()?.toISOString()  || null,
-    };
-  });
+  const referrals = referralsSnap.docs
+    .map((d) => {
+      const data = d.data();
+      return {
+        id:            d.id,
+        refereeEmail:  data.refereeEmail,
+        status:        data.status,
+        blockedReason: data.blockedReason || null,
+        signedUpAt:    data.signedUpAt?.toDate?.()?.toISOString() || null,
+        rewardedAt:    data.rewardedAt?.toDate?.()?.toISOString()  || null,
+      };
+    })
+    .sort((a, b) => (b.signedUpAt || "").localeCompare(a.signedUpAt || ""));
 
   return Response.json({
     referralCode:   tenant.referralCode || null,

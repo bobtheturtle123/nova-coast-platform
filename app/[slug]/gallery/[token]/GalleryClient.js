@@ -116,6 +116,23 @@ function downloadUrl(key, format, name) {
   return `/api/gallery/download?${params}`;
 }
 
+function CopyLinkButton() {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+      }}
+      className="flex items-center gap-1.5 px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider text-white border border-white/60 hover:bg-white/10 transition-colors"
+    >
+      {copied ? "Copied!" : "Copy Link"}
+    </button>
+  );
+}
+
 export default function GalleryClient({ gallery, booking, tenant, slug, token }) {
   const [unlocked,     setUnlocked]     = useState(gallery.unlocked);
   const [clientSecret, setClientSecret] = useState(null);
@@ -197,15 +214,20 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           <span className="font-display text-white text-lg tracking-wide drop-shadow">
             {name?.toUpperCase()}
           </span>
-          {unlocked && images.length > 0 && (
-            <a
-              href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web`}
-              className="flex items-center gap-2 px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider text-white border border-white/60 hover:bg-white/10 transition-colors"
-              download
-            >
-              ↓ Download All
-            </a>
-          )}
+          <div className="flex items-center gap-2">
+            {gallery.agentCanShare !== false && (
+              <CopyLinkButton />
+            )}
+            {unlocked && images.length > 0 && (
+              <a
+                href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web`}
+                className="flex items-center gap-2 px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider text-white border border-white/60 hover:bg-white/10 transition-colors"
+                download
+              >
+                ↓ Download All
+              </a>
+            )}
+          </div>
         </div>
         {/* Address */}
         <div className="absolute bottom-4 left-4">

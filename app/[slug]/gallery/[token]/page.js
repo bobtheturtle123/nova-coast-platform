@@ -23,6 +23,14 @@ export default async function TenantGalleryPage({ params }) {
   const galleryDoc = snap.docs[0];
   const gallery = { id: galleryDoc.id, ...galleryDoc.data() };
 
+  // Log gallery view (fire-and-forget — never block page render)
+  adminDb
+    .collection("tenants").doc(tenant.id)
+    .collection("galleries").doc(galleryDoc.id)
+    .collection("activityLog")
+    .add({ event: "view", timestamp: new Date() })
+    .catch(() => {});
+
   // Fetch booking for balance info
   let booking = null;
   if (gallery.bookingId) {

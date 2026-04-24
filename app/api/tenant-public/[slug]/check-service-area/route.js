@@ -47,10 +47,7 @@ export async function POST(req, { params }) {
     return Response.json({ covered: true, assignedPhotographers: [], zoneName: null, contact });
   }
 
-  // Geocode the address using LocationIQ
-  const liqKey = process.env.LOCATIONIQ_KEY || process.env.NEXT_PUBLIC_LOCATIONIQ_KEY;
-
-  // Also accept pre-geocoded coords in body to avoid an API call entirely
+  // Prefer pre-geocoded coords passed directly from the booking form
   const bodyLat = body.lat ? parseFloat(body.lat) : null;
   const bodyLng = body.lng ? parseFloat(body.lng) : null;
 
@@ -60,29 +57,47 @@ export async function POST(req, { params }) {
     lat = bodyLat;
     lng = bodyLng;
   } else {
-    if (!liqKey) {
-      console.warn("[check-service-area] No LOCATIONIQ_KEY configured; skipping zone check");
-      return Response.json({ covered: true, assignedPhotographers: [], zoneName: null, contact });
+    // Fall back to server-side geocoding (LocationIQ → Mapbox)
+    const liqKey     = process.env.LOCATIONIQ_KEY || process.env.NEXT_PUBLIC_LOCATIONIQ_KEY;
+    const mapboxKey  = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    let geocoded     = false;
+
+    if (liqKey) {
+      try {
+        const geoRes  = await fetch(
+          `https://us1.locationiq.com/v1/search.php?key=${liqKey}&q=${encodeURIComponent(address)}&format=json&limit=1&countrycodes=us`
+        );
+        const geoData = await geoRes.json();
+        if (Array.isArray(geoData) && geoData[0]) {
+          lat = parseFloat(geoData[0].lat);
+          lng = parseFloat(geoData[0].lon);
+          geocoded = true;
+        }
+      } catch { /* fall through to Mapbox */ }
     }
-    try {
-      const geoRes  = await fetch(
-        `https://us1.locationiq.com/v1/search.php?key=${liqKey}&q=${encodeURIComponent(address)}&format=json&limit=1&countrycodes=us`
-      );
-      const geoData = await geoRes.json();
-      if (!Array.isArray(geoData) || !geoData[0]) {
-        return Response.json({
-          covered: false,
-          geocodeError: true,
-          assignedPhotographers: [],
-          zoneName: null,
-          contact,
-        });
-      }
-      lat = parseFloat(geoData[0].lat);
-      lng = parseFloat(geoData[0].lon);
-    } catch (err) {
-      console.error("[check-service-area] Geocode error:", err);
-      return Response.json({ covered: true, assignedPhotographers: [], zoneName: null, contact });
+
+    if (!geocoded && mapboxKey) {
+      try {
+        const geoRes  = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${mapboxKey}&country=us&types=address&limit=1`
+        );
+        const geoData = await geoRes.json();
+        const feature = geoData?.features?.[0];
+        if (feature?.center) {
+          [lng, lat] = feature.center;
+          geocoded = true;
+        }
+      } catch { /* geocoding unavailable */ }
+    }
+
+    if (!geocoded) {
+      return Response.json({
+        covered: false,
+        geocodeError: true,
+        assignedPhotographers: [],
+        zoneName: null,
+        contact,
+      });
     }
   }
 

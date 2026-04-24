@@ -20,6 +20,7 @@ export default function TenantPropertyPage() {
   const router = useRouter();
   const {
     address, city, state, zip, squareFootage, propertyType, notes,
+    lat, lng,
     setProperty, customFields, setCustomFields, setServiceZone,
   } = useBookingStore();
 
@@ -74,7 +75,7 @@ export default function TenantPropertyPage() {
         const res = await fetch(`/api/tenant-public/${params.slug}/check-service-area`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address: fullAddress }),
+          body: JSON.stringify({ address: fullAddress, lat, lng }),
         });
         const data = await res.json();
 

@@ -19,7 +19,7 @@ export async function POST(req, { params }) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const { subject, note, to, cc, scheduledAt, websiteUrl, tourUrl } = body;
+  const { subject, note, to, cc, scheduledAt, websiteUrl, tourUrl, agentCanShare } = body;
 
   const galleryRef = adminDb
     .collection("tenants").doc(ctx.tenantId)
@@ -81,7 +81,16 @@ export async function POST(req, { params }) {
   const resolvedTourUrl = tourUrl || booking.propertyWebsite?.matterportUrl || null;
 
   await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken, tenant, subject, note, to, cc, websiteUrl: resolvedWebsiteUrl, tourUrl: resolvedTourUrl });
-  await galleryRef.update({ delivered: true, deliveredAt: new Date(), scheduledDelivery: null });
+  const allRecipients = [...new Set([...(to || []), ...(cc || [])])];
+  const existingAuth  = gallery.authorizedEmails || [];
+  const mergedAuth    = [...new Set([...existingAuth, ...allRecipients])];
+  await galleryRef.update({
+    delivered: true,
+    deliveredAt: new Date(),
+    scheduledDelivery: null,
+    authorizedEmails: mergedAuth,
+    ...(agentCanShare !== undefined ? { agentCanShare } : {}),
+  });
 
   // Cancel any pending scheduled delivery for this gallery since we just sent
   const pendingSnap = await adminDb
@@ -100,10 +109,13 @@ export async function POST(req, { params }) {
     reason: "delivery",
   }).catch(() => {});
 
-  // SMS notifications — media delivered
-  const appUrl     = process.env.NEXT_PUBLIC_APP_URL || "";
-  const galleryUrl = gallery.accessToken ? `${appUrl}/${tenant?.slug}/gallery/${gallery.accessToken}` : null;
-  sendMediaDeliveredSms({ booking, tenant, galleryUrl }).catch(() => {});
+  // SMS notifications — Studio and Pro plans only
+  const SMS_PLANS = ["studio", "pro", "scale"];
+  if (SMS_PLANS.includes(tenant?.subscriptionPlan)) {
+    const appUrl     = process.env.NEXT_PUBLIC_APP_URL || "";
+    const galleryUrl = gallery.accessToken ? `${appUrl}/${tenant?.slug}/gallery/${gallery.accessToken}` : null;
+    sendMediaDeliveredSms({ booking, tenant, galleryUrl }).catch(() => {});
+  }
 
   return Response.json({ ok: true });
 }

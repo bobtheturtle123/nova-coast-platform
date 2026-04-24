@@ -538,7 +538,7 @@ export default function TeamPage() {
   const [anchor,        setAnchor]        = useState(new Date());
   const [filterMember,  setFilterMember]  = useState("all");
   const [calModal,      setCalModal]      = useState(null);
-  const [calView,       setCalView]       = useState("week"); // "week" | "month" | "day"
+  const [calView,       setCalView]       = useState("2wk");  // "2wk" | "week" | "month" | "day"
   const [inviteEmail,   setInviteEmail]   = useState("");
   const [showInvite,    setShowInvite]    = useState(false);
   const [inviteSending, setInviteSending] = useState(false);
@@ -628,11 +628,22 @@ export default function TeamPage() {
   // ─── Calendar ──────────────────────────────────────────────────────────────
   const weekDates = useMemo(() => getWeekDates(anchor), [anchor]);
 
+  // 14 days (2 weeks) starting from the Sunday of the anchor week
+  const twoWeekDates = useMemo(() => {
+    const sunday = getWeekDates(anchor)[0];
+    return Array.from({ length: 14 }, (_, i) => {
+      const d = new Date(sunday);
+      d.setDate(sunday.getDate() + i);
+      return d;
+    });
+  }, [anchor]);
+
   function prevPeriod() {
     setAnchor((d) => {
       const n = new Date(d);
       if (calView === "month") n.setMonth(n.getMonth() - 1);
       else if (calView === "day") n.setDate(n.getDate() - 1);
+      else if (calView === "2wk") n.setDate(n.getDate() - 14);
       else n.setDate(n.getDate() - 7);
       return n;
     });
@@ -642,6 +653,7 @@ export default function TeamPage() {
       const n = new Date(d);
       if (calView === "month") n.setMonth(n.getMonth() + 1);
       else if (calView === "day") n.setDate(n.getDate() + 1);
+      else if (calView === "2wk") n.setDate(n.getDate() + 14);
       else n.setDate(n.getDate() + 7);
       return n;
     });
@@ -812,6 +824,8 @@ export default function TeamPage() {
                 ? `${MONTHS[anchor.getMonth()]} ${anchor.getFullYear()}`
                 : calView === "day"
                 ? `${DAYS_SHORT[anchor.getDay()]}, ${MONTHS[anchor.getMonth()]} ${anchor.getDate()}, ${anchor.getFullYear()}`
+                : calView === "2wk"
+                ? `${MONTHS[twoWeekDates[0].getMonth()].slice(0,3)} ${twoWeekDates[0].getDate()} – ${MONTHS[twoWeekDates[13].getMonth()].slice(0,3)} ${twoWeekDates[13].getDate()}, ${twoWeekDates[0].getFullYear()}`
                 : `${MONTHS[weekDates[0].getMonth()]} ${weekDates[0].getDate()} – ${weekDates[6].getDate()}, ${weekDates[0].getFullYear()}`
               }
             </p>
@@ -820,11 +834,16 @@ export default function TeamPage() {
           <div className="flex items-center gap-2">
             {/* View selector */}
             <div className="flex border border-gray-200 rounded-sm overflow-hidden text-xs">
-              {["week","month","day"].map((v) => (
-                <button key={v} onClick={() => setCalView(v)}
-                  className={`px-3 py-1.5 capitalize font-medium transition-colors ${
-                    calView === v ? "bg-navy text-white" : "text-gray-500 hover:bg-gray-50"
-                  }`}>{v}</button>
+              {[
+                { key: "2wk",   label: "2 Weeks" },
+                { key: "week",  label: "Week" },
+                { key: "month", label: "Month" },
+                { key: "day",   label: "Day" },
+              ].map(({ key, label }) => (
+                <button key={key} onClick={() => setCalView(key)}
+                  className={`px-3 py-1.5 font-medium transition-colors ${
+                    calView === key ? "bg-navy text-white" : "text-gray-500 hover:bg-gray-50"
+                  }`}>{label}</button>
               ))}
             </div>
             {/* Filter by photographer */}
@@ -837,6 +856,137 @@ export default function TeamPage() {
             </select>
           </div>
         </div>
+
+        {/* ── 2-WEEK AVAILABILITY GRID ───────────────────────────────────── */}
+        {calView === "2wk" && (
+          <div className="overflow-x-auto">
+            {members.length === 0 ? (
+              <div className="p-10 text-center text-gray-400">
+                <p className="text-3xl mb-2">📅</p>
+                <p className="font-medium text-gray-500">No team members yet</p>
+                <p className="text-sm mt-1">Add photographers to see their schedule here.</p>
+              </div>
+            ) : (
+              <table className="min-w-full border-collapse text-xs">
+                <thead>
+                  <tr>
+                    <th className="w-32 min-w-32 text-left px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-r border-gray-200 bg-gray-50/60 sticky left-0 z-10">
+                      Photographer
+                    </th>
+                    {twoWeekDates.map((d, i) => {
+                      const isToday    = isSameDay(d, today);
+                      const isSunday   = d.getDay() === 0;
+                      const isWeek2Start = i === 7;
+                      return (
+                        <th key={d.toISOString()}
+                          className={`text-center py-2 px-1 border-b border-r last:border-r-0 border-gray-200 min-w-14 ${
+                            isToday    ? "bg-navy/5"  :
+                            isWeek2Start ? "bg-gray-50" : ""
+                          }`}>
+                          {isWeek2Start && (
+                            <div className="text-[10px] font-bold text-gray-400 mb-0.5 uppercase tracking-wider">Next Wk</div>
+                          )}
+                          {i === 0 && (
+                            <div className="text-[10px] font-bold text-gray-400 mb-0.5 uppercase tracking-wider">This Wk</div>
+                          )}
+                          <div className={`text-[10px] uppercase font-semibold ${isToday ? "text-navy" : "text-gray-400"}`}>
+                            {DAYS_SHORT[d.getDay()]}
+                          </div>
+                          <div className={`text-sm font-bold leading-tight ${
+                            isToday ? "w-7 h-7 rounded-full bg-navy text-white flex items-center justify-center mx-auto" : "text-charcoal"
+                          }`}>
+                            {d.getDate()}
+                          </div>
+                          <div className="text-[10px] text-gray-300 mt-0.5">
+                            {MONTHS[d.getMonth()].slice(0,3)}
+                          </div>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleMembers.map((member) => {
+                    const memberEvents = calendarEvents.filter(
+                      (e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email)
+                    );
+                    return (
+                      <tr key={member.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/40 transition-colors">
+                        <td className="px-3 py-2 border-r border-gray-200 bg-white sticky left-0 z-10">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: member.color || "#0b2a55" }} />
+                            <span className="font-medium text-charcoal truncate max-w-24">{member.name}</span>
+                          </div>
+                        </td>
+                        {twoWeekDates.map((d, i) => {
+                          const dayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+                          const dayEvents  = memberEvents.filter((e) => isSameDay(e.shootDateObj, d));
+                          const dayBlocks  = timeBlocks.filter((b) => {
+                            const startStr = (b.startDate || "").slice(0, 10);
+                            const endStr   = (b.endDate   || b.startDate || "").slice(0, 10);
+                            return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
+                          });
+                          const isBlocked  = dayBlocks.length > 0;
+                          const isPast     = d < today;
+                          const isToday    = isSameDay(d, today);
+                          const count      = dayEvents.length;
+                          const isWeek2    = i >= 7;
+
+                          return (
+                            <td key={d.toISOString()}
+                              className={`text-center py-2 px-1 border-r last:border-r-0 border-gray-100 min-w-14 align-middle ${
+                                isToday  ? "bg-navy/3"  :
+                                isWeek2  ? "bg-gray-50/50" :
+                                isPast   ? "bg-gray-50/30" : ""
+                              }`}>
+                              {isBlocked ? (
+                                <span title={dayBlocks[0]?.reason || "Blocked"}
+                                  className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-500 mx-auto" style={{ fontSize: 14 }}>
+                                  —
+                                </span>
+                              ) : count > 0 ? (
+                                <a href={`/dashboard/listings/${dayEvents[0].id}`}
+                                  title={dayEvents.map((e) => e.address?.split(",")[0]).join(", ")}
+                                  className="inline-flex flex-col items-center gap-0.5">
+                                  <span className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold mx-auto"
+                                    style={{ background: member.color || "#0b2a55" }}>
+                                    {count}
+                                  </span>
+                                  {dayEvents[0].preferredTime && (
+                                    <span className="text-[10px] text-gray-400 capitalize leading-none">
+                                      {dayEvents[0].preferredTime.slice(0, 3)}
+                                    </span>
+                                  )}
+                                </a>
+                              ) : isPast ? (
+                                <span className="block w-1.5 h-1.5 rounded-full bg-gray-200 mx-auto" />
+                              ) : (
+                                <span className="block w-2 h-2 rounded-full bg-green-400 mx-auto" title="Available" />
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+
+            {/* Legend */}
+            <div className="flex items-center gap-4 px-4 py-2 border-t border-gray-100 bg-gray-50/60 text-xs text-gray-400">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-green-400 inline-block" /> Available
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-full bg-navy inline-flex items-center justify-center text-white text-[10px] font-bold">1</span> Booked (tap to view)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-5 h-5 rounded-full bg-red-100 inline-flex items-center justify-center text-red-500 text-xs">—</span> Blocked
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* ── WEEK VIEW ──────────────────────────────────────────────────── */}
         {calView === "week" && (<>

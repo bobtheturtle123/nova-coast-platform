@@ -5,15 +5,15 @@ import { useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 
 const PLANS = [
-  { id: "solo",   name: "Solo",   price: 39,  feePct: "2.0%", desc: "25 active listings · 1 team member · 6-month archive" },
-  { id: "studio", name: "Studio", price: 89,  feePct: "1.5%", desc: "75 active listings · Up to 5 team members · 12-month archive" },
-  { id: "pro",    name: "Pro",    price: 179, feePct: "1.25%", desc: "150 active listings · Up to 15 team members · 18-month archive" },
+  { id: "solo",   name: "Solo",   price: 39,  feePct: "2.0%", desc: "15 active listings · 1 team member · 6-month archive" },
+  { id: "studio", name: "Studio", price: 89,  feePct: "1.5%", desc: "50 active listings · Up to 5 team members · 12-month archive" },
+  { id: "pro",    name: "Pro",    price: 179, feePct: "1.25%", desc: "125 active listings · Up to 15 team members · 18-month archive" },
   { id: "scale",  name: "Scale",  price: 349, feePct: "1.0%", desc: "300+ active listings · Unlimited team members · 24-month archive" },
 ];
 
 const PLAN_NAMES  = { solo: "Solo", studio: "Studio", pro: "Pro", scale: "Scale", starter: "Solo" };
 const PLAN_PRICES = { solo: 39, studio: 89, pro: 179, scale: 349, starter: 39 };
-const PLAN_LIMITS = { solo: 25, studio: 75, pro: 150, scale: 300, starter: 25 };
+const PLAN_LIMITS = { solo: 15, studio: 50, pro: 125, scale: 300, starter: 15 };
 
 function isStripeNotConfigured(errorMsg) {
   if (!errorMsg) return false;

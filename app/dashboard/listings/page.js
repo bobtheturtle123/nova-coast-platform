@@ -4,12 +4,27 @@ import { useEffect, useState, useMemo } from "react";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 
-const FILTERS = [
+const STATUS_FILTERS = [
   { id: "all",       label: "All" },
   { id: "requested", label: "Pending" },
   { id: "confirmed", label: "Confirmed" },
   { id: "completed", label: "Complete" },
   { id: "delivered", label: "Delivered" },
+];
+
+const PAY_FILTERS = [
+  { id: "any",     label: "Any payment" },
+  { id: "paid",    label: "Paid in full" },
+  { id: "deposit", label: "Deposit only" },
+  { id: "unpaid",  label: "Unpaid" },
+];
+
+const SORT_OPTIONS = [
+  { id: "newest", label: "Newest first" },
+  { id: "oldest", label: "Oldest first" },
+  { id: "price_hi", label: "Price: high" },
+  { id: "price_lo", label: "Price: low" },
+  { id: "alpha",  label: "A to Z" },
 ];
 
 function PayBadge({ listing }) {
@@ -24,11 +39,13 @@ function DeliveryBadge({ listing }) {
 }
 
 export default function ListingsPage() {
-  const [listings, setListings] = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [filter,   setFilter]   = useState("all");
-  const [search,   setSearch]   = useState("");
-  const [view,     setView]     = useState("list");
+  const [listings,   setListings]   = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [filter,     setFilter]     = useState("all");
+  const [payFilter,  setPayFilter]  = useState("any");
+  const [sortBy,     setSortBy]     = useState("newest");
+  const [search,     setSearch]     = useState("");
+  const [view,       setView]       = useState("list");
 
   useEffect(() => {
     auth.currentUser?.getIdToken(true).then(async (token) => {
@@ -42,21 +59,45 @@ export default function ListingsPage() {
 
   const filtered = useMemo(() => {
     let list = listings;
+    // Status filter
     if (filter === "delivered") {
       list = list.filter((l) => l.gallery?.delivered);
     } else if (filter !== "all") {
       list = list.filter((l) => l.status === filter);
     }
+    // Payment filter
+    if (payFilter === "paid") {
+      list = list.filter((l) => l.paidInFull || l.balancePaid);
+    } else if (payFilter === "deposit") {
+      list = list.filter((l) => l.depositPaid && !l.paidInFull && !l.balancePaid);
+    } else if (payFilter === "unpaid") {
+      list = list.filter((l) => !l.depositPaid && !l.paidInFull && !l.balancePaid);
+    }
+    // Search
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((l) =>
         l.fullAddress?.toLowerCase().includes(q) ||
+        l.address?.toLowerCase().includes(q) ||
         l.clientName?.toLowerCase().includes(q) ||
         l.clientEmail?.toLowerCase().includes(q)
       );
     }
+    // Sort
+    list = [...list];
+    if (sortBy === "newest") {
+      list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    } else if (sortBy === "oldest") {
+      list.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    } else if (sortBy === "price_hi") {
+      list.sort((a, b) => (b.totalPrice || 0) - (a.totalPrice || 0));
+    } else if (sortBy === "price_lo") {
+      list.sort((a, b) => (a.totalPrice || 0) - (b.totalPrice || 0));
+    } else if (sortBy === "alpha") {
+      list.sort((a, b) => (a.address || a.fullAddress || "").localeCompare(b.address || b.fullAddress || ""));
+    }
     return list;
-  }, [listings, filter, search]);
+  }, [listings, filter, payFilter, sortBy, search]);
 
   const counts = useMemo(() => ({
     all:       listings.length,
@@ -114,7 +155,7 @@ export default function ListingsPage() {
           />
         </div>
         <div className="flex gap-1.5 flex-wrap">
-          {FILTERS.map((f) => (
+          {STATUS_FILTERS.map((f) => (
             <button key={f.id} onClick={() => setFilter(f.id)}
               className={`px-3.5 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
                 filter === f.id
@@ -127,6 +168,25 @@ export default function ListingsPage() {
               )}
             </button>
           ))}
+          <div className="w-px h-6 bg-gray-200 self-center mx-1" />
+          {PAY_FILTERS.map((f) => (
+            <button key={f.id} onClick={() => setPayFilter(f.id)}
+              className={`px-3.5 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                payFilter === f.id
+                  ? "bg-navy text-white border-navy"
+                  : "text-gray-500 border-gray-200 bg-white hover:border-gray-300 hover:text-charcoal"
+              }`}>
+              {f.label}
+            </button>
+          ))}
+          <div className="w-px h-6 bg-gray-200 self-center mx-1" />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="text-xs border border-gray-200 bg-white text-gray-500 rounded-lg px-2.5 py-1.5 cursor-pointer hover:border-gray-300 focus:outline-none"
+          >
+            {SORT_OPTIONS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+          </select>
         </div>
       </div>
 

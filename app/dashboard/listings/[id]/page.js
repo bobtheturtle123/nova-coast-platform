@@ -248,13 +248,37 @@ export default function ListingDetailPage() {
   const [sendingReminder, setSendingReminder] = useState(false);
   const [reminderMsg,     setReminderMsg]     = useState("");
 
+  // Role-based access
+  const [userRole, setUserRole] = useState("owner"); // "owner" | "admin" | "manager"
+
+  // Activity log
+  const [activityLog,     setActivityLog]     = useState([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+
   useEffect(() => {
     load();
   }, [id]);
 
+  async function loadActivity(galleryId) {
+    if (!galleryId) return;
+    setActivityLoading(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch(`/api/dashboard/galleries/${galleryId}/activity`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) { const d = await res.json(); setActivityLog(d.events || []); }
+    } catch { /* ignore */ }
+    setActivityLoading(false);
+  }
+
   async function load() {
     const token = await auth.currentUser?.getIdToken(true);
     if (!token) return;
+
+    // Get user role from claims
+    const result = await auth.currentUser.getIdTokenResult();
+    setUserRole(result.claims?.role || "owner");
 
     const [bRes, gRes, tRes] = await Promise.all([
       fetch(`/api/dashboard/bookings/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -567,8 +591,13 @@ export default function ListingDetailPage() {
             { id: "orders",    label: "Orders" },
             { id: "property",  label: "Property Site" },
             { id: "marketing", label: "Marketing" },
+            { id: "activity",  label: "Activity" },
           ].map((t) => (
-            <button key={t.id} onClick={() => { setTab(t.id); if (t.id === "marketing" && !analytics) loadAnalytics(); }}
+            <button key={t.id} onClick={() => {
+              setTab(t.id);
+              if (t.id === "marketing" && !analytics) loadAnalytics();
+              if (t.id === "activity" && activityLog.length === 0) loadActivity(gallery?.id);
+            }}
               className={`px-4 py-3.5 text-sm font-medium border-b-2 transition-colors ${
                 tab === t.id
                   ? "border-charcoal text-charcoal"
@@ -867,49 +896,56 @@ export default function ListingDetailPage() {
         {/* ── ORDERS TAB ───────────────────────────────────────────────────── */}
         {tab === "orders" && (
           <div className="space-y-4 max-w-lg">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
-              <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Payment Summary</p>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Total</span>
-                  <span className="font-semibold">${(booking.totalPrice || 0).toLocaleString()}</span>
-                </div>
-
-                {booking.paidInFull ? (
-                  <div className="flex justify-between text-green-700 font-medium">
-                    <span>Paid in full</span>
-                    <span>${(booking.totalPrice || 0).toLocaleString()} ✓</span>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Deposit</span>
-                      <span className={booking.depositPaid ? "text-green-600 font-medium" : "text-gray-400"}>
-                        ${(booking.depositAmount || 0).toLocaleString()}
-                        {booking.depositPaid ? " ✓ Paid" : " — Unpaid"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-t border-gray-100 pt-3">
-                      <span className="text-gray-500">Balance due</span>
-                      <span className={booking.balancePaid ? "text-green-600 font-medium" : "text-amber-600 font-medium"}>
-                        ${(booking.remainingBalance || 0).toLocaleString()}
-                        {booking.balancePaid ? " ✓ Paid" : " — Due at delivery"}
-                      </span>
-                    </div>
-                  </>
-                )}
-
-                {booking.tipAmount > 0 && (
-                  <div className="flex justify-between text-gray-500">
-                    <span>Tip</span>
-                    <span className="text-green-600 font-medium">+${booking.tipAmount.toLocaleString()}</span>
-                  </div>
-                )}
+            {userRole === "manager" ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-800">
+                Pricing details are visible to account owners and admins only.
               </div>
-            </div>
+            ) : null}
+            {userRole !== "manager" && (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+                <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Payment Summary</p>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Total</span>
+                    <span className="font-semibold">${(booking.totalPrice || 0).toLocaleString()}</span>
+                  </div>
+
+                  {booking.paidInFull ? (
+                    <div className="flex justify-between text-green-700 font-medium">
+                      <span>Paid in full</span>
+                      <span>${(booking.totalPrice || 0).toLocaleString()} ✓</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Deposit</span>
+                        <span className={booking.depositPaid ? "text-green-600 font-medium" : "text-gray-400"}>
+                          ${(booking.depositAmount || 0).toLocaleString()}
+                          {booking.depositPaid ? " ✓ Paid" : " — Unpaid"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-t border-gray-100 pt-3">
+                        <span className="text-gray-500">Balance due</span>
+                        <span className={booking.balancePaid ? "text-green-600 font-medium" : "text-amber-600 font-medium"}>
+                          ${(booking.remainingBalance || 0).toLocaleString()}
+                          {booking.balancePaid ? " ✓ Paid" : " — Due at delivery"}
+                        </span>
+                      </div>
+                    </>
+                  )}
+
+                  {booking.tipAmount > 0 && (
+                    <div className="flex justify-between text-gray-500">
+                      <span>Tip</span>
+                      <span className="text-green-600 font-medium">+${booking.tipAmount.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Send Invoice button */}
-            {!booking.paidInFull && !booking.balancePaid && (
+            {userRole !== "manager" && !booking.paidInFull && !booking.balancePaid && (
               <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Send Invoice</p>
                 <p className="text-sm text-gray-500 mb-4">
@@ -948,7 +984,7 @@ export default function ListingDetailPage() {
             )}
 
             {/* Send Payment Reminder button — only when gallery delivered and balance outstanding */}
-            {booking.depositPaid && !booking.paidInFull && !booking.balancePaid && booking.galleryId && (
+            {userRole !== "manager" && booking.depositPaid && !booking.paidInFull && !booking.balancePaid && booking.galleryId && (
               <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Payment Reminder</p>
                 <p className="text-sm text-gray-500 mb-4">
@@ -987,7 +1023,7 @@ export default function ListingDetailPage() {
               </div>
             )}
 
-            {booking.stripeDepositIntentId && (
+            {userRole !== "manager" && booking.stripeDepositIntentId && (
               <div className="bg-gray-50 rounded-sm border border-gray-100 p-4 text-xs text-gray-500 space-y-1">
                 <p>Deposit intent: <code className="font-mono">{booking.stripeDepositIntentId}</code></p>
                 {booking.stripeBalanceIntentId && (
@@ -1596,6 +1632,57 @@ export default function ListingDetailPage() {
                 No inquiries yet. Share the listing URL to start getting leads.
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── ACTIVITY TAB ─────────────────────────────────────────────────── */}
+        {tab === "activity" && (
+          <div className="max-w-2xl space-y-4">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs uppercase tracking-wide text-gray-400">Gallery Activity Log</p>
+                <button onClick={() => loadActivity(gallery?.id)}
+                  className="text-xs text-navy hover:underline">Refresh</button>
+              </div>
+
+              {activityLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+                </div>
+              ) : !gallery ? (
+                <p className="text-sm text-gray-400 text-center py-6">No gallery attached to this listing yet.</p>
+              ) : activityLog.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">No activity recorded yet. Activity appears here once the gallery is delivered and accessed.</p>
+              ) : (
+                <div className="space-y-0 divide-y divide-gray-50">
+                  {activityLog.map((ev) => {
+                    const icons = {
+                      view:     { icon: "👁", label: "Gallery viewed", color: "text-blue-600 bg-blue-50" },
+                      download: { icon: "⬇", label: "File downloaded", color: "text-green-600 bg-green-50" },
+                      link_copy:{ icon: "🔗", label: "Gallery link copied", color: "text-purple-600 bg-purple-50" },
+                      note:     { icon: "📝", label: "Admin note", color: "text-gray-600 bg-gray-50" },
+                    };
+                    const meta = icons[ev.event] || { icon: "·", label: ev.event, color: "text-gray-500 bg-gray-50" };
+                    return (
+                      <div key={ev.id} className="flex items-start gap-3 py-3">
+                        <span className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${meta.color}`}>
+                          {meta.icon}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-charcoal">{meta.label}</p>
+                          {ev.email && <p className="text-xs text-gray-500">{ev.email}</p>}
+                          {ev.fileName && <p className="text-xs text-gray-500 truncate">{ev.fileName}</p>}
+                          {ev.note && <p className="text-xs text-gray-500 italic">{ev.note}</p>}
+                        </div>
+                        <p className="text-xs text-gray-400 flex-shrink-0">
+                          {ev.timestamp ? new Date(ev.timestamp).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

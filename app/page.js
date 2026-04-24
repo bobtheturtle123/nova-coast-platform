@@ -582,17 +582,17 @@ const COMPARISON_ROWS = [
 
 const TESTIMONIALS = [
   {
-    name: "Rick M.",
+    name: "Marcus W.",
     role: "Real estate photographer, San Diego CA",
     quote: "I used to spend half my Friday chasing down payment requests. Now the balance just shows up in my account before I even think about it. The whole system runs itself.",
   },
   {
-    name: "Cory T.",
+    name: "Devon T.",
     role: "Photography team owner, Phoenix AZ",
     quote: "Assigning shoots to my team used to be a group text. Now I open the booking, see who is available, tap their name, and they get notified. Game changer for us.",
   },
   {
-    name: "Kelly R.",
+    name: "Brooke S.",
     role: "Solo photographer, Nashville TN",
     quote: "I was nervous it would take forever to set up. I had my booking page live, Stripe connected, and my first real booking confirmed within the same afternoon.",
   },

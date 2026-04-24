@@ -659,10 +659,25 @@ export default function SettingsPage() {
   const [availInterval,    setAvailInterval]    = useState(30);
   const [availDuration,    setAvailDuration]    = useState(120);
   const [availBuffer,      setAvailBuffer]      = useState(30);
+  const [availBufferAfter, setAvailBufferAfter] = useState(0);
   const [savingAvail,               setSavingAvail]               = useState(false);
   const [showWeather,               setShowWeather]               = useState(true);
   const [twilightOffsetMinutes,     setTwilightOffsetMinutes]     = useState(60);
   const [allowAgentPhotographerSel, setAllowAgentPhotographerSel] = useState(false);
+
+  // Booking limits state
+  const [minNoticeHours,    setMinNoticeHours]    = useState(24);
+  const [maxAdvanceDays,    setMaxAdvanceDays]     = useState(90);
+  const [maxBookingsPerDay, setMaxBookingsPerDay]  = useState(0);  // 0 = unlimited
+  const [maxWeeklyHours,    setMaxWeeklyHours]     = useState(0);  // 0 = unlimited
+
+  // Cancel / reschedule fee state
+  const [cancelFeeEnabled,    setCancelFeeEnabled]    = useState(false);
+  const [cancelFeePercent,    setCancelFeePercent]    = useState(50);
+  const [cancelFeeWindowHrs,  setCancelFeeWindowHrs]  = useState(48);
+  const [rescheduleFeeEnabled,  setRescheduleFeeEnabled]   = useState(false);
+  const [rescheduleFeePercent,  setRescheduleFeePercent]   = useState(25);
+  const [rescheduleFeeWindowHrs, setRescheduleFeeWindowHrs] = useState(24);
 
   // Service agreement (contract) state
   const [serviceAgreementEnabled, setServiceAgreementEnabled] = useState(false);
@@ -755,10 +770,24 @@ export default function SettingsPage() {
             if (av.businessHours?.days?.length) setAvailDays(av.businessHours.days);
             if (av.intervalMinutes)  setAvailInterval(av.intervalMinutes);
             if (av.defaultDuration)  setAvailDuration(av.defaultDuration);
-            if (av.bufferMinutes)    setAvailBuffer(av.bufferMinutes);
+            if (av.bufferMinutes)      setAvailBuffer(av.bufferMinutes);
+            if (av.bufferAfterMinutes) setAvailBufferAfter(av.bufferAfterMinutes);
             if (av.showWeather !== undefined) setShowWeather(av.showWeather);
             if (av.twilightOffsetMinutes !== undefined) setTwilightOffsetMinutes(av.twilightOffsetMinutes);
             if (av.allowAgentPhotographerSelection !== undefined) setAllowAgentPhotographerSel(av.allowAgentPhotographerSelection);
+            if (av.minNoticeHours    != null) setMinNoticeHours(av.minNoticeHours);
+            if (av.maxAdvanceDays    != null) setMaxAdvanceDays(av.maxAdvanceDays);
+            if (av.maxBookingsPerDay != null) setMaxBookingsPerDay(av.maxBookingsPerDay);
+            if (av.maxWeeklyHours    != null) setMaxWeeklyHours(av.maxWeeklyHours);
+          }
+          if (bc.cancellation) {
+            const c = bc.cancellation;
+            if (c.feeEnabled    !== undefined) setCancelFeeEnabled(c.feeEnabled);
+            if (c.feePercent    != null)       setCancelFeePercent(c.feePercent);
+            if (c.feeWindowHrs  != null)       setCancelFeeWindowHrs(c.feeWindowHrs);
+            if (c.rescheduleEnabled !== undefined) setRescheduleFeeEnabled(c.rescheduleEnabled);
+            if (c.reschedulePercent != null)       setRescheduleFeePercent(c.reschedulePercent);
+            if (c.rescheduleWindowHrs != null)     setRescheduleFeeWindowHrs(c.rescheduleWindowHrs);
           }
         }
         if (data.tenant.emailTemplate) {
@@ -926,10 +955,23 @@ export default function SettingsPage() {
         businessHours:  { start: availStart, end: availEnd, days: availDays },
         intervalMinutes: Number(availInterval) || 30,
         defaultDuration: Number(availDuration) || 120,
-        bufferMinutes:   Number(availBuffer)   || 30,
+        bufferMinutes:      Number(availBuffer)      || 30,
+        bufferAfterMinutes: Number(availBufferAfter) || 0,
         showWeather,
         twilightOffsetMinutes: Number(twilightOffsetMinutes) || 60,
         allowAgentPhotographerSelection: allowAgentPhotographerSel,
+        minNoticeHours:    Number(minNoticeHours)    || 0,
+        maxAdvanceDays:    Number(maxAdvanceDays)    || 0,
+        maxBookingsPerDay: Number(maxBookingsPerDay) || 0,
+        maxWeeklyHours:    Number(maxWeeklyHours)    || 0,
+      },
+      cancellation: {
+        feeEnabled:           cancelFeeEnabled,
+        feePercent:           Number(cancelFeePercent)     || 0,
+        feeWindowHrs:         Number(cancelFeeWindowHrs)   || 0,
+        rescheduleEnabled:    rescheduleFeeEnabled,
+        reschedulePercent:    Number(rescheduleFeePercent)  || 0,
+        rescheduleWindowHrs:  Number(rescheduleFeeWindowHrs) || 0,
       },
     };
   }
@@ -1676,10 +1718,18 @@ export default function SettingsPage() {
                 className="input-field w-full text-sm" />
             </div>
             <div>
-              <label className="label-field text-[11px]">Buffer between shoots</label>
+              <label className="label-field text-[11px]">Buffer before shoot (min)</label>
               <input type="number" value={availBuffer} min={0} step={15}
                 onChange={(e) => setAvailBuffer(e.target.value)}
                 className="input-field w-full text-sm" />
+              <p className="text-[10px] text-gray-400 mt-0.5">Travel / prep time before each appointment.</p>
+            </div>
+            <div>
+              <label className="label-field text-[11px]">Buffer after shoot (min)</label>
+              <input type="number" value={availBufferAfter} min={0} step={15}
+                onChange={(e) => setAvailBufferAfter(e.target.value)}
+                className="input-field w-full text-sm" />
+              <p className="text-[10px] text-gray-400 mt-0.5">Wind-down / editing time after each appointment.</p>
             </div>
           </div>
         </div>
@@ -1732,6 +1782,115 @@ export default function SettingsPage() {
               onChange={(e) => setTwilightOffsetMinutes(e.target.value)}
               className="input-field w-24 text-sm" />
             <span className="text-sm text-gray-500">minutes before sunset</span>
+          </div>
+        </div>
+
+        {/* Booking Limits */}
+        <div className="pt-4 border-t border-gray-100">
+          <h3 className="text-sm font-semibold text-charcoal mb-1">Booking Limits</h3>
+          <p className="text-xs text-gray-400 mb-3">Control how far in advance clients can book and how many shoots your team can take on.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label-field text-[11px]">Minimum notice (hours)</label>
+              <input type="number" value={minNoticeHours} min={0} step={1}
+                onChange={(e) => setMinNoticeHours(e.target.value)}
+                className="input-field w-full text-sm" />
+              <p className="text-[10px] text-gray-400 mt-0.5">How many hours ahead a client must book. 0 = no minimum.</p>
+            </div>
+            <div>
+              <label className="label-field text-[11px]">Max days in advance</label>
+              <input type="number" value={maxAdvanceDays} min={0} step={1}
+                onChange={(e) => setMaxAdvanceDays(e.target.value)}
+                className="input-field w-full text-sm" />
+              <p className="text-[10px] text-gray-400 mt-0.5">Furthest date a client can book. 0 = no limit.</p>
+            </div>
+            <div>
+              <label className="label-field text-[11px]">Max bookings per day</label>
+              <input type="number" value={maxBookingsPerDay} min={0} step={1}
+                onChange={(e) => setMaxBookingsPerDay(e.target.value)}
+                className="input-field w-full text-sm" />
+              <p className="text-[10px] text-gray-400 mt-0.5">Cap new bookings per day. 0 = unlimited.</p>
+            </div>
+            <div>
+              <label className="label-field text-[11px]">Max team hours per week</label>
+              <input type="number" value={maxWeeklyHours} min={0} step={1}
+                onChange={(e) => setMaxWeeklyHours(e.target.value)}
+                className="input-field w-full text-sm" />
+              <p className="text-[10px] text-gray-400 mt-0.5">Weekly capacity limit across all team. 0 = unlimited.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Cancellation & Reschedule Fees */}
+        <div className="pt-4 border-t border-gray-100">
+          <h3 className="text-sm font-semibold text-charcoal mb-1">Cancellation &amp; Reschedule Fees</h3>
+          <p className="text-xs text-gray-400 mb-3">
+            Charge a fee when a client cancels or reschedules within a short window before the shoot.
+            These settings are for your records — you apply the charge manually from the booking.
+          </p>
+
+          {/* Cancel fee */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-3">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-charcoal">Late Cancellation Fee</p>
+              <button type="button" onClick={() => setCancelFeeEnabled((v) => !v)}
+                className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${cancelFeeEnabled ? "bg-navy" : "bg-gray-200"}`}>
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${cancelFeeEnabled ? "left-5" : "left-0.5"}`} />
+              </button>
+            </div>
+            {cancelFeeEnabled && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label-field text-[11px]">Fee (%)</label>
+                  <input type="number" value={cancelFeePercent} min={0} max={100} step={5}
+                    onChange={(e) => setCancelFeePercent(e.target.value)}
+                    className="input-field w-full text-sm" />
+                </div>
+                <div>
+                  <label className="label-field text-[11px]">Within (hours of shoot)</label>
+                  <input type="number" value={cancelFeeWindowHrs} min={1} step={1}
+                    onChange={(e) => setCancelFeeWindowHrs(e.target.value)}
+                    className="input-field w-full text-sm" />
+                </div>
+              </div>
+            )}
+            {cancelFeeEnabled && (
+              <p className="text-[10px] text-gray-400 mt-2">
+                e.g. {cancelFeePercent}% of booking total if cancelled within {cancelFeeWindowHrs} hours of the scheduled shoot.
+              </p>
+            )}
+          </div>
+
+          {/* Reschedule fee */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-charcoal">Late Reschedule Fee</p>
+              <button type="button" onClick={() => setRescheduleFeeEnabled((v) => !v)}
+                className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${rescheduleFeeEnabled ? "bg-navy" : "bg-gray-200"}`}>
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${rescheduleFeeEnabled ? "left-5" : "left-0.5"}`} />
+              </button>
+            </div>
+            {rescheduleFeeEnabled && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label-field text-[11px]">Fee (%)</label>
+                  <input type="number" value={rescheduleFeePercent} min={0} max={100} step={5}
+                    onChange={(e) => setRescheduleFeePercent(e.target.value)}
+                    className="input-field w-full text-sm" />
+                </div>
+                <div>
+                  <label className="label-field text-[11px]">Within (hours of shoot)</label>
+                  <input type="number" value={rescheduleFeeWindowHrs} min={1} step={1}
+                    onChange={(e) => setRescheduleFeeWindowHrs(e.target.value)}
+                    className="input-field w-full text-sm" />
+                </div>
+              </div>
+            )}
+            {rescheduleFeeEnabled && (
+              <p className="text-[10px] text-gray-400 mt-2">
+                e.g. {rescheduleFeePercent}% of booking total if rescheduled within {rescheduleFeeWindowHrs} hours of the scheduled shoot.
+              </p>
+            )}
           </div>
         </div>
 

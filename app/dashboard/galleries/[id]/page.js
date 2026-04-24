@@ -279,6 +279,10 @@ export default function GalleryDetailPage() {
   const [deliveryMode,  setDeliveryMode]  = useState("now"); // "now" | "later"
   const [scheduledAt,   setScheduledAt]   = useState(""); // datetime-local value
 
+  // Gallery access
+  const [agentCanShare, setAgentCanShare] = useState(true);
+  const [extraAccessEmail, setExtraAccessEmail] = useState("");
+
   // Category state
   const [showCatPanel,    setShowCatPanel]    = useState(false);
   const [newCatName,      setNewCatName]      = useState("");
@@ -336,6 +340,9 @@ export default function GalleryDetailPage() {
         setEmailSubject(defaultSubject);
         if (defaultNote) setEmailNote(defaultNote);
         if (data.gallery.clientEmail) setEmailTo([data.gallery.clientEmail]);
+
+        // Gallery access settings
+        if (data.gallery.agentCanShare !== undefined) setAgentCanShare(data.gallery.agentCanShare);
 
         // Load extras
         if (data.gallery.matterportUrl)    setMatterportUrl(data.gallery.matterportUrl);
@@ -597,10 +604,11 @@ export default function GalleryDetailPage() {
     setDelivering(true);
     const token = await auth.currentUser.getIdToken();
     const body  = {
-      subject: emailSubject,
-      note:    emailNote,
-      to:      emailTo,
-      cc:      emailCc,
+      subject:      emailSubject,
+      note:         emailNote,
+      to:           emailTo,
+      cc:           emailCc,
+      agentCanShare,
       ...(deliveryMode === "later" ? { scheduledAt: new Date(scheduledAt).toISOString() } : {}),
     };
     const res = await fetch(`/api/dashboard/galleries/${id}/send`, {
@@ -610,12 +618,21 @@ export default function GalleryDetailPage() {
     });
     setDelivering(false); setShowDeliver(false);
     if (res.ok) {
+      // Record all recipient emails as authorized viewers
+      const allRecipients = [...new Set([...emailTo, ...emailCc])];
+      const updatedEmails = [...new Set([...(gallery.authorizedEmails || []), ...allRecipients])];
+      setGallery((g) => ({
+        ...g,
+        authorizedEmails: updatedEmails,
+        agentCanShare,
+        ...(deliveryMode === "later"
+          ? { scheduledDelivery: { scheduledAt: new Date(scheduledAt), status: "pending" } }
+          : { delivered: true, scheduledDelivery: null }),
+      }));
       if (deliveryMode === "later") {
         toast(`Delivery scheduled for ${new Date(scheduledAt).toLocaleString()}.`);
-        setGallery((g) => ({ ...g, scheduledDelivery: { scheduledAt: new Date(scheduledAt), status: "pending" } }));
       } else {
         toast("Gallery delivered.");
-        setGallery((g) => ({ ...g, delivered: true, scheduledDelivery: null }));
       }
     } else {
       toast("Failed — check settings and try again.", "error");
@@ -808,6 +825,78 @@ export default function GalleryDetailPage() {
             </button>
           </div>
         </div>
+
+        {/* Gallery access panel */}
+        {(gallery.authorizedEmails?.length > 0 || true) && (
+          <div className="mb-5 bg-white border border-gray-200 rounded-xl p-4 shadow-card">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-semibold text-charcoal">Gallery Access</p>
+              <span className="text-xs text-gray-400">No login required to view</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mb-3 min-h-6">
+              {(gallery.authorizedEmails || []).length === 0
+                ? <span className="text-xs text-gray-400 italic">No recipients added yet. Deliver to add access.</span>
+                : (gallery.authorizedEmails || []).map((email) => (
+                  <span key={email} className="inline-flex items-center gap-1 bg-navy/8 text-navy text-xs px-2.5 py-1 rounded-full">
+                    {email}
+                    <button
+                      onClick={async () => {
+                        const updated = (gallery.authorizedEmails || []).filter((e) => e !== email);
+                        setGallery((g) => ({ ...g, authorizedEmails: updated }));
+                        const token = await auth.currentUser.getIdToken();
+                        await fetch(`/api/dashboard/galleries/${id}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                          body: JSON.stringify({ authorizedEmails: updated }),
+                        });
+                      }}
+                      className="hover:text-red-500 text-navy/50 leading-none ml-0.5 text-sm">&times;</button>
+                  </span>
+                ))
+              }
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={extraAccessEmail}
+                onChange={(e) => setExtraAccessEmail(e.target.value)}
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter" && extraAccessEmail.includes("@")) {
+                    const updated = [...new Set([...(gallery.authorizedEmails || []), extraAccessEmail.trim()])];
+                    setGallery((g) => ({ ...g, authorizedEmails: updated }));
+                    setExtraAccessEmail("");
+                    const token = await auth.currentUser.getIdToken();
+                    await fetch(`/api/dashboard/galleries/${id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                      body: JSON.stringify({ authorizedEmails: updated }),
+                    });
+                  }
+                }}
+                placeholder="Add email and press Enter"
+                className="input-field flex-1 text-sm py-1.5"
+              />
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-400">Reshare:</span>
+                <button
+                  onClick={async () => {
+                    const newVal = !gallery.agentCanShare;
+                    setGallery((g) => ({ ...g, agentCanShare: newVal }));
+                    setAgentCanShare(newVal);
+                    const token = await auth.currentUser.getIdToken();
+                    await fetch(`/api/dashboard/galleries/${id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                      body: JSON.stringify({ agentCanShare: newVal }),
+                    });
+                  }}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${gallery.agentCanShare !== false ? "bg-navy" : "bg-gray-300"}`}>
+                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${gallery.agentCanShare !== false ? "translate-x-4" : "translate-x-0.5"}`} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Scheduled delivery banner */}
         {gallery.scheduledDelivery?.status === "pending" && (
@@ -1304,6 +1393,24 @@ export default function GalleryDetailPage() {
                 </label>
                 <RichTextEditor value={emailNote} onChange={setEmailNote}
                   placeholder="Great shoot today! Let me know if you need anything adjusted." />
+              </div>
+
+              {/* Gallery access settings */}
+              <div className="bg-gray-50 border border-gray-200 rounded-sm p-4 space-y-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Gallery Access</p>
+                <p className="text-xs text-gray-400">Recipients get view access via the link — no account needed. Emails listed here are recorded for your reference.</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-charcoal">Agents can reshare this gallery</p>
+                    <p className="text-xs text-gray-400">If on, the gallery page shows a copy-link button to the viewer.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAgentCanShare((v) => !v)}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${agentCanShare ? "bg-navy" : "bg-gray-300"}`}>
+                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${agentCanShare ? "translate-x-4" : "translate-x-0.5"}`} />
+                  </button>
+                </div>
               </div>
 
               {/* Send time */}
