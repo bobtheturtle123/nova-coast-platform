@@ -18,7 +18,7 @@ export async function POST(req, { params }) {
 
     if (!AI_KEY) {
       return Response.json(
-        { error: "AI not configured. Add DEEPSEEK_API_KEY or OPENAI_API_KEY to enable." },
+        { error: "AI not configured. Add DEEPSEEK_API_KEY or GROQ_API_KEY to enable." },
         { status: 503 }
       );
     }

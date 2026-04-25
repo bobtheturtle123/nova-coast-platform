@@ -1,6 +1,7 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
 import Link from "next/link";
+import AgentShareButtons from "@/components/AgentShareButtons";
 
 export default async function AgentPortalPage({ params, searchParams }) {
   const { slug } = params;
@@ -48,10 +49,11 @@ export default async function AgentPortalPage({ params, searchParams }) {
       address:      data.fullAddress || data.address || "Property",
       status:       data.status || "confirmed",
       shootDate:    data.shootDate   ? data.shootDate.toDate?.()?.toISOString?.() ?? data.shootDate : null,
-      galleryId:    data.galleryId   || null,
-      propertyWebsite: data.propertyWebsite || null,
-      totalPrice:   data.totalPrice  || 0,
-      createdAt:    data.createdAt?.toDate?.()?.toISOString?.() ?? null,
+      galleryId:        data.galleryId   || null,
+      propertyWebsite:  data.propertyWebsite || null,
+      totalPrice:       data.totalPrice  || 0,
+      photographerName: data.photographerName || null,
+      createdAt:        data.createdAt?.toDate?.()?.toISOString?.() ?? null,
     };
   });
 
@@ -76,8 +78,9 @@ export default async function AgentPortalPage({ params, searchParams }) {
     );
   }
 
-  const primary = tenant.branding?.primaryColor || "#0b2a55";
-  const accent  = tenant.branding?.accentColor  || "#c9a96e";
+  const primary  = tenant.branding?.primaryColor || "#0b2a55";
+  const accent   = tenant.branding?.accentColor  || "#c9a96e";
+  const appUrl   = process.env.NEXT_PUBLIC_APP_URL || "";
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-8">
@@ -157,6 +160,15 @@ export default async function AgentPortalPage({ params, searchParams }) {
                     </a>
                   )}
                 </div>
+
+                {/* Social share — only when gallery is delivered */}
+                {gal?.delivered && gal?.accessToken && (() => {
+                  const galleryUrl  = `${appUrl}/${slug}/gallery/${gal.accessToken}`;
+                  const photographer = b.photographerName && b.photographerName !== "TBD"
+                    ? ` Photos by ${b.photographerName}.` : "";
+                  const shareText   = `Just listed! 🏡 Check out the media for ${b.address}.${photographer} #JustListed #ShootFlow`;
+                  return <AgentShareButtons galleryUrl={galleryUrl} shareText={shareText} />;
+                })()}
               </div>
             );
           })}

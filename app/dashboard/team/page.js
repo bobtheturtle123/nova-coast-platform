@@ -20,6 +20,20 @@ const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS     = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const COLORS     = ["#0b2a55","#1e6091","#2e7d32","#6a1b9a","#d84315","#00695c","#827717","#ad1457"];
 
+function fmt12(time24) {
+  if (!time24) return "";
+  const [h, m] = time24.split(":");
+  const hr = Number(h);
+  return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`;
+}
+
+function hexWithAlpha(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 function getWeekDates(anchor) {
   const d = new Date(anchor);
   d.setHours(0,0,0,0);
@@ -42,14 +56,15 @@ function isSameDay(a, b) {
 // ─── Member form modal ────────────────────────────────────────────────────────
 function MemberForm({ member, products, onSave, onDelete, onClose }) {
   const [form, setForm] = useState({
-    name:         member?.name         || "",
-    email:        member?.email        || "",
-    phone:        member?.phone        || "",
-    skills:       member?.skills       || [],
-    color:        member?.color        || COLORS[0],
-    active:       member?.active       !== false,
-    payRate:      member?.payRate      ?? "",
-    serviceRates: member?.serviceRates || {},
+    name:          member?.name          || "",
+    email:         member?.email         || "",
+    phone:         member?.phone         || "",
+    skills:        member?.skills        || [],
+    color:         member?.color         || COLORS[0],
+    active:        member?.active        !== false,
+    payRate:       member?.payRate       ?? "",
+    serviceRates:  member?.serviceRates  || {},
+    bufferMinutes: member?.bufferMinutes ?? "",
   });
   const [showServiceRates, setShowServiceRates] = useState(
     Object.keys(member?.serviceRates || {}).length > 0
@@ -199,6 +214,24 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
                 )}
               </div>
             )}
+          </div>
+
+          <div>
+            <label className="label-field">
+              Booking Buffer
+              <span className="font-normal text-gray-400 ml-1">(extra time after each shoot)</span>
+            </label>
+            <select value={form.bufferMinutes}
+              onChange={(e) => setForm((f) => ({ ...f, bufferMinutes: e.target.value === "" ? "" : Number(e.target.value) }))}
+              className="input-field w-full">
+              <option value="">Default (no extra buffer)</option>
+              <option value={15}>+15 min</option>
+              <option value={30}>+30 min</option>
+              <option value={45}>+45 min</option>
+              <option value={60}>+60 min</option>
+              <option value={90}>+90 min</option>
+            </select>
+            <p className="text-xs text-gray-400 mt-0.5">For photographers who need more time between jobs.</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -1047,18 +1080,22 @@ export default function TeamPage() {
                           <div key={d.toISOString()} className={`p-1.5 border-r last:border-r-0 border-gray-100 min-h-20 relative ${isToday ? "bg-navy/2" : ""}`}>
                             {dayBlocks.length > 0 && (
                               <div className="absolute inset-0 pointer-events-none"
-                                style={{ background: "repeating-linear-gradient(-45deg, #fee2e2, #fee2e2 3px, transparent 3px, transparent 10px)", opacity: 0.5 }} />
+                                style={{ background: `repeating-linear-gradient(-45deg, ${hexWithAlpha(member.color || "#0b2a55", 0.12)}, ${hexWithAlpha(member.color || "#0b2a55", 0.12)} 3px, transparent 3px, transparent 10px)` }} />
                             )}
                             <div className="relative z-10">
                             {dayBlocks.map((bl) => (
-                              <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1.5 py-0.5 rounded-sm mb-1 group">
+                              <div key={bl.id} className="text-xs border-l-2 px-1.5 py-0.5 rounded-sm mb-1 group"
+                                style={{ background: hexWithAlpha(member.color || "#0b2a55", 0.1), borderLeftColor: member.color || "#0b2a55" }}>
                                 <div className="flex items-center justify-between">
-                                  <span className="text-red-600 font-medium truncate">{bl.reason}</span>
+                                  <span className="font-medium truncate" style={{ color: member.color || "#0b2a55" }}>{bl.reason}</span>
                                   <button onClick={() => deleteBlock(bl.id)}
-                                    className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 ml-1 flex-shrink-0 text-[10px]">×</button>
+                                    className="opacity-0 group-hover:opacity-100 ml-1 flex-shrink-0 text-[10px]"
+                                    style={{ color: member.color || "#0b2a55" }}>×</button>
                                 </div>
                                 {(bl.startTime || bl.endTime) && (
-                                  <p className="text-red-400 text-[10px]">{bl.startTime}{bl.endTime ? ` – ${bl.endTime}` : ""}</p>
+                                  <p className="text-[10px]" style={{ color: hexWithAlpha(member.color || "#0b2a55", 0.7) }}>
+                                    {fmt12(bl.startTime)}{bl.endTime ? ` – ${fmt12(bl.endTime)}` : ""}
+                                  </p>
                                 )}
                               </div>
                             ))}
@@ -1241,15 +1278,17 @@ export default function TeamPage() {
                         </span>
                       </div>
                       {dayBlocks.map((bl) => (
-                        <div key={bl.id} className="px-4 py-2 bg-red-50/60 border-b border-red-100 flex items-center justify-between">
+                        <div key={bl.id} className="px-4 py-2 border-b flex items-center justify-between"
+                          style={{ background: hexWithAlpha(member.color || "#0b2a55", 0.06), borderColor: hexWithAlpha(member.color || "#0b2a55", 0.15) }}>
                           <div>
-                            <p className="text-xs font-semibold text-red-600">{bl.reason || "Blocked"}</p>
+                            <p className="text-xs font-semibold" style={{ color: member.color || "#0b2a55" }}>{bl.reason || "Blocked"}</p>
                             {(bl.startTime || bl.endTime) && (
-                              <p className="text-xs text-red-400">{bl.startTime} – {bl.endTime}</p>
+                              <p className="text-xs" style={{ color: hexWithAlpha(member.color || "#0b2a55", 0.65) }}>{fmt12(bl.startTime)} – {fmt12(bl.endTime)}</p>
                             )}
-                            {bl.note && <p className="text-xs text-red-400">{bl.note}</p>}
+                            {bl.note && <p className="text-xs mt-0.5" style={{ color: hexWithAlpha(member.color || "#0b2a55", 0.6) }}>{bl.note}</p>}
                           </div>
-                          <button onClick={() => deleteBlock(bl.id)} className="text-xs text-red-400 hover:text-red-600 ml-3">Remove</button>
+                          <button onClick={() => deleteBlock(bl.id)} className="text-xs ml-3 font-medium"
+                            style={{ color: hexWithAlpha(member.color || "#0b2a55", 0.5) }}>Remove</button>
                         </div>
                       ))}
                       {memberEvents.length === 0 && !isBlocked ? (
@@ -1385,32 +1424,36 @@ export default function TeamPage() {
                 <p className="font-semibold text-charcoal text-sm">
                   {blockDetail.member.name} — {DAYS_SHORT[blockDetail.date.getDay()]}, {MONTHS[blockDetail.date.getMonth()]} {blockDetail.date.getDate()}
                 </p>
-                <p className="text-xs text-red-500 mt-0.5">Blocked</p>
+                <p className="text-xs mt-0.5 font-medium" style={{ color: blockDetail.member.color || "#0b2a55" }}>Blocked</p>
               </div>
               <button onClick={() => setBlockDetail(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
             </div>
             <div className="p-5 space-y-3">
-              {blockDetail.blocks.map((bl) => (
-                <div key={bl.id} className="bg-red-50 border border-red-100 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-red-700">{bl.reason || "Blocked"}</p>
-                    <button onClick={() => { deleteBlock(bl.id); setBlockDetail(null); }}
-                      className="text-xs text-red-400 hover:text-red-600 font-medium">Remove</button>
-                  </div>
-                  {(bl.startTime || bl.endTime) && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {bl.startTime || "All day"}{bl.endTime ? ` – ${bl.endTime}` : " (no end time set)"}
+              {blockDetail.blocks.map((bl) => {
+                const mc = blockDetail.member.color || "#0b2a55";
+                return (
+                  <div key={bl.id} className="border rounded-lg p-3"
+                    style={{ background: hexWithAlpha(mc, 0.06), borderColor: hexWithAlpha(mc, 0.2) }}>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold" style={{ color: mc }}>{bl.reason || "Blocked"}</p>
+                      <button onClick={() => { deleteBlock(bl.id); setBlockDetail(null); }}
+                        className="text-xs font-medium" style={{ color: hexWithAlpha(mc, 0.6) }}>Remove</button>
+                    </div>
+                    {(bl.startTime || bl.endTime) && (
+                      <p className="text-xs mt-1" style={{ color: hexWithAlpha(mc, 0.7) }}>
+                        {fmt12(bl.startTime) || "All day"}{bl.endTime ? ` – ${fmt12(bl.endTime)}` : " (no end time set)"}
+                      </p>
+                    )}
+                    {!bl.startTime && !bl.endTime && (
+                      <p className="text-xs mt-1" style={{ color: hexWithAlpha(mc, 0.55) }}>Full day</p>
+                    )}
+                    {bl.note && <p className="text-xs mt-1 italic" style={{ color: hexWithAlpha(mc, 0.55) }}>{bl.note}</p>}
+                    <p className="text-[10px] mt-1" style={{ color: hexWithAlpha(mc, 0.4) }}>
+                      {bl.startDate === bl.endDate ? "Single day" : `${bl.startDate} – ${bl.endDate}`}
                     </p>
-                  )}
-                  {!bl.startTime && !bl.endTime && (
-                    <p className="text-xs text-red-400 mt-1">Full day</p>
-                  )}
-                  {bl.note && <p className="text-xs text-red-400 mt-1 italic">{bl.note}</p>}
-                  <p className="text-[10px] text-red-300 mt-1">
-                    {bl.startDate === bl.endDate ? "Single day" : `${bl.startDate} – ${bl.endDate}`}
-                  </p>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

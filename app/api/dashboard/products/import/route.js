@@ -2,8 +2,7 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { rateLimitTenant } from "@/lib/rateLimit";
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const OPENAI_API_KEY   = process.env.OPENAI_API_KEY;
-const AI_KEY           = DEEPSEEK_API_KEY || OPENAI_API_KEY;
+const AI_KEY           = DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
 const AI_URL           = DEEPSEEK_API_KEY
   ? "https://api.deepseek.com/v1/chat/completions"
   : "https://api.openai.com/v1/chat/completions";
@@ -26,7 +25,7 @@ export async function POST(req) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   if (!AI_KEY) {
-    return Response.json({ error: "AI not configured. Set DEEPSEEK_API_KEY or GROQ_API_KEY to enable pricing import." }, { status: 503 });
+    return Response.json({ error: "AI not configured. Set DEEPSEEK_API_KEY or OPENAI_API_KEY to enable pricing import." }, { status: 503 });
   }
 
   // 5 AI import runs per tenant per hour — this endpoint fetches external URLs + calls AI

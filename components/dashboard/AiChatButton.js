@@ -6,7 +6,6 @@ import { auth } from "@/lib/firebase";
 const SUGGESTED_QUESTIONS = [
   "How do I assign services to a photographer?",
   "How does the agent portal work?",
-  "How do I connect QuickBooks?",
   "How do I create a manual booking?",
   "How does gallery delivery work?",
   "How do I set up service areas?",

@@ -15,8 +15,8 @@ const s3 = new S3Client({
   region:   "auto",
   endpoint: process.env.R2_ENDPOINT,
   credentials: {
-    accessKeyId:     process.env.R2_ACCESS_KEY,
-    secretAccessKey: process.env.R2_SECRET_KEY,
+    accessKeyId:     process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
   },
 });
 
@@ -53,7 +53,7 @@ export async function POST(req) {
       return Response.json({ error: "File type not allowed" }, { status: 400 });
     }
 
-    if (!process.env.R2_ENDPOINT || !process.env.R2_ACCESS_KEY || !process.env.R2_BUCKET) {
+    if (!process.env.R2_ENDPOINT || !process.env.R2_ACCESS_KEY_ID || !process.env.R2_BUCKET_NAME) {
       console.error("R2 not configured");
       return Response.json({ error: "Storage not configured." }, { status: 500 });
     }
@@ -79,7 +79,7 @@ export async function POST(req) {
     // No ContentType in the command — avoids Content-Type signing mismatch
     // when the browser PUT omits or differs in Content-Type header.
     const command = new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET,
+      Bucket: process.env.R2_BUCKET_NAME,
       Key:    key,
     });
 

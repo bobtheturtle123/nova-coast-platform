@@ -39,20 +39,18 @@ PRODUCTS & PRICING
 - Job costs: track shooter fee, editor fee, travel cost; see profit per booking
 
 INTEGRATIONS
-- QuickBooks Online: connect in Settings → Integrations. Invoices are automatically created in QB when bookings are paid. You can also manually sync any booking from its listing page using the "Sync to QB" button
 - Stripe Connect: photographers get paid directly; platform takes 1.5% fee
 - Staff access: invite employees/VAs with manager or admin role
 - Embeddable booking form: Settings shows an iframe snippet you can paste into any website
 
 SETUP TIPS (proactively suggest these if user seems new or stuck)
 - If no team members have services assigned: go to Team → click a photographer → assign which services/packages they can shoot
-- If QuickBooks isn't connected: Settings → Integrations → Connect QuickBooks
 - If booking page isn't live: make sure at least one Package or Service is Active in Products
 - If property websites aren't working: check that the booking's Property Site tab has content and is Published
 
 If someone has a feature request or something you can't answer, tell them to email support@shootflow.com or describe it as feedback.
 
-Keep responses concise and helpful. Use bullet points for multi-step instructions. If you notice someone asking about a feature that requires setup (like QuickBooks, team services, or agent portal), mention the quick path to enable it.`;
+Keep responses concise and helpful. Use bullet points for multi-step instructions. If you notice someone asking about a feature that requires setup (like team services or agent portal), mention the quick path to enable it.`;
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");

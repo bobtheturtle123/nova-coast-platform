@@ -115,7 +115,7 @@ export default function MarketingPage() {
       {/* TRUST BAR */}
       <div className="bg-cream border-y border-gray-100 py-5 px-6">
         <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-6 text-center text-sm text-gray-500">
-          {["Branded booking pages","Deposits at booking","Media locked until paid","Auto balance collection","Direct Stripe payouts","Agent marketing portal"].map((f) => (
+          {["Branded booking pages","Deposit collected at booking","Media locked until balance paid","Service areas & travel fees","Direct Stripe payouts","Agent marketing portal + AI captions"].map((f) => (
             <span key={f} className="flex items-center gap-2"><span className="text-gold">✓</span> {f}</span>
           ))}
         </div>
@@ -562,8 +562,8 @@ const FEATURE_CATEGORIES = [
       "AI social media captions",
       "Agent portal (no login needed)",
       "Customizable email templates",
-      "SMS delivery notifications",
-      "Service agreement capture",
+      "SMS notifications (Studio plan+)",
+      "Service agreement e-capture",
     ],
   },
 ];
@@ -571,10 +571,10 @@ const FEATURE_CATEGORIES = [
 const COMPARISON_ROWS = [
   { feature: "Starting monthly price",            us: "From $39/mo",                   them: "From $49/mo",             highlight: true },
   { feature: "Listing caps",                      us: "Active listings, not annual caps", them: "Annual caps — pay more to list more", highlight: true },
-  { feature: "Transaction fee",                   us: "1.0–2.0% (shown upfront)",       them: "Varies, often hidden",    highlight: false },
+  { feature: "Transaction fee",                   us: "0–1.5% (shown upfront)",         them: "Varies, often hidden",    highlight: false },
   { feature: "Deposit + balance automation",      us: "Built in on every plan",          them: "Manual or add-on",       highlight: true },
   { feature: "Agent marketing kit",               us: "Included, auto-sent on delivery", them: "Separate product/upsell", highlight: false },
-  { feature: "AI social captions",                us: "Included on Pro+",               them: "Upsell",                  highlight: false },
+  { feature: "AI social captions",                us: "Included on all plans",          them: "Upsell or not available",  highlight: true },
   { feature: "Payment before download",           us: "Yes, gallery locked until paid",  them: "Manual follow-up",       highlight: true },
   { feature: "Setup time",                        us: "Under 1 hour, no onboarding call needed", them: "Days + demo required", highlight: true },
   { feature: "Contract",                          us: "None, cancel anytime",            them: "Often annual",            highlight: false },

@@ -44,32 +44,37 @@ export async function GET(req) {
   const r2Url = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
   if (!r2Url) return new Response("Storage not configured", { status: 500 });
 
-  // Collect all processed image buffers
+  // Cap zip downloads to 300 images to prevent memory/timeout overruns
+  const MAX_ZIP_FILES = 300;
+  const toProcess = images.slice(0, MAX_ZIP_FILES);
+
+  // Fetch and process images in parallel batches of 10 to stay within timeout
+  const BATCH = 10;
   const entries = [];
-  for (const img of images) {
-    try {
-      const sourceRes = await fetch(`${r2Url}/${img.key}`);
-      if (!sourceRes.ok) continue;
-
-      const arrayBuffer = await sourceRes.arrayBuffer();
-      let buffer = Buffer.from(arrayBuffer);
-
-      const baseName = (img.fileName || "image").replace(/\.[^.]+$/, "");
-      let fileName;
-
-      if (format === "web") {
-        buffer = await sharp(buffer)
-          .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
-          .jpeg({ quality: WEB_QUALITY, progressive: true })
-          .toBuffer();
-        fileName = `${baseName}-MLS.jpg`;
-      } else {
-        fileName = img.fileName || "image.jpg";
-      }
-
-      entries.push({ buffer, fileName });
-    } catch {
-      // Skip failed images
+  for (let i = 0; i < toProcess.length; i += BATCH) {
+    const batch = toProcess.slice(i, i + BATCH);
+    const results = await Promise.allSettled(
+      batch.map(async (img) => {
+        const sourceRes = await fetch(`${r2Url}/${img.key}`);
+        if (!sourceRes.ok) return null;
+        const arrayBuffer = await sourceRes.arrayBuffer();
+        let buffer = Buffer.from(arrayBuffer);
+        const baseName = (img.fileName || "image").replace(/\.[^.]+$/, "");
+        let fileName;
+        if (format === "web") {
+          buffer = await sharp(buffer)
+            .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
+            .jpeg({ quality: WEB_QUALITY, progressive: true })
+            .toBuffer();
+          fileName = `${baseName}-MLS.jpg`;
+        } else {
+          fileName = img.fileName || "image.jpg";
+        }
+        return { buffer, fileName };
+      })
+    );
+    for (const r of results) {
+      if (r.status === "fulfilled" && r.value) entries.push(r.value);
     }
   }
 

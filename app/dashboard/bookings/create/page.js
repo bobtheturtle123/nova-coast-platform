@@ -313,7 +313,7 @@ export default function CreateBookingPage() {
         fetch("/api/dashboard/check-service-area", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ lat: form.lat, lng: form.lng }),
+          body: JSON.stringify({ address: form.address, lat: form.lat, lng: form.lng }),
         }),
       ]);
 

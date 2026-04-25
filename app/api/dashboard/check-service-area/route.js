@@ -30,17 +30,60 @@ export async function POST(req) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { lat, lng } = await req.json();
-
-    if (lat == null || lng == null) {
-      return Response.json({ covered: true, zoneName: null, assignedPhotographers: [] });
-    }
+    const body = await req.json();
+    const { address } = body;
 
     const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
     const tenant    = tenantDoc.data() || {};
 
-    // If service area gate is not enabled, everything is covered
+    // If gate is disabled, skip entirely (no warning shown)
     if (!tenant.bookingConfig?.requireServiceArea) {
+      return Response.json({ covered: true, zoneName: null, assignedPhotographers: [] });
+    }
+
+    // Resolve lat/lng — prefer pre-geocoded coords from the autocomplete
+    let lat = body.lat != null ? parseFloat(body.lat) : null;
+    let lng = body.lng != null ? parseFloat(body.lng) : null;
+
+    if ((lat == null || isNaN(lat)) && address?.trim()) {
+      const liqKey    = process.env.LOCATIONIQ_KEY || process.env.NEXT_PUBLIC_LOCATIONIQ_KEY;
+      const mapboxKey = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+      let geocoded    = false;
+
+      if (liqKey) {
+        try {
+          const geoRes  = await fetch(
+            `https://us1.locationiq.com/v1/search.php?key=${liqKey}&q=${encodeURIComponent(address)}&format=json&limit=1&countrycodes=us`
+          );
+          const geoData = await geoRes.json();
+          if (Array.isArray(geoData) && geoData[0]) {
+            lat = parseFloat(geoData[0].lat);
+            lng = parseFloat(geoData[0].lon);
+            geocoded = true;
+          }
+        } catch { /* fall through */ }
+      }
+
+      if (!geocoded && mapboxKey) {
+        try {
+          const geoRes  = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${mapboxKey}&country=us&types=address&limit=1`
+          );
+          const geoData = await geoRes.json();
+          const feature = geoData?.features?.[0];
+          if (feature?.center) {
+            [lng, lat] = feature.center;
+            geocoded = true;
+          }
+        } catch { /* geocoding unavailable */ }
+      }
+
+      if (!geocoded) {
+        return Response.json({ covered: true, zoneName: null, assignedPhotographers: [] });
+      }
+    }
+
+    if (lat == null || isNaN(lat)) {
       return Response.json({ covered: true, zoneName: null, assignedPhotographers: [] });
     }
 

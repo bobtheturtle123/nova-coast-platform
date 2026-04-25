@@ -29,6 +29,9 @@ export async function GET(req) {
         const { tenantId, galleryId, subject, note, to, cc } = job;
 
         try {
+          // Claim the job atomically — prevents duplicate sends if cron overlaps
+          await doc.ref.update({ status: "processing" });
+
           const galleryRef = adminDb
             .collection("tenants").doc(tenantId)
             .collection("galleries").doc(galleryId);

@@ -4,6 +4,58 @@ import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/components/Toast";
 
+// ─── Notification definitions (shared with notifications page) ───────────────
+
+const CUSTOMER_NOTIFICATIONS = [
+  { id: "order_confirmation",    label: "Order Confirmation",    description: "Sent when a client submits a new booking request.",               channels: ["email", "sms"] },
+  { id: "appointment_scheduled", label: "Appointment Scheduled", description: "Sent when a shoot date and time are confirmed.",                   channels: ["email", "sms"] },
+  { id: "appointment_reminder",  label: "Appointment Reminder",  description: "Sent 24 hours before an upcoming shoot.",                          channels: ["email", "sms"] },
+  { id: "appointment_canceled",  label: "Appointment Canceled",  description: "Sent when a booking is canceled.",                                 channels: ["email", "sms"] },
+  { id: "listing_delivered",     label: "Listing Delivered",     description: "Sent when your media is delivered to the agent.",                  channels: ["email", "sms"] },
+  { id: "payment_required",      label: "Payment Required",      description: "Sent when a payment (deposit or balance) is due.",                 channels: ["email"] },
+];
+
+const TEAM_NOTIFICATIONS = [
+  { id: "team_order_received",        label: "New Order Received",    description: "Sent to you when a new booking is submitted.",                     channels: ["email", "sms"] },
+  { id: "team_appointment_assigned",  label: "Appointment Assigned",  description: "Sent to a photographer when assigned to a shoot.",                 channels: ["email", "sms"] },
+  { id: "team_appointment_reminder",  label: "Team Shoot Reminder",   description: "Sent to the assigned photographer 24 hours before a shoot.",       channels: ["email", "sms"] },
+];
+
+const SMS_PLANS_LIST = ["studio", "pro", "scale"];
+
+function NotifToggleRow({ notif, pref, plan, onToggle }) {
+  const emailOn  = pref?.channels?.email !== false;
+  const smsOn    = pref?.channels?.sms   !== false;
+  const smsOk    = SMS_PLANS_LIST.includes(plan);
+  return (
+    <div className="flex items-center gap-3 py-3 border-b last:border-0 border-gray-100">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-charcoal">{notif.label}</p>
+        <p className="text-xs text-gray-400 mt-0.5">{notif.description}</p>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {notif.channels.includes("email") && (
+          <button onClick={() => onToggle("email")}
+            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${emailOn ? "bg-navy text-white border-navy" : "text-gray-400 border-gray-200 hover:border-gray-300"}`}>
+            Email
+          </button>
+        )}
+        {notif.channels.includes("sms") && (
+          <button onClick={() => smsOk && onToggle("sms")}
+            title={!smsOk ? "SMS is available on Studio plan and above" : undefined}
+            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
+              !smsOk ? "opacity-40 cursor-not-allowed text-gray-400 border-gray-200"
+              : smsOn ? "bg-emerald-600 text-white border-emerald-600"
+              : "text-gray-400 border-gray-200 hover:border-gray-300"
+            }`}>
+            SMS{!smsOk && <span className="ml-0.5 text-[9px] opacity-70"> Studio+</span>}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Staff Access Section ─────────────────────────────────────────────────────
 function StaffAccessSection() {
   const [invites,       setInvites]       = useState([]);
@@ -280,123 +332,6 @@ function SmsNotificationsSection() {
   );
 }
 
-// ─── QuickBooks Section ───────────────────────────────────────────────────────
-function QuickBooksSection() {
-  const [connected, setConnected] = useState(null); // null=loading, false=no, object=yes
-  const [loading,   setLoading]   = useState(true);
-  const [working,   setWorking]   = useState(false);
-  const [msg,       setMsg]       = useState("");
-
-  useEffect(() => {
-    // Check if QB is connected via tenant data
-    auth.currentUser?.getIdToken().then(async (token) => {
-      const res = await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setConnected(data.tenant?.quickbooks || false);
-      }
-      setLoading(false);
-    });
-    // Check URL param for post-OAuth redirect
-    const p = new URLSearchParams(window.location.search);
-    if (p.get("qb") === "connected") setMsg("QuickBooks connected successfully!");
-    if (p.get("qb") === "error")     setMsg("QuickBooks connection failed. Try again.");
-  }, []);
-
-  async function connect() {
-    setWorking(true);
-    const token = await auth.currentUser.getIdToken();
-    const res   = await fetch("/api/dashboard/quickbooks/connect", { headers: { Authorization: `Bearer ${token}` } });
-    const data  = await res.json();
-    if (res.ok && data.url) {
-      window.location.href = data.url;
-    } else {
-      setMsg(data.error || "Failed to start QuickBooks connection.");
-      setWorking(false);
-    }
-  }
-
-  async function disconnect() {
-    if (!window.confirm("Disconnect QuickBooks? Future bookings won't sync automatically.")) return;
-    setWorking(true);
-    const token = await auth.currentUser.getIdToken();
-    await fetch("/api/dashboard/quickbooks/disconnect", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
-    setConnected(false);
-    setMsg("QuickBooks disconnected.");
-    setWorking(false);
-  }
-
-  return (
-    <div id="settings-integrations" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h2 className="font-semibold text-charcoal text-base">Integrations</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Connect third-party tools to automate your workflow.</p>
-        </div>
-      </div>
-
-      {msg && (
-        <div className={`text-sm px-3 py-2 rounded mb-4 ${msg.includes("success") || msg.includes("connected") ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-          {msg}
-          {msg.includes("QUICKBOOKS_CLIENT_ID") && (
-            <div className="mt-2 text-xs space-y-1">
-              <p className="font-semibold">Setup steps:</p>
-              <ol className="list-decimal pl-4 space-y-1">
-                <li>Go to <a href="https://developer.intuit.com" target="_blank" rel="noopener noreferrer" className="underline">developer.intuit.com</a> → Sign in → Create an App</li>
-                <li>Choose "QuickBooks Online and Payments" → set redirect URI to: <code className="bg-amber-100 px-1 rounded font-mono">{typeof window !== "undefined" ? window.location.origin : ""}/api/dashboard/quickbooks/callback</code></li>
-                <li>Copy Client ID and Client Secret from the Keys tab</li>
-                <li>Add to Vercel: <code className="bg-amber-100 px-1 rounded font-mono">QUICKBOOKS_CLIENT_ID</code>, <code className="bg-amber-100 px-1 rounded font-mono">QUICKBOOKS_CLIENT_SECRET</code>, <code className="bg-amber-100 px-1 rounded font-mono">QUICKBOOKS_SANDBOX=false</code></li>
-                <li>Redeploy, then come back here to connect</li>
-              </ol>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* QuickBooks */}
-      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#2CA01C] flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-sm">QB</span>
-          </div>
-          <div>
-            <p className="font-medium text-charcoal text-sm">QuickBooks Online</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {loading ? "Checking status…" : connected
-                ? `Connected · Auto-creates invoices for new bookings`
-                : "Auto-create invoices when bookings are confirmed"}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {!loading && connected && (
-            <span className="text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">Connected</span>
-          )}
-          {!loading && (
-            connected ? (
-              <button onClick={disconnect} disabled={working}
-                className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 hover:border-red-200 hover:text-red-500 transition-colors disabled:opacity-50">
-                {working ? "…" : "Disconnect"}
-              </button>
-            ) : (
-              <button onClick={connect} disabled={working}
-                className="text-xs px-3 py-1.5 bg-[#2CA01C] text-white rounded-lg hover:bg-[#228016] transition-colors disabled:opacity-50">
-                {working ? "Redirecting…" : "Connect QuickBooks"}
-              </button>
-            )
-          )}
-        </div>
-      </div>
-
-      {connected && (
-        <p className="text-xs text-gray-400 mt-3">
-          Invoices are automatically created in QuickBooks when bookings are paid. Use "Sync to QB" on any listing to manually sync a single booking.
-        </p>
-      )}
-    </div>
-  );
-}
-
 // ─── Custom Domain Section ────────────────────────────────────────────────────
 function CustomDomainSection() {
   const [domain,   setDomain]   = useState("");
@@ -610,7 +545,15 @@ export default function SettingsPage() {
   const [tenant,  setTenant]  = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
-  const [sg,      setSg]      = useState("Business");
+
+  // Support ?tab=Communications redirect from notifications page
+  const [sg, setSg] = useState(() => {
+    if (typeof window !== "undefined") {
+      const tab = new URLSearchParams(window.location.search).get("tab");
+      if (tab) return tab;
+    }
+    return "Business";
+  });
 
   const [form, setForm] = useState({
     businessName: "", phone: "", fromZip: "",
@@ -707,6 +650,11 @@ export default function SettingsPage() {
   const [savingTemplate,  setSavingTemplate]  = useState(false);
   const [emailTab,        setEmailTab]        = useState("gallery");
 
+  // Notification prefs (merged from Notifications page)
+  const [notifPrefs,    setNotifPrefs]    = useState({});
+  const [savingNotifs,  setSavingNotifs]  = useState(false);
+  const [editingNotif,  setEditingNotif]  = useState(null);
+
   // Promo codes state
   const [promoCodes,    setPromoCodes]    = useState([]);
   const [promoForm,     setPromoForm]     = useState({ code: "", type: "flat", value: "", description: "", usageLimit: "", minOrder: "", expiresAt: "" });
@@ -794,6 +742,8 @@ export default function SettingsPage() {
             if (c.rescheduleWindowHrs != null)     setRescheduleFeeWindowHrs(c.rescheduleWindowHrs);
           }
         }
+        if (data.tenant.notificationPrefs) setNotifPrefs(data.tenant.notificationPrefs);
+
         if (data.tenant.emailTemplate) {
           if (data.tenant.emailTemplate.subject) setEmailTplSubject(data.tenant.emailTemplate.subject);
           if (data.tenant.emailTemplate.body)    setEmailTplBody(data.tenant.emailTemplate.body);
@@ -1094,6 +1044,42 @@ export default function SettingsPage() {
       else showMsg("Failed to save.", "error");
     } catch { showMsg("Something went wrong.", "error"); }
     setSavingTravel(false);
+  }
+
+  async function saveNotifPrefs() {
+    setSavingNotifs(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ prefs: notifPrefs }),
+      });
+      if (res.ok) showMsg("Notification preferences saved.");
+      else showMsg("Failed to save.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    setSavingNotifs(false);
+  }
+
+  function toggleNotifChannel(id, channel) {
+    setNotifPrefs((prev) => {
+      const existing = prev[id] || { channels: { email: true, sms: true } };
+      return {
+        ...prev,
+        [id]: {
+          ...existing,
+          channels: { ...existing.channels, [channel]: !(existing.channels?.[channel] !== false) },
+        },
+      };
+    });
+  }
+
+  function saveNotifTemplate(id, data) {
+    setNotifPrefs((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] || { channels: { email: true, sms: true } }), ...data },
+    }));
+    setEditingNotif(null);
   }
 
   async function saveEmailTemplate() {
@@ -2412,7 +2398,7 @@ export default function SettingsPage() {
         {/* Insert field chips — shared for all tabs */}
         {(() => {
           const TAB_VARS = {
-            gallery:  [["Client Name","{{clientName}}"],["Property Address","{{address}}"],["Gallery Link","{{websiteUrl}}"],["Virtual Tour","{{tourUrl}}"]],
+            gallery:  [["Client Name","{{clientName}}"],["Property Address","{{address}}"],["Gallery Link","{{websiteUrl}}"],["3D Tour (conditional)","[[and your 3D tour is ready: {{tourUrl}}]]"]],
             received: [["Client Name","{{clientName}}"],["Property Address","{{address}}"],["Preferred Date","{{preferredDate}}"],["Services","{{services}}"]],
             approved: [["Client Name","{{clientName}}"],["Property Address","{{address}}"],["Shoot Date","{{date}}"],["Shoot Time","{{shootTime}}"]],
             reminder: [["Client Name","{{clientName}}"],["Property Address","{{address}}"],["Balance Owed","{{balance}}"],["Pay Link","{{paymentUrl}}"]],
@@ -2446,17 +2432,25 @@ export default function SettingsPage() {
 
           return (
             <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-              <p className="text-xs text-gray-500 font-medium mb-2">Insert field into subject or body — click while the cursor is in the field:</p>
+              <p className="text-xs text-gray-500 font-medium mb-2">Insert field — click while cursor is in the field:</p>
               <div className="flex flex-wrap gap-1.5">
                 {vars.map(([label, token]) => (
                   <button key={token} type="button"
                     onMouseDown={(e) => { e.preventDefault(); insertInto(document.activeElement?.closest("[data-emailbody]") ? bodySetter : subjectSetter, token); }}
-                    onClick={() => insertInto(bodySetter, token)}
-                    className="text-xs bg-white border border-navy/20 text-navy px-2.5 py-1 rounded-full hover:bg-navy/5 transition-colors font-medium">
+                    className={`text-xs border px-2.5 py-1 rounded-full font-medium transition-colors ${
+                      token.startsWith("[[")
+                        ? "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+                        : "bg-white border-navy/20 text-navy hover:bg-navy/5"
+                    }`}>
                     + {label}
                   </button>
                 ))}
               </div>
+              {emailTab === "gallery" && (
+                <p className="text-[11px] text-gray-400 mt-2">
+                  <span className="font-semibold text-amber-600">Conditional fields</span> like &quot;3D Tour&quot; are automatically hidden in the email if that data isn&apos;t available for the listing.
+                </p>
+              )}
             </div>
           );
         })()}
@@ -2532,28 +2526,54 @@ export default function SettingsPage() {
           </div>
         )}
 
-        <div className="mt-6 flex items-center justify-between">
-          <p className="text-xs text-gray-400">For full notification control and SMS settings, visit the <a href="/dashboard/notifications" className="text-navy underline underline-offset-2">Notifications page</a>.</p>
+        <div className="mt-6 flex justify-end">
           <button onClick={saveEmailTemplate} disabled={savingTemplate} className="btn-primary px-8 py-3">
             {savingTemplate ? "Saving…" : "Save Email Templates"}
           </button>
         </div>
       </div>
 
-      {/* SMS note */}
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mt-6 flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-charcoal">SMS Notifications</p>
-          <p className="text-xs text-gray-400 mt-0.5">Enable or disable SMS per notification type from the Notifications page.</p>
+      {/* Notification channel toggles */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="font-semibold text-charcoal text-base">Notification Channels</h2>
+          <button onClick={saveNotifPrefs} disabled={savingNotifs} className="btn-primary px-5 py-2 text-sm">
+            {savingNotifs ? "Saving…" : "Save"}
+          </button>
         </div>
-        <a href="/dashboard/notifications" className="text-xs text-navy font-medium hover:underline flex-shrink-0">
-          Go to Notifications →
-        </a>
+        <p className="text-sm text-gray-500 mb-5">Toggle email and SMS delivery for each notification type. SMS requires Studio plan or above.</p>
+
+        {!SMS_PLANS_LIST.includes(tenant?.subscriptionPlan) && (
+          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-xs text-amber-700">
+            SMS notifications require the <strong>Studio plan or above</strong>. Upgrade to enable SMS delivery.
+          </div>
+        )}
+
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Client notifications</p>
+        {CUSTOMER_NOTIFICATIONS.map((notif) => (
+          <NotifToggleRow key={notif.id} notif={notif}
+            pref={notifPrefs[notif.id] || { channels: { email: true, sms: true } }}
+            plan={tenant?.subscriptionPlan || "solo"}
+            onToggle={(ch) => toggleNotifChannel(notif.id, ch)} />
+        ))}
+
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-1">Team notifications</p>
+        {TEAM_NOTIFICATIONS.map((notif) => (
+          <NotifToggleRow key={notif.id} notif={notif}
+            pref={notifPrefs[notif.id] || { channels: { email: true, sms: true } }}
+            plan={tenant?.subscriptionPlan || "solo"}
+            onToggle={(ch) => toggleNotifChannel(notif.id, ch)} />
+        ))}
       </div>
       </>)}
 
-      {/* Integrations (QuickBooks etc) */}
-      {sg === "Integrations" && <QuickBooksSection />}
+      {/* Integrations */}
+      {sg === "Integrations" && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+          <h2 className="font-semibold text-charcoal text-base mb-1">Integrations</h2>
+          <p className="text-sm text-gray-500">More integrations coming soon.</p>
+        </div>
+      )}
 
       {/* Custom Domain */}
       {sg === "Business" && <CustomDomainSection />}

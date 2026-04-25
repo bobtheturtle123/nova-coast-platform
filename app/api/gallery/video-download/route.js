@@ -9,8 +9,8 @@ const s3 = new S3Client({
   region:   "auto",
   endpoint: process.env.R2_ENDPOINT,
   credentials: {
-    accessKeyId:     process.env.R2_ACCESS_KEY,
-    secretAccessKey: process.env.R2_SECRET_KEY,
+    accessKeyId:     process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
   },
 });
 
@@ -50,13 +50,13 @@ export async function GET(req) {
     return new Response("File not found in this gallery", { status: 404 });
   }
 
-  if (!process.env.R2_BUCKET) {
+  if (!process.env.R2_BUCKET_NAME) {
     return new Response("Storage not configured", { status: 500 });
   }
 
   try {
     const command = new GetObjectCommand({
-      Bucket:                     process.env.R2_BUCKET,
+      Bucket:                     process.env.R2_BUCKET_NAME,
       Key:                        key,
       ResponseContentDisposition: `attachment; filename="${encodeURIComponent(name)}"`,
     });

@@ -3,7 +3,6 @@ import { adminDb } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
 import { sendBookingCreatedNotifications } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
-import { syncBookingToQB } from "@/lib/quickbooks";
 import { sendBookingConfirmedSms } from "@/lib/sms";
 import { getTenantByStripeCustomerId, triggerReferralReward } from "@/lib/referral";
 
@@ -37,53 +36,65 @@ export async function POST(req) {
         if (!bookingDoc.exists) break;
         const booking = bookingDoc.data();
 
-        if (type === "deposit" && !booking.depositPaid) {
-          await bookingRef.update({ depositPaid: true, status: "requested", stripeDepositIntentId: pi.id });
-          try {
-            const tenant = await getTenantById(tenantId);
-            if (tenant) {
-              await sendBookingCreatedNotifications({
-                booking: { ...booking, depositPaid: true },
-                tenant,
-                adminEmail: tenant.email || null,
-              });
-              sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" }).catch(() => {});
-              sendBookingConfirmedSms({ booking, tenant }).catch(() => {});
-              if (tenant.quickbooks?.accessToken) {
-                syncBookingToQB(tenantId, { id: bookingDoc.id, ...booking }, tenant.quickbooks).catch(() => {});
+        if (type === "deposit") {
+          // Use a transaction so concurrent Stripe retries don't double-notify
+          let shouldNotify = false;
+          await adminDb.runTransaction(async (tx) => {
+            const snap = await tx.get(bookingRef);
+            if (!snap.exists || snap.data().depositPaid) return;
+            tx.update(bookingRef, { depositPaid: true, status: "requested", stripeDepositIntentId: pi.id });
+            shouldNotify = true;
+          });
+          if (shouldNotify) {
+            try {
+              const tenant = await getTenantById(tenantId);
+              if (tenant) {
+                await sendBookingCreatedNotifications({
+                  booking: { ...booking, depositPaid: true },
+                  tenant,
+                  adminEmail: tenant.email || null,
+                });
+                sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" }).catch(() => {});
+                sendBookingConfirmedSms({ booking, tenant }).catch(() => {});
               }
-            }
-          } catch (e) { console.error("Confirmation email failed:", e); }
+            } catch (e) { console.error("Confirmation email failed:", e); }
+          }
         }
 
         // Full payment at booking time — unlock gallery immediately if it exists
-        if (type === "full" && !booking.paidInFull) {
-          await bookingRef.update({
-            depositPaid: true,
-            balancePaid: true,
-            paidInFull:  true,
-            remainingBalance: 0,
-            status: "requested",
-            stripeDepositIntentId: pi.id,
+        if (type === "full") {
+          let shouldNotify = false;
+          let galleryId    = null;
+          await adminDb.runTransaction(async (tx) => {
+            const snap = await tx.get(bookingRef);
+            if (!snap.exists || snap.data().paidInFull) return;
+            galleryId = snap.data().galleryId || null;
+            tx.update(bookingRef, {
+              depositPaid: true, balancePaid: true, paidInFull: true,
+              remainingBalance: 0, status: "requested", stripeDepositIntentId: pi.id,
+            });
+            shouldNotify = true;
           });
-          if (booking.galleryId) {
+          if (galleryId) {
             await adminDb
               .collection("tenants").doc(tenantId)
-              .collection("galleries").doc(booking.galleryId)
+              .collection("galleries").doc(galleryId)
               .update({ unlocked: true });
           }
-          try {
-            const tenant = await getTenantById(tenantId);
-            if (tenant) {
-              await sendBookingCreatedNotifications({
-                booking: { ...booking, depositPaid: true },
-                tenant,
-                adminEmail: tenant.email || null,
-              });
-              sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" }).catch(() => {});
-              sendBookingConfirmedSms({ booking, tenant }).catch(() => {});
-            }
-          } catch (e) { console.error("Confirmation email failed:", e); }
+          if (shouldNotify) {
+            try {
+              const tenant = await getTenantById(tenantId);
+              if (tenant) {
+                await sendBookingCreatedNotifications({
+                  booking: { ...booking, depositPaid: true },
+                  tenant,
+                  adminEmail: tenant.email || null,
+                });
+                sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" }).catch(() => {});
+                sendBookingConfirmedSms({ booking, tenant }).catch(() => {});
+              }
+            } catch (e) { console.error("Confirmation email failed:", e); }
+          }
         }
 
         if (type === "balance" && !booking.balancePaid) {
@@ -111,12 +122,14 @@ export async function POST(req) {
         if (!bookingDoc.exists) break;
         const booking = bookingDoc.data();
 
-        if (!booking.depositPaid) {
-          await bookingRef.update({
-            depositPaid: true,
-            status: "requested",
-            stripeDepositSessionId: session.id,
-          });
+        let checkoutShouldNotify = false;
+        await adminDb.runTransaction(async (tx) => {
+          const snap = await tx.get(bookingRef);
+          if (!snap.exists || snap.data().depositPaid) return;
+          tx.update(bookingRef, { depositPaid: true, status: "requested", stripeDepositSessionId: session.id });
+          checkoutShouldNotify = true;
+        });
+        if (checkoutShouldNotify) {
           try {
             const tenant = await getTenantById(tenantId);
             if (tenant) {

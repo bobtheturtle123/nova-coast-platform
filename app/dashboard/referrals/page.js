@@ -151,10 +151,22 @@ export default function ReferralsPage() {
             <div className="flex gap-2 flex-wrap">
               <ShareButton referralUrl={referralUrl} />
               <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Running your real estate photography business on ShootFlow. Sign up with my link and we both get $20:\n${referralUrl}`)}`}
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Running my real estate photography business on ShootFlow. Sign up with my link and we both get $20:\n${referralUrl}`)}`}
                 target="_blank" rel="noopener noreferrer"
                 className="text-xs px-3 py-1.5 rounded-sm border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
                 Share on X
+              </a>
+              <a
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralUrl)}&quote=${encodeURIComponent(`Running my real estate photography business on ShootFlow — sign up with my link and we both get $20!`)}`}
+                target="_blank" rel="noopener noreferrer"
+                className="text-xs px-3 py-1.5 rounded-sm border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
+                Share on Facebook
+              </a>
+              <a
+                href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(referralUrl)}`}
+                target="_blank" rel="noopener noreferrer"
+                className="text-xs px-3 py-1.5 rounded-sm border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
+                Share on LinkedIn
               </a>
             </div>
           </>
