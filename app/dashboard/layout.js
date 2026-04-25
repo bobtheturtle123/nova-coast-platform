@@ -158,31 +158,31 @@ export default function DashboardLayout({ children }) {
   }
 
   const Sidebar = () => (
-    <aside className="w-52 flex flex-col h-full" style={{ background: "#0C1524" }}>
+    <aside className="w-52 flex flex-col h-full" style={{ background: "#0b2a55" }}>
       {/* Brand */}
-      <div className="px-5 pt-6 pb-5">
+      <div className="px-5 pt-6 pb-5 border-b border-white/10">
         <p className="font-semibold text-white text-[13px] tracking-tight leading-none">ShootFlow</p>
         {tenantName && (
-          <p className="text-white/35 text-[11px] mt-1.5 truncate leading-none">{tenantName}</p>
+          <p className="text-white/50 text-[11px] mt-1.5 truncate leading-none">{tenantName}</p>
         )}
       </div>
 
       {/* Nav */}
-      <nav className="px-3 flex-1 overflow-y-auto space-y-px">
+      <nav className="px-3 pt-3 flex-1 overflow-y-auto space-y-px">
         {NAV.map((item) => {
           const active = isActive(item);
           return (
             <Link key={item.href} href={item.href}
               onClick={() => setSidebarOpen(false)}
-              className={`relative flex items-center gap-2.5 pl-3 pr-3 py-[7px] rounded-md text-[12.5px] font-medium transition-all duration-150 group ${
+              className={`relative flex items-center gap-2.5 pl-3 pr-3 py-[8px] rounded-md text-[12.5px] font-medium transition-all duration-150 group ${
                 active
-                  ? "text-white bg-white/10"
-                  : "text-white/50 hover:text-white/85 hover:bg-white/[0.06]"
+                  ? "text-white bg-white/[0.14]"
+                  : "text-white/70 hover:text-white hover:bg-white/[0.08]"
               }`}>
               {active && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-white/70 rounded-full" />
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-gold rounded-full" />
               )}
-              <span className={`flex-shrink-0 transition-opacity ${active ? "opacity-90" : "opacity-50 group-hover:opacity-75"}`}>
+              <span className={`flex-shrink-0 transition-opacity ${active ? "opacity-100" : "opacity-60 group-hover:opacity-90"}`}>
                 {item.icon}
               </span>
               <span className="tracking-tight">{item.label}</span>
@@ -193,11 +193,11 @@ export default function DashboardLayout({ children }) {
 
       {/* Footer */}
       <div className="px-3 py-4 mt-2">
-        <div className="border-t border-white/[0.07] pt-3">
-          <p className="text-[10.5px] text-white/30 truncate px-1 mb-1.5">{user?.email}</p>
+        <div className="border-t border-white/10 pt-3">
+          <p className="text-[10.5px] text-white/40 truncate px-1 mb-1.5">{user?.email}</p>
           <button
             onClick={() => auth.signOut().then(() => router.push("/auth/login"))}
-            className="w-full text-left text-[12px] text-white/40 hover:text-white/70 transition-colors px-1 py-1 rounded">
+            className="w-full text-left text-[12px] text-white/55 hover:text-white transition-colors px-1 py-1 rounded">
             Sign out
           </button>
         </div>
@@ -225,7 +225,7 @@ export default function DashboardLayout({ children }) {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile top bar */}
-        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-white/10" style={{ background: "#0C1524" }}>
+        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-white/10" style={{ background: "#0b2a55" }}>
           <button onClick={() => setSidebarOpen(true)} className="text-white/60 hover:text-white">
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />

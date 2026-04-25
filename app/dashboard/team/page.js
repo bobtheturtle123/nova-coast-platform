@@ -545,6 +545,7 @@ export default function TeamPage() {
   const [inviteMsg,     setInviteMsg]     = useState("");
   const [timeBlocks,    setTimeBlocks]    = useState([]);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [blockDetail,    setBlockDetail]    = useState(null); // { member, blocks, date }
 
   const getToken = () => auth.currentUser?.getIdToken();
 
@@ -745,7 +746,11 @@ export default function TeamPage() {
     </div>
   );
 
-  const visibleMembers = filterMember === "all" ? members : members.filter((m) => m.id === filterMember);
+  // In availability views hide inactive photographers; the member list still shows all
+  const activeMembers = members.filter((m) => m.active !== false);
+  const visibleMembers = filterMember === "all"
+    ? (calView === "2wk" || calView === "week" ? activeMembers : members)
+    : members.filter((m) => m.id === filterMember);
 
   return (
     <div className="p-6 max-w-7xl">
@@ -940,10 +945,12 @@ export default function TeamPage() {
                                 isPast   ? "bg-gray-50/30" : ""
                               }`}>
                               {isBlocked ? (
-                                <span title={dayBlocks[0]?.reason || "Blocked"}
-                                  className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-500 mx-auto" style={{ fontSize: 14 }}>
+                                <button
+                                  onClick={() => setBlockDetail({ member, blocks: dayBlocks, date: d })}
+                                  title="Click for details"
+                                  className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-500 mx-auto hover:bg-red-200 transition-colors cursor-pointer" style={{ fontSize: 14 }}>
                                   —
-                                </span>
+                                </button>
                               ) : count > 0 ? (
                                 <a href={`/dashboard/listings/${dayEvents[0].id}`}
                                   title={dayEvents.map((e) => e.address?.split(",")[0]).join(", ")}
@@ -1112,6 +1119,16 @@ export default function TeamPage() {
                       .filter((e) => weekDates.some((d) => isSameDay(e.shootDateObj, d)))
                       .map((e) => DAYS_SHORT[e.shootDateObj.getDay()])
                   );
+                  // Also mark days with time blocks as unavailable
+                  weekDates.forEach((d) => {
+                    const dayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+                    const hasBlock = timeBlocks.some((b) => {
+                      const startStr = (b.startDate || "").slice(0, 10);
+                      const endStr   = (b.endDate   || b.startDate || "").slice(0, 10);
+                      return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
+                    });
+                    if (hasBlock) bookedDays.add(DAYS_SHORT[d.getDay()]);
+                  });
                   const freeDays = weekDates
                     .filter((d) => d >= today && !bookedDays.has(DAYS_SHORT[d.getDay()]))
                     .map((d) => `${DAYS_SHORT[d.getDay()]} ${MONTHS[d.getMonth()].slice(0,3)} ${d.getDate()}`);
@@ -1357,6 +1374,46 @@ export default function TeamPage() {
             if (updated) setCalModal(updated);
           }}
         />
+      )}
+
+      {/* Block detail popover */}
+      {blockDetail && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setBlockDetail(null)}>
+          <div className="bg-white rounded-sm shadow-xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-charcoal text-sm">
+                  {blockDetail.member.name} — {DAYS_SHORT[blockDetail.date.getDay()]}, {MONTHS[blockDetail.date.getMonth()]} {blockDetail.date.getDate()}
+                </p>
+                <p className="text-xs text-red-500 mt-0.5">Blocked</p>
+              </div>
+              <button onClick={() => setBlockDetail(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+            <div className="p-5 space-y-3">
+              {blockDetail.blocks.map((bl) => (
+                <div key={bl.id} className="bg-red-50 border border-red-100 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-red-700">{bl.reason || "Blocked"}</p>
+                    <button onClick={() => { deleteBlock(bl.id); setBlockDetail(null); }}
+                      className="text-xs text-red-400 hover:text-red-600 font-medium">Remove</button>
+                  </div>
+                  {(bl.startTime || bl.endTime) && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {bl.startTime || "All day"}{bl.endTime ? ` – ${bl.endTime}` : " (no end time set)"}
+                    </p>
+                  )}
+                  {!bl.startTime && !bl.endTime && (
+                    <p className="text-xs text-red-400 mt-1">Full day</p>
+                  )}
+                  {bl.note && <p className="text-xs text-red-400 mt-1 italic">{bl.note}</p>}
+                  <p className="text-[10px] text-red-300 mt-1">
+                    {bl.startDate === bl.endDate ? "Single day" : `${bl.startDate} – ${bl.endDate}`}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Block Time modal */}

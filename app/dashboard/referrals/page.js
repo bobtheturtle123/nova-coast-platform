@@ -47,8 +47,12 @@ function ShareButton({ referralUrl }) {
 }
 
 export default function ReferralsPage() {
-  const [data,    setData]    = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data,        setData]        = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [newLabel,    setNewLabel]    = useState("");
+  const [addingCode,  setAddingCode]  = useState(false);
+  const [codeError,   setCodeError]   = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
@@ -60,16 +64,46 @@ export default function ReferralsPage() {
     });
   }, []);
 
+  async function addCode() {
+    if (!newLabel.trim()) return;
+    setAddingCode(true); setCodeError("");
+    const token = await auth.currentUser?.getIdToken();
+    const res = await fetch("/api/dashboard/referrals/codes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ label: newLabel.trim() }),
+    });
+    const body = await res.json();
+    if (res.ok) {
+      setData((d) => ({ ...d, namedReferralCodes: [...(d.namedReferralCodes || []), body.code] }));
+      setNewLabel(""); setShowAddForm(false);
+    } else {
+      setCodeError(body.error || "Failed to create code.");
+    }
+    setAddingCode(false);
+  }
+
+  async function deleteCode(code) {
+    if (!confirm(`Remove the "${code}" referral code?`)) return;
+    const token = await auth.currentUser?.getIdToken();
+    await fetch(`/api/dashboard/referrals/codes?code=${encodeURIComponent(code)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setData((d) => ({ ...d, namedReferralCodes: (d.namedReferralCodes || []).filter((c) => c.code !== code) }));
+  }
+
   if (loading) return (
     <div className="p-8 flex justify-center">
       <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
     </div>
   );
 
-  const appUrl      = typeof window !== "undefined" ? window.location.origin : "https://shootflow.app";
-  const referralUrl = data?.referralCode ? `${appUrl}/ref/${data.referralCode}` : null;
+  const appUrl         = typeof window !== "undefined" ? window.location.origin : "https://shootflow.app";
+  const referralUrl    = data?.referralCode ? `${appUrl}/ref/${data.referralCode}` : null;
   const creditsDollars = Math.floor((data?.creditsCents || 0) / 100);
-  const referrals   = data?.referrals || [];
+  const referrals      = data?.referrals || [];
+  const namedCodes     = data?.namedReferralCodes || [];
 
   return (
     <div className="p-8 max-w-2xl">
@@ -127,6 +161,72 @@ export default function ReferralsPage() {
         ) : (
           <div className="bg-amber-50 border border-amber-200 rounded-sm p-3 text-sm text-amber-700">
             Your referral link is being generated. Refresh in a moment.
+          </div>
+        )}
+      </div>
+
+      {/* Tracking codes */}
+      <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="font-semibold text-charcoal text-sm">Tracking Codes</h2>
+          {namedCodes.length < 10 && !showAddForm && (
+            <button onClick={() => setShowAddForm(true)}
+              className="text-xs text-navy hover:underline font-medium">
+              + Add code
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-gray-400 mb-4">
+          Create separate links for different channels — Instagram, events, emails — so you can see which ones convert.
+        </p>
+
+        {showAddForm && (
+          <div className="flex gap-2 mb-4">
+            <input
+              autoFocus
+              type="text" value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addCode()}
+              placeholder="e.g. Instagram, NAR Conference 2025…"
+              className="input-field flex-1 text-sm" maxLength={48} />
+            <button onClick={addCode} disabled={addingCode || !newLabel.trim()}
+              className="btn-primary text-sm px-4 py-2 disabled:opacity-50">
+              {addingCode ? "…" : "Create"}
+            </button>
+            <button onClick={() => { setShowAddForm(false); setNewLabel(""); setCodeError(""); }}
+              className="btn-outline text-sm px-3 py-2">Cancel</button>
+          </div>
+        )}
+        {codeError && <p className="text-xs text-red-500 mb-3">{codeError}</p>}
+
+        {namedCodes.length === 0 && !showAddForm ? (
+          <p className="text-xs text-gray-400 italic">No tracking codes yet. Add one to track different referral sources.</p>
+        ) : (
+          <div className="space-y-2">
+            {/* Default code always shown first */}
+            {referralUrl && (
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-charcoal mb-0.5">Default link</p>
+                  <p className="font-mono text-xs text-gray-500 truncate">{referralUrl}</p>
+                </div>
+                <CopyButton text={referralUrl} />
+              </div>
+            )}
+            {namedCodes.map((c) => {
+              const url = `${appUrl}/ref/${c.code}`;
+              return (
+                <div key={c.code} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-charcoal mb-0.5">{c.label}</p>
+                    <p className="font-mono text-xs text-gray-500 truncate">{url}</p>
+                  </div>
+                  <CopyButton text={url} />
+                  <button onClick={() => deleteCode(c.code)}
+                    className="text-xs text-red-400 hover:text-red-600 flex-shrink-0 px-1.5">Remove</button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

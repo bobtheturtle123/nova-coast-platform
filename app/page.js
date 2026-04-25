@@ -37,7 +37,7 @@ export default function MarketingPage() {
               <p className="text-gold text-xs tracking-[0.2em] uppercase font-body mb-4">
                 Made by media teams, for media teams
               </p>
-              <h1 className="font-serif text-5xl md:text-6xl leading-tight mb-6 font-normal">
+              <h1 className="font-serif text-5xl md:text-6xl leading-tight mb-6 font-normal text-white">
                 Run your business.<br />Get paid faster.
               </h1>
               <p className="text-white/70 text-lg max-w-xl leading-relaxed mb-10">

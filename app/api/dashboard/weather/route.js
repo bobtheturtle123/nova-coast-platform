@@ -12,6 +12,7 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const address = searchParams.get("address");
     const date    = searchParams.get("date"); // YYYY-MM-DD
+    const unit    = searchParams.get("unit") === "C" ? "celsius" : "fahrenheit";
 
     if (!address || !date) {
       return Response.json({ error: "address and date are required" }, { status: 400 });
@@ -51,9 +52,9 @@ export async function GET(req) {
       `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,uv_index_max,windspeed_10m_max,weathercode`,
       `&hourly=uv_index`,
       `&current_weather=true`,
-      `&temperature_unit=fahrenheit`,
-      `&wind_speed_unit=mph`,
-      `&precipitation_unit=inch`,
+      `&temperature_unit=${unit}`,
+      `&wind_speed_unit=${unit === "celsius" ? "kmh" : "mph"}`,
+      `&precipitation_unit=${unit === "celsius" ? "mm" : "inch"}`,
       `&timezone=auto`,
       `&forecast_days=16`,
     ].join("");
@@ -121,6 +122,7 @@ export async function GET(req) {
       windSpeed,
       precipitation: parseFloat(precip.toFixed(2)),
       daysOut:     diffDays,
+      tempUnit:    unit === "celsius" ? "C" : "F",
     });
   } catch (err) {
     console.error("Weather API error:", err);

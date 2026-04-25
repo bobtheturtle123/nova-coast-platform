@@ -28,6 +28,7 @@ export default function TenantPropertyPage() {
   const [fieldValues,        setFieldValues]        = useState(customFields || {});
   const [requireServiceArea, setRequireServiceArea] = useState(false);
   const [checking,           setChecking]           = useState(false);
+  const [tenantCountry,      setTenantCountry]      = useState("US");
   const [zoneError,          setZoneError]          = useState(null); // { contact }
   const [geocodeError,       setGeocodeError]       = useState(false);
 
@@ -39,6 +40,7 @@ export default function TenantPropertyPage() {
           setConfigFields(data.bookingConfig.customFields);
         }
         setRequireServiceArea(!!data.bookingConfig?.requireServiceArea);
+        if (data.country) setTenantCountry(data.country);
       })
       .catch(() => {});
   }, [params.slug]);
@@ -146,16 +148,20 @@ export default function TenantPropertyPage() {
                     placeholder="San Diego" className="input-field" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-1.5">State</label>
+                  <label className="block text-sm font-medium text-charcoal mb-1.5">
+                    {tenantCountry === "CA" ? "Province" : tenantCountry === "AU" ? "State/Territory" : "State"}
+                  </label>
                   <input name="state" value={state} onChange={handleChange}
-                    placeholder="CA" maxLength={2} className="input-field uppercase" />
+                    placeholder={tenantCountry === "CA" ? "ON" : tenantCountry === "GB" ? "" : "CA"}
+                    maxLength={tenantCountry === "US" ? 2 : 50} className="input-field uppercase" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-charcoal mb-1.5">
-                    ZIP <span className="text-red-400">*</span>
+                    {tenantCountry === "US" ? "ZIP" : "Postal Code"} <span className="text-red-400">*</span>
                   </label>
                   <input name="zip" value={zip} onChange={handleChange}
-                    placeholder="92101" maxLength={5} className="input-field" />
+                    placeholder={tenantCountry === "CA" ? "M5V 3A5" : tenantCountry === "GB" ? "SW1A 1AA" : tenantCountry === "AU" ? "2000" : "92101"}
+                    maxLength={tenantCountry === "US" ? 5 : 10} className="input-field" />
                 </div>
               </div>
               <div>

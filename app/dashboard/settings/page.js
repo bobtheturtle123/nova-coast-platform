@@ -610,10 +610,12 @@ export default function SettingsPage() {
   const [tenant,  setTenant]  = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
+  const [sg,      setSg]      = useState("Business");
 
   const [form, setForm] = useState({
     businessName: "", phone: "", fromZip: "",
     tagline: "", primaryColor: "#0b2a55", accentColor: "#c9a96e",
+    country: "US", tempUnit: "F",
   });
 
   // Pricing config state
@@ -734,6 +736,8 @@ export default function SettingsPage() {
           tagline:       data.tenant.branding?.tagline || "",
           primaryColor:  data.tenant.branding?.primaryColor || "#0b2a55",
           accentColor:   data.tenant.branding?.accentColor  || "#c9a96e",
+          country:       data.tenant.country  || "US",
+          tempUnit:      data.tenant.tempUnit || "F",
         });
         // Load pricing config
         if (data.tenant.pricingConfig) {
@@ -840,8 +844,10 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           businessName: form.businessName,
-          phone: form.phone,
-          fromZip: form.fromZip,
+          phone:        form.phone,
+          fromZip:      form.fromZip,
+          country:      form.country,
+          tempUnit:     form.tempUnit,
           branding: {
             ...(tenant?.branding || {}),
             businessName: form.businessName,
@@ -1215,25 +1221,36 @@ export default function SettingsPage() {
     <div className="p-6 max-w-5xl">
       <div className="mb-6">
         <h1 className="font-semibold text-xl text-charcoal mb-1">Settings</h1>
-        <p className="text-gray-400 text-sm">Manage your business profile, branding, and pricing.</p>
+        <p className="text-gray-400 text-sm">Select a category to configure your account.</p>
+      </div>
+
+      {/* Mobile tab bar */}
+      <div className="flex gap-1 flex-wrap mb-6 lg:hidden">
+        {SECTION_GROUPS.map((grp) => (
+          <button key={grp.group} onClick={() => setSg(grp.group)}
+            className={`text-xs py-1.5 px-3 rounded-full font-medium transition-colors border ${
+              sg === grp.group
+                ? "bg-navy text-white border-navy"
+                : "text-gray-500 border-gray-200 hover:border-navy/30 hover:text-navy"
+            }`}>
+            {grp.group}
+          </button>
+        ))}
       </div>
 
       <div className="flex gap-8 items-start">
-        {/* Sticky side nav — grouped */}
+        {/* Sticky side nav — tabs */}
         <nav className="hidden lg:block w-44 flex-shrink-0 sticky top-6">
-          <div className="space-y-4">
+          <div className="space-y-0.5">
             {SECTION_GROUPS.map((grp) => (
-              <div key={grp.group}>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1 px-2">{grp.group}</p>
-                <div className="space-y-0.5">
-                  {grp.items.map((s) => (
-                    <a key={s.id} href={`#settings-${s.id}`}
-                      className="block text-sm text-gray-500 hover:text-navy py-1.5 px-2 rounded hover:bg-navy/5 transition-colors">
-                      {s.label}
-                    </a>
-                  ))}
-                </div>
-              </div>
+              <button key={grp.group} onClick={() => setSg(grp.group)}
+                className={`w-full text-left text-sm py-2 px-3 rounded-lg font-medium transition-colors ${
+                  sg === grp.group
+                    ? "bg-navy text-white"
+                    : "text-gray-500 hover:text-navy hover:bg-navy/5"
+                }`}>
+                {grp.group}
+              </button>
             ))}
           </div>
         </nav>
@@ -1241,6 +1258,7 @@ export default function SettingsPage() {
         {/* Main content */}
         <div className="flex-1 min-w-0">
 
+      {sg === "Business" && (<>
       {/* Booking URL */}
       <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-4">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Your Booking Page</p>
@@ -1283,8 +1301,38 @@ export default function SettingsPage() {
                 <input type="tel" value={form.phone} onChange={set("phone")} className="input-field w-full" />
               </div>
               <div>
-                <label className="label-field">Home ZIP Code</label>
-                <input type="text" value={form.fromZip} onChange={set("fromZip")} maxLength={5} className="input-field w-full" />
+                <label className="label-field">{form.country === "US" ? "Home ZIP Code" : "Postal Code"}</label>
+                <input type="text" value={form.fromZip} onChange={set("fromZip")} maxLength={10} className="input-field w-full" />
+              </div>
+            </div>
+
+            {/* Regional settings */}
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+              <div>
+                <label className="label-field">Country / Region</label>
+                <select value={form.country} onChange={set("country")} className="input-field w-full">
+                  <option value="US">🇺🇸 United States</option>
+                  <option value="CA">🇨🇦 Canada</option>
+                  <option value="AU">🇦🇺 Australia</option>
+                  <option value="GB">🇬🇧 United Kingdom</option>
+                  <option value="NZ">🇳🇿 New Zealand</option>
+                  <option value="IE">🇮🇪 Ireland</option>
+                  <option value="ZA">🇿🇦 South Africa</option>
+                  <option value="OTHER">🌍 Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="label-field">Temperature Units</label>
+                <div className="flex gap-2">
+                  {[{ v: "F", label: "°F  Fahrenheit" }, { v: "C", label: "°C  Celsius" }].map(({ v, label }) => (
+                    <button key={v} type="button" onClick={() => setForm((f) => ({ ...f, tempUnit: v }))}
+                      className={`flex-1 py-2 px-3 text-sm border rounded-sm transition-colors ${
+                        form.tempUnit === v ? "bg-navy text-white border-navy" : "border-gray-200 text-gray-600 hover:border-navy/30"
+                      }`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -1335,7 +1383,9 @@ export default function SettingsPage() {
           {saving ? "Saving…" : "Save Settings"}
         </button>
       </form>
+      </>)}
 
+      {sg === "Booking" && (<>
       {/* ─── Pricing Tiers ─────────────────────────────────────────────────────── */}
       <div id="settings-pricing" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <div className="flex items-center justify-between mb-1">
@@ -1591,8 +1641,10 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+      </>)}
 
       {/* ─── Job Cost Rates ──────────────────────────────────────────────────── */}
+      {sg === "Team" && (
       <div id="settings-cost-rates" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <h2 className="font-semibold text-charcoal text-base mb-1">Default Job Cost Rates</h2>
         <p className="text-sm text-gray-500 mb-6">
@@ -1633,8 +1685,10 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+      )}
 
       {/* ─── Availability ────────────────────────────────────────────────────── */}
+      {sg === "Booking" && (<>
       <div id="settings-availability" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <h2 className="font-semibold text-charcoal text-base mb-1">Availability & Scheduling</h2>
         <p className="text-sm text-gray-500 mb-6">
@@ -1931,7 +1985,10 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      </>)}
+
       {/* ─── Service Agreement ───────────────────────────────────────────────── */}
+      {sg === "Legal" && (<>
       <div id="settings-agreement" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <div className="flex items-start justify-between mb-1">
           <div>
@@ -2070,7 +2127,10 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      </>)}
+
       {/* ─── Travel Fees ─────────────────────────────────────────────────────── */}
+      {sg === "Booking" && (
       <div id="settings-travel" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-semibold text-charcoal text-base">Travel Fees</h2>
@@ -2199,10 +2259,13 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      )}
+
       {/* ─── Staff Access ────────────────────────────────────────────────────── */}
-      <StaffAccessSection />
+      {sg === "Team" && <StaffAccessSection />}
 
       {/* ─── Promo Codes ─────────────────────────────────────────────────────── */}
+      {sg === "Booking" && (
       <div id="settings-promos" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -2313,34 +2376,30 @@ export default function SettingsPage() {
         )}
       </div>
 
+      )}
+
       {/* ─── Email Templates ─────────────────────────────────────────────────── */}
+      {sg === "Communications" && (<>
       <div id="settings-email" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
         <h2 className="font-semibold text-charcoal text-base mb-1">Email Templates</h2>
         <p className="text-sm text-gray-500 mb-4">
-          Customize the emails clients receive. Leave fields blank to use the default text.
-          Available placeholders: <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{clientName}}"}</code>{" "}
-          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{address}}"}</code>{" "}
-          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{date}}"}</code>{" "}
-          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{balance}}"}</code>{" "}
-          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{websiteUrl}}"}</code>{" "}
-          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{"{{tourUrl}}"}</code>
-          <span className="text-xs text-gray-400 ml-1">(gallery delivery only — auto-included if available)</span>
+          Customize what each email says. Click any <span className="font-medium text-navy">insert field</span> button to add dynamic content like the client name or property address.
         </p>
 
         <div className="bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-5 text-xs text-amber-700">
-          <strong>Email setup required:</strong> Emails are sent via Resend. Set <code className="font-mono">RESEND_API_KEY</code> in your Vercel environment variables and verify your sending domain in the Resend dashboard.
+          <strong>Email setup required:</strong> Emails are sent via Resend. Add <code className="font-mono bg-amber-100 px-1 rounded">RESEND_API_KEY</code> in your Vercel environment variables and verify your sending domain.
         </div>
 
         {/* Email type tabs */}
-        <div className="flex gap-1 mb-6 border-b border-gray-100">
+        <div className="flex gap-1 mb-6 border-b border-gray-100 overflow-x-auto">
           {[
-            { id: "gallery",   label: "Gallery Delivery" },
-            { id: "received",  label: "Booking Received" },
-            { id: "approved",  label: "Shoot Confirmed" },
-            { id: "reminder",  label: "Payment Reminder" },
+            { id: "gallery",   label: "Gallery Delivery",  hint: "Sent when you deliver photos" },
+            { id: "received",  label: "Booking Received",  hint: "Sent at booking submission" },
+            { id: "approved",  label: "Shoot Confirmed",   hint: "Sent when shoot is scheduled" },
+            { id: "reminder",  label: "Payment Reminder",  hint: "Sent for unpaid balances" },
           ].map((t) => (
             <button key={t.id} onClick={() => setEmailTab(t.id)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
                 emailTab === t.id
                   ? "border-navy text-navy"
                   : "border-transparent text-gray-400 hover:text-gray-600"
@@ -2350,9 +2409,61 @@ export default function SettingsPage() {
           ))}
         </div>
 
+        {/* Insert field chips — shared for all tabs */}
+        {(() => {
+          const TAB_VARS = {
+            gallery:  [["Client Name","{{clientName}}"],["Property Address","{{address}}"],["Gallery Link","{{websiteUrl}}"],["Virtual Tour","{{tourUrl}}"]],
+            received: [["Client Name","{{clientName}}"],["Property Address","{{address}}"],["Preferred Date","{{preferredDate}}"],["Services","{{services}}"]],
+            approved: [["Client Name","{{clientName}}"],["Property Address","{{address}}"],["Shoot Date","{{date}}"],["Shoot Time","{{shootTime}}"]],
+            reminder: [["Client Name","{{clientName}}"],["Property Address","{{address}}"],["Balance Owed","{{balance}}"],["Pay Link","{{paymentUrl}}"]],
+          };
+          const vars = TAB_VARS[emailTab] || [];
+
+          function insertInto(setter, value) {
+            const el = document.activeElement;
+            if (el && (el.tagName === "TEXTAREA" || el.tagName === "INPUT")) {
+              const start = el.selectionStart ?? el.value.length;
+              const end   = el.selectionEnd   ?? el.value.length;
+              const next  = el.value.slice(0, start) + value + el.value.slice(end);
+              setter(next);
+              requestAnimationFrame(() => {
+                el.focus();
+                el.setSelectionRange(start + value.length, start + value.length);
+              });
+            } else {
+              setter((v) => v + value);
+            }
+          }
+
+          const subjectSetter = emailTab === "gallery" ? setEmailTplSubject
+            : emailTab === "received" ? setBookingReceivedSubject
+            : emailTab === "approved" ? setBookingApprovedSubject
+            : setPaymentReminderSubject;
+          const bodySetter = emailTab === "gallery" ? setEmailTplBody
+            : emailTab === "received" ? setBookingReceivedBody
+            : emailTab === "approved" ? setBookingApprovedBody
+            : setPaymentReminderBody;
+
+          return (
+            <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-xs text-gray-500 font-medium mb-2">Insert field into subject or body — click while the cursor is in the field:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {vars.map(([label, token]) => (
+                  <button key={token} type="button"
+                    onMouseDown={(e) => { e.preventDefault(); insertInto(document.activeElement?.closest("[data-emailbody]") ? bodySetter : subjectSetter, token); }}
+                    onClick={() => insertInto(bodySetter, token)}
+                    className="text-xs bg-white border border-navy/20 text-navy px-2.5 py-1 rounded-full hover:bg-navy/5 transition-colors font-medium">
+                    + {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {emailTab === "gallery" && (
           <div className="space-y-4">
-            <p className="text-xs text-gray-400 mb-2">Sent when you deliver a gallery. Can be overridden per-delivery in the gallery editor.</p>
+            <p className="text-xs text-gray-400">Sent when you deliver a gallery. Can be customized per delivery from the gallery editor.</p>
             <div>
               <label className="label-field">Subject Line</label>
               <input type="text" value={emailTplSubject} onChange={(e) => setEmailTplSubject(e.target.value)}
@@ -2360,7 +2471,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <label className="label-field">Message Body</label>
-              <textarea value={emailTplBody} onChange={(e) => setEmailTplBody(e.target.value)} rows={7}
+              <textarea data-emailbody="1" value={emailTplBody} onChange={(e) => setEmailTplBody(e.target.value)} rows={8}
                 placeholder={"Hi {{clientName}},\n\nYour media for {{address}} is ready to view and download.\n\nLet me know if you need any adjustments.\n\nBest,\n" + (tenant?.businessName || "Your Photographer")}
                 className="input-field w-full text-sm leading-relaxed resize-y" />
               <p className="text-xs text-gray-400 mt-1">Appears above the gallery button in the email.</p>
@@ -2370,33 +2481,33 @@ export default function SettingsPage() {
 
         {emailTab === "received" && (
           <div className="space-y-4">
-            <p className="text-xs text-gray-400 mb-2">Sent automatically when a client submits a booking and pays their deposit.</p>
+            <p className="text-xs text-gray-400">Sent automatically when a client submits a booking and pays their deposit.</p>
             <div>
               <label className="label-field">Subject Line</label>
               <input type="text" value={bookingReceivedSubject} onChange={(e) => setBookingReceivedSubject(e.target.value)}
-                className="input-field w-full" placeholder={`Booking received — {{address}}`} />
+                className="input-field w-full" placeholder="Booking received — {{address}}" />
             </div>
             <div>
               <label className="label-field">Message Body</label>
-              <textarea value={bookingReceivedBody} onChange={(e) => setBookingReceivedBody(e.target.value)} rows={7}
+              <textarea data-emailbody="1" value={bookingReceivedBody} onChange={(e) => setBookingReceivedBody(e.target.value)} rows={8}
                 placeholder={"Hi {{clientName}},\n\nThanks for booking with us! Your shoot request for {{address}} is under review. We'll confirm within 24 hours.\n\nLooking forward to it,\n" + (tenant?.businessName || "Your Photographer")}
                 className="input-field w-full text-sm leading-relaxed resize-y" />
-              <p className="text-xs text-gray-400 mt-1">Appears above the booking details table in the email.</p>
+              <p className="text-xs text-gray-400 mt-1">Appears above the booking details in the email.</p>
             </div>
           </div>
         )}
 
         {emailTab === "approved" && (
           <div className="space-y-4">
-            <p className="text-xs text-gray-400 mb-2">Sent when you approve a booking and assign a shoot date.</p>
+            <p className="text-xs text-gray-400">Sent when you approve a booking and assign a shoot date.</p>
             <div>
               <label className="label-field">Subject Line</label>
               <input type="text" value={bookingApprovedSubject} onChange={(e) => setBookingApprovedSubject(e.target.value)}
-                className="input-field w-full" placeholder={`Shoot confirmed — {{address}}`} />
+                className="input-field w-full" placeholder="Shoot confirmed — {{address}}" />
             </div>
             <div>
               <label className="label-field">Message Body</label>
-              <textarea value={bookingApprovedBody} onChange={(e) => setBookingApprovedBody(e.target.value)} rows={7}
+              <textarea data-emailbody="1" value={bookingApprovedBody} onChange={(e) => setBookingApprovedBody(e.target.value)} rows={8}
                 placeholder={"Hi {{clientName}},\n\nGreat news — your shoot at {{address}} is confirmed for {{date}}. We'll be in touch with any details beforehand.\n\nSee you then,\n" + (tenant?.businessName || "Your Photographer")}
                 className="input-field w-full text-sm leading-relaxed resize-y" />
             </div>
@@ -2405,15 +2516,15 @@ export default function SettingsPage() {
 
         {emailTab === "reminder" && (
           <div className="space-y-4">
-            <p className="text-xs text-gray-400 mb-2">Sent manually from the Orders tab when a client has an outstanding balance after gallery delivery.</p>
+            <p className="text-xs text-gray-400">Sent manually from the Orders tab when a client has an outstanding balance after gallery delivery.</p>
             <div>
               <label className="label-field">Subject Line</label>
               <input type="text" value={paymentReminderSubject} onChange={(e) => setPaymentReminderSubject(e.target.value)}
-                className="input-field w-full" placeholder={`Friendly reminder — balance due for {{address}}`} />
+                className="input-field w-full" placeholder="Friendly reminder — balance due for {{address}}" />
             </div>
             <div>
               <label className="label-field">Message Body</label>
-              <textarea value={paymentReminderBody} onChange={(e) => setPaymentReminderBody(e.target.value)} rows={7}
+              <textarea data-emailbody="1" value={paymentReminderBody} onChange={(e) => setPaymentReminderBody(e.target.value)} rows={8}
                 placeholder={"Hi {{clientName}},\n\nJust a quick reminder that your remaining balance of ${{balance}} is due for {{address}}. You can pay directly from your gallery — it only takes a minute.\n\nThanks!\n" + (tenant?.businessName || "Your Photographer")}
                 className="input-field w-full text-sm leading-relaxed resize-y" />
               <p className="text-xs text-gray-400 mt-1">Appears above the Pay &amp; Download button in the email.</p>
@@ -2421,21 +2532,31 @@ export default function SettingsPage() {
           </div>
         )}
 
-        <div className="mt-6">
+        <div className="mt-6 flex items-center justify-between">
+          <p className="text-xs text-gray-400">For full notification control and SMS settings, visit the <a href="/dashboard/notifications" className="text-navy underline underline-offset-2">Notifications page</a>.</p>
           <button onClick={saveEmailTemplate} disabled={savingTemplate} className="btn-primary px-8 py-3">
             {savingTemplate ? "Saving…" : "Save Email Templates"}
           </button>
         </div>
       </div>
 
-      {/* SMS Notifications */}
-      <SmsNotificationsSection />
+      {/* SMS note */}
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mt-6 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-charcoal">SMS Notifications</p>
+          <p className="text-xs text-gray-400 mt-0.5">Enable or disable SMS per notification type from the Notifications page.</p>
+        </div>
+        <a href="/dashboard/notifications" className="text-xs text-navy font-medium hover:underline flex-shrink-0">
+          Go to Notifications →
+        </a>
+      </div>
+      </>)}
 
       {/* Integrations (QuickBooks etc) */}
-      <QuickBooksSection />
+      {sg === "Integrations" && <QuickBooksSection />}
 
       {/* Custom Domain */}
-      <CustomDomainSection />
+      {sg === "Business" && <CustomDomainSection />}
 
         </div>{/* end main content */}
       </div>{/* end flex */}

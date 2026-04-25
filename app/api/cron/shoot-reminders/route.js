@@ -26,7 +26,7 @@ export async function GET(req) {
     await Promise.allSettled(
       tenantsSnap.docs.map(async (tenantDoc) => {
         const tenant = { id: tenantDoc.id, ...tenantDoc.data() };
-        const prefs  = mergeSmsPrefs(tenant.smsNotifications);
+        const prefs  = mergeSmsPrefs(tenant.smsNotifications, tenant.notificationPrefs);
 
         // Skip if neither client nor photographer reminders are enabled
         if (!prefs.shootReminder.client && !prefs.shootReminder.photographer) return;

@@ -53,11 +53,22 @@ export async function GET(req) {
     })
     .sort((a, b) => (b.signedUpAt || "").localeCompare(a.signedUpAt || ""));
 
+  // Also annotate each referral with its source code label if known
+  const namedCodes = tenant.namedReferralCodes || [];
+  const codeLabelMap = Object.fromEntries(namedCodes.map((c) => [c.code, c.label]));
+
+  const annotatedReferrals = referrals.map((r) => ({
+    ...r,
+    sourceCode:  r.sourceCode  || null,
+    sourceLabel: r.sourceCode  ? (codeLabelMap[r.sourceCode] || r.sourceCode) : null,
+  }));
+
   return Response.json({
-    referralCode:   tenant.referralCode || null,
-    creditsCents:   tenant.referralCredits || 0,
-    referrals,
-    totalRewarded:  referrals.filter((r) => r.status === "rewarded").length,
-    totalPending:   referrals.filter((r) => r.status === "pending").length,
+    referralCode:      tenant.referralCode || null,
+    namedReferralCodes: namedCodes,
+    creditsCents:      tenant.referralCredits || 0,
+    referrals:         annotatedReferrals,
+    totalRewarded:     annotatedReferrals.filter((r) => r.status === "rewarded").length,
+    totalPending:      annotatedReferrals.filter((r) => r.status === "pending").length,
   });
 }

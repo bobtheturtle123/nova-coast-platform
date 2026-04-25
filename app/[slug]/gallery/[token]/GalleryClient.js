@@ -236,6 +236,31 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         </div>
       </div>
 
+      {/* Agent listing hub — search portal links */}
+      {gallery.bookingAddress && (
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center gap-3 overflow-x-auto">
+            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex-shrink-0">View listing on</span>
+            {[
+              { label: "Zillow",       url: `https://www.zillow.com/homes/${encodeURIComponent(gallery.bookingAddress)}_rb/` },
+              { label: "Redfin",       url: `https://www.redfin.com/query/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "+")}` },
+              { label: "Realtor.com",  url: `https://www.realtor.com/realestateandhomes-search/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "-")}` },
+            ].map((l) => (
+              <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
+                className="flex-shrink-0 text-xs font-medium text-navy border border-navy/20 px-3 py-1 rounded-full hover:bg-navy/5 transition-colors">
+                {l.label} ↗
+              </a>
+            ))}
+            {gallery.mlsUrl && (
+              <a href={gallery.mlsUrl} target="_blank" rel="noopener noreferrer"
+                className="flex-shrink-0 text-xs font-medium text-white bg-navy px-3 py-1 rounded-full hover:bg-navy/90 transition-colors">
+                MLS Listing ↗
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
       <main className="max-w-6xl mx-auto px-4 py-8">
 
         {/* Preview-only notice */}

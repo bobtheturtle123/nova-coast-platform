@@ -305,6 +305,7 @@ export default function GalleryDetailPage() {
   const [virtualLinks,    setVirtualLinks]    = useState([]); // [{label, url}]
   const [floorPlans,      setFloorPlans]      = useState([]); // [{url, key, fileName}]
   const [attachedFiles,   setAttachedFiles]   = useState([]); // [{url, key, fileName, fileType}]
+  const [mlsUrl,          setMlsUrl]          = useState("");
   const [savingExtras,    setSavingExtras]    = useState(false);
   const [uploadingFloor,  setUploadingFloor]  = useState(false);
   const [uploadingFile,   setUploadingFile]   = useState(false);
@@ -352,6 +353,7 @@ export default function GalleryDetailPage() {
         if (data.gallery.virtualLinks)     setVirtualLinks(data.gallery.virtualLinks);
         if (data.gallery.floorPlans)       setFloorPlans(data.gallery.floorPlans);
         if (data.gallery.attachedFiles)    setAttachedFiles(data.gallery.attachedFiles);
+        if (data.gallery.mlsUrl)           setMlsUrl(data.gallery.mlsUrl);
       }
       setLoading(false);
     });
@@ -670,7 +672,7 @@ export default function GalleryDetailPage() {
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ matterportUrl, matterportHidden, videoUrl, videoUrlHidden, virtualLinks, floorPlans, attachedFiles, ...overrides }),
+      body: JSON.stringify({ matterportUrl, matterportHidden, videoUrl, videoUrlHidden, virtualLinks, floorPlans, attachedFiles, mlsUrl, ...overrides }),
     });
     setSavingExtras(false);
     toast("Saved.");
@@ -792,16 +794,22 @@ export default function GalleryDetailPage() {
 
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard/galleries" className="text-sm text-gray-400 hover:text-navy">← All galleries</Link>
-            {gallery?.bookingId && (
-              <Link href={`/dashboard/listings/${gallery.bookingId}`} className="text-sm text-gray-400 hover:text-navy border-l border-gray-200 pl-3">
-                ← Back to listing
+          <div className="flex items-center gap-2">
+            {gallery?.bookingId ? (
+              <Link href={`/dashboard/listings/${gallery.bookingId}`}
+                className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-navy transition-colors font-medium">
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back to listing
               </Link>
-            )}
-            {gallery?.bookingId && (
-              <Link href={`/dashboard/bookings/${gallery.bookingId}`} className="text-sm text-gray-400 hover:text-navy border-l border-gray-200 pl-3">
-                ← Back to booking
+            ) : (
+              <Link href="/dashboard/galleries"
+                className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-navy transition-colors font-medium">
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
+                </svg>
+                All galleries
               </Link>
             )}
           </div>
@@ -1311,6 +1319,59 @@ export default function GalleryDetailPage() {
               </div>
             )}
           </div>
+
+          {/* ── Listing Links (Agent Hub) ─────────────────────────────────── */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-card mt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-sm bg-navy/8 flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-charcoal">Listing Links</p>
+                <p className="text-xs text-gray-400">Shown to agents in the gallery — quick links to the live listing and search portals.</p>
+              </div>
+            </div>
+
+            {/* Auto-generated search links (read-only preview) */}
+            {gallery?.bookingAddress && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {[
+                  { label: "Search Zillow", url: `https://www.zillow.com/homes/${encodeURIComponent(gallery.bookingAddress)}_rb/` },
+                  { label: "Search Redfin", url: `https://www.redfin.com/query/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "+")}` },
+                  { label: "Search Realtor.com", url: `https://www.realtor.com/realestateandhomes-search/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "-")}` },
+                ].map((l) => (
+                  <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-navy border border-navy/20 px-3 py-1.5 rounded-full hover:bg-navy/5 transition-colors font-medium">
+                    {l.label} →
+                  </a>
+                ))}
+                <span className="text-xs text-gray-400 self-center">auto-generated from address</span>
+              </div>
+            )}
+
+            {/* Manual MLS link */}
+            <div className="flex gap-2 items-center">
+              <div className="flex-1">
+                <label className="label-field text-xs">MLS / Portal Link (optional)</label>
+                <input type="url" value={mlsUrl} onChange={(e) => setMlsUrl(e.target.value)}
+                  placeholder="https://matrix.mlslistings.com/... or any direct listing URL"
+                  className="input-field w-full text-sm" />
+              </div>
+              <button onClick={() => saveExtras()} disabled={savingExtras}
+                className="btn-primary px-4 py-2 text-xs whitespace-nowrap mt-4">
+                {savingExtras ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {mlsUrl && (
+              <p className="text-xs text-green-600 mt-1.5 flex items-center gap-1">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                MLS link will appear as a button in the agent gallery.
+              </p>
+            )}
+          </div>
+
         </div>
       </div>
 

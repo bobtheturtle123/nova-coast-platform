@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 
-function WeatherWidget({ booking }) {
+function WeatherWidget({ booking, tempUnit = "F" }) {
   const [wx,      setWx]      = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -19,14 +19,14 @@ function WeatherWidget({ booking }) {
     setLoading(true);
     auth.currentUser?.getIdToken().then(async (token) => {
       const res = await fetch(
-        `/api/dashboard/weather?address=${encodeURIComponent(address)}&date=${date}`,
+        `/api/dashboard/weather?address=${encodeURIComponent(address)}&date=${date}&unit=${tempUnit}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();
       setWx(data);
       setLoading(false);
     });
-  }, [booking.fullAddress, booking.address, weatherDate]);
+  }, [booking.fullAddress, booking.address, weatherDate, tempUnit]);
 
   if (!weatherDate) return null;
   if (loading) return (
@@ -65,7 +65,7 @@ function WeatherWidget({ booking }) {
       <div className="flex items-center gap-4 mb-3">
         <span className="text-4xl">{wx.icon}</span>
         <div>
-          <p className="text-2xl font-semibold text-charcoal">{wx.temp}°F</p>
+          <p className="text-2xl font-semibold text-charcoal">{wx.temp}°{wx.tempUnit || "F"}</p>
           <p className="text-sm text-gray-500">{wx.description} · H:{wx.tempHigh}° L:{wx.tempLow}°</p>
         </div>
       </div>
@@ -84,9 +84,9 @@ function WeatherWidget({ booking }) {
         )}
         <div className="bg-gray-50 rounded p-2.5">
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Wind</p>
-          <p className="font-semibold text-charcoal">{wx.windSpeed} mph</p>
+          <p className="font-semibold text-charcoal">{wx.windSpeed} {wx.tempUnit === "C" ? "km/h" : "mph"}</p>
           {wx.precipitation > 0 && (
-            <p className="text-xs text-blue-500">{wx.precipitation}" precip</p>
+            <p className="text-xs text-blue-500">{wx.precipitation}{wx.tempUnit === "C" ? "mm" : "\""} precip</p>
           )}
         </div>
       </div>
@@ -148,6 +148,7 @@ export default function BookingDetailPage() {
   const [msg,     setMsg]      = useState("");
   const [shootDate, setShootDate] = useState("");
   const [showWeather, setShowWeather] = useState(true);
+  const [tempUnit,    setTempUnit]    = useState("F");
 
   // Job costs state
   const [costs, setCosts] = useState({ shooterFee: 0, editorFee: 0, travelCost: 0, otherCosts: 0, shootHours: "", editHoursPerPhoto: "", notes: "" });
@@ -194,6 +195,7 @@ export default function BookingDetailPage() {
         const av = tenantData.tenant?.bookingConfig?.availability;
         if (av?.showWeather !== undefined) setShowWeather(av.showWeather);
         if (tenantData.tenant?.costRates) setGlobalCostRates(tenantData.tenant.costRates);
+        if (tenantData.tenant?.tempUnit)  setTempUnit(tenantData.tenant.tempUnit);
       }
       setLoading(false);
     });
@@ -395,7 +397,7 @@ export default function BookingDetailPage() {
       </div>
 
       {/* Weather */}
-      {showWeather && <WeatherWidget booking={booking} />}
+      {showWeather && <WeatherWidget booking={booking} tempUnit={tempUnit} />}
 
       {/* Signed Service Agreement */}
       {booking.contractSigned && (
