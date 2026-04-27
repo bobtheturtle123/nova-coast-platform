@@ -2,8 +2,6 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { Resend } from "resend";
 import { v4 as uuidv4 } from "uuid";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
   if (!auth) return null;
@@ -47,7 +45,9 @@ export async function POST(req) {
   const inviteUrl = `${appUrl}/join/${token}`;
 
   try {
-    await resend.emails.send({
+    const key = process.env.RESEND_API_KEY;
+    if (!key) return Response.json({ ok: true, inviteUrl, emailFailed: true });
+    await new Resend(key).emails.send({
       from:    "ShootFlow <noreply@shootflow.com>",
       to:      email.trim(),
       subject: `${company} invited you to join their photography team`,

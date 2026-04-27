@@ -4,8 +4,12 @@ import { rateLimitTenant } from "@/lib/rateLimit";
 import { Resend } from "resend";
 import { v4 as uuidv4 } from "uuid";
 
-const resend  = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "";
+function getResend() {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return null;
+  return new Resend(key);
+}
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -85,7 +89,7 @@ export async function POST(req, { params }) {
     const address  = booking.fullAddress || booking.address || "your property";
 
     try {
-      await resend.emails.send({
+      await getResend()?.emails.send({
         from,
         to:      [booking.clientEmail],
         subject: `Your media portal is ready — ${address}`,
