@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 
@@ -22,44 +21,27 @@ function PayBadge({ listing }) {
 }
 
 export default function DashboardHome() {
-  const router = useRouter();
   const [listings,       setListings]       = useState([]);
   const [tenant,         setTenant]         = useState(null);
   const [hasProducts,    setHasProducts]    = useState(false);
   const [loading,        setLoading]        = useState(true);
-  const [showSetupModal, setShowSetupModal] = useState(false);
-
   useEffect(() => {
     auth.currentUser?.getIdToken(true).then(async (token) => {
       const h = { Authorization: `Bearer ${token}` };
       const [listRes, tenantRes, svcRes, pkgRes] = await Promise.all([
-        fetch("/api/dashboard/listings",          { headers: h }),
-        fetch("/api/dashboard/tenant",            { headers: h }),
+        fetch("/api/dashboard/listings",               { headers: h }),
+        fetch("/api/dashboard/tenant",                 { headers: h }),
         fetch("/api/dashboard/products?type=services", { headers: h }),
         fetch("/api/dashboard/products?type=packages", { headers: h }),
       ]);
-      if (listRes.ok)   { const d = await listRes.json();   setListings(d.listings || []); }
-      if (tenantRes.ok) {
-        const d = await tenantRes.json();
-        setTenant(d.tenant);
-        // Show welcome modal if onboarding not done and not dismissed this session
-        if (d.tenant && !d.tenant.onboardingCompleted) {
-          const dismissed = typeof window !== "undefined"
-            && localStorage.getItem(`sfSetupDismissed_${d.tenant.id || "x"}`);
-          if (!dismissed) setShowSetupModal(true);
-        }
-      }
-      const svcData = svcRes.ok  ? await svcRes.json()  : {};
-      const pkgData = pkgRes.ok  ? await pkgRes.json()  : {};
+      if (listRes.ok)   { const d = await listRes.json();  setListings(d.listings || []); }
+      if (tenantRes.ok) { const d = await tenantRes.json(); setTenant(d.tenant); }
+      const svcData = svcRes.ok ? await svcRes.json() : {};
+      const pkgData = pkgRes.ok ? await pkgRes.json() : {};
       setHasProducts((svcData.items?.length || 0) > 0 || (pkgData.items?.length || 0) > 0);
       setLoading(false);
     });
   }, []);
-
-  function dismissSetupModal() {
-    if (tenant) localStorage.setItem(`sfSetupDismissed_${tenant.id || "x"}`, "1");
-    setShowSetupModal(false);
-  }
 
   const stats = {
     total:     listings.length,
@@ -87,47 +69,16 @@ export default function DashboardHome() {
   return (
     <div className="p-6 max-w-6xl">
 
-      {/* ── Setup welcome modal ─────────────────────────────────────────── */}
-      {showSetupModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative">
-            <div className="w-12 h-12 bg-navy/5 rounded-xl flex items-center justify-center mb-5">
-              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-navy">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-              </svg>
-            </div>
-            <h2 className="font-display text-2xl text-navy mb-2">Want to set up now?</h2>
-            <p className="text-gray-500 text-sm leading-relaxed mb-2">
-              Takes about 5–10 minutes. We'll walk you through:
-            </p>
-            <ul className="space-y-1.5 mb-6">
-              {["Business basics & contact info", "Your services and pricing", "Connecting Stripe for payments", "Service areas and travel fees", "Inviting your team (optional)"].map((item) => (
-                <li key={item} className="flex items-center gap-2 text-sm text-gray-600">
-                  <span className="text-gold font-bold">✓</span> {item}
-                </li>
-              ))}
-            </ul>
-            <div className="flex flex-col gap-3">
-              <button onClick={() => router.push("/onboarding")}
-                className="btn-primary py-3 text-sm w-full">
-                Yes, let's set up →
-              </button>
-              <button onClick={dismissSetupModal}
-                className="text-sm text-gray-400 hover:text-gray-600 transition-colors py-2 text-center">
-                Not now — I'll do it later
-              </button>
-            </div>
+      {/* ── Setup banner ────────────────────────────────────────────────── */}
+      {tenant && !tenant.onboardingCompleted && (
+        <div className="bg-navy rounded-xl px-5 py-4 mb-6 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-white">Finish setting up your account</p>
+            <p className="text-xs text-white/60 mt-0.5">Business info, booking settings, services, and team — takes about 10 minutes.</p>
           </div>
-        </div>
-      )}
-
-      {/* ── Resume setup banner (dismissed but not complete) ────────────── */}
-      {tenant && !tenant.onboardingCompleted && !showSetupModal && (
-        <div className="bg-navy/[0.04] border border-navy/10 rounded-xl px-5 py-3 mb-5 flex items-center justify-between">
-          <p className="text-sm text-navy/70">Finish setting up your account to go live.</p>
           <Link href="/onboarding"
-            className="text-xs font-semibold text-navy border border-navy/20 px-4 py-1.5 rounded-lg hover:bg-navy/5 transition-colors">
-            Continue Setup →
+            className="flex-shrink-0 text-xs font-semibold bg-white text-navy px-4 py-2 rounded-lg hover:bg-white/90 transition-colors">
+            Finish Setup →
           </Link>
         </div>
       )}

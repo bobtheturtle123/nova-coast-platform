@@ -59,6 +59,7 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
     name:          member?.name          || "",
     email:         member?.email         || "",
     phone:         member?.phone         || "",
+    homeZip:       member?.homeZip       || "",
     skills:        member?.skills        || [],
     color:         member?.color         || COLORS[0],
     active:        member?.active        !== false,
@@ -121,16 +122,35 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
               <input type="tel" value={form.phone} onChange={(e) => setForm((f) => ({...f, phone: e.target.value}))}
                 className="input-field w-full" />
             </div>
+            <div>
+              <label className="label-field">Home ZIP Code</label>
+              <input type="text" value={form.homeZip} maxLength={5}
+                onChange={(e) => setForm((f) => ({...f, homeZip: e.target.value}))}
+                className="input-field w-full" placeholder="e.g. 92108" />
+              <p className="text-xs text-gray-400 mt-0.5">Used to calculate travel fees from their location.</p>
+            </div>
           </div>
 
           <div>
             <label className="label-field">Calendar Color</label>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
               {COLORS.map((c) => (
                 <button key={c} type="button" onClick={() => setForm((f) => ({...f, color: c}))}
                   style={{ background: c }}
-                  className={`w-7 h-7 rounded-full transition-all ${form.color === c ? "ring-2 ring-offset-1 ring-gray-400 scale-110" : ""}`} />
+                  className={`w-7 h-7 rounded-full transition-all flex-shrink-0 ${form.color === c ? "ring-2 ring-offset-1 ring-gray-400 scale-110" : ""}`} />
               ))}
+              {/* Custom color — always show the picker; highlight if current color isn't a preset */}
+              <label
+                title="Custom color"
+                className={`w-7 h-7 rounded-full flex-shrink-0 border-2 border-dashed cursor-pointer flex items-center justify-center overflow-hidden transition-all ${
+                  !COLORS.includes(form.color) ? "ring-2 ring-offset-1 ring-gray-400 scale-110" : "border-gray-300 hover:border-gray-500"
+                }`}
+                style={!COLORS.includes(form.color) ? { background: form.color } : {}}>
+                <input type="color" value={form.color}
+                  onChange={(e) => setForm((f) => ({...f, color: e.target.value}))}
+                  className="opacity-0 absolute w-px h-px" />
+                {COLORS.includes(form.color) && <span className="text-gray-400 text-[10px] leading-none select-none">+</span>}
+              </label>
             </div>
           </div>
 

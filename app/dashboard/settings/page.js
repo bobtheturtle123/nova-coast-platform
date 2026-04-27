@@ -532,12 +532,10 @@ We use Stripe for payment processing and Resend for email delivery. These servic
 For privacy-related questions or requests, please contact us directly through your booking confirmation email.`;
 
 const DEFAULT_TIERS = [
-  { name: "Tiny",   label: "Studio / Under 800 sqft",  max: 800 },
-  { name: "Small",  label: "801 – 2,500 sqft",         max: 2500 },
-  { name: "Medium", label: "2,501 – 4,000 sqft",       max: 4000 },
-  { name: "Large",  label: "4,001 – 6,000 sqft",       max: 6000 },
-  { name: "XL",     label: "6,001 – 8,500 sqft",       max: 8500 },
-  { name: "XXL",    label: "8,500+ sqft",               max: 999999 },
+  { name: "Small",  label: "Under 2,500 sqft",   max: 2500 },
+  { name: "Medium", label: "2,501 – 4,000 sqft", max: 4000 },
+  { name: "Large",  label: "4,001 – 6,000 sqft", max: 6000 },
+  { name: "XL",     label: "6,000+ sqft",         max: 999999 },
 ];
 
 export default function SettingsPage() {
@@ -588,13 +586,14 @@ export default function SettingsPage() {
   const [newFieldType,  setNewFieldType]  = useState("text");
 
   // Travel fee state
-  const [travelEnabled,    setTravelEnabled]    = useState(false);
-  const [travelMode,       setTravelMode]       = useState("perMile"); // "perMile" | "flat" | "zones"
-  const [travelFlatFee,    setTravelFlatFee]    = useState(50);
-  const [travelFreeRadius, setTravelFreeRadius] = useState(20);
-  const [travelRate,       setTravelRate]       = useState(1.5);
-  const [travelMaxRadius,  setTravelMaxRadius]  = useState(0);
-  const [savingTravel,     setSavingTravel]     = useState(false);
+  const [travelEnabled,      setTravelEnabled]      = useState(false);
+  const [travelMode,         setTravelMode]         = useState("perMile"); // "perMile" | "flat" | "zones"
+  const [travelFlatFee,      setTravelFlatFee]      = useState(50);
+  const [travelFreeRadius,   setTravelFreeRadius]   = useState(20);
+  const [travelRate,         setTravelRate]         = useState(1.5);
+  const [travelMaxRadius,    setTravelMaxRadius]    = useState(0);
+  const [usePhotographerZip, setUsePhotographerZip] = useState(false);
+  const [savingTravel,       setSavingTravel]       = useState(false);
 
   // Availability state
   const [availMode,        setAvailMode]        = useState("slots"); // "slots" | "real"
@@ -687,15 +686,12 @@ export default function SettingsPage() {
           country:       data.tenant.country  || "US",
           tempUnit:      data.tenant.tempUnit || "F",
         });
-        // Load pricing config
-        if (data.tenant.pricingConfig) {
-          setPricingMode(data.tenant.pricingConfig.mode || "sqft");
-          if (data.tenant.pricingConfig.tiers?.length) {
-            setTiers(data.tenant.pricingConfig.tiers);
-          }
-          if (data.tenant.pricingConfig.customGateLabel) {
-            setCustomGateLabel(data.tenant.pricingConfig.customGateLabel);
-          }
+        // Load pricing config — always pre-populate tiers so Pricing Tiers section is ready
+        {
+          const pc = data.tenant.pricingConfig;
+          setPricingMode(pc?.mode || "sqft");
+          setTiers(pc?.tiers?.length ? pc.tiers : DEFAULT_TIERS);
+          if (pc?.customGateLabel) setCustomGateLabel(pc.customGateLabel);
         }
         // Load booking config
         if (data.tenant.bookingConfig) {
@@ -764,12 +760,13 @@ export default function SettingsPage() {
         // Load travel fee config
         if (data.tenant.travelFeeConfig) {
           const tf = data.tenant.travelFeeConfig;
-          if (tf.enabled    !== undefined) setTravelEnabled(tf.enabled);
-          if (tf.mode       !== undefined) setTravelMode(tf.mode);
-          if (tf.flatFee    !== undefined) setTravelFlatFee(tf.flatFee);
-          if (tf.freeRadius !== undefined) setTravelFreeRadius(tf.freeRadius);
-          if (tf.ratePerMile !== undefined) setTravelRate(tf.ratePerMile);
-          if (tf.maxRadius  !== undefined) setTravelMaxRadius(tf.maxRadius);
+          if (tf.enabled           !== undefined) setTravelEnabled(tf.enabled);
+          if (tf.mode              !== undefined) setTravelMode(tf.mode);
+          if (tf.flatFee           !== undefined) setTravelFlatFee(tf.flatFee);
+          if (tf.freeRadius        !== undefined) setTravelFreeRadius(tf.freeRadius);
+          if (tf.ratePerMile       !== undefined) setTravelRate(tf.ratePerMile);
+          if (tf.maxRadius         !== undefined) setTravelMaxRadius(tf.maxRadius);
+          if (tf.usePhotographerZip !== undefined) setUsePhotographerZip(tf.usePhotographerZip);
         }
       }
       setLoading(false);
@@ -1031,12 +1028,13 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           travelFeeConfig: {
-            enabled:    travelEnabled,
-            mode:       travelMode,
-            flatFee:    Number(travelFlatFee) || 0,
-            freeRadius: Number(travelFreeRadius) || 20,
-            ratePerMile: Number(travelRate) || 1.5,
-            maxRadius:  Number(travelMaxRadius) || 0,
+            enabled:           travelEnabled,
+            mode:              travelMode,
+            flatFee:           Number(travelFlatFee) || 0,
+            freeRadius:        Number(travelFreeRadius) || 20,
+            ratePerMile:       Number(travelRate) || 1.5,
+            maxRadius:         Number(travelMaxRadius) || 0,
+            usePhotographerZip,
           },
         }),
       });
@@ -2127,10 +2125,15 @@ export default function SettingsPage() {
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${travelEnabled ? "translate-x-5" : "translate-x-1"}`} />
           </button>
         </div>
-        <p className="text-sm text-gray-500 mb-6">
-          Automatically add a travel fee to bookings based on drive distance from your home base.
+        <p className="text-sm text-gray-500 mb-3">
+          Automatically add a travel fee to bookings based on drive distance from the photographer's home base.
           {!travelEnabled && <span className="text-gray-400"> (Currently disabled — clients won't be charged travel fees.)</span>}
         </p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-5 text-xs text-blue-700 leading-relaxed">
+          <strong>Home base ZIP:</strong> Currently using <code className="bg-blue-100 px-1 rounded">{form.fromZip || "not set"}</code> (from Business settings).{" "}
+          {form.fromZip ? "" : <span className="text-blue-600">Set your ZIP in Business settings first.</span>}
+          {" "}Each team member can also have their own home ZIP (set in Team → edit member) so photographers in different cities charge the right travel rate from their location.
+        </div>
 
         {travelEnabled && (
           <div className="space-y-5">
@@ -2235,6 +2238,27 @@ export default function SettingsPage() {
                 <p className="text-amber-700 text-xs">Draw service zones in <a href="/dashboard/service-areas" className="underline">Service Areas</a> and assign a travel fee to each zone. Fees will be applied automatically based on the property address.</p>
               </div>
             )}
+
+            {/* Per-photographer ZIP toggle */}
+            <div className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-charcoal">Calculate from photographer's home ZIP</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    When on, travel fees use each photographer's individual home ZIP instead of the business ZIP. Requires setting a home ZIP on each team member.
+                  </p>
+                </div>
+                <button type="button" onClick={() => setUsePhotographerZip((v) => !v)}
+                  className={`relative w-10 h-6 rounded-full flex-shrink-0 ml-4 transition-colors ${usePhotographerZip ? "bg-navy" : "bg-gray-200"}`}>
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${usePhotographerZip ? "translate-x-5" : "translate-x-1"}`} />
+                </button>
+              </div>
+              {usePhotographerZip && (
+                <p className="text-xs text-navy/70 mt-2 bg-navy/5 rounded px-3 py-2">
+                  A photographer in LA shooting in LA, and one in San Diego shooting in San Diego, will each be charged travel from their own home ZIP — not yours. Set home ZIPs under Team → edit member.
+                </p>
+              )}
+            </div>
           </div>
         )}
 

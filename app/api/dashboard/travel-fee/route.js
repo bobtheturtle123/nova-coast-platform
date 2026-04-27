@@ -16,15 +16,25 @@ export async function POST(req) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { address, lat, lng } = await req.json();
+    const { address, lat, lng, photographerId } = await req.json();
     if (!address) return Response.json({ travelFee: 0, miles: 0, withinRange: true });
 
     const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
     const tenant    = tenantDoc.data() || {};
+    const tfConfig  = tenant.travelFeeConfig || {};
 
-    const fromZip = tenant.fromZip || process.env.NEXT_PUBLIC_FROM_ZIP || "90210";
-    const config  = {
-      ...(tenant.travelFeeConfig || {}),
+    // If usePhotographerZip is on and a photographerId was passed, use their homeZip
+    let fromZip = tenant.fromZip || process.env.NEXT_PUBLIC_FROM_ZIP || "90210";
+    if (tfConfig.usePhotographerZip && photographerId) {
+      const memberDoc = await adminDb
+        .collection("tenants").doc(ctx.tenantId)
+        .collection("team").doc(photographerId).get();
+      const memberZip = memberDoc.exists ? memberDoc.data()?.homeZip : null;
+      if (memberZip) fromZip = memberZip;
+    }
+
+    const config = {
+      ...tfConfig,
       ...(lat != null && lng != null ? { destLat: lat, destLng: lng } : {}),
     };
 
