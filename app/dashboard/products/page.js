@@ -574,64 +574,106 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
 }
 
 // ─── Import Pricing Button ────────────────────────────────────────────────────
-function ImportPricingButton({ onImport, activeType }) {
+function ImportPricingButton({ onImport, activeType, pricingConfig }) {
   const [open,       setOpen]       = useState(false);
   const [url,        setUrl]        = useState("");
   const [text,       setText]       = useState("");
+  const [csvFile,    setCsvFile]    = useState(null);
+  const [useTiers,   setUseTiers]   = useState(false);
   const [importing,  setImporting]  = useState(false);
   const [msg,        setMsg]        = useState("");
-  const [mode,       setMode]       = useState("text"); // "url" | "text"
+  const [mode,       setMode]       = useState("csv"); // "csv" | "text" | "url"
+  const csvInputRef = useRef(null);
+
+  function getTierNames() {
+    if (pricingConfig?.tiers?.length) return pricingConfig.tiers.map((t) => t.name);
+    return ["Tiny", "Small", "Medium", "Large", "XL", "XXL"];
+  }
+
+  function downloadTemplate() {
+    const tiers = getTierNames();
+    let headers, rows;
+    if (useTiers) {
+      headers = ["type", "name", "description", "tagline", "deliverables", ...tiers.map((t) => `price_${t}`)];
+      rows = [
+        ["packages", "Standard Shoot", "25 edited photos + drone", "Everything you need", "Photos within 24hrs|Drone footage", 199, 249, 299, 399, 499, 599].slice(0, headers.length).join(","),
+        ["services",  "Drone Footage",  "10 aerial photos",         "",                   "",                                   99,  99,  149, 149, 199, 199].slice(0, headers.length).join(","),
+        ["addons",    "Rush Delivery",  "24hr turnaround",          "",                   "",                                   49,  49,  49,  49,  49,  49].slice(0, headers.length).join(","),
+      ];
+    } else {
+      headers = ["type", "name", "description", "price", "tagline", "deliverables"];
+      rows = [
+        "packages,Standard Shoot,25 edited photos + drone,299,Everything you need,Photos within 24hrs|Drone footage",
+        "services,Drone Footage,10 aerial photos,149,,",
+        "addons,Rush Delivery,24hr turnaround,49,,",
+      ];
+    }
+    const csv  = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = "shootflow_products_template.csv"; a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function handleImport() {
-    const content = mode === "url" ? url.trim() : text.trim();
+    let content = "";
+    if (mode === "csv") {
+      if (!csvFile) { setMsg("Please select a CSV file."); return; }
+      content = await csvFile.text();
+    } else {
+      content = mode === "url" ? url.trim() : text.trim();
+    }
     if (!content) return;
-    setImporting(true);
-    setMsg("");
+
+    setImporting(true); setMsg("");
     try {
       const token = await auth.currentUser.getIdToken();
       const res = await fetch("/api/dashboard/products/import", {
         method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ mode, content, targetType: activeType }),
+        body:    JSON.stringify({ mode, content, targetType: activeType, useTiers: mode === "csv" ? useTiers : false }),
       });
       const data = await res.json();
       if (res.ok && data.imported > 0) {
-        setMsg(`✓ Imported ${data.imported} item${data.imported !== 1 ? "s" : ""}. Review and save each one.`);
+        setMsg(`✓ Imported ${data.imported} item${data.imported !== 1 ? "s" : ""}. They're saved as drafts — toggle Active when ready.`);
         if (onImport) onImport(data.items || {});
-        setTimeout(() => { setOpen(false); setMsg(""); setUrl(""); setText(""); }, 3000);
+        setTimeout(() => { setOpen(false); setMsg(""); setUrl(""); setText(""); setCsvFile(null); }, 3500);
       } else {
-        setMsg(data.error || "No items could be parsed. Try pasting the text instead.");
+        setMsg(data.error || "No items found. Check your file and try again.");
       }
     } catch {
-      setMsg("Something went wrong. Try pasting as text.");
+      setMsg("Something went wrong. Please try again.");
     } finally {
       setImporting(false);
     }
   }
 
+  function close() { setOpen(false); setMsg(""); setUrl(""); setText(""); setCsvFile(null); }
+
   if (!open) {
     return (
       <button onClick={() => setOpen(true)}
         className="btn-outline text-sm px-4 py-2 flex items-center gap-1.5">
-        ↓ Import Pricing
+        ↓ Import
       </button>
     );
   }
+
+  const canImport = mode === "csv" ? !!csvFile : mode === "url" ? !!url.trim() : !!text.trim();
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-display text-navy text-lg">Import Pricing</h2>
-          <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+          <h2 className="font-display text-navy text-lg">Import Products</h2>
+          <button onClick={close} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
         <div className="p-6 space-y-4">
-          <p className="text-sm text-gray-500">
-            Paste pricing text from your website or another source. The AI will parse it into services/packages.
-          </p>
 
-          <div className="flex border border-gray-200 rounded-sm overflow-hidden text-xs mb-2">
-            {[["text", "Paste Text"], ["url", "From URL"]].map(([m, label]) => (
+          {/* Mode tabs */}
+          <div className="flex border border-gray-200 rounded-sm overflow-hidden text-xs">
+            {[["csv", "CSV File"], ["text", "Paste Text"], ["url", "From URL"]].map(([m, label]) => (
               <button key={m} onClick={() => setMode(m)}
                 className={`px-4 py-2 flex-1 font-medium transition-colors ${mode === m ? "bg-navy text-white" : "text-gray-500 hover:bg-gray-50"}`}>
                 {label}
@@ -639,25 +681,90 @@ function ImportPricingButton({ onImport, activeType }) {
             ))}
           </div>
 
-          {mode === "url" ? (
-            <input type="url" value={url} onChange={(e) => setUrl(e.target.value)}
-              className="input-field w-full" placeholder="https://yourwebsite.com/pricing" />
-          ) : (
-            <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8}
-              className="input-field w-full text-sm font-mono"
-              placeholder={"Real Estate Photography — $299\n• 25 edited photos\n• Delivered in 24 hours\n\nDrone Add-on — $149\n• 10 aerial shots..."} />
+          {/* CSV mode */}
+          {mode === "csv" && (
+            <div className="space-y-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium text-blue-800">Use our CSV template for best results</p>
+                <p className="text-xs text-blue-600 leading-relaxed">
+                  Columns: <code className="bg-blue-100 px-1 rounded">type</code>, <code className="bg-blue-100 px-1 rounded">name</code>, <code className="bg-blue-100 px-1 rounded">description</code>, <code className="bg-blue-100 px-1 rounded">price</code>, <code className="bg-blue-100 px-1 rounded">tagline</code>, <code className="bg-blue-100 px-1 rounded">deliverables</code> (pipe-separated).
+                  Types: <code className="bg-blue-100 px-1 rounded">packages</code>, <code className="bg-blue-100 px-1 rounded">services</code>, <code className="bg-blue-100 px-1 rounded">addons</code>.
+                </p>
+                <div className="flex items-center gap-3 pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" checked={useTiers} onChange={(e) => setUseTiers(e.target.checked)} className="rounded" />
+                    <span className="text-xs font-medium text-blue-800">My products use tiered pricing by square footage</span>
+                  </label>
+                </div>
+                {useTiers && (
+                  <p className="text-xs text-blue-600">
+                    Template will include columns: {getTierNames().map((t) => `price_${t}`).join(", ")}.
+                    {pricingConfig?.tiers?.length ? "" : " Configure your tier names in Settings → Pricing Tiers to customize."}
+                  </p>
+                )}
+                <button onClick={downloadTemplate}
+                  className="text-xs font-semibold text-blue-700 hover:text-blue-900 underline underline-offset-2">
+                  ↓ Download {useTiers ? "tiered" : ""} CSV template
+                </button>
+              </div>
+
+              <div>
+                <input
+                  ref={csvInputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                />
+                <button onClick={() => csvInputRef.current?.click()}
+                  className={`w-full border-2 border-dashed rounded-lg py-6 text-center transition-colors ${
+                    csvFile ? "border-emerald-300 bg-emerald-50" : "border-gray-200 hover:border-gray-300 bg-gray-50"
+                  }`}>
+                  {csvFile ? (
+                    <span className="text-sm font-medium text-emerald-700">{csvFile.name}</span>
+                  ) : (
+                    <span className="text-sm text-gray-400">Click to select your CSV file</span>
+                  )}
+                </button>
+                {csvFile && (
+                  <button onClick={() => setCsvFile(null)} className="text-xs text-gray-400 hover:text-red-500 mt-1">
+                    Remove file
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* URL mode */}
+          {mode === "url" && (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-500">Paste your pricing page URL. AI will extract services and packages.</p>
+              <input type="url" value={url} onChange={(e) => setUrl(e.target.value)}
+                className="input-field w-full" placeholder="https://yourwebsite.com/pricing" />
+            </div>
+          )}
+
+          {/* Text mode */}
+          {mode === "text" && (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-500">Paste any pricing text — from your website, a PDF, or anywhere. AI will parse it.</p>
+              <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8}
+                className="input-field w-full text-sm font-mono"
+                placeholder={"Real Estate Photography — $299\n• 25 edited photos\n• Delivered in 24 hours\n\nDrone Add-on — $149\n• 10 aerial shots..."} />
+            </div>
           )}
 
           {msg && <p className={`text-sm ${msg.startsWith("✓") ? "text-green-600" : "text-red-500"}`}>{msg}</p>}
+
           <div className="flex gap-3">
-            <button onClick={handleImport} disabled={importing || (!url.trim() && !text.trim())}
+            <button onClick={handleImport} disabled={importing || !canImport}
               className="btn-primary px-6 py-2 text-sm flex-1 disabled:opacity-40">
               {importing ? "Importing…" : "Import"}
             </button>
-            <button onClick={() => setOpen(false)} className="btn-outline px-4 py-2 text-sm">Cancel</button>
+            <button onClick={close} className="btn-outline px-4 py-2 text-sm">Cancel</button>
           </div>
           <p className="text-xs text-gray-400">
-            Imported items will be added as drafts. Review each one before making it live.
+            All imported items are saved as inactive drafts. Toggle them Active when you're ready to publish.
           </p>
         </div>
       </div>
@@ -827,10 +934,17 @@ export default function ProductsPage() {
           <p className="text-gray-400 text-sm mt-0.5">Customize the services that appear on your booking page</p>
         </div>
         <div className="flex items-center gap-2">
-          <ImportPricingButton onImport={(items) => {
-            // Add imported items to the list (they're already saved via the API)
-            setItems((prev) => ({ ...prev, [activeType]: [...(items[activeType] || []), ...(prev[activeType] || [])] }));
-          }} activeType={activeType} />
+          <ImportPricingButton
+            onImport={(imported) => {
+              setItems((prev) => ({
+                packages: [...(imported.packages || []), ...prev.packages],
+                services: [...(imported.services || []), ...prev.services],
+                addons:   [...(imported.addons   || []), ...prev.addons],
+              }));
+            }}
+            activeType={activeType}
+            pricingConfig={pricingConfig}
+          />
           <button
             onClick={() => setEditing({ item: null, type: activeType })}
             className="btn-primary text-sm px-5 py-2 flex items-center gap-2"

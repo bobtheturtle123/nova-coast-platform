@@ -29,8 +29,8 @@ export default function OnboardingPage() {
   const [fromZip, setFromZip] = useState("");
 
   // Step 5 — team invites
-  const [inviteEmails, setInviteEmails] = useState([""]);
-  const [inviteSent,   setInviteSent]   = useState(false);
+  const [invites,    setInvites]    = useState([{ email: "", role: "photographer" }]);
+  const [inviteSent, setInviteSent] = useState(false);
 
   const [slug, setSlug] = useState("");
 
@@ -106,15 +106,15 @@ export default function OnboardingPage() {
   }
 
   async function sendInvites() {
-    const valid = inviteEmails.filter((e) => e.trim() && e.includes("@"));
+    const valid = invites.filter((i) => i.email.trim() && i.email.includes("@"));
     if (!valid.length) { next(); return; }
     setSaving(true);
     const token = await user.getIdToken();
-    await Promise.all(valid.map((email) =>
+    await Promise.all(valid.map((invite) =>
       fetch("/api/dashboard/team/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: invite.email.trim(), role: invite.role }),
       })
     ));
     setInviteSent(true);
@@ -344,22 +344,46 @@ export default function OnboardingPage() {
           <div>
             <h1 className="font-display text-3xl text-navy mb-1">Invite your team</h1>
             <p className="text-gray-500 mb-6 leading-relaxed">
-              Photographers and editors get their own login. They can see assigned shoots, sync their calendar, and upload media — without access to billing or settings.
+              Everyone gets their own login and sees only what their role allows. Photographers and editors see assigned shoots; managers see everything except billing; admins have full access.
             </p>
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3 mb-6">
-              {inviteEmails.map((email, i) => (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3 mb-4">
+              {/* Role legend */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 pb-3 border-b border-gray-100">
+                {[
+                  ["Photographer", "Assigned shoots, calendar, uploads"],
+                  ["Editor",       "Upload & deliver media only"],
+                  ["Manager",      "All bookings + team, no billing"],
+                  ["Admin",        "Full access except owner billing"],
+                ].map(([role, desc]) => (
+                  <div key={role} className="flex items-start gap-1.5">
+                    <span className="text-[11px] font-semibold text-navy mt-px w-24 flex-shrink-0">{role}</span>
+                    <span className="text-[11px] text-gray-400 leading-snug">{desc}</span>
+                  </div>
+                ))}
+              </div>
+
+              {invites.map((invite, i) => (
                 <div key={i} className="flex gap-2">
-                  <input type="email" value={email}
-                    onChange={(e) => setInviteEmails((arr) => arr.map((v, j) => j === i ? e.target.value : v))}
-                    className="input-field flex-1" placeholder={`photographer${i + 1}@email.com`} />
-                  {inviteEmails.length > 1 && (
-                    <button onClick={() => setInviteEmails((arr) => arr.filter((_, j) => j !== i))}
+                  <input type="email" value={invite.email}
+                    onChange={(e) => setInvites((arr) => arr.map((v, j) => j === i ? { ...v, email: e.target.value } : v))}
+                    className="input-field flex-1" placeholder="name@email.com" />
+                  <select
+                    value={invite.role}
+                    onChange={(e) => setInvites((arr) => arr.map((v, j) => j === i ? { ...v, role: e.target.value } : v))}
+                    className="input-field w-36 flex-shrink-0">
+                    <option value="photographer">Photographer</option>
+                    <option value="editor">Editor</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  {invites.length > 1 && (
+                    <button onClick={() => setInvites((arr) => arr.filter((_, j) => j !== i))}
                       className="text-gray-300 hover:text-red-400 px-2 text-lg">×</button>
                   )}
                 </div>
               ))}
-              {inviteEmails.length < 5 && (
-                <button onClick={() => setInviteEmails((arr) => [...arr, ""])}
+              {invites.length < 5 && (
+                <button onClick={() => setInvites((arr) => [...arr, { email: "", role: "photographer" }])}
                   className="text-xs text-navy hover:underline">+ Add another</button>
               )}
               {inviteSent && (
@@ -371,11 +395,11 @@ export default function OnboardingPage() {
                 </div>
               )}
             </div>
-            <p className="text-xs text-gray-400 mb-4">Solo plan? You can still invite up to 1 team member. Add more later from Settings → Team.</p>
+            <p className="text-xs text-gray-400 mb-4">Add more team members anytime from Dashboard → Team.</p>
             <div className="flex gap-3">
               <button onClick={prev} className="btn-outline px-5 py-3">← Back</button>
               <button onClick={sendInvites} disabled={saving} className="btn-primary flex-1 py-3">
-                {saving ? "Sending…" : inviteEmails.some((e) => e.trim()) ? "Send Invites →" : "Continue →"}
+                {saving ? "Sending…" : invites.some((i) => i.email.trim()) ? "Send Invites →" : "Continue →"}
               </button>
               <button onClick={skip} className="btn-outline px-5 py-3 text-gray-400">Skip</button>
             </div>

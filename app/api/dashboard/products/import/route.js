@@ -24,18 +24,126 @@ export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!AI_KEY) {
-    return Response.json({ error: "AI not configured. Set DEEPSEEK_API_KEY or OPENAI_API_KEY to enable pricing import." }, { status: 503 });
-  }
-
-  // 5 AI import runs per tenant per hour — this endpoint fetches external URLs + calls AI
-  const rl = await rateLimitTenant(ctx.tenantId, "products-import", 5, 3600);
-  if (rl.limited) {
-    return Response.json({ error: "Import limit reached. Please wait before running another import." }, { status: 429 });
-  }
-
-  const { mode, content, targetType = "services" } = await req.json();
+  const { mode, content, targetType = "services", useTiers = false } = await req.json();
   if (!content) return Response.json({ error: "content required" }, { status: 400 });
+
+  // AI-backed modes require the key + rate limit; CSV is parsed locally so skip those checks
+  if (mode !== "csv") {
+    if (!AI_KEY) {
+      return Response.json({ error: "AI not configured. Set DEEPSEEK_API_KEY or OPENAI_API_KEY to enable pricing import." }, { status: 503 });
+    }
+    const rl = await rateLimitTenant(ctx.tenantId, "products-import", 5, 3600);
+    if (rl.limited) {
+      return Response.json({ error: "Import limit reached. Please wait before running another import." }, { status: 429 });
+    }
+  }
+
+  // ── CSV mode: parse directly without AI ───────────────────────────────────
+  if (mode === "csv") {
+    function parseCSVLine(line) {
+      const result = [];
+      let cur = "", inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') {
+          if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+          else { inQ = !inQ; }
+        } else if (c === "," && !inQ) {
+          result.push(cur); cur = "";
+        } else {
+          cur += c;
+        }
+      }
+      result.push(cur);
+      return result.map((v) => v.trim());
+    }
+
+    const rows = content.trim().split(/\r?\n/).map(parseCSVLine).filter((r) => r.some((c) => c));
+    if (rows.length < 2) {
+      return Response.json({ error: "CSV must have a header row and at least one data row." }, { status: 400 });
+    }
+
+    const headers = rows[0].map((h) => h.toLowerCase());
+    const col = (name) => headers.indexOf(name);
+    const typeIdx         = col("type");
+    const nameIdx         = col("name");
+    const descIdx         = col("description");
+    const priceIdx        = col("price");
+    const taglineIdx      = col("tagline");
+    const deliverablesIdx = col("deliverables");
+
+    // Tier price columns: headers matching price_* (excluding the plain "price" column)
+    const tierCols = useTiers
+      ? headers.reduce((acc, h, i) => {
+          if (h.startsWith("price_")) {
+            const tierName = h.slice(6); // strip "price_"
+            if (tierName) acc.push({ name: tierName, idx: i });
+          }
+          return acc;
+        }, [])
+      : [];
+
+    const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
+    const batch     = adminDb.batch();
+    const created   = { packages: [], services: [], addons: [] };
+    let count = 0;
+
+    for (const row of rows.slice(1)) {
+      if (!row.some((c) => c)) continue;
+      const rawName = nameIdx >= 0 ? row[nameIdx] : "";
+      if (!rawName) continue;
+      if (count >= 100) break;
+
+      const rawType = (typeIdx >= 0 ? row[typeIdx] : "").toLowerCase();
+      const type = rawType === "package" ? "packages"
+                 : rawType === "service" ? "services"
+                 : rawType === "addon"   ? "addons"
+                 : ["packages","services","addons"].includes(rawType) ? rawType
+                 : "services";
+
+      const price        = priceIdx >= 0         ? (Number(row[priceIdx]) || 0)                    : 0;
+      const description  = descIdx >= 0          ? (row[descIdx] || "")                             : "";
+      const tagline      = taglineIdx >= 0        ? (row[taglineIdx] || "")                          : "";
+      const deliverables = deliverablesIdx >= 0
+        ? (row[deliverablesIdx] || "").split("|").map((s) => s.trim()).filter(Boolean)
+        : [];
+
+      let priceTiers = null;
+      if (useTiers && tierCols.length > 0) {
+        priceTiers = {};
+        for (const { name: tierName, idx } of tierCols) {
+          const v = Number(row[idx]) || 0;
+          if (v > 0) priceTiers[tierName] = v;
+        }
+        if (Object.keys(priceTiers).length === 0) priceTiers = null;
+      }
+
+      const ref = tenantRef.collection(type).doc();
+      const doc = {
+        id:           ref.id,
+        type,
+        name:         String(rawName).slice(0, 100),
+        description:  String(description).slice(0, 500),
+        price:        priceTiers ? 0 : price,
+        active:       false,
+        createdAt:    new Date(),
+        importedAt:   new Date(),
+        ...(tagline      ? { tagline }      : {}),
+        ...(deliverables.length ? { deliverables } : {}),
+        ...(priceTiers   ? { priceTiers }   : {}),
+      };
+      batch.set(ref, doc);
+      created[type].push(doc);
+      count++;
+    }
+
+    if (count === 0) {
+      return Response.json({ error: "No valid rows found. Make sure the CSV has a 'name' column." }, { status: 422 });
+    }
+
+    await batch.commit();
+    return Response.json({ imported: count, items: created });
+  }
 
   let text = content;
 

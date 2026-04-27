@@ -16,11 +16,13 @@ export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { email } = await req.json();
+  const { email, role } = await req.json();
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!email || !emailRegex.test(email.trim())) {
     return Response.json({ error: "Valid email required." }, { status: 400 });
   }
+  const validRoles = ["photographer", "editor", "manager", "admin"];
+  const inviteRole = validRoles.includes(role) ? role : "photographer";
 
   const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
   const tenant    = tenantDoc.exists ? tenantDoc.data() : {};
@@ -32,6 +34,7 @@ export async function POST(req) {
   const inviteData = {
     email:     email.trim().toLowerCase(),
     tenantId:  ctx.tenantId,
+    role:      inviteRole,
     createdAt: new Date(),
     expiresAt,
     accepted:  false,
