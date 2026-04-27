@@ -58,30 +58,54 @@ export async function POST(req) {
       return result.map((v) => v.trim());
     }
 
+    // Extract a plain number from strings like "$39 per image", "$79.99", "299"
+    function extractNumber(str) {
+      const m = String(str || "").match(/[\d]+\.?\d*/);
+      return m ? Number(m[0]) : 0;
+    }
+
+    // Extract the tier name from a column header like "Price_Tiny_Under_800" → "Tiny"
+    // Handles both "price_tiny" and "Price_Tiny_Under_800" styles
+    function extractTierName(header) {
+      const lower = header.toLowerCase();
+      if (!lower.startsWith("price_")) return null;
+      const rest  = header.slice(6); // strip "price_" (case-insensitive position)
+      const word  = rest.match(/^([A-Za-z]+)/)?.[1]; // first alphabetic word
+      return word || null;
+    }
+
     const rows = content.trim().split(/\r?\n/).map(parseCSVLine).filter((r) => r.some((c) => c));
     if (rows.length < 2) {
       return Response.json({ error: "CSV must have a header row and at least one data row." }, { status: 400 });
     }
 
-    const headers = rows[0].map((h) => h.toLowerCase());
-    const col = (name) => headers.indexOf(name);
-    const typeIdx         = col("type");
-    const nameIdx         = col("name");
-    const descIdx         = col("description");
-    const priceIdx        = col("price");
-    const taglineIdx      = col("tagline");
-    const deliverablesIdx = col("deliverables");
+    const rawHeaders = rows[0];
+    const headers    = rawHeaders.map((h) => h.toLowerCase().trim());
+    const col  = (name) => headers.indexOf(name);
+    const colf = (...names) => { for (const n of names) { const i = col(n); if (i >= 0) return i; } return -1; };
 
-    // Tier price columns: headers matching price_* (excluding the plain "price" column)
-    const tierCols = useTiers
-      ? headers.reduce((acc, h, i) => {
-          if (h.startsWith("price_")) {
-            const tierName = h.slice(6); // strip "price_"
-            if (tierName) acc.push({ name: tierName, idx: i });
-          }
-          return acc;
-        }, [])
-      : [];
+    // Support both our simple format and the extended format
+    const typeIdx         = colf("type", "category");
+    const nameIdx         = colf("name", "service name");
+    const descIdx         = colf("description");
+    const priceIdx        = colf("price", "fixed price / unit", "fixed price", "unit price");
+    const taglineIdx      = colf("tagline", "tier tag");
+    const marketingIdx    = col("marketing summary");
+    const featureIdx      = colf("feature list", "deliverables");
+    const badgeIdx        = col("badge");
+    const pricingModelIdx = colf("pricing model");
+    const imageIdx        = colf("image url", "image");
+    const imageAltIdx     = col("image alt text");
+
+    // Detect all tier-price columns (headers starting with "price_" that aren't just "price")
+    const tierCols = rawHeaders.reduce((acc, rawH, i) => {
+      const tierName = extractTierName(rawH);
+      if (tierName) acc.push({ name: tierName, idx: i });
+      return acc;
+    }, []);
+
+    // If the CSV has tier columns, treat it as tiered regardless of the checkbox
+    const hasTierCols = tierCols.length > 0;
 
     const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
     const batch     = adminDb.batch();
@@ -94,22 +118,51 @@ export async function POST(req) {
       if (!rawName) continue;
       if (count >= 100) break;
 
-      const rawType = (typeIdx >= 0 ? row[typeIdx] : "").toLowerCase();
-      const type = rawType === "package" ? "packages"
-                 : rawType === "service" ? "services"
-                 : rawType === "addon"   ? "addons"
+      // Type mapping: handles Package/A La Carte/Add-On/packages/services/addons
+      const rawType = (typeIdx >= 0 ? row[typeIdx] : "").toLowerCase().trim();
+      const type = rawType === "package"    ? "packages"
+                 : rawType === "service"    ? "services"
+                 : rawType === "addon"      ? "addons"
+                 : rawType === "add-on"     ? "addons"
+                 : rawType === "add on"     ? "addons"
+                 : rawType === "a la carte" ? "services"
+                 : rawType === "ala carte"  ? "services"
                  : ["packages","services","addons"].includes(rawType) ? rawType
                  : "services";
 
-      const price        = priceIdx >= 0         ? (Number(row[priceIdx]) || 0)                    : 0;
-      const description  = descIdx >= 0          ? (row[descIdx] || "")                             : "";
-      const tagline      = taglineIdx >= 0        ? (row[taglineIdx] || "")                          : "";
-      const deliverables = deliverablesIdx >= 0
-        ? (row[deliverablesIdx] || "").split("|").map((s) => s.trim()).filter(Boolean)
+      // Pricing model from column or inferred from presence of tier columns
+      const pricingModel = pricingModelIdx >= 0
+        ? row[pricingModelIdx].toUpperCase().trim()
+        : (hasTierCols ? "TIER_BASED" : "FIXED");
+
+      // Price for flat-rate items — strip text like "per image"
+      const flatPrice = priceIdx >= 0 ? extractNumber(row[priceIdx]) : 0;
+
+      // Marketing copy: "Short tagline | Long description" or plain string
+      let description = descIdx >= 0 ? row[descIdx] : "";
+      let tagline     = taglineIdx >= 0 ? row[taglineIdx] : "";
+      if (marketingIdx >= 0 && row[marketingIdx]) {
+        const parts = row[marketingIdx].split("|").map((s) => s.trim()).filter(Boolean);
+        if (!tagline && parts[0]) tagline     = parts[0];
+        if (!description && parts[1]) description = parts[1];
+        else if (!description && parts[0]) description = parts[0];
+      }
+
+      // Feature list / deliverables
+      const deliverables = featureIdx >= 0
+        ? row[featureIdx].split("|").map((s) => s.trim()).filter(Boolean)
         : [];
 
+      // Badge → featured flag + badge text
+      const badgeText    = badgeIdx >= 0 ? row[badgeIdx].trim() : "";
+      const isFeatured   = badgeText.toLowerCase().includes("most popular") || badgeText.toLowerCase().includes("featured");
+
+      // Image
+      const thumbnailUrl = imageIdx >= 0 ? row[imageIdx].trim() : "";
+
+      // Tier prices
       let priceTiers = null;
-      if (useTiers && tierCols.length > 0) {
+      if (pricingModel === "TIER_BASED" && tierCols.length > 0) {
         priceTiers = {};
         for (const { name: tierName, idx } of tierCols) {
           const v = Number(row[idx]) || 0;
@@ -120,17 +173,20 @@ export async function POST(req) {
 
       const ref = tenantRef.collection(type).doc();
       const doc = {
-        id:           ref.id,
+        id:          ref.id,
         type,
-        name:         String(rawName).slice(0, 100),
-        description:  String(description).slice(0, 500),
-        price:        priceTiers ? 0 : price,
-        active:       false,
-        createdAt:    new Date(),
-        importedAt:   new Date(),
-        ...(tagline      ? { tagline }      : {}),
+        name:        String(rawName).slice(0, 100),
+        description: String(description).slice(0, 500),
+        price:       priceTiers ? 0 : flatPrice,
+        active:      false,
+        createdAt:   new Date(),
+        importedAt:  new Date(),
+        ...(tagline          ? { tagline: String(tagline).slice(0, 200) } : {}),
         ...(deliverables.length ? { deliverables } : {}),
-        ...(priceTiers   ? { priceTiers }   : {}),
+        ...(priceTiers       ? { priceTiers }       : {}),
+        ...(isFeatured       ? { featured: true }   : {}),
+        ...(badgeText && !isFeatured ? { badge: badgeText.slice(0, 50) } : {}),
+        ...(thumbnailUrl     ? { thumbnailUrl, mediaUrls: [thumbnailUrl] } : {}),
       };
       batch.set(ref, doc);
       created[type].push(doc);
@@ -138,7 +194,7 @@ export async function POST(req) {
     }
 
     if (count === 0) {
-      return Response.json({ error: "No valid rows found. Make sure the CSV has a 'name' column." }, { status: 422 });
+      return Response.json({ error: "No valid rows found. Make sure the CSV has a 'name' or 'Service Name' column." }, { status: 422 });
     }
 
     await batch.commit();

@@ -585,29 +585,54 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
   const [mode,       setMode]       = useState("csv"); // "csv" | "text" | "url"
   const csvInputRef = useRef(null);
 
-  function getTierNames() {
-    if (pricingConfig?.tiers?.length) return pricingConfig.tiers.map((t) => t.name);
-    return ["Tiny", "Small", "Medium", "Large", "XL", "XXL"];
+  function getTiers() {
+    if (pricingConfig?.tiers?.length) return pricingConfig.tiers;
+    return [
+      { name: "Tiny",   label: "Under 800 sqft" },
+      { name: "Small",  label: "801–2,500 sqft" },
+      { name: "Medium", label: "2,501–4,000 sqft" },
+      { name: "Large",  label: "4,001–6,000 sqft" },
+      { name: "XL",     label: "6,001–8,500 sqft" },
+      { name: "XXL",    label: "8,500+ sqft" },
+    ];
+  }
+
+  function csvEscape(val) {
+    const s = String(val ?? "");
+    return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
   }
 
   function downloadTemplate() {
-    const tiers = getTierNames();
-    let headers, rows;
-    if (useTiers) {
-      headers = ["type", "name", "description", "tagline", "deliverables", ...tiers.map((t) => `price_${t}`)];
-      rows = [
-        ["packages", "Standard Shoot", "25 edited photos + drone", "Everything you need", "Photos within 24hrs|Drone footage", 199, 249, 299, 399, 499, 599].slice(0, headers.length).join(","),
-        ["services",  "Drone Footage",  "10 aerial photos",         "",                   "",                                   99,  99,  149, 149, 199, 199].slice(0, headers.length).join(","),
-        ["addons",    "Rush Delivery",  "24hr turnaround",          "",                   "",                                   49,  49,  49,  49,  49,  49].slice(0, headers.length).join(","),
-      ];
-    } else {
-      headers = ["type", "name", "description", "price", "tagline", "deliverables"];
-      rows = [
-        "packages,Standard Shoot,25 edited photos + drone,299,Everything you need,Photos within 24hrs|Drone footage",
-        "services,Drone Footage,10 aerial photos,149,,",
-        "addons,Rush Delivery,24hr turnaround,49,,",
-      ];
+    const tiers = getTiers();
+
+    // Build tier column headers: Price_Tiny_Under_800 style using label if available
+    const tierCols = tiers.map((t) => {
+      const safeName  = t.name.replace(/\s+/g, "_");
+      const safeLabel = (t.label || "").replace(/[,\s–\-]+/g, "_").replace(/[^a-zA-Z0-9_]/g, "").replace(/_+/g, "_").replace(/^_|_$/, "");
+      return safeLabel ? `Price_${safeName}_${safeLabel}` : `Price_${safeName}`;
+    });
+
+    const baseHeaders    = ["Category", "Service Name", "Pricing Model", "Fixed Price / Unit"];
+    const featureHeaders = ["Badge", "Tier Tag", "Marketing Summary", "Feature List", "Image URL"];
+    const headers        = [...baseHeaders, ...tierCols, ...featureHeaders];
+
+    function row(category, name, model, fixedPrice, tierPrices, badge, tag, marketing, features, img) {
+      const tierVals = tiers.map((t, i) => tierPrices[i] || "");
+      return [category, name, model, fixedPrice, ...tierVals, badge, tag, marketing, features, img].map(csvEscape).join(",");
     }
+
+    const rows = [
+      row("Package",   "Standard Shoot",          "TIER_BASED", "", [199,249,299,399,499,599], "",             "Photos · Drone",       "Professional coverage ready to publish within 24 hours.|Photos delivered within 24 hours", "25 edited photos|Drone footage|Professional editing", ""),
+      row("Package",   "Premium Package",          "TIER_BASED", "", [399,499,599,699,799,999], "Most Popular", "Photos · Drone · Twilight", "Luxury photography with real twilight.|Photos 24hrs · Twilight scheduled at dusk",  "Luxury photography|Drone|Real twilight|Editing",       ""),
+      row("A La Carte","Classic Photography",      "TIER_BASED", "", [250,275,325,375,475,525], "",             "",                     "Full interior and exterior coverage for MLS.|Delivered within 24 hours",                "Full coverage|Blue sky replacement|Professional editing", ""),
+      row("A La Carte","Drone Photos",             "TIER_BASED", "", [299,299,299,299,299,299], "",             "",                     "Aerial exterior coverage from multiple angles.",                                        "~15 images from varied altitudes|24 hour turnaround",  ""),
+      row("A La Carte","Cinematic Video",          "TIER_BASED", "", [375,475,525,599,699,850], "",             "",                     "60-second horizontal video with drone footage.",                                        "60 seconds|Drone included|Delivered within 72 hours",  ""),
+      row("Add-On",    "Property Outlines",        "FIXED",      "$39 per image", [], "", "", "Boundary lines overlaid on drone media.", "Per image pricing",        ""),
+      row("Add-On",    "Digital Twilight Image",   "FIXED",      "$49 per image", [], "", "", "Warm curb appeal without rescheduling.",  "48 hour delivery",         ""),
+      row("Add-On",    "Single Property Website",  "FIXED",      "$79.99",        [], "", "", "All media and property info in one link.", "",                        ""),
+      row("Add-On",    "Rush Turnaround",          "FIXED",      "$399",          [], "", "", "Photos by 8:30pm for shoots starting by 1:30pm.", "",                ""),
+    ];
+
     const csv  = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url  = URL.createObjectURL(blob);
@@ -632,7 +657,7 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
       const res = await fetch("/api/dashboard/products/import", {
         method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ mode, content, targetType: activeType, useTiers: mode === "csv" ? useTiers : false }),
+        body:    JSON.stringify({ mode, content, targetType: activeType }),
       });
       const data = await res.json();
       if (res.ok && data.imported > 0) {
@@ -685,26 +710,17 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
           {mode === "csv" && (
             <div className="space-y-3">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-                <p className="text-sm font-medium text-blue-800">Use our CSV template for best results</p>
+                <p className="text-sm font-medium text-blue-800">Download the template, fill it in, then upload</p>
                 <p className="text-xs text-blue-600 leading-relaxed">
-                  Columns: <code className="bg-blue-100 px-1 rounded">type</code>, <code className="bg-blue-100 px-1 rounded">name</code>, <code className="bg-blue-100 px-1 rounded">description</code>, <code className="bg-blue-100 px-1 rounded">price</code>, <code className="bg-blue-100 px-1 rounded">tagline</code>, <code className="bg-blue-100 px-1 rounded">deliverables</code> (pipe-separated).
-                  Types: <code className="bg-blue-100 px-1 rounded">packages</code>, <code className="bg-blue-100 px-1 rounded">services</code>, <code className="bg-blue-100 px-1 rounded">addons</code>.
+                  Supports: <code className="bg-blue-100 px-1 rounded">Package</code>, <code className="bg-blue-100 px-1 rounded">A La Carte</code>, <code className="bg-blue-100 px-1 rounded">Add-On</code> as Category values.
+                  Tier price columns are auto-detected — just include <code className="bg-blue-100 px-1 rounded">Price_*</code> columns.
+                  {pricingConfig?.tiers?.length
+                    ? ` Your template uses your configured tiers: ${getTiers().map(t => t.name).join(", ")}.`
+                    : " Go to Settings → Pricing Tiers to configure your tier names."}
                 </p>
-                <div className="flex items-center gap-3 pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" checked={useTiers} onChange={(e) => setUseTiers(e.target.checked)} className="rounded" />
-                    <span className="text-xs font-medium text-blue-800">My products use tiered pricing by square footage</span>
-                  </label>
-                </div>
-                {useTiers && (
-                  <p className="text-xs text-blue-600">
-                    Template will include columns: {getTierNames().map((t) => `price_${t}`).join(", ")}.
-                    {pricingConfig?.tiers?.length ? "" : " Configure your tier names in Settings → Pricing Tiers to customize."}
-                  </p>
-                )}
                 <button onClick={downloadTemplate}
                   className="text-xs font-semibold text-blue-700 hover:text-blue-900 underline underline-offset-2">
-                  ↓ Download {useTiers ? "tiered" : ""} CSV template
+                  ↓ Download CSV template
                 </button>
               </div>
 

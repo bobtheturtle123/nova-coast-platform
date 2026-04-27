@@ -157,7 +157,7 @@ export default function MarketingPage() {
                   "Balance auto-collected before download",
                   "Guided booking flow upsells for you",
                   "Full revenue breakdown per listing",
-                  "Token-based links, no login needed",
+                  "Private gallery link emailed directly to your client",
                   "Agent portal: website, QR code & captions",
                   "Confirmations, reminders & invoices automated",
                 ].map((item) => (
@@ -216,7 +216,7 @@ export default function MarketingPage() {
                   "QR code for open houses and print marketing",
                   "AI-generated Instagram, Facebook & email captions",
                   "3D Matterport tour embedded in-browser",
-                  "One-click gallery access, no login needed",
+                  "Agent accesses gallery via private link — no account required",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-sm text-gray-700">
                     <span className="w-5 h-5 rounded-full bg-navy flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -560,7 +560,7 @@ const FEATURE_CATEGORIES = [
       "Print-ready PDF brochures",
       "QR code generation",
       "AI social media captions",
-      "Agent portal (no login needed)",
+      "Agent portal via private link (no account required)",
       "Customizable email templates",
       "SMS notifications (Studio plan+)",
       "Service agreement e-capture",
