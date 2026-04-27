@@ -38,3 +38,7 @@ serviceAccountKey.json
 firebase-adminsdk*.json
 Bucke Tokens  Keys.txt
 nova-coast-media-*.json
+
+# Credentials and recovery codes — NEVER commit these
+*.txt
+!README.txt
