@@ -355,7 +355,7 @@ export default function MarketingPage() {
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl text-navy mb-3 font-normal">Transparent pricing that grows with you.</h2>
             <p className="text-gray-500 text-sm max-w-lg mx-auto">
-              A monthly subscription plus a small per-transaction fee. No annual listing caps. No hidden charges. Cancel anytime.
+              A monthly subscription plus a small per-transaction fee. Annual listing credits included in every plan. No hidden charges. Cancel anytime.
             </p>
           </div>
           <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
@@ -425,7 +425,7 @@ export default function MarketingPage() {
           <p className="text-gold text-xs tracking-[0.2em] uppercase mb-4">Ready to grow?</p>
           <h2 className="font-serif text-4xl text-white mb-4 font-normal">Your business, running on autopilot.</h2>
           <p className="text-white/60 mb-8 text-lg leading-relaxed">
-            Booking, payment collection, and media delivery. Fully automated, starting at $39/mo.
+            Booking, payment collection, and media delivery. Fully automated, starting at $79/mo.
           </p>
           <Link href="/auth/register"
             className="inline-block bg-gold text-navy font-semibold px-10 py-4 rounded-sm hover:bg-gold/90 transition-colors text-base">
@@ -569,9 +569,9 @@ const FEATURE_CATEGORIES = [
 ];
 
 const COMPARISON_ROWS = [
-  { feature: "Starting monthly price",            us: "From $39/mo",                   them: "From $49/mo",             highlight: true },
-  { feature: "Listing caps",                      us: "Active listings, not annual caps", them: "Annual caps — pay more to list more", highlight: true },
-  { feature: "Transaction fee",                   us: "0–1.5% (shown upfront)",         them: "Varies, often hidden",    highlight: false },
+  { feature: "Starting monthly price",            us: "From $79/mo",                   them: "From $99+/mo",            highlight: true },
+  { feature: "Listing credits",                   us: "Included in plan, buy more as needed", them: "Annual caps — charge extra mid-cycle", highlight: true },
+  { feature: "Transaction fee",                   us: "1–2% (shown upfront)",           them: "Varies, often hidden",    highlight: false },
   { feature: "Deposit + balance automation",      us: "Built in on every plan",          them: "Manual or add-on",       highlight: true },
   { feature: "Agent marketing kit",               us: "Included, auto-sent on delivery", them: "Separate product/upsell", highlight: false },
   { feature: "AI social captions",                us: "Included on all plans",          them: "Upsell or not available",  highlight: true },
