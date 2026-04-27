@@ -5,15 +5,30 @@ import { useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 
 const PLANS = [
-  { id: "solo",   name: "Solo",   price: 39,  feePct: "2.0%", desc: "15 active listings · 1 team member · 6-month archive" },
-  { id: "studio", name: "Studio", price: 89,  feePct: "1.5%", desc: "50 active listings · Up to 5 team members · 12-month archive" },
-  { id: "pro",    name: "Pro",    price: 179, feePct: "1.25%", desc: "125 active listings · Up to 15 team members · 18-month archive" },
-  { id: "scale",  name: "Scale",  price: 349, feePct: "1.0%", desc: "300+ active listings · Unlimited team members · 24-month archive" },
+  { id: "solo",   name: "Solo",     price: 79,  desc: "120 listing credits / year · 1 seat" },
+  { id: "studio", name: "Studio",   price: 159, desc: "300 listing credits / year · 5 seats" },
+  { id: "pro",    name: "Pro Team", price: 279, desc: "600 listing credits / year · 12 seats" },
+  { id: "scale",  name: "Scale",    price: 449, desc: "1,200 listing credits / year · Unlimited seats" },
 ];
 
-const PLAN_NAMES  = { solo: "Solo", studio: "Studio", pro: "Pro", scale: "Scale", starter: "Solo" };
-const PLAN_PRICES = { solo: 39, studio: 89, pro: 179, scale: 349, starter: 39 };
-const PLAN_LIMITS = { solo: 15, studio: 50, pro: 125, scale: 300, starter: 15 };
+const PLAN_NAMES  = { solo: "Solo", studio: "Studio", pro: "Pro Team", scale: "Scale", starter: "Solo" };
+const PLAN_PRICES = { solo: 79, studio: 159, pro: 279, scale: 449, starter: 79 };
+const PLAN_LIMITS = { solo: 120, studio: 300, pro: 600, scale: 1200, starter: 120 };
+
+// Per-plan expansion caps — null means unlimited (Scale)
+const ADDON_CAPS = {
+  solo:   { extraSeats: 0,    topupListings: 50  },
+  studio: { extraSeats: 3,    topupListings: 100 },
+  pro:    { extraSeats: 8,    topupListings: 200 },
+  scale:  { extraSeats: null, topupListings: null },
+};
+const NEXT_PLAN_NAME = { solo: "Studio", studio: "Pro Team", pro: "Scale", scale: null };
+
+const TOPUP_PACKS = [
+  { pack: "pack25",  label: "+25 Credits",  price: "$175", credits: 25 },
+  { pack: "pack50",  label: "+50 Credits",  price: "$325", credits: 50 },
+  { pack: "pack100", label: "+100 Credits", price: "$600", credits: 100 },
+];
 
 function isStripeNotConfigured(errorMsg) {
   if (!errorMsg) return false;
@@ -33,6 +48,9 @@ export default function BillingPage() {
   useEffect(() => {
     if (searchParams.get("subscribed") === "true") {
       setMsg({ text: "You're subscribed! Welcome aboard. Your plan is now active.", type: "success" });
+    }
+    if (searchParams.get("topup") === "success") {
+      setMsg({ text: "Listing credits added successfully. Your balance has been updated.", type: "success" });
     }
   }, [searchParams]);
 
@@ -96,6 +114,25 @@ export default function BillingPage() {
     }
   }
 
+  async function buyTopup(pack) {
+    setWorking(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/billing/topup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ pack }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else setError(data.error || "Could not start checkout.");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
   async function startConnect() {
     setWorking(true);
     try {
@@ -125,9 +162,18 @@ export default function BillingPage() {
   const subscribed = !!tenant?.stripeSubscriptionId;
 
   const addonListings  = tenant?.addonListings || 0;
-  const listingLimit   = (PLAN_LIMITS[plan] || 25) + addonListings;
+  const addonSeats     = tenant?.addonSeats || 0;
+  const listingLimit   = (PLAN_LIMITS[plan] || 120) + addonListings;
   const listingsUsed   = listingsThisYear;
   const listingPct     = Math.min(100, Math.round((listingsUsed / listingLimit) * 100));
+
+  const caps           = ADDON_CAPS[plan] || ADDON_CAPS.solo;
+  const nextPlanName   = NEXT_PLAN_NAME[plan];
+  const topupCap       = caps.topupListings;
+  const topupAtCap     = topupCap !== null && addonListings >= topupCap;
+  const topupRemaining = topupCap === null ? null : topupCap - addonListings;
+  const seatCap        = caps.extraSeats; // 0 = not allowed, null = unlimited
+  const seatAtCap      = seatCap !== null && addonSeats >= seatCap;
 
   const msgStyles = {
     success: "bg-green-50 border border-green-300 text-green-800",
@@ -201,11 +247,11 @@ export default function BillingPage() {
         )}
       </div>
 
-      {/* Listings usage */}
+      {/* Listing credits usage */}
       <div className="bg-white rounded-sm border border-gray-200 p-6 mb-6">
-        <h2 className="font-display text-navy text-base mb-4">Active Listings</h2>
+        <h2 className="font-display text-navy text-base mb-4">Listing Credits</h2>
         <div className="flex items-end justify-between mb-2">
-          <p className="text-sm text-gray-500">Currently active</p>
+          <p className="text-sm text-gray-500">Used this year</p>
           <p className="text-sm font-semibold text-charcoal">
             {listingsUsed.toLocaleString()} / {listingLimit.toLocaleString()}
             {addonListings > 0 && <span className="text-xs text-gray-400 ml-1">(+{addonListings} add-on)</span>}
@@ -217,11 +263,133 @@ export default function BillingPage() {
             style={{ width: `${listingPct}%` }}
           />
         </div>
-        <p className="text-xs text-gray-400 mt-1.5">{listingPct}% of your plan limit used</p>
+        <p className="text-xs text-gray-400 mt-1.5">{listingPct}% of your annual credits used</p>
         {listingPct >= 90 && (
-          <p className="text-xs text-red-600 mt-1 font-medium">Approaching limit. Upgrade your plan or add a listings add-on.</p>
+          <p className="text-xs text-red-600 mt-1 font-medium">Approaching your credit limit. Consider upgrading your plan or adding a credit expansion pack.</p>
         )}
-        <p className="text-xs text-gray-400 mt-3">Active listings are published property websites. Archiving a listing frees up a slot.</p>
+      </div>
+
+      {/* Listing credit top-ups */}
+      <div className="bg-white rounded-sm border border-gray-200 p-6 mb-6">
+        <div className="flex items-start justify-between mb-1">
+          <h2 className="font-display text-navy text-base">Need more listing credits?</h2>
+          {topupCap !== null && (
+            <span className="text-xs text-gray-400 mt-0.5">
+              {addonListings} / {topupCap} add-on credits used
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-gray-400 mb-4">
+          One-time purchases. Credits are added immediately and do not auto-renew. Non-refundable after purchase.
+        </p>
+
+        {topupAtCap ? (
+          <div className="rounded-sm border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-semibold text-amber-900 mb-1">
+              Credit expansion limit reached
+            </p>
+            <p className="text-xs text-amber-700 mb-3">
+              Your {PLAN_NAMES[plan]} plan supports up to {topupCap} add-on listing credits.
+              {nextPlanName && ` Upgrading to ${nextPlanName} significantly increases your annual credits and expansion capacity.`}
+            </p>
+            {nextPlanName && (
+              <button onClick={openPortal} disabled={working}
+                className="text-xs px-4 py-2 rounded-sm bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
+                {working ? "…" : `Upgrade to ${nextPlanName} →`}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            {TOPUP_PACKS.map((t) => {
+              const wouldExceed = topupCap !== null && (addonListings + t.credits) > topupCap;
+              const disabled    = working || wouldExceed;
+              return (
+                <button key={t.pack} onClick={() => buyTopup(t.pack)} disabled={disabled}
+                  className={`flex flex-col items-center p-4 rounded-sm border transition-all text-center
+                    ${wouldExceed
+                      ? "border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed"
+                      : "border-gray-200 hover:border-navy hover:bg-navy/[0.02] disabled:opacity-50"
+                    }`}>
+                  <span className="font-semibold text-navy text-sm">{t.label}</span>
+                  <span className="text-xs text-gray-500 mt-0.5">{t.price} one-time</span>
+                  {wouldExceed && (
+                    <span className="text-xs text-amber-600 mt-1">exceeds plan limit</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {!topupAtCap && topupRemaining !== null && topupRemaining <= 50 && nextPlanName && (
+          <p className="text-xs text-amber-600 mt-3">
+            You have {topupRemaining} add-on credits remaining on this plan.
+            Upgrading to {nextPlanName} gives you more annual credits and higher expansion capacity.
+          </p>
+        )}
+      </div>
+
+      {/* Team seat add-ons */}
+      <div className="bg-white rounded-sm border border-gray-200 p-6 mb-6">
+        <div className="flex items-start justify-between mb-1">
+          <h2 className="font-display text-navy text-base">Additional Team Seats</h2>
+          {seatCap !== null && seatCap > 0 && (
+            <span className="text-xs text-gray-400 mt-0.5">
+              {addonSeats} / {seatCap} add-on seats used
+            </span>
+          )}
+        </div>
+
+        {seatCap === 0 ? (
+          <div className="rounded-sm border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-semibold text-amber-900 mb-1">
+              Seat add-ons not available on Solo
+            </p>
+            <p className="text-xs text-amber-700 mb-3">
+              The Solo plan is for individual owner-operators. Upgrade to Studio to add photographers, videographers, admins, and managers.
+            </p>
+            {nextPlanName && (
+              <button onClick={openPortal} disabled={working}
+                className="text-xs px-4 py-2 rounded-sm bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
+                {working ? "…" : `Upgrade to ${nextPlanName} →`}
+              </button>
+            )}
+          </div>
+        ) : seatAtCap ? (
+          <div className="rounded-sm border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-semibold text-amber-900 mb-1">
+              Seat expansion limit reached
+            </p>
+            <p className="text-xs text-amber-700 mb-3">
+              Your {PLAN_NAMES[plan]} plan supports up to {seatCap} additional seats.
+              {nextPlanName && ` ${nextPlanName} includes more built-in seats and a higher expansion cap.`}
+            </p>
+            {nextPlanName && (
+              <button onClick={openPortal} disabled={working}
+                className="text-xs px-4 py-2 rounded-sm bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
+                {working ? "…" : `Upgrade to ${nextPlanName} →`}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div>
+            <p className="text-xs text-gray-500 mb-3">
+              $19/month per seat. Add photographers, videographers, admins, or managers.
+              {seatCap !== null && ` Up to ${seatCap} additional seats on your current plan.`}
+              {seatCap === null && " Unlimited seats on Scale."}
+            </p>
+            <button onClick={openPortal} disabled={working}
+              className="btn-outline text-sm px-4 py-2">
+              {working ? "Loading…" : "Manage seats via portal →"}
+            </button>
+            {seatCap !== null && seatCap - addonSeats <= 1 && nextPlanName && (
+              <p className="text-xs text-amber-600 mt-3">
+                You&apos;re approaching your seat limit. Upgrading to {nextPlanName} gives you significantly more capacity.
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Plan cards — always shown */}
@@ -251,7 +419,6 @@ export default function BillingPage() {
                   <div>
                     <p className={`font-medium text-sm ${isCurrent ? "text-navy" : "text-gray-600"}`}>{p.name}</p>
                     <p className="text-xs text-gray-500">{p.desc}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">+ {p.feePct} platform fee per transaction</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0 ml-4">
@@ -294,8 +461,7 @@ export default function BillingPage() {
         ) : (
           <div>
             <p className="text-sm text-gray-600 mb-4">
-              Connect your Stripe account to accept client deposits and balance payments.
-              Funds go directly to you minus the platform fee for your plan ({PLAN_PRICES[plan] ? `${PLANS.find(p => p.id === plan)?.feePct || "2.0%"}` : "2.0%"}).
+              Connect your Stripe account to accept client deposits and balance payments directly through ShootFlow.
             </p>
             <button onClick={startConnect} disabled={working}
               className="btn-primary px-6 py-2 text-sm">

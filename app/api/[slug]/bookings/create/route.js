@@ -75,7 +75,6 @@ export async function POST(req, { params }) {
 
     // Create payment intent — routed to tenant's Connect account (if onboarded)
     const tenantPlanId = tenant.subscriptionPlan || "solo";
-    const tenantHasByop = tenant.byop === true;
 
     let paymentIntent;
     if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
@@ -86,7 +85,6 @@ export async function POST(req, { params }) {
         description: `${tenant.businessName} ${paymentType === "full" ? "full payment" : "deposit"} — ${address}, ${city}`,
         receiptEmail: clientEmail,
         planId:  tenantPlanId,
-        hasByop: tenantHasByop,
       });
     } else {
       const { stripe } = await import("@/lib/stripe");

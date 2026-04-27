@@ -1,5 +1,6 @@
 import { stripe } from "@/lib/stripe";
 import { adminDb } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { getTenantById } from "@/lib/tenants";
 import { sendBookingCreatedNotifications } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
@@ -111,8 +112,23 @@ export async function POST(req) {
 
       case "checkout.session.completed": {
         const session = event.data.object;
-        const { bookingId, tenantId, type } = session.metadata || {};
-        if (!bookingId || !tenantId || type !== "deposit") break;
+        const { bookingId, tenantId, type, pack } = session.metadata || {};
+        if (!tenantId) break;
+
+        // One-time listing credit top-up
+        if (type === "topup" && pack) {
+          const TOPUP_CREDITS = { pack25: 25, pack50: 50, pack100: 100 };
+          const credits = TOPUP_CREDITS[pack] || 0;
+          if (credits > 0) {
+            await adminDb.collection("tenants").doc(tenantId).update({
+              addonListings: FieldValue.increment(credits),
+            });
+          }
+          break;
+        }
+
+        // Booking deposit via Checkout session
+        if (type !== "deposit" || !bookingId) break;
 
         const bookingRef = adminDb
           .collection("tenants").doc(tenantId)
@@ -182,27 +198,19 @@ export async function POST(req) {
 
         const { ADDON_PRICE_IDS } = await import("@/lib/stripe");
 
-        // Tally add-ons from subscription line items
-        let addonListings = 0;
-        let addonSeats    = 0;
-        let hasByop       = false;
-
+        // Count seat add-ons from subscription line items
+        let addonSeats = 0;
         for (const item of sub.items?.data || []) {
           const priceId = item.price?.id;
           const qty     = item.quantity || 1;
           if (!priceId) continue;
-          if (priceId === ADDON_PRICE_IDS.listings25) addonListings += 25 * qty;
-          if (priceId === ADDON_PRICE_IDS.listings50)  addonListings += 50 * qty;
-          if (priceId === ADDON_PRICE_IDS.extraSeat)  addonSeats    += qty;
-          if (priceId === ADDON_PRICE_IDS.byop)        hasByop        = true;
+          if (priceId === ADDON_PRICE_IDS.extraSeat) addonSeats += qty;
         }
 
         await adminDb.collection("tenants").doc(tenantId).update({
           stripeSubscriptionId: sub.id,
           subscriptionStatus:   sub.status,
           subscriptionPlan:     sub.metadata?.plan || "solo",
-          byop:                 hasByop,
-          addonListings,
           addonSeats,
         });
         break;
@@ -214,8 +222,6 @@ export async function POST(req) {
         if (!tenantId) break;
         await adminDb.collection("tenants").doc(tenantId).update({
           subscriptionStatus: "canceled",
-          byop:               false,
-          addonListings:      0,
           addonSeats:         0,
         });
         break;
