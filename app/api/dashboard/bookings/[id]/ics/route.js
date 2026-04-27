@@ -46,11 +46,11 @@ export async function GET(req, { params }) {
   const ics = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//NovaOS//Booking//EN",
+    "PRODID:-//KyoriaOS//Booking//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
-    `UID:${params.id}@novaos`,
+    `UID:${params.id}@kyoriaos`,
     `DTSTAMP:${now}`,
     `DTSTART;VALUE=DATE:${icsDate}`,
     `DTEND;VALUE=DATE:${icsDate}`,

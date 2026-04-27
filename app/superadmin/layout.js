@@ -39,7 +39,7 @@ export default function SuperadminLayout({ children }) {
     <div className="min-h-screen bg-cream flex">
       <aside className="w-56 bg-navy flex-shrink-0 flex flex-col">
         <div className="p-6 border-b border-white/10">
-          <p className="font-display text-white text-sm tracking-widest uppercase">NovaOS</p>
+          <p className="font-display text-white text-sm tracking-widest uppercase">KyoriaOS</p>
           <p className="text-red-400/70 text-xs font-body mt-0.5">Superadmin</p>
         </div>
         <nav className="p-4 space-y-1 flex-1">

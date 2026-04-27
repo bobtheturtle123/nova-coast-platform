@@ -461,7 +461,7 @@ export default function BillingPage() {
         ) : (
           <div>
             <p className="text-sm text-gray-600 mb-4">
-              Connect your Stripe account to accept client deposits and balance payments directly through ShootFlow.
+              Connect your Stripe account to accept client deposits and balance payments directly through KyoriaOS.
             </p>
             <button onClick={startConnect} disabled={working}
               className="btn-primary px-6 py-2 text-sm">

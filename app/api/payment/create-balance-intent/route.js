@@ -30,7 +30,7 @@ export async function POST(req) {
         bookingId,
         type: "balance",
       },
-      description:   `Nova Coast Media balance — ${booking.fullAddress}`,
+      description:   `Balance payment - ${booking.fullAddress}`,
       receipt_email: booking.clientEmail,
     });
 

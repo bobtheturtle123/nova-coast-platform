@@ -1,8 +1,8 @@
-# Nova Coast Platform — Setup Guide
+# KyoriaOS Platform - Setup Guide
 ### Plain English. No coding experience required.
 
-Read this entire guide before doing anything. It takes about 2–3 hours to complete.
-When you're done, your booking platform will be live at app.novacoastmedia.com.
+Read this entire guide before doing anything. It takes about 2-3 hours to complete.
+When you're done, your booking platform will be live at app.kyoriaos.com.
 
 ---
 

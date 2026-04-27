@@ -4,9 +4,9 @@ export const dynamic = "force-dynamic";
 
 // MCP server info
 const SERVER_INFO = {
-  name: "novaos-platform",
+  name: "kyoriaos-platform",
   version: "1.0.0",
-  description: "NovaOS real estate photography platform — access bookings, galleries, and client data",
+  description: "KyoriaOS real estate photography platform - access bookings, galleries, and client data",
 };
 
 const TOOLS = [

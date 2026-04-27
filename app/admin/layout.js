@@ -54,7 +54,7 @@ export default function AdminLayout({ children }) {
       <aside className="w-56 bg-navy flex-shrink-0 flex flex-col">
         <div className="p-6 border-b border-white/10">
           <p className="font-display text-white text-sm tracking-widest uppercase">
-            Nova Coast
+            KyoriaOS
           </p>
           <p className="text-gold/70 text-xs font-body mt-0.5">Admin</p>
         </div>

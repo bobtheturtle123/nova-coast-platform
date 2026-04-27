@@ -23,7 +23,7 @@ export default async function AgentPortalLayout({ children, params }) {
             <span className="font-semibold text-sm" style={{ color: primary }}>{name}</span>
             <span className="text-gray-300 text-xs">· Agent Portal</span>
           </div>
-          <span className="text-xs text-gray-400">Powered by ShootFlow</span>
+          <span className="text-xs text-gray-400">Powered by KyoriaOS</span>
         </div>
       </header>
       {children}

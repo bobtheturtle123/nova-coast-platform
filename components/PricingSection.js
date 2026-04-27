@@ -154,7 +154,7 @@ export default function PricingSection() {
             Pricing built to grow your media business
           </h2>
           <p className="text-gray-500 text-lg max-w-2xl mx-auto leading-relaxed">
-            From office admins to field photographers to agent delivery, ShootFlow keeps your entire operation running in one place.
+            From office admins to field photographers to agent delivery, KyoriaOS keeps your entire operation running in one place.
           </p>
         </div>
 

@@ -152,7 +152,7 @@ export default function DashboardLayout({ children }) {
     <aside className="w-52 flex flex-col h-full" style={{ background: "#0b2a55" }}>
       {/* Brand */}
       <div className="px-5 pt-6 pb-5 border-b border-white/10">
-        <p className="font-semibold text-white text-[13px] tracking-tight leading-none">ShootFlow</p>
+        <p className="font-semibold text-white text-[13px] tracking-tight leading-none">KyoriaOS</p>
         {tenantName && (
           <p className="text-white/50 text-[11px] mt-1.5 truncate leading-none">{tenantName}</p>
         )}
@@ -222,7 +222,7 @@ export default function DashboardLayout({ children }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="font-semibold text-white text-[13px] tracking-tight">ShootFlow</span>
+          <span className="font-semibold text-white text-[13px] tracking-tight">KyoriaOS</span>
         </div>
 
         <main className="flex-1 overflow-auto">{children}</main>

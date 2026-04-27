@@ -90,7 +90,7 @@ export default function PhotographerLayout({ children }) {
   const Sidebar = () => (
     <aside className="w-56 bg-[#0F172A] flex flex-col h-full">
       <div className="px-5 pt-5 pb-4 border-b border-white/5">
-        <p className="font-semibold text-white text-sm tracking-tight">{bizName || "NovaOS"}</p>
+        <p className="font-semibold text-white text-sm tracking-tight">{bizName || "KyoriaOS"}</p>
         {memberName && <p className="text-white/40 text-xs mt-0.5 truncate">{memberName}</p>}
         <span className="inline-block mt-1.5 text-[10px] bg-white/10 text-white/50 px-2 py-0.5 rounded-full">Photographer</span>
       </div>
@@ -142,7 +142,7 @@ export default function PhotographerLayout({ children }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="font-semibold text-white text-sm tracking-tight">{bizName || "NovaOS"}</span>
+          <span className="font-semibold text-white text-sm tracking-tight">{bizName || "KyoriaOS"}</span>
         </div>
         <main className="flex-1 overflow-auto">{children}</main>
       </div>

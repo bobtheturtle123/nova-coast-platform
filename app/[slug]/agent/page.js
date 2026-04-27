@@ -166,7 +166,7 @@ export default async function AgentPortalPage({ params, searchParams }) {
                   const galleryUrl  = `${appUrl}/${slug}/gallery/${gal.accessToken}`;
                   const photographer = b.photographerName && b.photographerName !== "TBD"
                     ? ` Photos by ${b.photographerName}.` : "";
-                  const shareText   = `Just listed! 🏡 Check out the media for ${b.address}.${photographer} #JustListed #ShootFlow`;
+                  const shareText   = `Just listed! Check out the media for ${b.address}.${photographer} #JustListed`;
                   return <AgentShareButtons galleryUrl={galleryUrl} shareText={shareText} />;
                 })()}
               </div>

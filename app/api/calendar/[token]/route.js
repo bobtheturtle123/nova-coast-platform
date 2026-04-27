@@ -42,8 +42,8 @@ export async function GET(req, { params }) {
     // Also get tenant name for calendar title
     const tenantDoc = await adminDb.collection("tenants").doc(tenantId).get();
     const tenantName = tenantDoc.exists
-      ? (tenantDoc.data().businessName || "NovaOS")
-      : "NovaOS";
+      ? (tenantDoc.data().businessName || "KyoriaOS")
+      : "KyoriaOS";
 
     const ical = buildICal(member, bookings, tenantName);
 
@@ -67,11 +67,11 @@ function buildICal(member, bookings, tenantName) {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    `PRODID:-//NovaOS//NovaOS//EN`,
+    `PRODID:-//KyoriaOS//KyoriaOS//EN`,
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    `X-WR-CALNAME:${escIcal(member.name)} — ${escIcal(tenantName)}`,
-    "X-WR-CALDESC:Shoot schedule from NovaOS",
+    `X-WR-CALNAME:${escIcal(member.name)} - ${escIcal(tenantName)}`,
+    "X-WR-CALDESC:Shoot schedule from KyoriaOS",
     "X-WR-TIMEZONE:America/Chicago",
   ];
 

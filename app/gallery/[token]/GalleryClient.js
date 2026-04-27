@@ -158,7 +158,7 @@ export default function GalleryClient({ gallery, booking }) {
       <header className="border-b border-white/10 px-6 py-4 flex items-center justify-between">
         <div>
           <p className="text-gold/80 text-xs font-body tracking-[0.2em] uppercase mb-0.5">
-            Nova Coast Media
+            KyoriaOS Media
           </p>
           <h1 className="font-display text-lg text-white">{gallery.propertyAddress}</h1>
         </div>

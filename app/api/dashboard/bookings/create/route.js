@@ -149,8 +149,8 @@ export async function POST(req) {
           const { Resend } = await import("resend");
           const resend = new Resend(process.env.RESEND_API_KEY);
           const primary   = tenant.branding?.primaryColor || "#0b2a55";
-          const bizName   = tenant.branding?.businessName || tenant.businessName || "ShootFlow";
-          const fromEmail = tenant.branding?.fromEmail || "noreply@shootflow.com";
+          const bizName   = tenant.branding?.businessName || tenant.businessName || "KyoriaOS";
+          const fromEmail = tenant.branding?.fromEmail || "noreply@kyoriaos.com";
           const from      = `${bizName} <${fromEmail}>`;
           const shootInfo = shootDate
             ? `${new Date(shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}${shootTime ? ` at ${shootTime}` : ""}`

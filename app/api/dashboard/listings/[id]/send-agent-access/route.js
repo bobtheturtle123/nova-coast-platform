@@ -85,14 +85,14 @@ export async function POST(req, { params }) {
     const bizName  = tenant.branding?.businessName || tenant.businessName || "Your Photographer";
     const from     = tenant.branding?.fromEmail
       ? `${bizName} <${tenant.branding.fromEmail}>`
-      : `${bizName} <noreply@shootflow.com>`;
+      : `${bizName} <noreply@kyoriaos.com>`;
     const address  = booking.fullAddress || booking.address || "your property";
 
     try {
       await getResend()?.emails.send({
         from,
         to:      [booking.clientEmail],
-        subject: `Your media portal is ready — ${address}`,
+        subject: `Your media portal is ready - ${address}`,
         html: `
           <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:40px 20px;background:#fff">
             <h2 style="font-family:Georgia,serif;color:${primary};font-size:24px;margin:0 0 16px">
@@ -119,7 +119,7 @@ export async function POST(req, { params }) {
               Bookmark this link — it's your permanent access to all listings from ${bizName}.
             </p>
             <hr style="border:none;border-top:1px solid #f0f0f0;margin:24px 0"/>
-            <p style="color:#ccc;font-size:11px;text-align:center">Powered by ShootFlow · ${bizName}</p>
+            <p style="color:#ccc;font-size:11px;text-align:center">Powered by KyoriaOS - ${bizName}</p>
           </div>
         `,
       });

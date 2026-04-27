@@ -90,10 +90,10 @@ function ConfirmationContent() {
 
         <div>
           <Link
-            href="https://novacoastmedia.com"
+            href="/"
             className="text-sm font-body text-navy underline underline-offset-4"
           >
-            ← Back to Nova Coast Media
+            Back to KyoriaOS
           </Link>
         </div>
       </div>

@@ -14,7 +14,7 @@ const SUGGESTED_QUESTIONS = [
 export default function AiChatButton() {
   const [open,     setOpen]     = useState(false);
   const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hi! I'm your ShootFlow assistant. Ask me anything about the platform — features, how-tos, or troubleshooting." }
+    { role: "assistant", content: "Hi! I'm your KyoriaOS assistant. Ask me anything about the platform - features, how-tos, or troubleshooting." }
   ]);
   const [input,    setInput]    = useState("");
   const [loading,  setLoading]  = useState(false);
@@ -72,15 +72,19 @@ export default function AiChatButton() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-navy rounded-t-xl">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-sm">✨</div>
+              <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+              </div>
               <div>
-                <p className="text-sm font-semibold text-white">ShootFlow Assistant</p>
+                <p className="text-sm font-semibold text-white">KyoriaOS Assistant</p>
                 <p className="text-[10px] text-white/60">Powered by AI</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setMessages([{ role: "assistant", content: "Hi! I'm your ShootFlow assistant. Ask me anything about the platform — features, how-tos, or troubleshooting." }])}
+                onClick={() => setMessages([{ role: "assistant", content: "Hi! I'm your KyoriaOS assistant. Ask me anything about the platform - features, how-tos, or troubleshooting." }])}
                 className="text-white/50 hover:text-white text-xs px-2 py-1 rounded hover:bg-white/10 transition-colors"
                 title="New conversation">
                 New chat
@@ -148,7 +152,7 @@ export default function AiChatButton() {
               </button>
             </div>
             <p className="text-[10px] text-gray-300 mt-1.5 text-center">
-              Can&apos;t find an answer? Email <a href="mailto:support@shootflow.com" className="underline">support@shootflow.com</a>
+              Can&apos;t find an answer? Email <a href="mailto:contact@kyoriaos.com" className="underline">contact@kyoriaos.com</a>
             </p>
           </div>
         </div>
@@ -157,10 +161,18 @@ export default function AiChatButton() {
       {/* Floating button */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-5 right-5 z-50 w-12 h-12 bg-navy text-white rounded-full shadow-lg hover:bg-navy/90 transition-all flex items-center justify-center text-xl"
-        title="ShootFlow Assistant"
+        className="fixed bottom-5 right-5 z-50 w-12 h-12 bg-navy text-white rounded-full shadow-lg hover:bg-navy/90 transition-all flex items-center justify-center"
+        title="KyoriaOS Assistant"
       >
-        {open ? "×" : "✨"}
+        {open ? (
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        ) : (
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
+        )}
       </button>
     </>
   );

@@ -1,4 +1,4 @@
-// firestore.rules — Multi-tenant ShootFlow
+// firestore.rules — Multi-tenant KyoriaOS
 // Deploy: firebase deploy --only firestore:rules
 
 rules_version = '2';

@@ -6,7 +6,7 @@ const AI_KEY   = DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
 const AI_URL   = DEEPSEEK_API_KEY ? "https://api.deepseek.com/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
 const AI_MODEL = DEEPSEEK_API_KEY ? "deepseek-chat" : "gpt-4o-mini";
 
-const SYSTEM_PROMPT = `You are a helpful assistant built into ShootFlow, a SaaS platform for real estate photography businesses.
+const SYSTEM_PROMPT = `You are a helpful assistant built into KyoriaOS, a SaaS platform for real estate photography businesses.
 
 You help photographers and studio owners:
 - Understand how to use features (bookings, galleries, team management, service areas, billing, etc.)
@@ -48,7 +48,7 @@ SETUP TIPS (proactively suggest these if user seems new or stuck)
 - If booking page isn't live: make sure at least one Package or Service is Active in Products
 - If property websites aren't working: check that the booking's Property Site tab has content and is Published
 
-If someone has a feature request or something you can't answer, tell them to email support@shootflow.com or describe it as feedback.
+If someone has a feature request or something you can't answer, tell them to email contact@kyoriaos.com or describe it as feedback.
 
 Keep responses concise and helpful. Use bullet points for multi-step instructions. If you notice someone asking about a feature that requires setup (like team services or agent portal), mention the quick path to enable it.`;
 
@@ -111,7 +111,7 @@ export async function POST(req) {
     if (!res.ok) {
       const err = await res.text();
       console.error("[ai-chat] Groq error:", err);
-      return Response.json({ reply: "Something went wrong. Please try again or contact support@shootflow.com." });
+      return Response.json({ reply: "Something went wrong. Please try again or contact contact@kyoriaos.com." });
     }
 
     const data  = await res.json();
@@ -120,7 +120,7 @@ export async function POST(req) {
   } catch (err) {
     console.error("[ai-chat] Error:", err);
     return Response.json({
-      reply: "Something went wrong. Please try again or contact support@shootflow.com.",
+      reply: "Something went wrong. Please try again or contact contact@kyoriaos.com.",
     });
   }
 }

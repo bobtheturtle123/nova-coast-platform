@@ -2,7 +2,7 @@ import Link from "next/link";
 import PricingSection from "@/components/PricingSection";
 
 export const metadata = {
-  title: "ShootFlow: Business software built for real estate photographers",
+  title: "KyoriaOS: Business software built for real estate photographers",
   description:
     "Booking, payments, galleries, and agent marketing tools. The complete operating system for real estate photography businesses.",
 };
@@ -13,7 +13,7 @@ export default function MarketingPage() {
       {/* NAV */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="font-display text-navy text-xl tracking-wide">ShootFlow</span>
+          <span className="font-display text-navy text-xl tracking-wide">KyoriaOS</span>
           <nav className="hidden md:flex items-center gap-8 text-sm text-gray-600">
             <a href="#features" className="hover:text-navy transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-navy transition-colors">How it works</a>
@@ -67,7 +67,7 @@ export default function MarketingPage() {
                     <div className="w-2.5 h-2.5 rounded-full bg-white/20" />
                   </div>
                   <div className="flex-1 bg-white/10 rounded text-white/30 text-[10px] px-3 py-1 text-center">
-                    app.shootflow.com/dashboard
+                    app.kyoriaos.com/dashboard
                   </div>
                 </div>
                 <div className="p-4 space-y-3">
@@ -130,7 +130,7 @@ export default function MarketingPage() {
           </div>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-7">
-              <p className="text-xs font-semibold text-red-400 uppercase tracking-widest mb-5">Without ShootFlow</p>
+              <p className="text-xs font-semibold text-red-400 uppercase tracking-widest mb-5">Without KyoriaOS</p>
               <ul className="space-y-3">
                 {[
                   "Chase clients for deposits over text",
@@ -149,7 +149,7 @@ export default function MarketingPage() {
               </ul>
             </div>
             <div className="border border-navy/10 rounded-xl p-7" style={{ background: "rgba(11,42,85,0.03)" }}>
-              <p className="text-xs font-semibold text-emerald-500 uppercase tracking-widest mb-5">With ShootFlow</p>
+              <p className="text-xs font-semibold text-emerald-500 uppercase tracking-widest mb-5">With KyoriaOS</p>
               <ul className="space-y-3">
                 {[
                   "Deposit collected the moment they book",
@@ -183,7 +183,7 @@ export default function MarketingPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {FEATURES.map((f) => (
               <div key={f.title} className="bg-white rounded-xl border border-gray-100 p-7 hover:shadow-md transition-all duration-300">
-                <div className="text-2xl mb-4">{f.icon}</div>
+                <div className="w-10 h-10 bg-navy/5 rounded-lg flex items-center justify-center mb-4 text-navy">{f.icon}</div>
                 <h3 className="font-serif text-lg text-navy mb-2 font-normal">{f.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed mb-4">{f.desc}</p>
                 <ul className="space-y-1.5">
@@ -242,16 +242,20 @@ export default function MarketingPage() {
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 mb-4">
-                {[{ icon: "🖼️", label: "Gallery", sub: "48 photos" },{ icon: "🏡", label: "Website", sub: "Share link" },{ icon: "📋", label: "Brochure", sub: "Print ready" }].map((c) => (
+                {[
+                { icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>, label: "Gallery", sub: "48 photos" },
+                { icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>, label: "Website", sub: "Share link" },
+                { icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>, label: "Brochure", sub: "Print ready" },
+              ].map((c) => (
                   <div key={c.label} className="bg-white border border-gray-200 rounded-xl p-3 text-center">
-                    <div className="text-xl mb-1">{c.icon}</div>
+                    <div className="flex items-center justify-center h-7 mb-1 text-navy">{c.icon}</div>
                     <p className="text-xs font-semibold text-gray-700">{c.label}</p>
                     <p className="text-[10px] text-gray-400">{c.sub}</p>
                   </div>
                 ))}
               </div>
               <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">✨ AI Social Caption</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1"><svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> AI Social Caption</p>
                 <p className="text-xs text-gray-600 italic leading-relaxed">"Just listed! 4BR/3BA in Coronado with ocean views. Stunning photography, swipe to see every detail. Link in bio to book a showing. 🏡"</p>
                 <div className="mt-2 text-[10px] text-navy font-semibold border border-navy/20 rounded px-2 py-1 inline-block">Copy →</div>
               </div>
@@ -364,7 +368,7 @@ export default function MarketingPage() {
                 <tr className="border-b border-gray-100">
                   <th className="text-left px-6 py-4 text-gray-400 font-medium text-xs uppercase tracking-wide">Feature</th>
                   <th className="px-6 py-4 text-center">
-                    <span className="font-display text-navy text-base tracking-wide">ShootFlow</span>
+                    <span className="font-display text-navy text-base tracking-wide">KyoriaOS</span>
                   </th>
                   <th className="px-6 py-4 text-center text-gray-400 font-medium text-sm">Other platforms</th>
                 </tr>
@@ -438,11 +442,11 @@ export default function MarketingPage() {
       {/* FOOTER */}
       <footer className="bg-navy border-t border-white/10 py-8 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-white/40 text-xs">
-          <span>© {new Date().getFullYear()} ShootFlow. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} KyoriaOS. All rights reserved.</span>
           <div className="flex gap-6">
             <a href="#" className="hover:text-white/70 transition-colors">Privacy</a>
             <a href="#" className="hover:text-white/70 transition-colors">Terms</a>
-            <a href="mailto:hello@shootflow.app" className="hover:text-white/70 transition-colors">Support</a>
+            <a href="mailto:contact@kyoriaos.com" className="hover:text-white/70 transition-colors">Support</a>
           </div>
         </div>
       </footer>
@@ -452,7 +456,7 @@ export default function MarketingPage() {
 
 const FEATURES = [
   {
-    icon: "📅",
+    icon: <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
     title: "Clients book and pay, no back-and-forth",
     desc: "A guided booking flow collects package selection, property details, scheduling, and a deposit in one shot. Your calendar fills itself.",
     bullets: [
@@ -463,7 +467,7 @@ const FEATURES = [
     ],
   },
   {
-    icon: "💳",
+    icon: <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>,
     title: "Get paid without asking twice",
     desc: "Deposits lock in at booking. Balances collect automatically before downloads unlock. You never have to ask for money.",
     bullets: [
@@ -474,7 +478,7 @@ const FEATURES = [
     ],
   },
   {
-    icon: "🖼️",
+    icon: <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
     title: "Deliver photos, collect balance, done",
     desc: "Upload your gallery and hit send. Photos are preview-only until the balance clears. No chasing clients for payment.",
     bullets: [
@@ -485,7 +489,7 @@ const FEATURES = [
     ],
   },
   {
-    icon: "🏡",
+    icon: <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
     title: "Every listing gets a professional kit",
     desc: "A branded property website and print-ready brochure, auto-built from your booking data. No extra work required.",
     bullets: [
@@ -496,7 +500,7 @@ const FEATURES = [
     ],
   },
   {
-    icon: "✨",
+    icon: <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
     title: "Agents share your work, you get referrals",
     desc: "Agents get a private marketing portal with gallery, website, QR code, and AI-generated social captions. Sent automatically on delivery.",
     bullets: [
@@ -507,7 +511,7 @@ const FEATURES = [
     ],
   },
   {
-    icon: "📊",
+    icon: <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
     title: "See exactly where your money is",
     desc: "Every shoot tracked from request to delivered. Revenue, pending payments, and photographer costs in one place.",
     bullets: [

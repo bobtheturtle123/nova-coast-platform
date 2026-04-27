@@ -149,7 +149,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-        <span className="font-display text-navy text-lg tracking-wide">ShootFlow</span>
+        <span className="font-display text-navy text-lg tracking-wide">KyoriaOS</span>
         <Link href="/dashboard" className="text-xs text-gray-400 hover:text-navy transition-colors">
           Skip setup → Dashboard
         </Link>

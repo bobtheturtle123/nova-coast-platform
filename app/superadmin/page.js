@@ -21,7 +21,7 @@ export default function SuperadminDashboard() {
   return (
     <div className="p-8">
       <h1 className="font-display text-2xl text-navy mb-2">Platform Overview</h1>
-      <p className="text-gray-500 text-sm mb-8">NovaOS platform metrics.</p>
+      <p className="text-gray-500 text-sm mb-8">KyoriaOS platform metrics.</p>
 
       {loading ? (
         <div className="flex justify-center py-16">

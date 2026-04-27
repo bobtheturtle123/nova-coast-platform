@@ -34,9 +34,9 @@ function CopyButton({ text }) {
 }
 
 function ShareButton({ referralUrl }) {
-  const subject = encodeURIComponent("Try ShootFlow — real estate photography business software");
+  const subject = encodeURIComponent("Try KyoriaOS - real estate photography business software");
   const body    = encodeURIComponent(
-    `Hey,\n\nI've been using ShootFlow to manage my real estate photography bookings and payments. Thought you might find it useful too.\n\nSign up with my link and we both get $20 in account credit:\n${referralUrl}\n\nNo credit card required to start.`
+    `Hey,\n\nI've been using KyoriaOS to manage my real estate photography bookings and payments. Thought you might find it useful too.\n\nSign up with my link and we both get $20 in account credit:\n${referralUrl}\n\nNo credit card required to start.`
   );
   return (
     <a href={`mailto:?subject=${subject}&body=${body}`}
@@ -99,7 +99,7 @@ export default function ReferralsPage() {
     </div>
   );
 
-  const appUrl         = typeof window !== "undefined" ? window.location.origin : "https://shootflow.app";
+  const appUrl         = typeof window !== "undefined" ? window.location.origin : "https://app.kyoriaos.com";
   const referralUrl    = data?.referralCode ? `${appUrl}/ref/${data.referralCode}` : null;
   const creditsDollars = Math.floor((data?.creditsCents || 0) / 100);
   const referrals      = data?.referrals || [];
@@ -151,13 +151,13 @@ export default function ReferralsPage() {
             <div className="flex gap-2 flex-wrap">
               <ShareButton referralUrl={referralUrl} />
               <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Running my real estate photography business on ShootFlow. Sign up with my link and we both get $20:\n${referralUrl}`)}`}
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Running my real estate photography business on KyoriaOS. Sign up with my link and we both get $20:\n${referralUrl}`)}`}
                 target="_blank" rel="noopener noreferrer"
                 className="text-xs px-3 py-1.5 rounded-sm border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
                 Share on X
               </a>
               <a
-                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralUrl)}&quote=${encodeURIComponent(`Running my real estate photography business on ShootFlow — sign up with my link and we both get $20!`)}`}
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralUrl)}&quote=${encodeURIComponent(`Running my real estate photography business on KyoriaOS - sign up with my link and we both get $20!`)}`}
                 target="_blank" rel="noopener noreferrer"
                 className="text-xs px-3 py-1.5 rounded-sm border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
                 Share on Facebook
@@ -248,7 +248,7 @@ export default function ReferralsPage() {
         <h2 className="font-semibold text-charcoal text-sm mb-4">How it works</h2>
         <div className="space-y-3">
           {[
-            { n: "1", title: "Share your link",    desc: "Send it to photographers who might benefit from ShootFlow." },
+            { n: "1", title: "Share your link",    desc: "Send it to photographers who might benefit from KyoriaOS." },
             { n: "2", title: "They sign up",        desc: "They register using your link. No credit card required to start." },
             { n: "3", title: "They subscribe",      desc: "When they complete their first paid subscription, the reward triggers." },
             { n: "4", title: "Both get $20 credit", desc: "Credit is applied automatically to the next invoice. No action needed." },

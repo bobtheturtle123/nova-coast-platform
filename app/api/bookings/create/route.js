@@ -39,7 +39,7 @@ export async function POST(req) {
         clientEmail,
         address:      `${address}, ${city}, ${state} ${zip}`,
       },
-      description: `Nova Coast Media deposit — ${address}, ${city}`,
+      description: `Deposit - ${address}, ${city}`,
       receipt_email: clientEmail,
     });
 
