@@ -1,5 +1,7 @@
 import { adminAuth } from "@/lib/firebase-admin";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/dashboard/weather?address=...&date=YYYY-MM-DD
 // Uses free APIs: Nominatim (geocoding) + Open-Meteo (weather/AQI)
 // Returns: { temp, tempHigh, tempLow, description, uvIndex, aqi, windSpeed, precipitation, available }
@@ -35,7 +37,7 @@ export async function GET(req) {
     // 1. Geocode address via Nominatim
     const geoUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
     const geoRes  = await fetch(geoUrl, {
-      headers: { "User-Agent": "NovaCoast-Platform/1.0" },
+      headers: { "User-Agent": "KyoriaOS-Platform/1.0" },
     });
     const geoData = await geoRes.json();
 
