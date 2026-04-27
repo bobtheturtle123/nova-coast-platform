@@ -350,8 +350,6 @@ export default function ListingDetailPage() {
     }
   }
 
-  }
-
   async function openGalleryEditor() {
     if (gallery) {
       router.push(`/dashboard/galleries/${gallery.id}`);
