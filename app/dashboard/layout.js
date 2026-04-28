@@ -174,8 +174,11 @@ export default function DashboardLayout({ children }) {
     <aside
       className="w-56 flex flex-col h-full"
       style={{
-        background: "linear-gradient(180deg, #0e2f5a 0%, #091e3e 100%)",
-        borderRight: "1px solid rgba(255,255,255,0.06)",
+        background: "linear-gradient(175deg, rgba(12,40,80,0.88) 0%, rgba(7,22,50,0.94) 100%)",
+        backdropFilter: "blur(24px) saturate(140%)",
+        WebkitBackdropFilter: "blur(24px) saturate(140%)",
+        borderRight: "1px solid rgba(255,255,255,0.1)",
+        boxShadow: "inset -1px 0 0 rgba(255,255,255,0.05)",
       }}
     >
       {/* Brand */}
@@ -195,7 +198,7 @@ export default function DashboardLayout({ children }) {
       </div>
 
       {/* Separator */}
-      <div className="mx-4 mb-2" style={{ height: 1, background: "rgba(255,255,255,0.07)" }} />
+      <div className="mx-4 mb-2" style={{ height: 1, background: "rgba(255,255,255,0.1)" }} />
 
       {/* Nav */}
       <nav className="px-2.5 pt-1 flex-1 overflow-y-auto space-y-0.5">
@@ -208,8 +211,11 @@ export default function DashboardLayout({ children }) {
               onClick={() => setSidebarOpen(false)}
               className="relative flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[12.5px] font-medium transition-all duration-150 group"
               style={{
-                color:      active ? "#ffffff" : "rgba(255,255,255,0.58)",
-                background: active ? "rgba(255,255,255,0.11)" : "transparent",
+                color:      active ? "#ffffff" : "rgba(255,255,255,0.56)",
+                background: active
+                  ? "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.07) 100%)"
+                  : "transparent",
+                boxShadow: active ? "inset 0 0 0 1px rgba(255,255,255,0.1)" : "none",
               }}
               onMouseEnter={(e) => {
                 if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.07)";
@@ -226,7 +232,7 @@ export default function DashboardLayout({ children }) {
               )}
               <span
                 className="flex-shrink-0 w-[28px] h-[28px] rounded-lg flex items-center justify-center transition-all"
-                style={{ background: active ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)" }}
+                style={{ background: active ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.06)" }}
               >
                 {item.icon}
               </span>
@@ -239,7 +245,7 @@ export default function DashboardLayout({ children }) {
       {/* Upgrade CTA */}
       <div className="px-3 pb-3">
         <div className="rounded-xl p-3"
-          style={{ background: "linear-gradient(135deg, rgba(201,169,110,0.13) 0%, rgba(201,169,110,0.07) 100%)", border: "1px solid rgba(201,169,110,0.22)" }}>
+          style={{ background: "linear-gradient(135deg, rgba(201,169,110,0.16) 0%, rgba(201,169,110,0.08) 100%)", border: "1px solid rgba(201,169,110,0.24)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)" }}>
           <div className="flex items-center gap-2 mb-1.5">
             <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
               style={{ background: "rgba(201,169,110,0.22)" }}>
@@ -264,7 +270,7 @@ export default function DashboardLayout({ children }) {
 
       {/* Footer — user area */}
       <div className="px-2.5 pb-3.5">
-        <div className="mx-1 mb-3" style={{ height: 1, background: "rgba(255,255,255,0.07)" }} />
+        <div className="mx-1 mb-3" style={{ height: 1, background: "rgba(255,255,255,0.1)" }} />
         <div className="flex items-center gap-2.5 px-2">
           <div
             className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-semibold text-white"
@@ -315,7 +321,12 @@ export default function DashboardLayout({ children }) {
           {/* Mobile top bar */}
           <div
             className="md:hidden flex items-center gap-3 px-4 py-3"
-            style={{ background: "linear-gradient(90deg, #0e2f5a 0%, #091e3e 100%)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}
+            style={{
+              background: "linear-gradient(90deg, rgba(12,40,80,0.9) 0%, rgba(7,22,50,0.96) 100%)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              borderBottom: "1px solid rgba(255,255,255,0.09)",
+            }}
           >
             <button onClick={() => setSidebarOpen(true)} className="text-white/60 hover:text-white transition-colors">
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

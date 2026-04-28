@@ -80,14 +80,20 @@
   /* ── Buttons ─────────────────────────────────────────────────────────── */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
-           bg-[#0F172A] text-white font-medium
+           text-white font-medium
            px-4 py-2.5 text-[13px] tracking-tight
-           hover:bg-[#1E293B] active:scale-[0.98]
+           active:scale-[0.98]
            transition-all duration-200
            disabled:opacity-35 disabled:cursor-not-allowed;
     border-radius: var(--radius-btn);
     letter-spacing: -0.01em;
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.14), inset 0 1px 0 0 rgb(255 255 255 / 0.07);
+    background: linear-gradient(145deg, #0e3580 0%, #081e4a 100%);
+    box-shadow: 0 1px 4px rgba(8,30,74,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(145deg, #1040a0 0%, #0a2660 100%);
+    box-shadow: 0 3px 12px rgba(8,30,74,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
   }
 
   .btn-outline {

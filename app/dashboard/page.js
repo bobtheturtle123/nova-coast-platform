@@ -130,7 +130,13 @@ function KpiWidget({ label, value, sub, icon, accentColor, accentBg, dark, alert
   return (
     <div className="relative overflow-hidden rounded-2xl p-5 flex flex-col gap-3"
       style={dark
-        ? { background: "linear-gradient(135deg, #0B2A55 0%, #0d3575 100%)", boxShadow: "0 4px 20px rgba(11,42,85,0.35)" }
+        ? {
+            background: "linear-gradient(145deg, rgba(13,53,115,0.88) 0%, rgba(8,28,68,0.94) 100%)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            boxShadow: "0 4px 24px rgba(7,22,56,0.2), inset 0 1px 0 rgba(255,255,255,0.14)",
+            border: "1px solid rgba(255,255,255,0.09)",
+          }
         : { background: "#fff", border: "1px solid var(--border-subtle)", boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)" }
       }>
       {dark && (
@@ -205,7 +211,7 @@ function RevenueAreaChart({ data, formatY, isBookings }) {
   const bottom   = padT + cH;
   const areaPath = `${linePath} L ${lastP.x.toFixed(1)},${bottom} L ${firstP.x.toFixed(1)},${bottom} Z`;
   const peakIdx  = data.reduce((bi, d, i) => d.value > data[bi].value ? i : bi, 0);
-  const accent   = isBookings ? "#0891B2" : "#0B2A55";
+  const accent   = isBookings ? "#0891B2" : "#1040a0";
   const goldC    = "#C9A96E";
 
   const yTicks = [0.25, 0.5, 0.75, 1].map(t => ({
@@ -482,7 +488,7 @@ export default function DashboardHome() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-5 h-5 border-2 border-gray-200 border-t-[#0B2A55] rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-gray-200 border-t-[#1040a0] rounded-full animate-spin" />
     </div>
   );
 
@@ -504,7 +510,13 @@ export default function DashboardHome() {
         {/* ── Setup hero ──────────────────────────────────────────────────── */}
         {tenant && !setupComplete && (
           <div className="relative overflow-hidden rounded-2xl px-8 py-7"
-            style={{ background: "linear-gradient(135deg, #0B2A55 0%, #0d3575 100%)", boxShadow: "0 8px 32px rgba(11,42,85,0.3)" }}>
+            style={{
+              background: "linear-gradient(145deg, rgba(13,53,115,0.9) 0%, rgba(8,28,68,0.96) 60%, rgba(6,18,46,1) 100%)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              boxShadow: "0 8px 40px rgba(6,18,46,0.22), inset 0 1px 0 rgba(255,255,255,0.12)",
+              border: "1px solid rgba(255,255,255,0.09)",
+            }}>
             <div className="absolute inset-0 pointer-events-none opacity-[0.07]"
               style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "22px 22px" }} />
             <div className="relative z-10">
@@ -584,7 +596,7 @@ export default function DashboardHome() {
             )}
             <Link href="/dashboard/listings/new"
               className="inline-flex items-center gap-2 text-xs font-semibold text-white px-4 py-2.5 rounded-xl transition-colors"
-              style={{ background: "linear-gradient(135deg, #0B2A55 0%, #0d3575 100%)", boxShadow: "0 2px 8px rgba(11,42,85,0.3)" }}>
+              style={{ background: "linear-gradient(135deg, #1040a0 0%, #0a2a5e 100%)", boxShadow: "0 2px 12px rgba(10,42,94,0.28), inset 0 1px 0 rgba(255,255,255,0.14)" }}>
               <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
@@ -700,8 +712,9 @@ export default function DashboardHome() {
                     {/* Date chip */}
                     <div className="w-14 flex-shrink-0 text-center"
                       style={{
-                        background:   isToday ? "#0B2A55" : "#F8F9FC",
-                        border:       isToday ? "none" : "1px solid var(--border-subtle)",
+                        background:   isToday ? "linear-gradient(145deg, rgba(13,53,115,0.88) 0%, rgba(8,28,68,0.94) 100%)" : "#F8F9FC",
+                        border:       isToday ? "1px solid rgba(255,255,255,0.1)" : "1px solid var(--border-subtle)",
+                        boxShadow:    isToday ? "inset 0 1px 0 rgba(255,255,255,0.12)" : "none",
                         borderRadius: 12, padding: "6px 0 8px",
                       }}>
                       <div className={`text-[10px] font-bold uppercase tracking-wider leading-tight ${isToday ? "text-white/60" : "text-[#0B2A55]/40"}`}>{mo}</div>
@@ -718,7 +731,7 @@ export default function DashboardHome() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-semibold text-[#0F172A] truncate">{l.clientName}</p>
-                          {isToday    && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#0B2A55] text-white flex-shrink-0">Today</span>}
+                          {isToday    && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #1040a0 0%, #0a2a5e 100%)" }}>Today</span>}
                           {isTomorrow && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex-shrink-0">Tomorrow</span>}
                         </div>
                         <p className="text-[11px] text-gray-400 truncate mt-0.5">
