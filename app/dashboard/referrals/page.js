@@ -25,7 +25,7 @@ function CopyButton({ text }) {
   }
   return (
     <button onClick={copy}
-      className={`text-xs px-3 py-1.5 rounded-sm border transition-all font-medium flex-shrink-0 ${
+      className={`text-xs px-3 py-1.5 rounded-xl border transition-all font-medium flex-shrink-0 ${
         copied ? "bg-green-50 border-green-200 text-green-700" : "border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy"
       }`}>
       {copied ? "Copied!" : "Copy"}
@@ -40,7 +40,7 @@ function ShareButton({ referralUrl }) {
   );
   return (
     <a href={`mailto:?subject=${subject}&body=${body}`}
-      className="text-xs px-3 py-1.5 rounded-sm border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium flex-shrink-0">
+      className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium flex-shrink-0">
       Share via Email
     </a>
   );
@@ -143,7 +143,7 @@ export default function ReferralsPage() {
         {referralUrl ? (
           <>
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex-1 bg-gray-50 border border-gray-200 rounded-sm px-3 py-2.5 font-mono text-sm text-gray-700 truncate">
+              <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 font-mono text-sm text-gray-700 truncate">
                 {referralUrl}
               </div>
               <CopyButton text={referralUrl} />
@@ -153,25 +153,25 @@ export default function ReferralsPage() {
               <a
                 href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Running my real estate photography business on KyoriaOS. Sign up with my link and we both get $20:\n${referralUrl}`)}`}
                 target="_blank" rel="noopener noreferrer"
-                className="text-xs px-3 py-1.5 rounded-sm border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
+                className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
                 Share on X
               </a>
               <a
                 href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralUrl)}&quote=${encodeURIComponent(`Running my real estate photography business on KyoriaOS - sign up with my link and we both get $20!`)}`}
                 target="_blank" rel="noopener noreferrer"
-                className="text-xs px-3 py-1.5 rounded-sm border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
+                className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
                 Share on Facebook
               </a>
               <a
                 href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(referralUrl)}`}
                 target="_blank" rel="noopener noreferrer"
-                className="text-xs px-3 py-1.5 rounded-sm border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
+                className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
                 Share on LinkedIn
               </a>
             </div>
           </>
         ) : (
-          <div className="bg-amber-50 border border-amber-200 rounded-sm p-3 text-sm text-amber-700">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
             Your referral link is being generated. Refresh in a moment.
           </div>
         )}

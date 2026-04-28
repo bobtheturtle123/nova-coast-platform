@@ -161,7 +161,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
           <h2 className="font-display text-navy text-lg">
             {item ? `Edit ${TYPE_META[type].singular}` : "New Item"}
@@ -297,7 +297,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
               </div>
               <div>
                 <label className="label-field">Included Services</label>
-                <div className="border border-gray-200 rounded-sm divide-y divide-gray-100">
+                <div className="border border-gray-200 rounded-xl divide-y divide-gray-100">
                   {allServices.map((svc) => (
                     <label key={svc.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
                       <input type="checkbox" checked={form.includes.includes(svc.id)}
@@ -321,7 +321,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
             <div>
               <label className="label-field">Show only when these are selected</label>
               <p className="text-xs text-gray-400 mb-2">Leave blank to always show this add-on.</p>
-              <div className="border border-gray-200 rounded-sm divide-y divide-gray-100">
+              <div className="border border-gray-200 rounded-xl divide-y divide-gray-100">
                 {allPackages?.length > 0 && (
                   <div className="px-4 py-2 bg-gray-50">
                     <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Packages</p>
@@ -517,7 +517,7 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
   return (
     <div className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors">
       {/* Thumb */}
-      <div className="w-12 h-12 rounded-sm bg-gray-100 overflow-hidden flex-shrink-0">
+      <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
         {item.thumbnailUrl
           ? <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover" />
           : <div className="w-full h-full flex items-center justify-center text-lg opacity-20">🏠</div>
@@ -529,7 +529,7 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold text-charcoal truncate">{item.name}</p>
           {type === "packages" && item.featured && (
-            <span className="text-xs px-1.5 py-0.5 bg-gold/20 text-gold-dark rounded-sm font-medium flex-shrink-0">
+            <span className="text-xs px-1.5 py-0.5 bg-gold/20 text-gold-dark rounded-xl font-medium flex-shrink-0">
               Featured
             </span>
           )}
@@ -561,11 +561,11 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
       <div className="flex gap-1.5 flex-shrink-0">
         <button onClick={() => onDuplicate(item)}
           title="Duplicate"
-          className="text-xs text-gray-400 border border-gray-200 px-2.5 py-1.5 rounded-sm hover:bg-gray-50">
+          className="text-xs text-gray-400 border border-gray-200 px-2.5 py-1.5 rounded-xl hover:bg-gray-50">
           Copy
         </button>
         <button onClick={() => onEdit(item)}
-          className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded-sm hover:bg-navy/5">
+          className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded-xl hover:bg-navy/5">
           Edit
         </button>
       </div>
@@ -697,7 +697,7 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
         <div className="p-6 space-y-4">
 
           {/* Mode tabs */}
-          <div className="flex border border-gray-200 rounded-sm overflow-hidden text-xs">
+          <div className="flex border border-gray-200 rounded-xl overflow-hidden text-xs">
             {[["csv", "CSV File"], ["text", "Paste Text"], ["url", "From URL"]].map(([m, label]) => (
               <button key={m} onClick={() => setMode(m)}
                 className={`px-4 py-2 flex-1 font-medium transition-colors ${mode === m ? "bg-navy text-white" : "text-gray-500 hover:bg-gray-50"}`}>
@@ -1002,7 +1002,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Product list */}
-      <div className="bg-white border border-gray-200 rounded-sm divide-y divide-gray-50">
+      <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-50">
         {/* Header */}
         <div className="flex items-center gap-4 px-4 py-2 text-xs text-gray-400 uppercase tracking-wide font-medium">
           <div className="w-12 flex-shrink-0" />

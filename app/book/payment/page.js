@@ -60,7 +60,7 @@ function PaymentForm({ clientSecret, deposit, onSuccess }) {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-sm p-3">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3">
           <p className="text-sm text-red-700 font-body">{error}</p>
         </div>
       )}

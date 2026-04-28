@@ -109,7 +109,7 @@ function StaffAccessSection() {
   }
 
   return (
-    <div id="settings-staff-access" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+    <div id="settings-staff-access" className="card mt-6 scroll-mt-6">
       <h2 className="font-semibold text-charcoal text-base mb-1">Staff Access</h2>
       <p className="text-sm text-gray-500 mb-6">
         Invite employees or virtual assistants to manage bookings and galleries. They get dashboard access but cannot change billing or settings.
@@ -135,7 +135,7 @@ function StaffAccessSection() {
           { role: "Admin", desc: "Full access except billing & platform settings" },
           { role: "Manager", desc: "View/edit bookings, galleries, and team calendar" },
         ].map((r) => (
-          <div key={r.role} className="bg-gray-50 rounded-sm p-3 border border-gray-100">
+          <div key={r.role} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
             <p className="text-xs font-semibold text-charcoal">{r.role}</p>
             <p className="text-xs text-gray-400 mt-0.5">{r.desc}</p>
           </div>
@@ -152,7 +152,7 @@ function StaffAccessSection() {
       ) : (
         <div className="space-y-2">
           {invites.map((inv) => (
-            <div key={inv.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-sm">
+            <div key={inv.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl">
               <div>
                 <p className="text-sm font-medium text-charcoal">{inv.email}</p>
                 <p className="text-xs text-gray-400 mt-0.5">
@@ -267,14 +267,14 @@ function SmsNotificationsSection() {
 
   if (!prefs) {
     return (
-      <div id="settings-sms" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <div id="settings-sms" className="card mt-6 scroll-mt-6">
         <div className="animate-pulse h-4 bg-gray-100 rounded w-32" />
       </div>
     );
   }
 
   return (
-    <div id="settings-sms" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+    <div id="settings-sms" className="card mt-6 scroll-mt-6">
       <div className="flex items-start justify-between mb-1">
         <div>
           <h2 className="font-semibold text-charcoal text-base">SMS Notifications</h2>
@@ -387,7 +387,7 @@ function CustomDomainSection() {
   const platformHost = process.env.NEXT_PUBLIC_APP_DOMAIN || "novaos.app";
 
   return (
-    <div id="settings-custom-domain" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+    <div id="settings-custom-domain" className="card mt-6 scroll-mt-6">
       <div className="flex items-start justify-between mb-1">
         <div>
           <h2 className="font-semibold text-charcoal text-base">Custom Domain</h2>
@@ -421,14 +421,14 @@ function CustomDomainSection() {
             </button>
             {current && (
               <button onClick={remove} disabled={removing}
-                className="px-4 py-2 text-sm text-red-500 hover:text-red-700 border border-red-200 rounded-sm transition-colors flex-shrink-0">
+                className="px-4 py-2 text-sm text-red-500 hover:text-red-700 border border-red-200 rounded-xl transition-colors flex-shrink-0">
                 {removing ? "…" : "Remove"}
               </button>
             )}
           </div>
 
           {msg.text && (
-            <div className={`text-sm px-4 py-2.5 rounded-sm mb-4 ${
+            <div className={`text-sm px-4 py-2.5 rounded-xl mb-4 ${
               msg.type === "success" ? "bg-green-50 border border-green-200 text-green-700" : "bg-red-50 border border-red-200 text-red-700"
             }`}>{msg.text}</div>
           )}
@@ -442,7 +442,7 @@ function CustomDomainSection() {
               <p className="text-sm text-gray-600 mb-4">
                 Add the following record to your DNS provider (GoDaddy, Namecheap, Cloudflare, etc.):
               </p>
-              <div className="bg-white border border-gray-200 rounded-sm overflow-hidden mb-4">
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-4">
                 <div className="grid grid-cols-3 bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   <span>Type</span><span>Name</span><span>Value</span>
                 </div>
@@ -1204,7 +1204,7 @@ export default function SettingsPage() {
   return (
     <div className="p-6 max-w-5xl">
       <div className="mb-6">
-        <h1 className="font-semibold text-xl text-charcoal mb-1">Settings</h1>
+        <h1 className="page-title mb-1">Settings</h1>
         <p className="text-gray-400 text-sm">Select a category to configure your account.</p>
       </div>
 
@@ -1272,7 +1272,7 @@ export default function SettingsPage() {
 
       <form id="settings-branding" onSubmit={saveBranding} className="space-y-6 scroll-mt-6">
         {/* Business info */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="card">
           <h2 className="font-semibold text-charcoal text-base mb-4">Business Info</h2>
           <div className="space-y-4">
             <div>
@@ -1310,7 +1310,7 @@ export default function SettingsPage() {
                 <div className="flex gap-2">
                   {[{ v: "F", label: "°F  Fahrenheit" }, { v: "C", label: "°C  Celsius" }].map(({ v, label }) => (
                     <button key={v} type="button" onClick={() => setForm((f) => ({ ...f, tempUnit: v }))}
-                      className={`flex-1 py-2 px-3 text-sm border rounded-sm transition-colors ${
+                      className={`flex-1 py-2 px-3 text-sm border rounded-xl transition-colors ${
                         form.tempUnit === v ? "bg-navy text-white border-navy" : "border-gray-200 text-gray-600 hover:border-navy/30"
                       }`}>
                       {label}
@@ -1323,7 +1323,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Branding */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="card">
           <h2 className="font-semibold text-charcoal text-base mb-4">Branding</h2>
           <div className="space-y-4">
             <div>
@@ -1352,7 +1352,7 @@ export default function SettingsPage() {
               </div>
             </div>
             {/* Preview */}
-            <div className="rounded-sm overflow-hidden border border-gray-200 mt-2">
+            <div className="rounded-xl overflow-hidden border border-gray-200 mt-2">
               <div style={{ background: form.primaryColor }} className="px-4 py-3">
                 <span style={{ color: form.accentColor }} className="font-display text-sm tracking-widest uppercase">
                   {form.businessName || "Your Business"}
@@ -1371,7 +1371,7 @@ export default function SettingsPage() {
 
       {sg === "Booking" && (<>
       {/* ─── Pricing Tiers ─────────────────────────────────────────────────────── */}
-      <div id="settings-pricing" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <div id="settings-pricing" className="card mt-6 scroll-mt-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-display text-navy text-base">Pricing Tiers</h2>
           <button onClick={resetTiers} className="text-xs text-gray-400 hover:text-navy">Reset to defaults</button>
@@ -1391,7 +1391,7 @@ export default function SettingsPage() {
               { value: "custom", label: "Custom Value",      desc: "Define your own tier labels and gate question" },
             ].map((m) => (
               <button key={m.value} type="button" onClick={() => switchPricingMode(m.value)}
-                className={`p-3 border rounded-sm text-left transition-colors ${
+                className={`p-3 border rounded-xl text-left transition-colors ${
                   pricingMode === m.value ? "border-navy bg-navy/5" : "border-gray-200 hover:border-navy/30"
                 }`}>
                 <p className={`text-sm font-semibold ${pricingMode === m.value ? "text-navy" : "text-charcoal"}`}>{m.label}</p>
@@ -1485,7 +1485,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Booking Config ──────────────────────────────────────────────────── */}
-      <div id="settings-booking" className="bg-white rounded-sm border border-gray-200 p-6 mt-8 space-y-8 scroll-mt-6">
+      <div id="settings-booking" className="card mt-8 space-y-8 scroll-mt-6">
         <div>
           <h2 className="font-semibold text-charcoal text-base mb-1">Booking Settings</h2>
           <p className="text-sm text-gray-500">Configure deposit requirements, time slots, and custom form fields.</p>
@@ -1501,7 +1501,7 @@ export default function SettingsPage() {
               { value: "none",    label: "No deposit",   desc: "Clients pay in full" },
             ].map((m) => (
               <button key={m.value} type="button" onClick={() => setDepositType(m.value)}
-                className={`p-3 border rounded-sm text-left transition-colors ${
+                className={`p-3 border rounded-xl text-left transition-colors ${
                   depositType === m.value ? "border-navy bg-navy/5" : "border-gray-200 hover:border-navy/30"
                 }`}>
                 <p className={`text-sm font-semibold ${depositType === m.value ? "text-navy" : "text-charcoal"}`}>{m.label}</p>
@@ -1544,7 +1544,7 @@ export default function SettingsPage() {
           {customFields.length > 0 && (
             <div className="space-y-2 mb-3">
               {customFields.map((f) => (
-                <div key={f.id} className="flex items-center gap-3 border border-gray-200 rounded-sm px-3 py-2.5 bg-gray-50">
+                <div key={f.id} className="flex items-center gap-3 border border-gray-200 rounded-xl px-3 py-2.5 bg-gray-50">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-charcoal truncate">{f.label}</p>
                     <p className="text-xs text-gray-400">{f.type}{f.required ? " · required" : " · optional"}</p>
@@ -1629,7 +1629,7 @@ export default function SettingsPage() {
 
       {/* ─── Job Cost Rates ──────────────────────────────────────────────────── */}
       {sg === "Team" && (
-      <div id="settings-cost-rates" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <div id="settings-cost-rates" className="card mt-6 scroll-mt-6">
         <h2 className="font-semibold text-charcoal text-base mb-1">Default Job Cost Rates</h2>
         <p className="text-sm text-gray-500 mb-6">
           These default rates auto-fill the Job Costs card on each booking. You can still override them per booking.
@@ -1673,7 +1673,7 @@ export default function SettingsPage() {
 
       {/* ─── Availability ────────────────────────────────────────────────────── */}
       {sg === "Booking" && (<>
-      <div id="settings-availability" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <div id="settings-availability" className="card mt-6 scroll-mt-6">
         <h2 className="font-semibold text-charcoal text-base mb-1">Availability & Scheduling</h2>
         <p className="text-sm text-gray-500 mb-6">
           Control how time slots are offered to clients on the booking schedule step.
@@ -1777,7 +1777,7 @@ export default function SettingsPage() {
           <label className="label-field mb-2">Named Time Slot Options</label>
           <div className="space-y-2">
             {timeSlots.map((slot) => (
-              <div key={slot.value} className={`border rounded-sm px-3 py-2.5 flex items-center gap-3 ${slot.enabled ? "border-gray-200 bg-white" : "border-dashed border-gray-200 bg-gray-50 opacity-60"}`}>
+              <div key={slot.value} className={`border rounded-xl px-3 py-2.5 flex items-center gap-3 ${slot.enabled ? "border-gray-200 bg-white" : "border-dashed border-gray-200 bg-gray-50 opacity-60"}`}>
                 <div
                   onClick={() => toggleTimeSlot(slot.value)}
                   className={`relative w-9 h-5 rounded-full flex-shrink-0 cursor-pointer transition-colors ${slot.enabled ? "bg-navy" : "bg-gray-300"}`}>
@@ -1957,7 +1957,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Service Areas ──────────────────────────────────────────────────────── */}
-      <div id="settings-service-areas" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <div id="settings-service-areas" className="card mt-6 scroll-mt-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-charcoal text-base">Service Areas & Zones</h2>
@@ -1973,7 +1973,7 @@ export default function SettingsPage() {
 
       {/* ─── Service Agreement ───────────────────────────────────────────────── */}
       {sg === "Legal" && (<>
-      <div id="settings-agreement" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <div id="settings-agreement" className="card mt-6 scroll-mt-6">
         <div className="flex items-start justify-between mb-1">
           <div>
             <h2 className="font-semibold text-charcoal text-base">Service Agreement</h2>
@@ -2025,7 +2025,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Terms of Service ─────────────────────────────────────────────────── */}
-      <div id="settings-terms" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <div id="settings-terms" className="card mt-6 scroll-mt-6">
         <h2 className="font-semibold text-charcoal text-base mb-1">Terms of Service</h2>
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-gray-500">
@@ -2071,7 +2071,7 @@ export default function SettingsPage() {
         </div>
       </div>
       {/* ─── Privacy Policy ──────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+      <div className="card mt-6">
         <h2 className="font-semibold text-charcoal text-base mb-1">Privacy Policy</h2>
         <p className="text-sm text-gray-500 mb-4">
           Shown at <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">/{tenant?.slug}/privacy</code>.
@@ -2115,7 +2115,7 @@ export default function SettingsPage() {
 
       {/* ─── Travel Fees ─────────────────────────────────────────────────────── */}
       {sg === "Booking" && (
-      <div id="settings-travel" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <div id="settings-travel" className="card mt-6 scroll-mt-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-semibold text-charcoal text-base">Travel Fees</h2>
           <button
@@ -2147,7 +2147,7 @@ export default function SettingsPage() {
                   { value: "zones",   label: "By Service Area",  desc: "Different fee per geographic zone" },
                 ].map((m) => (
                   <button key={m.value} type="button" onClick={() => setTravelMode(m.value)}
-                    className={`p-2.5 border rounded-sm text-left transition-colors ${
+                    className={`p-2.5 border rounded-xl text-left transition-colors ${
                       travelMode === m.value ? "border-navy bg-navy/5" : "border-gray-200 hover:border-navy/30"
                     }`}>
                     <p className={`text-xs font-semibold ${travelMode === m.value ? "text-navy" : "text-charcoal"}`}>{m.label}</p>
@@ -2276,7 +2276,7 @@ export default function SettingsPage() {
 
       {/* ─── Promo Codes ─────────────────────────────────────────────────────── */}
       {sg === "Booking" && (
-      <div id="settings-promos" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <div id="settings-promos" className="card mt-6 scroll-mt-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="font-semibold text-charcoal text-base">Promo Codes</h2>
@@ -2390,7 +2390,7 @@ export default function SettingsPage() {
 
       {/* ─── Email Templates ─────────────────────────────────────────────────── */}
       {sg === "Communications" && (<>
-      <div id="settings-email" className="bg-white rounded-xl border border-gray-200 p-6 mt-6 scroll-mt-6">
+      <div id="settings-email" className="card mt-6 scroll-mt-6">
         <h2 className="font-semibold text-charcoal text-base mb-1">Email Templates</h2>
         <p className="text-sm text-gray-500 mb-4">
           Customize what each email says. Click any <span className="font-medium text-navy">insert field</span> button to add dynamic content like the client name or property address.
@@ -2558,7 +2558,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Notification channel toggles */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+      <div className="card mt-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-semibold text-charcoal text-base">Notification Channels</h2>
           <button onClick={saveNotifPrefs} disabled={savingNotifs} className="btn-primary px-5 py-2 text-sm">
@@ -2593,7 +2593,7 @@ export default function SettingsPage() {
 
       {/* Integrations */}
       {sg === "Integrations" && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+        <div className="card mt-6">
           <h2 className="font-semibold text-charcoal text-base mb-1">Integrations</h2>
           <p className="text-sm text-gray-500">More integrations coming soon.</p>
         </div>

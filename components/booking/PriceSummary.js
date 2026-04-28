@@ -69,7 +69,7 @@ export default function PriceSummary({ showDeposit = false, catalog = null }) {
         </div>
 
         {showDeposit && subtotal > 0 && (
-          <div className="bg-cream rounded-sm p-3 mt-2 space-y-1">
+          <div className="bg-cream rounded-xl p-3 mt-2 space-y-1">
             <div className="flex justify-between text-gold-dark font-medium">
               <span>Deposit due today (50%)</span>
               <span>{formatPrice(deposit)}</span>

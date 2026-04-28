@@ -346,25 +346,25 @@ export default function ReportsPage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Revenue Collected", value: `$${totalRevenue.toLocaleString()}`,  sub: `from ${paidDeposit} paid bookings` },
-          { label: "Total Orders",      value: totalBookings,                          sub: "in period" },
-          { label: "Avg Order Value",   value: `$${avgOrder.toLocaleString()}`,         sub: "all services" },
-          { label: "Galleries Delivered", value: delivered,                            sub: `of ${totalBookings} bookings` },
+          { label: "Revenue Collected",   value: `$${totalRevenue.toLocaleString()}`, sub: `from ${paidDeposit} paid bookings`, variant: "stat-card-gold" },
+          { label: "Total Orders",        value: totalBookings,                        sub: "in period",                         variant: "stat-card-navy" },
+          { label: "Avg Order Value",     value: `$${avgOrder.toLocaleString()}`,      sub: "all services",                      variant: "stat-card-green" },
+          { label: "Galleries Delivered", value: delivered,                            sub: `of ${totalBookings} bookings`,       variant: "stat-card" },
         ].map((s) => (
-          <div key={s.label} className="bg-white border border-gray-200 rounded-sm p-5">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{s.label}</p>
-            <p className="text-2xl font-bold font-display text-navy">{s.value}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>
+          <div key={s.label} className={s.variant}>
+            <p className="text-[11px] text-gray-400 uppercase tracking-[0.06em] font-semibold mb-2">{s.label}</p>
+            <p className="text-2xl font-bold text-[#0F172A]">{s.value}</p>
+            <p className="text-xs text-gray-400 mt-1">{s.sub}</p>
           </div>
         ))}
       </div>
 
       {/* Profit & Loss summary */}
-      <div className="bg-white border border-gray-200 rounded-sm p-5 mb-8">
+      <div className="card mb-8">
         <div className="flex items-center justify-between mb-4">
           <p className="font-semibold text-charcoal text-sm">Profit &amp; Loss</p>
           {withCosts === 0 && (
-            <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-sm">
+            <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">
               No costs logged yet — add costs on individual booking pages
             </span>
           )}
@@ -421,12 +421,12 @@ export default function ReportsPage() {
 
       {/* Revenue + Orders charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white border border-gray-200 rounded-sm p-5">
+        <div className="card">
           <div className="flex items-center justify-between mb-4">
             <p className="font-semibold text-charcoal text-sm">Revenue Per Month</p>
             <div className="flex items-center gap-3 text-xs text-gray-400">
-              <span className="flex items-center gap-1"><span className="w-3 h-2 bg-navy rounded-sm inline-block" /> Revenue</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-2 bg-gold/60 rounded-sm inline-block" /> Cost</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-2 bg-navy rounded-lg inline-block" /> Revenue</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-2 bg-gold/60 rounded-lg inline-block" /> Cost</span>
             </div>
           </div>
           {revenueByMonth.length > 0
@@ -434,7 +434,7 @@ export default function ReportsPage() {
             : <p className="text-gray-400 text-sm py-8 text-center">No data for this period</p>
           }
         </div>
-        <div className="bg-white border border-gray-200 rounded-sm p-5">
+        <div className="card">
           <p className="font-semibold text-charcoal text-sm mb-4">Bookings Per Month</p>
           {ordersByMonth.length > 0
             ? <BarChart data={ordersByMonth} valueKey="count" labelKey="label" color="bg-gold" prefix="" formatVal={(v) => `${v} orders`} />
@@ -445,7 +445,7 @@ export default function ReportsPage() {
 
       {/* Service breakdown + Status + Top agents */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white border border-gray-200 rounded-sm p-5">
+        <div className="card">
           <p className="font-semibold text-charcoal text-sm mb-4">Revenue by Service</p>
           {byService.length === 0
             ? <p className="text-gray-400 text-sm">No data</p>
@@ -470,7 +470,7 @@ export default function ReportsPage() {
           }
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-sm p-5">
+        <div className="card">
           <p className="font-semibold text-charcoal text-sm mb-4">Booking Status</p>
           {statusBreakdown.length === 0
             ? <p className="text-gray-400 text-sm">No data</p>
@@ -483,7 +483,7 @@ export default function ReportsPage() {
                     return (
                       <div key={status}>
                         <div className="flex justify-between text-xs mb-0.5">
-                          <span className={`px-1.5 py-0.5 rounded-sm font-medium ${STATUS_COLORS[status] || "bg-gray-100 text-gray-500"}`}>
+                          <span className={`px-1.5 py-0.5 rounded-lg font-medium ${STATUS_COLORS[status] || "bg-gray-100 text-gray-500"}`}>
                             {STATUS_LABELS[status] || status}
                           </span>
                           <span className="text-gray-500 font-medium">{count} <span className="text-gray-300">({pct}%)</span></span>
@@ -497,7 +497,7 @@ export default function ReportsPage() {
           }
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-sm p-5">
+        <div className="card">
           <p className="font-semibold text-charcoal text-sm mb-4">Top Agents</p>
           {topAgents.length === 0
             ? <p className="text-gray-400 text-sm">No data</p>
@@ -525,7 +525,7 @@ export default function ReportsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Upsell intelligence */}
-        <div className="bg-white border border-gray-200 rounded-sm p-5">
+        <div className="card">
           <p className="font-semibold text-charcoal text-sm mb-1">Upsell Intelligence</p>
           <p className="text-xs text-gray-400 mb-4">Services most frequently booked together</p>
           {upsellData.length === 0 ? (
@@ -553,7 +553,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Client retention */}
-        <div className="bg-white border border-gray-200 rounded-sm p-5">
+        <div className="card">
           <p className="font-semibold text-charcoal text-sm mb-1">Client Retention</p>
           <p className="text-xs text-gray-400 mb-4">Repeat vs. new clients in period</p>
           <div className="flex items-center gap-6 mb-4">

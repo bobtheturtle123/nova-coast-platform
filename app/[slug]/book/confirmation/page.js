@@ -99,7 +99,7 @@ function ConfirmationContent() {
         </div>
 
         {/* What's next */}
-        <div className="bg-navy/4 rounded-sm p-5 mb-8 space-y-3">
+        <div className="bg-navy/4 rounded-xl p-5 mb-8 space-y-3">
           <p className="font-semibold text-navy text-sm">What happens next?</p>
           <ol className="space-y-2 text-sm text-gray-600">
             {[

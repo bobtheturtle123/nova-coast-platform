@@ -80,9 +80,9 @@ export default function RegisterPage() {
           <p className="text-gray-500 text-sm mt-2">Create your account — 14 days free</p>
         </div>
 
-        <div className="bg-white rounded-sm border border-gray-200 p-8 shadow-sm">
+        <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-sm mb-6">
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6">
               {error}
             </div>
           )}

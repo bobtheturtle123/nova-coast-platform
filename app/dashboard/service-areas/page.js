@@ -356,7 +356,7 @@ export default function ServiceAreasPage() {
   if (!MAPBOX_TOKEN) {
     return (
       <div className="p-6">
-        <h1 className="font-semibold text-xl text-charcoal mb-2">Service Areas</h1>
+        <h1 className="page-title mb-2">Service Areas</h1>
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
           <p className="font-medium text-amber-800 mb-1">Mapbox token required</p>
           <p className="text-sm text-amber-700">
@@ -371,7 +371,7 @@ export default function ServiceAreasPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-semibold text-xl text-charcoal">Service Areas</h1>
+          <h1 className="page-title">Service Areas</h1>
           <p className="text-gray-400 text-sm mt-0.5">Draw zones where you work and assign photographers to each area</p>
         </div>
         {!drawingMode && (
@@ -424,7 +424,7 @@ export default function ServiceAreasPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-card" style={{ height: 520 }}>
+          <div className="card-section" style={{ height: 520 }}>
             {!mapsReady && (
               <div className="w-full h-full flex items-center justify-center">
                 <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
@@ -444,7 +444,7 @@ export default function ServiceAreasPage() {
           )}
 
           {!loading && visibleZones.length === 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6 text-center shadow-card">
+            <div className="card text-center shadow-card">
               <p className="text-sm text-gray-400">{filterPhotog === "all" ? "No zones yet." : "No zones for this photographer."}</p>
               <p className="text-xs text-gray-400 mt-1">{filterPhotog === "all" ? 'Click "Draw New Zone" to start.' : "Draw a zone and assign them to it."}</p>
             </div>
@@ -452,7 +452,7 @@ export default function ServiceAreasPage() {
 
           {visibleZones.map((zone) => (
             <div key={zone.id} onClick={() => setEditing(zone)}
-              className="bg-white rounded-xl border border-gray-200 p-4 shadow-card cursor-pointer hover:shadow-card-hover hover:-translate-y-0.5 transition-all">
+              className="card-hover p-4">
               <div className="flex items-center gap-2.5 mb-1">
                 <div className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ background: zone.type === "exclude" ? "#EF4444" : (zone.color || "#3B82F6") }} />

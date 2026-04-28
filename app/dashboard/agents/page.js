@@ -50,10 +50,10 @@ function TeamGroupModal({ group, allAgents, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white">
+    <div className="modal-backdrop">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="modal-card relative w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 sticky top-0 bg-white" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <h2 className="font-semibold text-charcoal">{isEdit ? "Edit Team" : "New Team"}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
@@ -143,10 +143,10 @@ function CustomerModal({ agent, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+    <div className="modal-backdrop">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="modal-card relative w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <h2 className="font-semibold text-charcoal">{isEdit ? "Edit Customer" : "New Customer"}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
@@ -312,8 +312,8 @@ export default function AgentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-semibold text-xl text-charcoal">Customers</h1>
-          <p className="text-gray-400 text-sm mt-0.5">
+          <h1 className="page-title">Customers</h1>
+          <p className="page-subtitle">
             {agents.length} customer{agents.length !== 1 ? "s" : ""} · ${totalRevenue.toLocaleString()} total revenue
           </p>
         </div>
@@ -362,7 +362,7 @@ export default function AgentsPage() {
               {teams.map((team) => {
                 const memberAgents = team.members?.map((id) => agents.find((a) => a.id === id)).filter(Boolean) || [];
                 return (
-                  <div key={team.id} className="bg-white rounded-xl border border-gray-200 p-5 shadow-card">
+                  <div key={team.id} className="card">
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <p className="font-semibold text-charcoal">{team.name}</p>
@@ -412,13 +412,13 @@ export default function AgentsPage() {
           {agents.length > 0 && (
             <div className="grid grid-cols-3 gap-4 mb-6">
               {[
-                { label: "Total Customers", value: agents.length },
-                { label: "Total Revenue",   value: `$${totalRevenue.toLocaleString()}` },
-                { label: "Top Customer",    value: topAgent?.name || "—", sub: topAgent ? `${topAgent.totalOrders} orders` : null },
+                { label: "Total Customers", value: agents.length,                        variant: "stat-card-navy" },
+                { label: "Total Revenue",   value: `$${totalRevenue.toLocaleString()}`,   variant: "stat-card-gold" },
+                { label: "Top Customer",    value: topAgent?.name || "—", sub: topAgent ? `${topAgent.totalOrders} orders` : null, variant: "stat-card" },
               ].map((s) => (
-                <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{s.label}</p>
-                  <p className="text-xl font-semibold text-charcoal truncate">{s.value}</p>
+                <div key={s.label} className={s.variant}>
+                  <p className="text-[11px] text-gray-400 uppercase tracking-[0.06em] font-semibold mb-2">{s.label}</p>
+                  <p className="text-xl font-semibold text-[#0F172A] truncate">{s.value}</p>
                   {s.sub && <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>}
                 </div>
               ))}
@@ -456,9 +456,9 @@ export default function AgentsPage() {
               No customers match your search.
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="card-section">
               {/* Header row */}
-              <div className="grid grid-cols-12 px-5 py-3 text-xs text-gray-400 uppercase tracking-wide font-medium border-b border-gray-100">
+              <div className="grid grid-cols-12 px-5 py-3 text-[11px] text-gray-400 uppercase tracking-[0.06em] font-semibold" style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--bg-subtle)" }}>
                 <div className="col-span-4">Customer</div>
                 <div className="col-span-3">Contact</div>
                 <div className="col-span-2 text-right">Orders</div>
@@ -467,7 +467,9 @@ export default function AgentsPage() {
               </div>
 
               {filtered.map((agent) => (
-                <div key={agent.id} className="grid grid-cols-12 px-5 py-3.5 items-center hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-b-0">
+                <div key={agent.id} className="grid grid-cols-12 px-5 py-3.5 items-center transition-colors last:border-b-0" style={{ borderBottom: "1px solid var(--border-subtle)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgb(15 23 42 / 0.018)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}>
                   {/* Name + avatar */}
                   <div className="col-span-4 flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-full bg-navy/8 flex items-center justify-center text-navy font-semibold text-sm flex-shrink-0">

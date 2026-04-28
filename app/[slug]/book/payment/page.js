@@ -43,7 +43,7 @@ function PaymentForm({ chargeAmount, payLabel, onSuccess }) {
         <PaymentElement options={{ layout: "tabs", wallets: { applePay: "auto", googlePay: "auto" } }} />
       </div>
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-sm p-3">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3">
           <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
@@ -165,7 +165,7 @@ function OrderSummary({ pricing, catalog, packageId, serviceIds, addonIds, addre
         )}
       </div>
 
-      <div className="bg-cream rounded-sm p-3 text-xs text-gray-500 leading-relaxed">
+      <div className="bg-cream rounded-xl p-3 text-xs text-gray-500 leading-relaxed">
         {payFull
           ? "Paid in full — media will be available for immediate download."
           : "Booking shows as Requested until confirmed. Remaining balance is due when media is delivered."}
@@ -328,7 +328,7 @@ export default function TenantPaymentPage() {
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-charcoal text-sm uppercase tracking-wider">Your Information</p>
                 {lookupState === "found" && (
-                  <span className="text-xs px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-sm font-medium">
+                  <span className="text-xs px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-xl font-medium">
                     Welcome back!
                   </span>
                 )}
@@ -390,17 +390,17 @@ export default function TenantPaymentPage() {
                 <>
                   {/* Pay in full toggle — only shown when deposit is configured */}
                   {!noDeposit && deposit > 0 && deposit < (pricing?.subtotal ?? 0) && (
-                    <div className="border border-gray-200 rounded-sm p-3 space-y-2">
+                    <div className="border border-gray-200 rounded-xl p-3 space-y-2">
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment option</p>
                       <div className="flex gap-2">
                         <button type="button" onClick={() => setPayFull(false)}
-                          className={`flex-1 py-2.5 px-3 border rounded-sm text-sm font-medium transition-colors ${
+                          className={`flex-1 py-2.5 px-3 border rounded-xl text-sm font-medium transition-colors ${
                             !payFull ? "border-navy bg-navy/5 text-navy" : "border-gray-200 text-gray-500 hover:border-gray-300"
                           }`}>
                           {depositLabel(depositConfig)} — ${deposit?.toLocaleString()}
                         </button>
                         <button type="button" onClick={() => setPayFull(true)}
-                          className={`flex-1 py-2.5 px-3 border rounded-sm text-sm font-medium transition-colors ${
+                          className={`flex-1 py-2.5 px-3 border rounded-xl text-sm font-medium transition-colors ${
                             payFull ? "border-navy bg-navy/5 text-navy" : "border-gray-200 text-gray-500 hover:border-gray-300"
                           }`}>
                           Pay in full — ${pricing?.subtotal?.toLocaleString()}
@@ -415,14 +415,14 @@ export default function TenantPaymentPage() {
                   )}
 
                   {/* Tip selector */}
-                  <div className="border border-gray-200 rounded-sm p-3 space-y-2">
+                  <div className="border border-gray-200 rounded-xl p-3 space-y-2">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Add a tip <span className="font-normal text-gray-400">(optional)</span>
                     </p>
                     <div className="flex gap-2 flex-wrap">
                       {[0, 25, 50, 100].map((amt) => (
                         <button key={amt} type="button" onClick={() => { setTip(amt); setCustomTip(""); }}
-                          className={`px-3 py-1.5 border rounded-sm text-sm transition-colors ${
+                          className={`px-3 py-1.5 border rounded-xl text-sm transition-colors ${
                             tip === amt && customTip === ""
                               ? "border-navy bg-navy/5 text-navy font-medium"
                               : "border-gray-200 text-gray-600 hover:border-gray-300"
@@ -480,11 +480,11 @@ export default function TenantPaymentPage() {
 
                   {/* Service Agreement signing */}
                   {catalog?.bookingConfig?.serviceAgreement?.enabled && (
-                    <div className="space-y-3 border border-gray-200 rounded-sm p-4">
+                    <div className="space-y-3 border border-gray-200 rounded-xl p-4">
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Service Agreement</p>
                       {!contractSigned ? (
                         <>
-                          <div className="h-48 overflow-y-auto bg-gray-50 border border-gray-200 rounded-sm p-3 text-xs text-gray-600 font-mono leading-relaxed whitespace-pre-wrap">
+                          <div className="h-48 overflow-y-auto bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-600 font-mono leading-relaxed whitespace-pre-wrap">
                             {catalog.bookingConfig.serviceAgreement.text}
                           </div>
                           <div>
@@ -515,7 +515,7 @@ export default function TenantPaymentPage() {
                           )}
                         </>
                       ) : (
-                        <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-sm p-3">
+                        <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl p-3">
                           <span className="text-green-600 text-lg leading-none">✓</span>
                           <div>
                             <p className="text-sm font-medium text-green-800">Agreement signed</p>
@@ -539,7 +539,7 @@ export default function TenantPaymentPage() {
                 </>
               )}
               {initError && (
-                <div className="bg-red-50 border border-red-200 rounded-sm p-3">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3">
                   <p className="text-sm text-red-700">{initError}</p>
                 </div>
               )}

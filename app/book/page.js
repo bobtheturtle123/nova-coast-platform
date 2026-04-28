@@ -41,7 +41,7 @@ export default function BookPage() {
                 key={pkg.id}
                 onClick={() => setPackage(pkg.id)}
                 className={clsx(
-                  "relative text-left p-6 border rounded-sm transition-all duration-200",
+                  "relative text-left p-6 border rounded-xl transition-all duration-200",
                   "focus:outline-none",
                   selected
                     ? "border-navy bg-navy text-white shadow-lg"
@@ -133,7 +133,7 @@ export default function BookPage() {
                 key={svc.id}
                 onClick={() => toggleService(svc.id)}
                 className={clsx(
-                  "text-left p-5 border rounded-sm transition-all duration-200",
+                  "text-left p-5 border rounded-xl transition-all duration-200",
                   "flex items-start justify-between gap-4 focus:outline-none",
                   selected
                     ? "border-navy bg-navy/5 shadow-sm"

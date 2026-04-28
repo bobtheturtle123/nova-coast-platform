@@ -25,8 +25,8 @@ export default function TenantBookHeader({ tenant }) {
   if (isEmbed) return null;
 
   return (
-    <header className="bg-white/90 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-30">
-      <div className="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between">
+    <header className="bg-white/95 backdrop-blur-md sticky top-0 z-30" style={{ borderBottom: "1px solid var(--border-subtle)", boxShadow: "0 1px 3px 0 rgb(0 0 0/0.04)" }}>
+      <div className="max-w-3xl mx-auto px-5 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {tenant.branding?.logoUrl ? (
             <img src={tenant.branding.logoUrl} alt={name} className="h-7 w-auto object-contain" />

@@ -98,12 +98,12 @@ function BalanceForm({ clientSecret, balance, onSuccess, primary }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="p-4 border border-gray-200 rounded-sm">
+      <div className="p-4 border border-gray-200 rounded-xl">
         <PaymentElement />
       </div>
       {error && <p className="text-red-600 text-sm">{error}</p>}
       <button type="submit" disabled={!stripe || loading}
-        className="w-full py-3 rounded-sm font-semibold text-sm"
+        className="w-full py-3 rounded-xl font-semibold text-sm"
         style={{ background: primary, color: "#fff" }}>
         {loading ? "Processing…" : `Pay balance — $${balance}`}
       </button>
@@ -126,7 +126,7 @@ function CopyLinkButton() {
           setTimeout(() => setCopied(false), 2000);
         });
       }}
-      className="flex items-center gap-1.5 px-3 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider text-white border border-white/60 hover:bg-white/10 transition-colors"
+      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider text-white border border-white/60 hover:bg-white/10 transition-colors"
     >
       {copied ? "Copied!" : "Copy Link"}
     </button>
@@ -221,7 +221,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             {unlocked && images.length > 0 && (
               <a
                 href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web`}
-                className="flex items-center gap-2 px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider text-white border border-white/60 hover:bg-white/10 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-white border border-white/60 hover:bg-white/10 transition-colors"
                 download
               >
                 ↓ Download All
@@ -265,7 +265,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
 
         {/* Preview-only notice */}
         {!unlocked && balance <= 0 && (
-          <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 rounded-sm text-sm text-amber-800 flex items-center gap-2">
+          <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-center gap-2">
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -276,7 +276,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
 
         {/* Balance gate */}
         {!unlocked && balance > 0 && (
-          <div className="bg-white rounded-sm border border-gray-200 p-6 mb-8 max-w-lg">
+          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-8 max-w-lg">
             <h2 className="font-display text-xl text-gray-900 mb-2">Unlock full downloads</h2>
             <p className="text-gray-500 text-sm mb-4">
               Pay your remaining balance of <strong>${balance}</strong> to download full-resolution files.
@@ -284,7 +284,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             {payMsg && <p className="text-sm mb-4 text-blue-600">{payMsg}</p>}
             {!clientSecret && (
               <button onClick={startBalancePayment} disabled={loadingPay}
-                className="py-2 px-6 rounded-sm font-semibold text-sm text-white"
+                className="py-2 px-6 rounded-xl font-semibold text-sm text-white"
                 style={{ background: primary }}>
                 {loadingPay ? "Loading…" : `Pay $${balance}`}
               </button>
@@ -300,7 +300,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         )}
 
         {payMsg && unlocked && (
-          <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-sm mb-6">
+          <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-xl mb-6">
             {payMsg}
           </div>
         )}
@@ -333,7 +333,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
               <>
                 {/* Download all buttons */}
                 {unlocked && (
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5 p-4 bg-white rounded-sm border border-gray-200">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5 p-4 bg-white rounded-xl border border-gray-200">
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-gray-800">Download All Photos</p>
                       <p className="text-xs text-gray-400 mt-0.5">
@@ -364,7 +364,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {images.map((m, i) => (
-                    <div key={i} className="group relative rounded-sm overflow-hidden bg-gray-200 aspect-[4/3]"
+                    <div key={i} className="group relative rounded-xl overflow-hidden bg-gray-200 aspect-[4/3]"
                       onClick={() => setLightboxIdx(i)} style={{ cursor: "pointer" }}>
                       <img
                         src={m.url}
@@ -447,7 +447,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           <div className="space-y-4">
             {/* YouTube / Vimeo embed */}
             {videoUrl && (
-              <div className="rounded-sm overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
+              <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
                 <iframe
                   src={toEmbedUrl(videoUrl)}
                   title="Video Tour"
@@ -462,7 +462,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             {videos.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {videos.map((v, i) => (
-                  <div key={i} className="rounded-sm overflow-hidden bg-gray-900 aspect-video relative group">
+                  <div key={i} className="rounded-xl overflow-hidden bg-gray-900 aspect-video relative group">
                     <video src={v.url} className="w-full h-full object-cover" controls />
                     {unlocked && v.key && (
                       <a
@@ -483,7 +483,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         {activeTab === "3d" && (
           <div className="space-y-5">
             {matterportUrl && (
-              <div className="rounded-sm overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
+              <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
                 <iframe
                   src={matterportUrl}
                   title="3D Interactive Tour"
@@ -496,8 +496,8 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             )}
             {virtualLinks.map((l, i) => (
               <a key={i} href={l.url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-sm hover:border-gray-300 hover:shadow-sm transition-all group">
-                <div className="w-9 h-9 rounded-sm flex items-center justify-center flex-shrink-0"
+                className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all group">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{ background: primary + "15" }}>
                   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" style={{ color: primary }}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -516,7 +516,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         {activeTab === "floorplans" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {floorPlans.map((fp, i) => (
-              <div key={i} className="bg-white border border-gray-100 rounded-sm overflow-hidden">
+              <div key={i} className="bg-white border border-gray-100 rounded-xl overflow-hidden">
                 {fp.fileType?.includes("pdf") ? (
                   <a href={fp.url} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-3 p-5 hover:bg-gray-50 transition-colors">
@@ -549,7 +549,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             {attachedFiles.map((f, i) => (
               <a key={i} href={f.url} target="_blank" rel="noopener noreferrer"
                 download={f.fileName}
-                className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-sm hover:border-gray-300 hover:shadow-sm transition-all group">
+                className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all group">
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 flex-shrink-0">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>

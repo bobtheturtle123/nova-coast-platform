@@ -22,7 +22,7 @@ export default function MarketingPage() {
           <div className="flex items-center gap-3">
             <Link href="/auth/login" className="text-sm text-gray-600 hover:text-navy px-3 py-2 transition-colors">Sign in</Link>
             <Link href="/auth/register"
-              className="text-sm bg-navy text-white px-4 py-2 rounded-sm hover:bg-navy/90 transition-colors font-medium">
+              className="text-sm bg-navy text-white px-4 py-2 rounded-xl hover:bg-navy/90 transition-colors font-medium">
               Start free trial
             </Link>
           </div>
@@ -46,11 +46,11 @@ export default function MarketingPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/auth/register"
-                  className="bg-gold text-navy font-semibold px-8 py-4 rounded-sm hover:bg-gold/90 transition-colors text-center">
+                  className="bg-gold text-navy font-semibold px-8 py-4 rounded-xl hover:bg-gold/90 transition-colors text-center">
                   Start your 14-day free trial
                 </Link>
                 <a href="#features"
-                  className="border border-white/30 text-white px-8 py-4 rounded-sm hover:bg-white/5 transition-colors text-center">
+                  className="border border-white/30 text-white px-8 py-4 rounded-xl hover:bg-white/5 transition-colors text-center">
                   See what's included
                 </a>
               </div>
@@ -227,7 +227,7 @@ export default function MarketingPage() {
                 ))}
               </ul>
               <Link href="/auth/register"
-                className="inline-block bg-navy text-white font-semibold px-7 py-3 rounded-sm hover:bg-navy/90 transition-colors text-sm">
+                className="inline-block bg-navy text-white font-semibold px-7 py-3 rounded-xl hover:bg-navy/90 transition-colors text-sm">
                 Start free trial →
               </Link>
             </div>
@@ -432,7 +432,7 @@ export default function MarketingPage() {
             Booking, payment collection, and media delivery. Fully automated, starting at $79/mo.
           </p>
           <Link href="/auth/register"
-            className="inline-block bg-gold text-navy font-semibold px-10 py-4 rounded-sm hover:bg-gold/90 transition-colors text-base">
+            className="inline-block bg-gold text-navy font-semibold px-10 py-4 rounded-xl hover:bg-gold/90 transition-colors text-base">
             Start free, no credit card needed
           </Link>
           <p className="text-white/30 text-xs mt-5">14-day free trial · No contract · Cancel anytime</p>

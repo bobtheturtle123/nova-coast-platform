@@ -23,7 +23,7 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
       onDrop={!selectMode ? onDrop : undefined}
       onDragEnd={!selectMode ? onDragEnd : undefined}
       onClick={selectMode ? (e) => { e.stopPropagation(); onSelect?.(); } : undefined}
-      className={`aspect-square rounded-sm overflow-hidden bg-gray-100 relative group
+      className={`aspect-square rounded-xl overflow-hidden bg-gray-100 relative group
         ${selectMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}
         ${isDragging ? "opacity-40 scale-95" : ""}
         ${selected ? "ring-2 ring-gold ring-offset-1" : ""}
@@ -97,17 +97,17 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
 
       {isFirst && !selected && (
         <div className="absolute top-1.5 left-7">
-          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-sm bg-navy text-white">Cover</span>
+          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-xl bg-navy text-white">Cover</span>
         </div>
       )}
       {hidden && (
         <div className="absolute top-1.5 left-7">
-          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm bg-gray-700/80 text-white">Hidden</span>
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-xl bg-gray-700/80 text-white">Hidden</span>
         </div>
       )}
       {category && (
         <div className="absolute bottom-6 right-1.5">
-          <span className="text-xs font-medium px-1.5 py-0.5 rounded-sm bg-black/60 text-white truncate max-w-[80px]">{category}</span>
+          <span className="text-xs font-medium px-1.5 py-0.5 rounded-xl bg-black/60 text-white truncate max-w-[80px]">{category}</span>
         </div>
       )}
       <div className="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-full bg-black/50 text-white text-xs flex items-center justify-center font-bold">
@@ -131,7 +131,7 @@ function EmailTagInput({ label, value, onChange, placeholder }) {
       <div className="input-field min-h-10 flex flex-wrap gap-1.5 p-2 cursor-text"
         onClick={(e) => e.currentTarget.querySelector("input")?.focus()}>
         {value.map((email, i) => (
-          <span key={i} className="inline-flex items-center gap-1 bg-navy/10 text-navy text-xs px-2 py-0.5 rounded-sm">
+          <span key={i} className="inline-flex items-center gap-1 bg-navy/10 text-navy text-xs px-2 py-0.5 rounded-xl">
             {email}
             <button onClick={() => onChange(value.filter((_, idx) => idx !== i))} className="hover:text-red-500 leading-none text-base">&times;</button>
           </span>
@@ -192,7 +192,7 @@ function RichTextEditor({ value, onChange, placeholder }) {
   );
 
   return (
-    <div className="border border-gray-200 rounded-sm overflow-hidden">
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
       {/* Toolbar */}
       <div className="flex items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200 flex-wrap">
         <ToolBtn cmd="bold"   title="Bold">   <strong>B</strong></ToolBtn>
@@ -929,7 +929,7 @@ export default function GalleryDetailPage() {
         )}
 
         {/* Upload zone */}
-        <div className="border-2 border-dashed border-gray-200 rounded-sm p-6 mb-6 text-center cursor-pointer hover:border-navy/40 hover:bg-gray-50 transition-colors"
+        <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 mb-6 text-center cursor-pointer hover:border-navy/40 hover:bg-gray-50 transition-colors"
           onClick={() => !uploading && fileRef.current?.click()}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
@@ -982,7 +982,7 @@ export default function GalleryDetailPage() {
                 )}
                 <button
                   onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
-                  className={`text-xs px-3 py-1 rounded-sm border font-medium transition-colors ${
+                  className={`text-xs px-3 py-1 rounded-xl border font-medium transition-colors ${
                     selectMode
                       ? "border-navy bg-navy text-white"
                       : "border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy"
@@ -996,7 +996,7 @@ export default function GalleryDetailPage() {
               <>
                 {/* Bulk selection toolbar */}
                 {(selectMode || selectedKeys.size > 0) && (
-                  <div className="flex items-center gap-3 bg-navy/5 border border-navy/20 rounded-sm px-3 py-2 mb-3 flex-wrap">
+                  <div className="flex items-center gap-3 bg-navy/5 border border-navy/20 rounded-xl px-3 py-2 mb-3 flex-wrap">
                     <span className="text-sm font-semibold text-navy">
                       {selectedKeys.size > 0 ? `${selectedKeys.size} selected` : "Tap photos to select"}
                     </span>
@@ -1072,11 +1072,11 @@ export default function GalleryDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {videos.map((v, i) => (
                   <div key={v.key || i} className={`group relative ${v.hidden ? "opacity-50" : ""}`}>
-                    <video src={v.url} controls className="w-full rounded-sm" />
+                    <video src={v.url} controls className="w-full rounded-xl" />
                     <div className="flex items-center justify-between mt-1">
                       <div className="flex items-center gap-2 min-w-0">
                         <p className="text-xs text-gray-400 truncate">{v.fileName}</p>
-                        {v.hidden && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm bg-gray-200 text-gray-500 flex-shrink-0">Hidden</span>}
+                        {v.hidden && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-xl bg-gray-200 text-gray-500 flex-shrink-0">Hidden</span>}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <button
@@ -1107,9 +1107,9 @@ export default function GalleryDetailPage() {
           <p className="text-xs text-gray-400 mb-5">Add 3D tours, floor plans, and documents — all delivered alongside photos in the client gallery.</p>
 
           {/* 3D / Matterport */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-card mb-4">
+          <div className="card shadow-card mb-4">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-sm bg-navy/8 flex items-center justify-center flex-shrink-0">
+              <div className="w-7 h-7 rounded-xl bg-navy/8 flex items-center justify-center flex-shrink-0">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                 </svg>
@@ -1151,9 +1151,9 @@ export default function GalleryDetailPage() {
           </div>
 
           {/* Video Tour URL */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-card mb-4">
+          <div className="card shadow-card mb-4">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-sm bg-navy/8 flex items-center justify-center flex-shrink-0">
+              <div className="w-7 h-7 rounded-xl bg-navy/8 flex items-center justify-center flex-shrink-0">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
                 </svg>
@@ -1195,10 +1195,10 @@ export default function GalleryDetailPage() {
           </div>
 
           {/* Floor Plans */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-card mb-4">
+          <div className="card shadow-card mb-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-sm bg-navy/8 flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 rounded-xl bg-navy/8 flex items-center justify-center flex-shrink-0">
                   <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                   </svg>
@@ -1220,7 +1220,7 @@ export default function GalleryDetailPage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {floorPlans.map((fp, i) => (
-                  <div key={fp.key || i} className={`relative group rounded-sm overflow-hidden border border-gray-100 bg-gray-50 ${fp.hidden ? "opacity-50" : ""}`}>
+                  <div key={fp.key || i} className={`relative group rounded-xl overflow-hidden border border-gray-100 bg-gray-50 ${fp.hidden ? "opacity-50" : ""}`}>
                     {fp.fileType?.includes("pdf") ? (
                       <a href={fp.url} target="_blank" rel="noopener noreferrer"
                         className="flex items-center gap-2 p-3 text-xs text-navy font-medium hover:bg-gray-100 transition-colors">
@@ -1234,7 +1234,7 @@ export default function GalleryDetailPage() {
                     )}
                     {fp.hidden && (
                       <div className="absolute top-1 left-1">
-                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm bg-gray-700/80 text-white">Hidden</span>
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-xl bg-gray-700/80 text-white">Hidden</span>
                       </div>
                     )}
                     {/* Hide toggle */}
@@ -1263,10 +1263,10 @@ export default function GalleryDetailPage() {
           </div>
 
           {/* Attached files / documents */}
-          <div className="bg-white border border-gray-100 rounded-sm p-5 shadow-sm">
+          <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-sm bg-navy/8 flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 rounded-xl bg-navy/8 flex items-center justify-center flex-shrink-0">
                   <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                   </svg>
@@ -1288,13 +1288,13 @@ export default function GalleryDetailPage() {
             ) : (
               <div className="space-y-1.5">
                 {attachedFiles.map((f, i) => (
-                  <div key={f.key || i} className={`flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-sm group ${f.hidden ? "opacity-50" : ""}`}>
+                  <div key={f.key || i} className={`flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl group ${f.hidden ? "opacity-50" : ""}`}>
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 flex-shrink-0">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
                     <a href={f.url} target="_blank" rel="noopener noreferrer"
                       className="text-xs text-navy hover:underline truncate flex-1">{f.fileName}</a>
-                    {f.hidden && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm bg-gray-200 text-gray-500 flex-shrink-0">Hidden</span>}
+                    {f.hidden && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-xl bg-gray-200 text-gray-500 flex-shrink-0">Hidden</span>}
                     <span className="text-[10px] text-gray-300 flex-shrink-0">{f.fileType?.split("/")[1]?.toUpperCase() || "FILE"}</span>
                     <button
                       onClick={async () => {
@@ -1321,9 +1321,9 @@ export default function GalleryDetailPage() {
           </div>
 
           {/* ── Listing Links (Agent Hub) ─────────────────────────────────── */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-card mt-4">
+          <div className="card shadow-card mt-4">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-sm bg-navy/8 flex items-center justify-center flex-shrink-0">
+              <div className="w-7 h-7 rounded-xl bg-navy/8 flex items-center justify-center flex-shrink-0">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
@@ -1378,7 +1378,7 @@ export default function GalleryDetailPage() {
       {/* Category panel */}
       {showCatPanel && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-sm shadow-xl w-full max-w-md">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="font-display text-navy text-lg">Manage Categories</h2>
               <button onClick={() => setShowCatPanel(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
@@ -1411,7 +1411,7 @@ export default function GalleryDetailPage() {
               ) : (
                 <div className="space-y-1">
                   {catNames.map((cat) => (
-                    <div key={cat} className="flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-sm">
+                    <div key={cat} className="flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-xl">
                       <div>
                         <p className="text-sm font-medium text-charcoal">{cat}</p>
                         <p className="text-xs text-gray-400">{(categories[cat] || []).length} photos</p>
@@ -1435,7 +1435,7 @@ export default function GalleryDetailPage() {
       {/* Deliver modal */}
       {showDeliver && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[92vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[92vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
               <h2 className="font-display text-navy text-lg">Deliver Gallery</h2>
               <button onClick={() => setShowDeliver(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
@@ -1457,7 +1457,7 @@ export default function GalleryDetailPage() {
               </div>
 
               {/* Gallery access settings */}
-              <div className="bg-gray-50 border border-gray-200 rounded-sm p-4 space-y-3">
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Gallery Access</p>
                 <p className="text-xs text-gray-400">Recipients get view access via the link — no account needed. Emails listed here are recorded for your reference.</p>
                 <div className="flex items-center justify-between">
@@ -1505,7 +1505,7 @@ export default function GalleryDetailPage() {
 
               {/* Email preview */}
               {deliveryMode === "now" && (
-                <div className="bg-gray-50 border border-gray-200 rounded-sm p-4 text-sm text-gray-600 space-y-2">
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-600 space-y-2">
                   <p className="font-medium text-xs text-gray-400 uppercase tracking-wide mb-3">Email preview</p>
                   <p>Hi <strong>{gallery.clientName || "there"}</strong>,</p>
                   {emailNote && (

@@ -99,7 +99,7 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="font-display text-navy text-lg">{member ? "Edit Team Member" : "Add Team Member"}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
@@ -186,7 +186,7 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
                   {showServiceRates ? "Hide per-service rates" : "Set per-service rates (optional)"}
                 </button>
                 {showServiceRates && (
-                  <div className="mt-2 border border-gray-200 rounded-sm divide-y divide-gray-100">
+                  <div className="mt-2 border border-gray-200 rounded-xl divide-y divide-gray-100">
                     {form.skills.map((skillId) => {
                       const product = allProducts.find((p) => p.id === skillId);
                       if (!product) return null;
@@ -324,7 +324,7 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-md">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="font-display text-navy text-lg">Calendar Sync — {member.name}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
@@ -476,7 +476,7 @@ function BlockTimeModal({ members, onSave, onClose, timeBlocks, onDeleteBlock })
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-md">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="font-display text-navy text-lg">Block Time</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
@@ -558,7 +558,7 @@ function BlockTimeModal({ members, onSave, onClose, timeBlocks, onDeleteBlock })
               <p className="text-sm text-gray-400 text-center py-6">No time blocks set.</p>
             ) : (
               timeBlocks.map((b) => (
-                <div key={b.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-sm">
+                <div key={b.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-xl">
                   <div>
                     <p className="text-sm font-medium text-charcoal">{b.memberName} — {b.reason}</p>
                     <p className="text-xs text-gray-500 mt-0.5">
@@ -830,7 +830,7 @@ export default function TeamPage() {
       {members.length > 0 && (
         <div className="flex gap-3 flex-wrap mb-6">
           {members.map((m) => (
-            <div key={m.id} className="flex items-center gap-3 bg-white border border-gray-200 rounded-sm px-4 py-3 hover:shadow-sm transition-shadow">
+            <div key={m.id} className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3 hover:shadow-sm transition-shadow">
               <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
                 style={{ background: m.color || "#0b2a55" }}>
                 {m.name?.[0]?.toUpperCase() || "?"}
@@ -862,7 +862,7 @@ export default function TeamPage() {
       )}
 
       {/* Calendar section */}
-      <div className="bg-white border border-gray-200 rounded-sm overflow-hidden mb-6">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">
         {/* Calendar toolbar */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-wrap gap-2">
           <div className="flex items-center gap-3">
@@ -891,7 +891,7 @@ export default function TeamPage() {
 
           <div className="flex items-center gap-2">
             {/* View selector */}
-            <div className="flex border border-gray-200 rounded-sm overflow-hidden text-xs">
+            <div className="flex border border-gray-200 rounded-xl overflow-hidden text-xs">
               {[
                 { key: "2wk",   label: "2 Weeks" },
                 { key: "week",  label: "Week" },
@@ -1080,7 +1080,7 @@ export default function TeamPage() {
                       <p className="text-xs font-semibold text-charcoal">{member.name}</p>
                       <div className="flex gap-1 flex-wrap ml-1">
                         {(member.skills || []).slice(0, 4).map((s) => (
-                          <span key={s} className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-sm">{SKILL_LABELS[s] || s}</span>
+                          <span key={s} className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-xl">{SKILL_LABELS[s] || s}</span>
                         ))}
                         {(member.skills || []).length > 4 && <span className="text-xs text-gray-400">+{member.skills.length - 4} more</span>}
                       </div>
@@ -1104,7 +1104,7 @@ export default function TeamPage() {
                             )}
                             <div className="relative z-10">
                             {dayBlocks.map((bl) => (
-                              <div key={bl.id} className="text-xs border-l-2 px-1.5 py-0.5 rounded-sm mb-1 group"
+                              <div key={bl.id} className="text-xs border-l-2 px-1.5 py-0.5 rounded-xl mb-1 group"
                                 style={{ background: hexWithAlpha(member.color || "#0b2a55", 0.1), borderLeftColor: member.color || "#0b2a55" }}>
                                 <div className="flex items-center justify-between">
                                   <span className="font-medium truncate" style={{ color: member.color || "#0b2a55" }}>{bl.reason}</span>
@@ -1121,7 +1121,7 @@ export default function TeamPage() {
                             ))}
                             {dayEvents.map((ev) => (
                               <div key={ev.id} style={{ background: member.color + "22", borderLeftColor: member.color }}
-                                className="text-xs border-l-2 px-1.5 py-1 rounded-sm mb-1 truncate">
+                                className="text-xs border-l-2 px-1.5 py-1 rounded-xl mb-1 truncate">
                                 <p className="font-medium truncate" style={{ color: member.color }}>{ev.address}</p>
                                 {ev.preferredTime && <p className="text-gray-400 capitalize">{ev.preferredTime}</p>}
                               </div>
@@ -1150,7 +1150,7 @@ export default function TeamPage() {
                       return (
                         <div key={d.toISOString()} className="p-1 border-r last:border-r-0 border-gray-100 min-h-12">
                           {dayUnscheduled.map((b) => (
-                            <div key={b.id} className="text-xs bg-amber-50 border-l-2 border-amber-400 px-1.5 py-1 rounded-sm mb-1">
+                            <div key={b.id} className="text-xs bg-amber-50 border-l-2 border-amber-400 px-1.5 py-1 rounded-xl mb-1">
                               <p className="font-medium text-amber-700 truncate">{b.address}</p>
                               <p className="text-amber-500 capitalize">{b.preferredTime}</p>
                             </div>
@@ -1237,14 +1237,14 @@ export default function TeamPage() {
                 return (
                   <div key={d.toISOString()} className={`border-r last:border-r-0 border-b border-gray-100 min-h-28 p-1.5 relative ${isToday ? "bg-blue-50/30" : ""}`}>
                     {hasBlocks && (
-                      <div className="absolute inset-0 pointer-events-none rounded-sm"
+                      <div className="absolute inset-0 pointer-events-none rounded-xl"
                         style={{ background: "repeating-linear-gradient(-45deg, #fee2e2, #fee2e2 3px, transparent 3px, transparent 10px)", opacity: 0.5 }} />
                     )}
                     <p className={`text-xs font-bold mb-1 w-6 h-6 flex items-center justify-center rounded-full relative z-10 ${isToday ? "bg-navy text-white" : "text-charcoal"}`}>
                       {d.getDate()}
                     </p>
                     {dayBlocks.slice(0, 2).map((bl) => (
-                      <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1 py-0.5 rounded-sm mb-0.5 truncate relative z-10">
+                      <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1 py-0.5 rounded-xl mb-0.5 truncate relative z-10">
                         <span className="text-red-600 font-medium">{bl.reason || "Blocked"}</span>
                       </div>
                     ))}
@@ -1252,7 +1252,7 @@ export default function TeamPage() {
                       const member = members.find((m) => m.id === ev.photographerId);
                       return (
                         <div key={ev.id} style={{ background: (member?.color || "#0b2a55") + "22", borderLeftColor: member?.color || "#0b2a55" }}
-                          className="text-xs border-l-2 px-1 py-0.5 rounded-sm mb-0.5 truncate relative z-10">
+                          className="text-xs border-l-2 px-1 py-0.5 rounded-xl mb-0.5 truncate relative z-10">
                           <span style={{ color: member?.color || "#0b2a55" }} className="font-medium">{ev.address?.split(",")[0]}</span>
                         </div>
                       );
@@ -1286,7 +1286,7 @@ export default function TeamPage() {
                   });
                   const isBlocked = dayBlocks.length > 0;
                   return (
-                    <div key={member.id} className="border border-gray-200 rounded-sm overflow-hidden">
+                    <div key={member.id} className="border border-gray-200 rounded-xl overflow-hidden">
                       <div className="flex items-center gap-2 px-4 py-2 bg-gray-50/50 border-b border-gray-100">
                         <div className="w-4 h-4 rounded-full" style={{ background: member.color || "#0b2a55" }} />
                         <p className="text-sm font-semibold text-charcoal">{member.name}</p>
@@ -1335,7 +1335,7 @@ export default function TeamPage() {
 
       {/* Unscheduled list */}
       {unscheduled.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-sm">
+        <div className="bg-white border border-gray-200 rounded-xl">
           <div className="px-4 py-3 border-b border-gray-200">
             <p className="font-semibold text-charcoal text-sm">Needs Scheduling ({unscheduled.length})</p>
           </div>
@@ -1347,7 +1347,7 @@ export default function TeamPage() {
               </div>
               <div className="flex flex-wrap gap-1">
                 {(b.serviceIds || []).concat(b.packageId ? [b.packageId] : []).map((s) => (
-                  <span key={s} className="text-xs bg-navy/8 text-navy px-1.5 py-0.5 rounded-sm capitalize">{s}</span>
+                  <span key={s} className="text-xs bg-navy/8 text-navy px-1.5 py-0.5 rounded-xl capitalize">{s}</span>
                 ))}
               </div>
               <a href={`/dashboard/listings/${b.id}`} className="text-xs text-navy hover:underline flex-shrink-0">
@@ -1372,7 +1372,7 @@ export default function TeamPage() {
       {/* Invite modal */}
       {showInvite && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-sm shadow-xl w-full max-w-md">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="font-display text-navy text-lg">Invite Photographer</h2>
               <button onClick={() => { setShowInvite(false); setInviteEmail(""); setInviteMsg(""); }}
@@ -1437,8 +1437,8 @@ export default function TeamPage() {
 
       {/* Block detail popover */}
       {blockDetail && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setBlockDetail(null)}>
-          <div className="bg-white rounded-sm shadow-xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setBlockDetail(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
               <div>
                 <p className="font-semibold text-charcoal text-sm">

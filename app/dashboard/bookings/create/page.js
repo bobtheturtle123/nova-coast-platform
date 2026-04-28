@@ -428,13 +428,13 @@ export default function CreateBookingPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-sm mb-6">{error}</div>
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6">{error}</div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
 
         {/* ── Client / Agent ────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="card">
           <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-4">Client / Agent Info</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -477,7 +477,7 @@ export default function CreateBookingPage() {
         </div>
 
         {/* ── Property ──────────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="card">
           <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-4">Property</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
@@ -545,7 +545,7 @@ export default function CreateBookingPage() {
 
         {/* ── Services ──────────────────────────────────────── */}
         {(catalog.packages.length > 0 || catalog.services.length > 0 || catalog.addons.length > 0) && (
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="card">
             <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-4">Services</h2>
 
             {catalog.packages.length > 0 && (
@@ -611,7 +611,7 @@ export default function CreateBookingPage() {
         )}
 
         {/* ── Schedule + Team Availability ──────────────────── */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="card">
           <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-4">Schedule</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
             <div>
@@ -775,7 +775,7 @@ export default function CreateBookingPage() {
         </div>
 
         {/* ── Pricing ───────────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="card">
           <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-4">Pricing</h2>
 
           {/* Auto-calculated breakdown */}
@@ -832,7 +832,7 @@ export default function CreateBookingPage() {
         </div>
 
         {/* ── Notes ─────────────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="card">
           <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-3">Notes</h2>
           <textarea value={form.notes} onChange={set("notes")} rows={3}
             placeholder="Special instructions, access notes, lockbox code, etc."
@@ -840,7 +840,7 @@ export default function CreateBookingPage() {
         </div>
 
         {/* ── Notifications ─────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="card">
           <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-3">Notifications</h2>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="sendNotif" checked={form.sendNotification}

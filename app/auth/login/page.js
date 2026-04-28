@@ -44,22 +44,21 @@ export default function LoginPage() {
     <div className="min-h-screen bg-cream flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="font-display text-navy text-2xl tracking-wide">KyoriaOS</Link>
-          <p className="text-gray-500 text-sm mt-2">Sign in to your account</p>
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center mx-auto mb-4 font-bold text-white text-base" style={{ background: "linear-gradient(135deg, #0e2f5a, #091e3e)" }}>K</div>
+          <Link href="/" className="font-semibold text-[#0F172A] text-xl tracking-tight">KyoriaOS</Link>
+          <p className="text-gray-500 text-sm mt-1.5">Sign in to your account</p>
         </div>
 
-        <div className="bg-white rounded-sm border border-gray-200 p-8 shadow-sm">
+        <div className="card p-8">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-sm mb-6">
+            <div className="bg-red-50 border border-red-100 text-red-700 text-sm px-4 py-3 rounded-xl mb-6">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">
-                Email
-              </label>
+              <label className="label-field">Email</label>
               <input
                 type="email"
                 value={email}
@@ -70,9 +69,7 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">
-                Password
-              </label>
+                <label className="label-field">Password</label>
               <input
                 type="password"
                 value={password}

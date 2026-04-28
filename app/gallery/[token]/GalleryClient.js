@@ -81,7 +81,7 @@ function PaymentModal({ booking, onClose, onUnlock }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-sm max-w-md w-full p-6 relative">
+      <div className="bg-white rounded-xl max-w-md w-full p-6 relative">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl"
@@ -95,7 +95,7 @@ function PaymentModal({ booking, onClose, onUnlock }) {
 
         {!clientSecret && (
           <>
-            <div className="bg-cream rounded-sm p-4 mb-6">
+            <div className="bg-cream rounded-xl p-4 mb-6">
               <div className="flex justify-between text-sm font-body">
                 <span>Balance due</span>
                 <span className="font-semibold text-navy">{formatPrice(booking.remainingBalance)}</span>
@@ -167,7 +167,7 @@ export default function GalleryClient({ gallery, booking }) {
         {gallery.photos?.length > 0 && (
           <button
             onClick={handleDownloadAll}
-            className={`flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-body font-medium transition-all
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-body font-medium transition-all
               ${isUnlocked
                 ? "bg-gold text-navy hover:bg-gold-dark"
                 : "bg-white/10 text-white/60 border border-white/20 hover:bg-white/20"
@@ -191,7 +191,7 @@ export default function GalleryClient({ gallery, booking }) {
           </p>
           <button
             onClick={() => setShowPayment(true)}
-            className="bg-gold text-navy text-xs font-semibold px-4 py-1.5 rounded-sm hover:bg-gold-dark ml-4 flex-shrink-0"
+            className="bg-gold text-navy text-xs font-semibold px-4 py-1.5 rounded-xl hover:bg-gold-dark ml-4 flex-shrink-0"
           >
             Pay & Unlock
           </button>
@@ -227,7 +227,7 @@ export default function GalleryClient({ gallery, booking }) {
               <div
                 key={i}
                 onClick={() => setLightboxIdx(i)}
-                className="relative break-inside-avoid cursor-pointer overflow-hidden rounded-sm
+                className="relative break-inside-avoid cursor-pointer overflow-hidden rounded-xl
                            group hover:opacity-90 transition-opacity"
               >
                 <img
@@ -245,7 +245,7 @@ export default function GalleryClient({ gallery, booking }) {
         {activeTab === "videos" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {gallery.videos?.map((video, i) => (
-              <div key={i} className="bg-white/5 rounded-sm overflow-hidden">
+              <div key={i} className="bg-white/5 rounded-xl overflow-hidden">
                 <video
                   src={video.url}
                   controls
@@ -268,7 +268,7 @@ export default function GalleryClient({ gallery, booking }) {
                 <p className="text-sm font-body text-white/60 mb-2">{link.label || "3D Tour"}</p>
                 <iframe
                   src={link.url}
-                  className="w-full aspect-video rounded-sm"
+                  className="w-full aspect-video rounded-xl"
                   allowFullScreen
                 />
               </div>
@@ -280,7 +280,7 @@ export default function GalleryClient({ gallery, booking }) {
         {activeTab === "floorplans" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {gallery.floorPlans?.map((plan, i) => (
-              <div key={i} className="bg-white/5 rounded-sm p-2">
+              <div key={i} className="bg-white/5 rounded-xl p-2">
                 <img src={plan.url} alt={plan.filename} className="w-full h-auto" />
               </div>
             ))}

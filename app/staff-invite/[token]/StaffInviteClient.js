@@ -60,7 +60,7 @@ export default function StaffInviteClient({ token, tenantId, companyName, invite
             You now have <strong>{ROLE_LABELS[role] || role}</strong> access to <strong>{companyName}</strong>.
           </p>
           <a href="/dashboard"
-            className="inline-block bg-navy text-white font-semibold py-3 px-8 rounded-sm text-sm hover:bg-navy/90 transition-colors">
+            className="inline-block bg-navy text-white font-semibold py-3 px-8 rounded-xl text-sm hover:bg-navy/90 transition-colors">
             Go to Dashboard →
           </a>
         </div>
@@ -101,14 +101,14 @@ export default function StaffInviteClient({ token, tenantId, companyName, invite
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Email</label>
             <input type="email" value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-200 rounded-sm px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
               placeholder="you@example.com" required />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Password</label>
             <input type="password" value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-200 rounded-sm px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
               placeholder="Min. 6 characters" required />
           </div>
           {mode === "signup" && (
@@ -116,7 +116,7 @@ export default function StaffInviteClient({ token, tenantId, companyName, invite
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Confirm Password</label>
               <input type="password" value={password2}
                 onChange={(e) => setPassword2(e.target.value)}
-                className="w-full border border-gray-200 rounded-sm px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
                 placeholder="Repeat password" required />
             </div>
           )}
@@ -126,7 +126,7 @@ export default function StaffInviteClient({ token, tenantId, companyName, invite
           )}
 
           <button type="submit" disabled={submitting}
-            className="w-full bg-navy text-white font-semibold py-3 rounded-sm text-sm hover:bg-navy/90 transition-colors disabled:opacity-50">
+            className="w-full bg-navy text-white font-semibold py-3 rounded-xl text-sm hover:bg-navy/90 transition-colors disabled:opacity-50">
             {submitting ? "Processing…" : mode === "signup" ? "Create Account & Accept" : "Sign In & Accept"}
           </button>
         </form>

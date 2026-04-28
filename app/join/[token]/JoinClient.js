@@ -85,28 +85,28 @@ export default function JoinClient({ token, tenantId, companyName, inviteEmail }
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Your Name *</label>
             <input type="text" value={form.name} required
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className="w-full border border-gray-200 rounded-sm px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
               placeholder="First and last name" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Email *</label>
             <input type="email" value={form.email} required
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              className="w-full border border-gray-200 rounded-sm px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
               placeholder="your@email.com" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Phone (optional)</label>
             <input type="tel" value={form.phone}
               onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-              className="w-full border border-gray-200 rounded-sm px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
               placeholder="+1 (555) 000-0000" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Create Password *</label>
             <input type="password" value={form.password} required minLength={6}
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              className="w-full border border-gray-200 rounded-sm px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
               placeholder="At least 6 characters" />
           </div>
 
@@ -115,7 +115,7 @@ export default function JoinClient({ token, tenantId, companyName, inviteEmail }
           )}
 
           <button type="submit" disabled={submitting || !form.name.trim() || !form.email.trim() || form.password.length < 6}
-            className="w-full bg-navy text-white font-semibold py-3 rounded-sm text-sm hover:bg-navy/90 transition-colors disabled:opacity-50">
+            className="w-full bg-navy text-white font-semibold py-3 rounded-xl text-sm hover:bg-navy/90 transition-colors disabled:opacity-50">
             {submitting ? "Creating account…" : "Accept & Create Account"}
           </button>
         </form>

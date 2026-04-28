@@ -115,7 +115,7 @@ export default function ReviewPage() {
 
         {/* Deposit breakdown */}
         {pricing && (
-          <div className="bg-navy/5 border border-navy/10 rounded-sm p-4 mb-8 space-y-2">
+          <div className="bg-navy/5 border border-navy/10 rounded-xl p-4 mb-8 space-y-2">
             <p className="text-xs font-body font-medium text-navy uppercase tracking-widest mb-3">
               Payment Schedule
             </p>

@@ -161,7 +161,7 @@ export default function PricingSection() {
         {/* 3-persona trust strip */}
         <div className="grid md:grid-cols-3 gap-5 mb-16">
           {PERSONAS.map((p) => (
-            <div key={p.title} className="text-center p-7 rounded-sm border border-gray-100 bg-white">
+            <div key={p.title} className="text-center p-7 rounded-xl border border-gray-100 bg-white">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-navy/5 text-navy mb-4">
                 {p.icon}
               </div>
@@ -175,7 +175,7 @@ export default function PricingSection() {
         <div className="grid md:grid-cols-4 gap-4 mb-5">
           {PLANS.map((plan) => (
             <div key={plan.id}
-              className={`rounded-sm border p-7 flex flex-col ${
+              className={`rounded-xl border p-7 flex flex-col ${
                 plan.featured
                   ? "border-navy bg-navy text-white shadow-xl ring-2 ring-navy/10"
                   : "border-gray-100 bg-white hover:border-gray-200 transition-colors"
@@ -212,7 +212,7 @@ export default function PricingSection() {
                 ))}
               </ul>
               <Link href="/auth/register"
-                className={`block text-center py-3 px-4 rounded-sm text-sm font-semibold transition-colors mt-auto ${
+                className={`block text-center py-3 px-4 rounded-xl text-sm font-semibold transition-colors mt-auto ${
                   plan.featured
                     ? "bg-gold text-navy hover:bg-gold/90"
                     : "bg-navy text-white hover:bg-navy/90"
@@ -236,7 +236,7 @@ export default function PricingSection() {
           <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
             {ADDONS.map((addon) => (
               <div key={addon.name}
-                className={`p-6 rounded-sm border ${addon.oneTime ? "border-navy/10 bg-navy/[0.02]" : "border-gray-100 bg-white"}`}>
+                className={`p-6 rounded-xl border ${addon.oneTime ? "border-navy/10 bg-navy/[0.02]" : "border-gray-100 bg-white"}`}>
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <p className="font-semibold text-sm leading-snug text-navy">{addon.name}</p>
                   <div className="text-right shrink-0">

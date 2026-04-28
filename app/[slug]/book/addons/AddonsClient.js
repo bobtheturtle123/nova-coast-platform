@@ -94,12 +94,12 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
                 return (
                   <button key={addon.id} onClick={() => toggleAddon(addon.id)}
                     className={clsx(
-                      "w-full text-left border rounded-sm transition-all duration-200 overflow-hidden focus:outline-none",
+                      "w-full text-left border rounded-xl transition-all duration-200 overflow-hidden focus:outline-none",
                       selected ? "border-navy bg-navy/5 ring-1 ring-navy/20" : "border-gray-200 bg-white hover:border-navy/30"
                     )}>
                     <div className="flex items-center gap-4 p-4">
                       {img && (
-                        <div className="w-20 h-14 flex-shrink-0 overflow-hidden rounded-sm">
+                        <div className="w-20 h-14 flex-shrink-0 overflow-hidden rounded-xl">
                           <img src={img} alt={addon.name} className="w-full h-full object-cover" />
                         </div>
                       )}

@@ -37,7 +37,7 @@ function PackageCard({ pkg, tier, selected, onSelect }) {
     <button
       type="button"
       onClick={onSelect}
-      className={`relative text-left rounded-sm border p-4 transition-all ${
+      className={`relative text-left rounded-xl border p-4 transition-all ${
         selected
           ? "border-navy bg-navy text-white"
           : "border-gray-200 bg-white hover:border-navy/40"
@@ -65,7 +65,7 @@ function ServiceRow({ item, tier, checked, onToggle }) {
   const long = item.description && item.description.length > 80;
   return (
     <div
-      className={`w-full rounded-sm border transition-all ${
+      className={`w-full rounded-xl border transition-all ${
         checked
           ? "border-navy/60 bg-navy/5"
           : "border-transparent bg-gray-50 hover:border-gray-200"
@@ -572,11 +572,11 @@ export default function BookingsPage() {
           <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-sm border border-gray-100 p-16 text-center text-gray-400 text-sm">
+        <div className="bg-white rounded-xl border border-gray-100 p-16 text-center text-gray-400 text-sm">
           No bookings found.
         </div>
       ) : (
-        <div className="bg-white rounded-sm border border-gray-100 divide-y divide-gray-50">
+        <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
           {filtered.map((b) => {
             const s = STATUS_LABELS[b.status] || { label: b.status, cls: "bg-gray-50 text-gray-500" };
             const dateStr = b.preferredDate
@@ -614,8 +614,8 @@ export default function BookingsPage() {
 
       {/* ── Create booking modal ──────────────────────────────────────────────── */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto py-6 px-4">
-          <div className="bg-white rounded-sm shadow-2xl w-full max-w-4xl my-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto py-6 px-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-auto">
 
             {/* Modal header */}
             <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100">
@@ -637,7 +637,7 @@ export default function BookingsPage() {
                 <div className="flex-1 px-8 py-6 space-y-7 overflow-y-auto max-h-[70vh]">
 
                   {createError && (
-                    <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-2.5 rounded-sm">
+                    <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-2.5 rounded-xl">
                       {createError}
                     </div>
                   )}
@@ -786,7 +786,7 @@ export default function BookingsPage() {
                             min="0"
                           />
                           {tierLabel && (
-                            <span className="text-xs px-2.5 py-1.5 rounded-sm bg-navy/10 text-navy font-medium whitespace-nowrap">
+                            <span className="text-xs px-2.5 py-1.5 rounded-xl bg-navy/10 text-navy font-medium whitespace-nowrap">
                               {tierLabel}
                             </span>
                           )}
@@ -883,7 +883,7 @@ export default function BookingsPage() {
                       <div>
                         <p className="text-xs text-gray-400 mb-2">Custom items</p>
                         {form.customLineItems.map((line, i) => (
-                          <div key={i} className="flex items-center gap-2 mb-1.5 px-3 py-2 bg-gray-50 rounded-sm">
+                          <div key={i} className="flex items-center gap-2 mb-1.5 px-3 py-2 bg-gray-50 rounded-xl">
                             <span className="text-sm text-charcoal flex-1">{line.label}</span>
                             <span className="text-sm font-semibold text-navy">{formatPrice(line.price || 0)}</span>
                             <button type="button" onClick={() => setForm((p) => ({ ...p, customLineItems: p.customLineItems.filter((_, j) => j !== i) }))}
@@ -979,7 +979,7 @@ export default function BookingsPage() {
 
                   {/* Tier badge */}
                   {tierLabel && form.sqft && (
-                    <div className="text-xs px-2.5 py-1.5 bg-white border border-gray-200 rounded-sm text-gray-500 mb-4">
+                    <div className="text-xs px-2.5 py-1.5 bg-white border border-gray-200 rounded-xl text-gray-500 mb-4">
                       Priced as <span className="font-medium text-charcoal">{tierLabel}</span>
                       <span className="text-gray-300"> ({Number(form.sqft).toLocaleString()} sqft)</span>
                     </div>

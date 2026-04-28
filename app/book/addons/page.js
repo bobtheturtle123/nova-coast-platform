@@ -45,7 +45,7 @@ export default function AddonsPage() {
                     key={addon.id}
                     onClick={() => toggleAddon(addon.id)}
                     className={clsx(
-                      "w-full text-left p-5 border rounded-sm transition-all duration-200",
+                      "w-full text-left p-5 border rounded-xl transition-all duration-200",
                       "flex items-center justify-between gap-4 focus:outline-none",
                       selected
                         ? "border-navy bg-navy/5"

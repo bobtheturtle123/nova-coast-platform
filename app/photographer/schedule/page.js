@@ -196,7 +196,7 @@ export default function PhotographerSchedulePage() {
                         style={{ background: "repeating-linear-gradient(-45deg,#fee2e2,#fee2e2 3px,transparent 3px,transparent 10px)", opacity: 0.6 }} />
                     )}
                     {dayBlocks.map((bl) => (
-                      <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1.5 py-0.5 rounded-sm mb-1 flex items-center justify-between group relative z-10">
+                      <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1.5 py-0.5 rounded-xl mb-1 flex items-center justify-between group relative z-10">
                         <span className="text-red-600 font-medium truncate">{bl.reason}</span>
                         <button onClick={() => deleteBlock(bl.id)}
                           className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 ml-1 text-[10px]">×</button>
@@ -204,7 +204,7 @@ export default function PhotographerSchedulePage() {
                     ))}
                     {dayEvents.map((ev) => (
                       <div key={ev.id} style={{ background: memberColor + "22", borderLeftColor: memberColor }}
-                        className="text-xs border-l-2 px-1.5 py-1 rounded-sm mb-1 relative z-10">
+                        className="text-xs border-l-2 px-1.5 py-1 rounded-xl mb-1 relative z-10">
                         <p className="font-medium truncate" style={{ color: memberColor }}>{ev.address?.split(",")[0] || "Shoot"}</p>
                         {ev.preferredTime && <p className="text-gray-400 capitalize">{ev.preferredTime}</p>}
                       </div>
@@ -238,7 +238,7 @@ export default function PhotographerSchedulePage() {
                     </p>
                     {dayEvents.slice(0,2).map((ev) => (
                       <div key={ev.id} style={{ background: memberColor + "22", borderLeftColor: memberColor }}
-                        className="text-xs border-l-2 px-1 py-0.5 rounded-sm mb-0.5 truncate">
+                        className="text-xs border-l-2 px-1 py-0.5 rounded-xl mb-0.5 truncate">
                         <span style={{ color: memberColor }} className="font-medium">{ev.address?.split(",")[0] || "Shoot"}</span>
                       </div>
                     ))}

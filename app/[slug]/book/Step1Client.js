@@ -176,7 +176,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
             <h1 className="font-display text-4xl text-navy mb-3 leading-tight">{gateQuestion}</h1>
             <p className="font-body text-gray-400 mb-10 leading-relaxed">{gateSubtext}</p>
 
-            <div className="bg-white border border-gray-100 rounded-sm p-8 shadow-sm">
+            <div className="bg-white border border-gray-100 rounded-xl p-8 shadow-sm">
               <input
                 type="number"
                 inputMode="numeric"
@@ -236,7 +236,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
             return (
               <button key={pkg.id} onClick={() => setPackage(pkg.id)}
                 className={clsx(
-                  "relative text-left border rounded-sm transition-all duration-200 focus:outline-none overflow-hidden flex flex-col",
+                  "relative text-left border rounded-xl transition-all duration-200 focus:outline-none overflow-hidden flex flex-col",
                   selected
                     ? "border-navy shadow-lg ring-2 ring-navy/20"
                     : "border-gray-200 bg-white hover:border-navy/40 hover:shadow-sm"
@@ -315,7 +315,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                 return (
                   <button key={svc.id} onClick={() => toggleService(svc.id)}
                     className={clsx(
-                      "text-left border rounded-sm transition-all duration-200 overflow-hidden focus:outline-none",
+                      "text-left border rounded-xl transition-all duration-200 overflow-hidden focus:outline-none",
                       selected ? "border-navy shadow-sm ring-1 ring-navy/20" : "border-gray-200 bg-white hover:border-navy/30"
                     )}>
                     {img && (

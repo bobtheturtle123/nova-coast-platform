@@ -78,7 +78,7 @@ export default function SchedulePage() {
                 key={t.value}
                 onClick={() => setTime(t.value)}
                 className={clsx(
-                  "p-4 border rounded-sm text-center transition-all duration-150 focus:outline-none",
+                  "p-4 border rounded-xl text-center transition-all duration-150 focus:outline-none",
                   time === t.value
                     ? "border-navy bg-navy text-white"
                     : "border-gray-200 hover:border-navy/30"
@@ -98,7 +98,7 @@ export default function SchedulePage() {
         </div>
 
         {/* Phase 2 note */}
-        <div className="bg-gold/10 border border-gold/30 rounded-sm p-4 mb-8">
+        <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mb-8">
           <p className="text-sm font-body text-charcoal">
             <span className="font-semibold text-navy">How scheduling works:</span>{" "}
             After your deposit, we'll review your request and confirm your exact

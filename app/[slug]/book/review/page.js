@@ -243,7 +243,7 @@ export default function TenantReviewPage() {
                 </div>
 
                 {squareFootage && (
-                  <div className="mt-4 bg-navy/4 rounded-sm p-3 text-xs text-gray-500">
+                  <div className="mt-4 bg-navy/4 rounded-xl p-3 text-xs text-gray-500">
                     Pricing based on <span className="font-medium text-navy">{tier} tier</span>
                     {" "}({Number(squareFootage).toLocaleString()} sq ft)
                   </div>

@@ -28,7 +28,7 @@ export default function ClassicTemplate({
               <img src={branding.logo} alt={branding.bizName} className="h-7 w-auto object-contain" />
             ) : (
               <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-sm rotate-45" style={{ background: theme.primary }} />
+                <div className="w-2.5 h-2.5 rounded-xl rotate-45" style={{ background: theme.primary }} />
                 <span className="font-bold text-base tracking-tight" style={{ color: theme.primary }}>
                   {branding.bizName}
                 </span>

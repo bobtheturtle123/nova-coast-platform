@@ -89,7 +89,7 @@ function AgentImageField({ label, value, onChange, folder, placeholder, hint, pr
                 type="button"
                 disabled={uploading}
                 onClick={() => fileRef.current?.click()}
-                className="w-full border-2 border-dashed border-gray-200 rounded-sm py-3 text-sm text-gray-500 hover:border-navy/30 hover:text-navy transition-colors disabled:opacity-50">
+                className="w-full border-2 border-dashed border-gray-200 rounded-xl py-3 text-sm text-gray-500 hover:border-navy/30 hover:text-navy transition-colors disabled:opacity-50">
                 {uploading ? "Uploading…" : value ? "Replace image" : "Click to choose image"}
               </button>
               {uploadErr && <p className="text-xs text-red-500 mt-1">{uploadErr}</p>}
@@ -517,18 +517,18 @@ export default function ListingDetailPage() {
               <h1 className="font-semibold text-white text-2xl leading-tight">{address}</h1>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {gallery?.delivered && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-sm bg-green-500 text-white">Listing Delivered</span>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-xl bg-green-500 text-white">Listing Delivered</span>
                 )}
                 {booking.paidInFull && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-sm bg-emerald-500 text-white">Paid in Full</span>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-xl bg-emerald-500 text-white">Paid in Full</span>
                 )}
                 {!booking.paidInFull && booking.balancePaid && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-sm bg-emerald-500 text-white">Fully Paid</span>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-xl bg-emerald-500 text-white">Fully Paid</span>
                 )}
                 {!booking.paidInFull && !booking.balancePaid && booking.depositPaid && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-sm bg-blue-500 text-white">Deposit Paid</span>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-xl bg-blue-500 text-white">Deposit Paid</span>
                 )}
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-sm ${STATUS_COLORS[booking.status] || "bg-gray-100 text-gray-600"}`}>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-xl ${STATUS_COLORS[booking.status] || "bg-gray-100 text-gray-600"}`}>
                   {STATUS_OPTIONS.find((s) => s.value === booking.status)?.label || booking.status}
                 </span>
               </div>
@@ -536,18 +536,18 @@ export default function ListingDetailPage() {
             <div className="flex items-center gap-2">
               {booking.status === "requested" && (
                 <button onClick={() => patchBooking({ status: "confirmed" })} disabled={saving}
-                  className="px-4 py-2 text-sm font-semibold rounded-sm bg-green-500 text-white hover:bg-green-600 transition-colors">
+                  className="px-4 py-2 text-sm font-semibold rounded-xl bg-green-500 text-white hover:bg-green-600 transition-colors">
                   ✓ Confirm
                 </button>
               )}
               <button
                 onClick={openGalleryEditor}
-                className="px-4 py-2 text-sm font-semibold rounded-sm bg-white text-navy hover:bg-gray-100 transition-colors">
+                className="px-4 py-2 text-sm font-semibold rounded-xl bg-white text-navy hover:bg-gray-100 transition-colors">
                 Upload Media
               </button>
               {gallery && (
                 <button onClick={() => { setDeliveryMode("now"); setScheduledAt(""); setShowDeliver(true); }}
-                  className="px-4 py-2 text-sm font-semibold rounded-sm bg-gold text-navy hover:bg-gold/90 transition-colors">
+                  className="px-4 py-2 text-sm font-semibold rounded-xl bg-gold text-navy hover:bg-gold/90 transition-colors">
                   Deliver →
                 </button>
               )}
@@ -623,7 +623,7 @@ export default function ListingDetailPage() {
                 <p className="text-xs text-gray-400">{(booking.sqft || booking.squareFootage).toLocaleString()} sq ft{booking.propertyType ? ` · ${booking.propertyType}` : ""}</p>
               )}
               {booking.notes && (
-                <div className="mt-3 p-3 bg-gray-50 rounded-sm">
+                <div className="mt-3 p-3 bg-gray-50 rounded-xl">
                   <p className="text-xs text-gray-500 italic">"{booking.notes}"</p>
                 </div>
               )}
@@ -671,19 +671,19 @@ export default function ListingDetailPage() {
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Payment Status</label>
                   <div className="flex flex-wrap gap-2">
                     {booking.paidInFull || booking.balancePaid ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-sm bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
                         ✓ Paid in Full
                       </span>
                     ) : booking.depositPaid ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-sm bg-blue-50 text-blue-700 border border-blue-200">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl bg-blue-50 text-blue-700 border border-blue-200">
                         ◑ Deposit Paid
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-sm bg-gray-50 text-gray-500 border border-gray-200">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl bg-gray-50 text-gray-500 border border-gray-200">
                         ○ Unpaid
                       </span>
                     )}
-                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-sm border ${
+                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl border ${
                       gallery?.delivered
                         ? "bg-green-50 text-green-700 border-green-200"
                         : "bg-amber-50 text-amber-600 border-amber-200"
@@ -705,7 +705,7 @@ export default function ListingDetailPage() {
                 </div>
                 {/* Client requested time */}
                 {(booking.preferredDate || booking.preferredTime) && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-sm px-3 py-2.5 text-xs">
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs">
                     <p className="font-semibold text-amber-800 mb-0.5">Client Requested</p>
                     <p className="text-amber-700">
                       {booking.preferredDate
@@ -982,7 +982,7 @@ export default function ListingDetailPage() {
             )}
 
             {userRole !== "manager" && booking.stripeDepositIntentId && (
-              <div className="bg-gray-50 rounded-sm border border-gray-100 p-4 text-xs text-gray-500 space-y-1">
+              <div className="bg-gray-50 rounded-xl border border-gray-100 p-4 text-xs text-gray-500 space-y-1">
                 <p>Deposit intent: <code className="font-mono">{booking.stripeDepositIntentId}</code></p>
                 {booking.stripeBalanceIntentId && (
                   <p>Balance intent: <code className="font-mono">{booking.stripeBalanceIntentId}</code></p>
@@ -996,7 +996,7 @@ export default function ListingDetailPage() {
         {tab === "property" && (
           <div className="max-w-2xl space-y-6">
             {/* Publish status */}
-            <div className="flex items-center justify-between bg-white rounded-sm border border-gray-200 p-4">
+            <div className="flex items-center justify-between bg-white rounded-xl border border-gray-200 p-4">
               <div>
                 <p className="text-sm font-semibold text-charcoal">
                   {propSite.published ? "🟢 Website is live" : "⚫ Website is draft (not public)"}
@@ -1034,7 +1034,7 @@ export default function ListingDetailPage() {
                   finally { setSavingPropSite(false); }
                 }}
                 disabled={savingPropSite}
-                className={`px-4 py-2 text-sm font-semibold rounded-sm transition-colors disabled:opacity-60 ${
+                className={`px-4 py-2 text-sm font-semibold rounded-xl transition-colors disabled:opacity-60 ${
                   propSite.published
                     ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
                     : "bg-green-500 text-white hover:bg-green-600"
@@ -1045,7 +1045,7 @@ export default function ListingDetailPage() {
             </div>
 
             {propSiteMsg.text && (
-              <div className={`text-sm px-4 py-2.5 rounded-sm ${
+              <div className={`text-sm px-4 py-2.5 rounded-xl ${
                 propSiteMsg.type === "success"
                   ? "bg-green-50 border border-green-200 text-green-700"
                   : "bg-red-50 border border-red-200 text-red-700"
@@ -1053,7 +1053,7 @@ export default function ListingDetailPage() {
             )}
 
             {/* Template + Color Scheme */}
-            <div className="bg-white rounded-sm border border-gray-200 p-6">
+            <div className="card">
               <h3 className="font-display text-navy text-base mb-1">Template & Style</h3>
               <p className="text-xs text-gray-400 mb-5">Choose a layout and color scheme for the public property website.</p>
 
@@ -1147,7 +1147,7 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Display settings */}
-            <div className="bg-white rounded-sm border border-gray-200 p-6">
+            <div className="card">
               <h3 className="font-display text-navy text-base mb-5">Website Settings</h3>
               <div className="space-y-4">
                 <div>
@@ -1177,7 +1177,7 @@ export default function ListingDetailPage() {
                     <p className="text-xs text-gray-400 mt-1">Status → "For Sale" automatically on this day.</p>
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-sm">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                   <div>
                     <p className="text-sm font-medium text-charcoal">Branded website</p>
                     <p className="text-xs text-gray-400">Show your business name and logo on the listing page</p>
@@ -1192,7 +1192,7 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Property details */}
-            <div className="bg-white rounded-sm border border-gray-200 p-6">
+            <div className="card">
               <h3 className="font-display text-navy text-base mb-5">Property Details</h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -1298,7 +1298,7 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Agent info */}
-            <div className="bg-white rounded-sm border border-gray-200 p-6">
+            <div className="card">
               <h3 className="font-display text-navy text-base mb-5">Listing Agent</h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -1354,7 +1354,7 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Agent Custom Domain (per-listing) */}
-            <div className="bg-white rounded-sm border border-gray-200 p-6">
+            <div className="card">
               <h3 className="font-display text-navy text-base mb-1">Agent Custom Domain</h3>
               <p className="text-xs text-gray-400 mb-4">
                 Let the agent use their own domain (e.g. <code className="bg-gray-100 px-1 rounded">123mainst.agentdomain.com</code>) for this property website.
@@ -1407,11 +1407,11 @@ export default function ListingDetailPage() {
                     className="flex-1 input-field text-sm bg-gray-50 text-gray-600" />
                   <button
                     onClick={() => { navigator.clipboard.writeText(listingUrl); }}
-                    className="px-4 py-2 text-sm font-medium rounded-sm bg-navy text-white hover:bg-navy/90 transition-colors flex-shrink-0">
+                    className="px-4 py-2 text-sm font-medium rounded-xl bg-navy text-white hover:bg-navy/90 transition-colors flex-shrink-0">
                     Copy
                   </button>
                   <a href={listingUrl} target="_blank" rel="noopener noreferrer"
-                    className="px-4 py-2 text-sm font-medium rounded-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex-shrink-0">
+                    className="px-4 py-2 text-sm font-medium rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex-shrink-0">
                     ↗ Open
                   </a>
                 </div>
@@ -1497,7 +1497,7 @@ export default function ListingDetailPage() {
                     href={`/${tenantSlug}/property/${id}/brochure`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-sm bg-navy text-white hover:bg-navy/90 transition-colors">
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-navy text-white hover:bg-navy/90 transition-colors">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                     </svg>
@@ -1517,7 +1517,7 @@ export default function ListingDetailPage() {
                   <p className="text-xs text-gray-400 mt-0.5">Instagram, Facebook, and email subject — generated instantly</p>
                 </div>
                 <button onClick={generateCaptions} disabled={captionsLoading}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-sm bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
                   {captionsLoading ? (
                     <>
                       <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -1648,7 +1648,7 @@ export default function ListingDetailPage() {
       {/* Deliver modal */}
       {showDeliver && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
               <h2 className="font-display text-navy text-lg">Deliver Gallery</h2>
               <button onClick={() => setShowDeliver(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
@@ -1700,7 +1700,7 @@ export default function ListingDetailPage() {
 
               {/* Preview */}
               {deliveryMode === "now" && (
-                <div className="bg-gray-50 rounded-sm p-4 text-sm text-gray-600 space-y-2">
+                <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-600 space-y-2">
                   <p className="font-medium text-gray-700 text-xs uppercase tracking-wide mb-2">Preview</p>
                   <p>Hi {booking.clientName?.split(" ")[0] || "there"},</p>
                   {emailNote && <p className="italic text-gray-500">{emailNote}</p>}

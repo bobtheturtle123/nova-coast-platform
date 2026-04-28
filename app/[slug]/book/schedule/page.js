@@ -190,13 +190,13 @@ export default function TenantSchedulePage() {
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <button onClick={prevMonth} disabled={isPrevDisabled}
-                className={`p-1.5 rounded-sm transition-colors ${isPrevDisabled ? "text-gray-200 cursor-not-allowed" : "text-navy hover:bg-navy/5"}`}>
+                className={`p-1.5 rounded-xl transition-colors ${isPrevDisabled ? "text-gray-200 cursor-not-allowed" : "text-navy hover:bg-navy/5"}`}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
               <p className="font-semibold text-charcoal text-sm">{MONTHS[calMonth]} {calYear}</p>
-              <button onClick={nextMonth} className="p-1.5 rounded-sm text-navy hover:bg-navy/5 transition-colors">
+              <button onClick={nextMonth} className="p-1.5 rounded-xl text-navy hover:bg-navy/5 transition-colors">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
@@ -260,7 +260,7 @@ export default function TenantSchedulePage() {
                   Checking availability…
                 </div>
               ) : slots && slots.length === 0 ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-sm p-4 text-sm text-amber-700">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
                   No available times on this date. Please choose another day.
                 </div>
               ) : slots ? (
@@ -268,7 +268,7 @@ export default function TenantSchedulePage() {
                   {slots.map((t) => (
                     <button key={t} type="button"
                       onClick={() => setSchedule({ preferredTime: t })}
-                      className={`py-2.5 px-2 border rounded-sm text-sm font-medium text-center transition-all duration-150
+                      className={`py-2.5 px-2 border rounded-xl text-sm font-medium text-center transition-all duration-150
                         ${preferredTime === t
                           ? "border-navy bg-navy text-white shadow-sm"
                           : "border-gray-200 text-charcoal hover:border-navy/30 hover:bg-gray-50"
@@ -338,7 +338,7 @@ export default function TenantSchedulePage() {
               </p>
             )}
             {preferredTime && isTwilightBooking && twilightTime && (
-              <div className="bg-navy/5 rounded-sm px-3 py-2 text-xs text-navy font-medium space-y-0.5">
+              <div className="bg-navy/5 rounded-xl px-3 py-2 text-xs text-navy font-medium space-y-0.5">
                 <p>Daytime: {formatTime12(preferredTime)}</p>
                 <p>Twilight: {formatTime12(twilightTime)}</p>
                 <p className="text-navy/50 font-normal">{formattedDate}</p>
@@ -362,7 +362,7 @@ export default function TenantSchedulePage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               <button type="button"
                 onClick={() => setSchedule({ photographerId: null })}
-                className={`p-3 border rounded-sm text-center transition-colors ${
+                className={`p-3 border rounded-xl text-center transition-colors ${
                   !photographerId ? "border-navy bg-navy/5" : "border-gray-200 hover:border-gray-300"
                 }`}>
                 <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2 text-gray-400 text-lg">
@@ -373,7 +373,7 @@ export default function TenantSchedulePage() {
               {photographers.map((p) => (
                 <button key={p.id} type="button"
                   onClick={() => setSchedule({ photographerId: p.id })}
-                  className={`p-3 border rounded-sm text-center transition-colors ${
+                  className={`p-3 border rounded-xl text-center transition-colors ${
                     photographerId === p.id ? "border-navy bg-navy/5" : "border-gray-200 hover:border-gray-300"
                   }`}>
                   {p.photoUrl ? (

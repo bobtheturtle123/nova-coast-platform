@@ -140,9 +140,9 @@ export default function PhotographerShootsPage() {
                 {/* Services */}
                 {(b.serviceIds?.length > 0 || b.packageId) && (
                   <div className="flex flex-wrap gap-1.5 mt-3">
-                    {b.packageId && <span className="text-xs bg-navy/8 text-navy px-2 py-0.5 rounded-sm">{b.packageId}</span>}
+                    {b.packageId && <span className="text-xs bg-navy/8 text-navy px-2 py-0.5 rounded-xl">{b.packageId}</span>}
                     {(b.serviceIds || []).map((s) => (
-                      <span key={s} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-sm">{s}</span>
+                      <span key={s} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-xl">{s}</span>
                     ))}
                   </div>
                 )}

@@ -30,7 +30,7 @@ function WeatherWidget({ booking, tempUnit = "F" }) {
 
   if (!weatherDate) return null;
   if (loading) return (
-    <div className="bg-white rounded-sm border border-gray-200 p-5 mb-6">
+    <div className="card mb-6">
       <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-2">Weather Forecast</h3>
       <div className="flex items-center gap-2 text-sm text-gray-400">
         <div className="w-4 h-4 border-2 border-gray-200 border-t-navy rounded-full animate-spin" />
@@ -47,7 +47,7 @@ function WeatherWidget({ booking, tempUnit = "F" }) {
       ? "Shoot date has passed"
       : "Forecast unavailable for this location";
     return (
-      <div className="bg-white rounded-sm border border-gray-200 p-5 mb-6">
+      <div className="card mb-6">
         <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-2">Weather Forecast</h3>
         <p className="text-sm text-gray-400">{msg}</p>
       </div>
@@ -55,7 +55,7 @@ function WeatherWidget({ booking, tempUnit = "F" }) {
   }
 
   return (
-    <div className="bg-white rounded-sm border border-gray-200 p-5 mb-6">
+    <div className="card mb-6">
       <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-3">
         Weather Forecast
         <span className="ml-2 font-normal normal-case text-gray-300">
@@ -105,7 +105,7 @@ function SignedAgreementPanel({ booking }) {
     : null;
 
   return (
-    <div className="bg-white rounded-sm border border-green-200 p-5 mb-6">
+    <div className="bg-white rounded-xl border border-green-200 p-5 mb-6">
       <div className="flex items-start justify-between mb-3">
         <h3 className="text-xs uppercase tracking-wide text-gray-400">Signed Service Agreement</h3>
         <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5 font-medium">Executed</span>
@@ -129,7 +129,7 @@ function SignedAgreementPanel({ booking }) {
             {expanded ? "Hide agreement text ▲" : "View agreement text ▼"}
           </button>
           {expanded && (
-            <pre className="text-xs text-gray-600 font-mono leading-relaxed bg-gray-50 border border-gray-100 rounded-sm p-3 whitespace-pre-wrap max-h-64 overflow-y-auto">
+            <pre className="text-xs text-gray-600 font-mono leading-relaxed bg-gray-50 border border-gray-100 rounded-xl p-3 whitespace-pre-wrap max-h-64 overflow-y-auto">
               {booking.contractText}
             </pre>
           )}
@@ -363,14 +363,14 @@ export default function BookingDetailPage() {
       </div>
 
       {msg && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 text-sm px-4 py-2 rounded-sm mb-4">
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 text-sm px-4 py-2 rounded-xl mb-4">
           {msg}
         </div>
       )}
 
       <div className="grid md:grid-cols-2 gap-6 mb-6">
         {/* Client info */}
-        <div className="bg-white rounded-sm border border-gray-200 p-5">
+        <div className="card">
           <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-3">Client</h3>
           <p className="text-sm font-medium">{booking.clientName}</p>
           <p className="text-sm text-gray-500">{booking.clientEmail}</p>
@@ -378,7 +378,7 @@ export default function BookingDetailPage() {
         </div>
 
         {/* Pricing */}
-        <div className="bg-white rounded-sm border border-gray-200 p-5">
+        <div className="card">
           <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-3">Pricing</h3>
           <div className="space-y-1 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Total</span><span className="font-semibold">${booking.totalPrice}</span></div>
@@ -411,7 +411,7 @@ export default function BookingDetailPage() {
         const profit      = totalPrice - totalCost;
         const margin      = totalPrice > 0 ? Math.round((profit / totalPrice) * 100) : null;
         return (
-          <div className="bg-white rounded-sm border border-gray-200 p-5 mb-6">
+          <div className="card mb-6">
             <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-4">Job Costs &amp; Profit</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
               {[
@@ -468,7 +468,7 @@ export default function BookingDetailPage() {
               />
             </div>
             {/* Profit summary */}
-            <div className="bg-gray-50 rounded-sm p-3 mb-4 grid grid-cols-3 gap-3 text-sm">
+            <div className="bg-gray-50 rounded-xl p-3 mb-4 grid grid-cols-3 gap-3 text-sm">
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">Total Cost</p>
                 <p className="font-semibold text-charcoal">${totalCost.toLocaleString()}</p>
@@ -508,7 +508,7 @@ export default function BookingDetailPage() {
       })()}
 
       {/* Status + shoot date */}
-      <div className="bg-white rounded-sm border border-gray-200 p-5 mb-6">
+      <div className="card mb-6">
         <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-4">Manage Booking</h3>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
