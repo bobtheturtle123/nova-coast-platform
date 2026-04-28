@@ -218,8 +218,34 @@ export default function DashboardLayout({ children }) {
         })}
       </nav>
 
+      {/* Upgrade CTA */}
+      <div className="px-3 pb-3">
+        <div className="rounded-xl p-3"
+          style={{ background: "linear-gradient(135deg, rgba(201,169,110,0.13) 0%, rgba(201,169,110,0.07) 100%)", border: "1px solid rgba(201,169,110,0.22)" }}>
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
+              style={{ background: "rgba(201,169,110,0.22)" }}>
+              <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="#C9A96E" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <p className="text-[11.5px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>Upgrade to Pro</p>
+          </div>
+          <p className="text-[10px] mb-2.5 leading-relaxed" style={{ color: "rgba(255,255,255,0.35)" }}>
+            Unlock advanced analytics, custom branding, and priority support.
+          </p>
+          <Link href="/dashboard/billing"
+            className="block w-full text-center text-[11px] font-semibold py-1.5 rounded-lg transition-colors"
+            style={{ background: "rgba(201,169,110,0.18)", color: "#C9A96E", border: "1px solid rgba(201,169,110,0.28)" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(201,169,110,0.28)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(201,169,110,0.18)"; }}>
+            View Plans →
+          </Link>
+        </div>
+      </div>
+
       {/* Footer — user area */}
-      <div className="px-2.5 py-3.5">
+      <div className="px-2.5 pb-3.5">
         <div className="mx-1 mb-3" style={{ height: 1, background: "rgba(255,255,255,0.07)" }} />
         <div className="flex items-center gap-2.5 px-2">
           <div
