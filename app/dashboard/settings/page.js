@@ -442,8 +442,8 @@ function CustomDomainSection() {
               <p className="text-sm text-gray-600 mb-4">
                 Add the following record to your DNS provider (GoDaddy, Namecheap, Cloudflare, etc.):
               </p>
-              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-4">
-                <div className="grid grid-cols-3 bg-gray-100 px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <div className="card-section overflow-hidden mb-4">
+                <div className="grid grid-cols-3 px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-[0.06em]" style={{ background: "var(--bg-subtle)" }}>
                   <span>Type</span><span>Name</span><span>Value</span>
                 </div>
                 <div className="grid grid-cols-3 px-4 py-3 font-mono text-sm">

@@ -108,33 +108,33 @@ export default function ReferralsPage() {
   return (
     <div className="p-8 max-w-2xl">
       <div className="mb-8">
-        <h1 className="font-display text-2xl text-navy mb-1">Refer &amp; Earn</h1>
-        <p className="text-gray-500 text-sm">
+        <h1 className="page-title">Refer &amp; Earn</h1>
+        <p className="page-subtitle">
           Invite other photographers. When they subscribe, you both get $20 in account credit.
         </p>
       </div>
 
       {/* Credit summary cards */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-white border border-gray-100 rounded-xl p-5">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Credits Earned</p>
+        <div className="stat-card p-5">
+          <p className="text-xs text-gray-400 uppercase tracking-[0.06em] mb-1">Credits Earned</p>
           <p className="text-2xl font-semibold text-navy">${creditsDollars}</p>
           <p className="text-xs text-gray-400 mt-0.5">applied to billing</p>
         </div>
-        <div className="bg-white border border-gray-100 rounded-xl p-5">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Successful</p>
+        <div className="stat-card p-5">
+          <p className="text-xs text-gray-400 uppercase tracking-[0.06em] mb-1">Successful</p>
           <p className="text-2xl font-semibold text-navy">{data?.totalRewarded ?? 0}</p>
           <p className="text-xs text-gray-400 mt-0.5">paying referrals</p>
         </div>
-        <div className="bg-white border border-gray-100 rounded-xl p-5">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Pending</p>
+        <div className="stat-card p-5">
+          <p className="text-xs text-gray-400 uppercase tracking-[0.06em] mb-1">Pending</p>
           <p className="text-2xl font-semibold text-navy">{data?.totalPending ?? 0}</p>
           <p className="text-xs text-gray-400 mt-0.5">awaiting payment</p>
         </div>
       </div>
 
       {/* Referral link */}
-      <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
+      <div className="card p-6 mb-6">
         <h2 className="font-semibold text-charcoal text-sm mb-1">Your Referral Link</h2>
         <p className="text-xs text-gray-400 mb-4">
           Share this link. Credit is applied automatically when the person subscribes.
@@ -178,7 +178,7 @@ export default function ReferralsPage() {
       </div>
 
       {/* Tracking codes */}
-      <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
+      <div className="card p-6 mb-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-semibold text-charcoal text-sm">Tracking Codes</h2>
           {namedCodes.length < 10 && !showAddForm && (
@@ -244,7 +244,7 @@ export default function ReferralsPage() {
       </div>
 
       {/* How it works */}
-      <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
+      <div className="card p-6 mb-6">
         <h2 className="font-semibold text-charcoal text-sm mb-4">How it works</h2>
         <div className="space-y-3">
           {[
@@ -272,11 +272,11 @@ export default function ReferralsPage() {
 
       {/* Referral history */}
       {referrals.length > 0 && (
-        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
+        <div className="card-section overflow-hidden">
+          <div className="px-6 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
             <h2 className="font-semibold text-charcoal text-sm">Referral History</h2>
           </div>
-          <div className="divide-y divide-gray-50">
+          <div>
             {referrals.map((r) => {
               const meta      = STATUS_META[r.status] || STATUS_META.pending;
               const date      = r.rewardedAt || r.signedUpAt;
@@ -286,7 +286,10 @@ export default function ReferralsPage() {
               const blockedLabel = r.blockedReason ? BLOCKED_LABELS[r.blockedReason] : null;
 
               return (
-                <div key={r.id} className="flex items-center justify-between px-6 py-3.5 gap-4">
+                <div key={r.id} className="flex items-center justify-between px-6 py-3.5 gap-4 transition-colors"
+                  style={{ borderBottom: "1px solid var(--border-subtle)" }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "rgb(15 23 42 / 0.022)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-charcoal font-medium truncate">
                       {r.refereeEmail || "Unknown"}

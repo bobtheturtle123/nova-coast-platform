@@ -160,13 +160,14 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
-          <h2 className="font-display text-navy text-lg">
+    <div className="modal-backdrop">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="modal-card relative w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <h2 className="font-semibold text-[#0F172A] text-base">
             {item ? `Edit ${TYPE_META[type].singular}` : "New Item"}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
         </div>
 
         <div className="p-6 space-y-5">
@@ -514,8 +515,11 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
     ? tierVals.length > 0 ? `From $${Math.min(...tierVals).toLocaleString()}` : "Tier pricing"
     : `$${(item.price || 0).toLocaleString()}`;
 
+  const [hovered, setHovered] = useState(false);
   return (
-    <div className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors">
+    <div className="flex items-center gap-4 px-4 py-3 transition-colors"
+      style={{ borderBottom: "1px solid var(--border-subtle)", background: hovered ? "rgb(15 23 42 / 0.022)" : "transparent" }}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       {/* Thumb */}
       <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
         {item.thumbnailUrl
@@ -688,11 +692,12 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
   const canImport = mode === "csv" ? !!csvFile : mode === "url" ? !!url.trim() : !!text.trim();
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-display text-navy text-lg">Import Products</h2>
-          <button onClick={close} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+    <div className="modal-backdrop">
+      <div className="absolute inset-0" onClick={close} />
+      <div className="modal-card relative w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <h2 className="font-semibold text-[#0F172A] text-base">Import Products</h2>
+          <button onClick={close} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
         </div>
         <div className="p-6 space-y-4">
 
@@ -789,6 +794,7 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
+
 export default function ProductsPage() {
   const toast = useToast();
   const [activeType,  setActiveType]  = useState("packages");
@@ -943,11 +949,11 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-[1200px]">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-display text-2xl text-navy">Products</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Customize the services that appear on your booking page</p>
+          <h1 className="page-title">Products</h1>
+          <p className="page-subtitle">Customize the services that appear on your booking page</p>
         </div>
         <div className="flex items-center gap-2">
           <ImportPricingButton
@@ -974,14 +980,14 @@ export default function ProductsPage() {
 
 
       {/* Type tabs */}
-      <div className="flex gap-1 mb-4 border-b border-gray-200">
+      <div className="flex gap-1 mb-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         {Object.entries(TYPE_META).map(([type, meta]) => (
           <button key={type} onClick={() => { setActiveType(type); setSearch(""); }}
-            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              activeType === type ? "border-navy text-navy" : "border-transparent text-gray-500 hover:text-gray-700"
+            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+              activeType === type ? "border-[#0F172A] text-[#0F172A]" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}>
             {meta.label}
-            <span className="ml-1.5 text-xs text-gray-400">({items[type].length})</span>
+            <span className={`ml-1.5 text-xs ${activeType === type ? "text-gray-500" : "text-gray-400"}`}>({items[type].length})</span>
           </button>
         ))}
       </div>
@@ -1002,9 +1008,10 @@ export default function ProductsPage() {
       </div>
 
       {/* Product list */}
-      <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-50">
+      <div className="card-section overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-4 px-4 py-2 text-xs text-gray-400 uppercase tracking-wide font-medium">
+        <div className="flex items-center gap-4 px-4 py-2 text-xs text-gray-400 uppercase tracking-[0.06em] font-medium"
+          style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-subtle)" }}>
           <div className="w-12 flex-shrink-0" />
           <div className="flex-1">Product</div>
           <div className="w-32 flex-shrink-0 text-right">

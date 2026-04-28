@@ -345,7 +345,7 @@ export default function BookingDetailPage() {
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="font-display text-2xl text-navy">{booking.clientName}</h1>
+          <h1 className="page-title">{booking.clientName}</h1>
           <p className="text-gray-400 text-sm">{booking.fullAddress}</p>
           {(booking.shootDate || booking.preferredDate) && (
             <p className="text-gray-400 text-sm mt-0.5">

@@ -115,13 +115,17 @@ export default function PlacesAutocomplete({
       />
 
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+        <ul className="absolute z-50 left-0 right-0 mt-1 bg-white rounded-lg shadow-lg max-h-64 overflow-y-auto"
+          style={{ border: "1px solid var(--border)", boxShadow: "var(--shadow-hover)" }}>
           {suggestions.map((s, i) => (
             <li key={i}>
               <button
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); handleSelect(s); }}
-                className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
+                className="w-full text-left px-4 py-2.5 text-sm text-gray-700 transition-colors"
+                style={{ borderBottom: "1px solid var(--border-subtle)" }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "rgb(15 23 42 / 0.03)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
                 <span className="font-medium">{s.display_name?.split(",")[0]}</span>
                 <span className="text-gray-400 text-xs ml-1">{s.display_name?.split(",").slice(1, 3).join(",")}</span>
               </button>

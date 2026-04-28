@@ -836,7 +836,7 @@ export default function GalleryDetailPage() {
 
         {/* Gallery access panel */}
         {(gallery.authorizedEmails?.length > 0 || true) && (
-          <div className="mb-5 bg-white border border-gray-200 rounded-xl p-4 shadow-card">
+          <div className="mb-5 card p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-semibold text-charcoal">Gallery Access</p>
               <span className="text-xs text-gray-400">No login required to view</span>
@@ -1263,7 +1263,7 @@ export default function GalleryDetailPage() {
           </div>
 
           {/* Attached files / documents */}
-          <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+          <div className="card p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-xl bg-navy/8 flex items-center justify-center flex-shrink-0">
@@ -1377,11 +1377,12 @@ export default function GalleryDetailPage() {
 
       {/* Category panel */}
       {showCatPanel && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="font-display text-navy text-lg">Manage Categories</h2>
-              <button onClick={() => setShowCatPanel(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        <div className="modal-backdrop">
+          <div className="absolute inset-0" onClick={() => setShowCatPanel(false)} />
+          <div className="modal-card relative w-full max-w-md">
+            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              <h2 className="font-semibold text-[#0F172A] text-base">Manage Categories</h2>
+              <button onClick={() => setShowCatPanel(false)} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm text-gray-500">Create folders to organize photos. Assign photos to categories from the gallery grid.</p>
@@ -1434,11 +1435,12 @@ export default function GalleryDetailPage() {
 
       {/* Deliver modal */}
       {showDeliver && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[92vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
-              <h2 className="font-display text-navy text-lg">Deliver Gallery</h2>
-              <button onClick={() => setShowDeliver(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        <div className="modal-backdrop">
+          <div className="absolute inset-0" onClick={() => setShowDeliver(false)} />
+          <div className="modal-card relative w-full max-w-lg max-h-[92vh] overflow-y-auto">
+            <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              <h2 className="font-semibold text-[#0F172A] text-base">Deliver Gallery</h2>
+              <button onClick={() => setShowDeliver(false)} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
             </div>
             <div className="p-6 space-y-4">
               <EmailTagInput label="To" value={emailTo} onChange={setEmailTo}

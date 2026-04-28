@@ -37,11 +37,12 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-modal w-full max-w-md">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-charcoal text-base">{zone ? "Edit Zone" : "New Zone"}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">x</button>
+    <div className="modal-backdrop">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="modal-card relative w-full max-w-md">
+        <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <h2 className="font-semibold text-[#0F172A] text-base">{zone ? "Edit Zone" : "New Zone"}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
         </div>
 
         <div className="p-6 space-y-4">

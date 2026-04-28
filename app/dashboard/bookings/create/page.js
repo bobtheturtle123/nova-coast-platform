@@ -424,7 +424,7 @@ export default function CreateBookingPage() {
       <div className="flex items-center gap-3 mb-6">
         <Link href="/dashboard/bookings" className="text-sm text-gray-400 hover:text-navy">← Bookings</Link>
         <span className="text-gray-300">/</span>
-        <h1 className="font-display text-xl text-navy">New Booking</h1>
+        <h1 className="page-title">New Booking</h1>
       </div>
 
       {error && (

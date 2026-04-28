@@ -315,8 +315,8 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 print:mb-4">
         <div>
-          <h1 className="font-display text-2xl text-navy">Reports</h1>
-          <p className="text-gray-400 text-sm mt-0.5">Financial and booking performance overview</p>
+          <h1 className="page-title">Reports</h1>
+          <p className="page-subtitle">Financial and booking performance overview</p>
         </div>
         <div className="flex items-center gap-2 print:hidden">
           <select

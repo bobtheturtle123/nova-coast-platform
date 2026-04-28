@@ -144,8 +144,8 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
   const ds = (day) => `${viewYear}-${String(viewMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm" onClick={(e)=>e.stopPropagation()}>
+    <div className="modal-backdrop" style={{ zIndex: 60 }} onClick={onClose}>
+      <div className="modal-card relative w-full max-w-sm" onClick={(e)=>e.stopPropagation()}>
         <div className="p-5">
           <div className="flex items-center justify-between mb-4">
             <button type="button" onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">‹</button>
@@ -607,7 +607,7 @@ export default function ListingDetailPage() {
         {tab === "overview" && (
           <div className="grid md:grid-cols-2 gap-6">
             {/* Client / Agent */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+            <div className="card p-5">
               <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Agent / Client</p>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-navy/10 flex items-center justify-center text-navy font-bold">
@@ -663,7 +663,7 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Shoot management */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+            <div className="card p-5">
               <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Shoot Details</p>
               <div className="space-y-4">
                 {/* Auto-derived status badges */}
@@ -779,7 +779,7 @@ export default function ListingDetailPage() {
 
             {/* Services */}
             {(booking.packageId || booking.serviceIds?.length > 0 || booking.customLineItems?.length > 0) && (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+              <div className="card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Services Booked</p>
                 {(() => {
                   const allItems = [
@@ -825,7 +825,7 @@ export default function ListingDetailPage() {
 
             {/* Gallery quick links */}
             {gallery && (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+              <div className="card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Gallery</p>
                 <div className="flex items-center justify-between mb-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -860,7 +860,7 @@ export default function ListingDetailPage() {
               </div>
             ) : null}
             {userRole !== "manager" && (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+              <div className="card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Payment Summary</p>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
@@ -904,7 +904,7 @@ export default function ListingDetailPage() {
 
             {/* Send Invoice button */}
             {userRole !== "manager" && !booking.paidInFull && !booking.balancePaid && (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+              <div className="card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Send Invoice</p>
                 <p className="text-sm text-gray-500 mb-4">
                   Email the client a payment link for their {booking.depositPaid ? "remaining balance" : "deposit"}.
@@ -943,7 +943,7 @@ export default function ListingDetailPage() {
 
             {/* Send Payment Reminder button — only when gallery delivered and balance outstanding */}
             {userRole !== "manager" && booking.depositPaid && !booking.paidInFull && !booking.balancePaid && booking.galleryId && (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+              <div className="card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Payment Reminder</p>
                 <p className="text-sm text-gray-500 mb-4">
                   Send the client a reminder to pay their remaining balance of <strong>${booking.remainingBalance}</strong>.
@@ -996,7 +996,7 @@ export default function ListingDetailPage() {
         {tab === "property" && (
           <div className="max-w-2xl space-y-6">
             {/* Publish status */}
-            <div className="flex items-center justify-between bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between card p-4">
               <div>
                 <p className="text-sm font-semibold text-charcoal">
                   {propSite.published ? "🟢 Website is live" : "⚫ Website is draft (not public)"}
@@ -1400,7 +1400,7 @@ export default function ListingDetailPage() {
 
             {/* Listing URL */}
             {listingUrl && propSite.published && (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+              <div className="card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Listing URL</p>
                 <div className="flex gap-2 items-center">
                   <input readOnly value={listingUrl}
@@ -1422,7 +1422,7 @@ export default function ListingDetailPage() {
             )}
 
             {/* Analytics */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+            <div className="card p-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs uppercase tracking-wide text-gray-400">Listing Analytics</p>
                 <button onClick={loadAnalytics} disabled={analyticsLoading}
@@ -1465,7 +1465,7 @@ export default function ListingDetailPage() {
             <div className="grid sm:grid-cols-2 gap-4">
               {/* QR Code */}
               {listingUrl && (
-                <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+                <div className="card p-5">
                   <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">QR Code</p>
                   <div className="flex items-start gap-4">
                     <img
@@ -1489,7 +1489,7 @@ export default function ListingDetailPage() {
               )}
 
               {/* Brochure */}
-              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+              <div className="card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Print Brochure</p>
                 <p className="text-sm text-gray-600 mb-4 leading-snug">One-page property brochure with photos, stats, agent info, and QR code. Ready to print or save as PDF.</p>
                 {tenantSlug ? (
@@ -1510,7 +1510,7 @@ export default function ListingDetailPage() {
             </div>
 
             {/* Social captions generator */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+            <div className="card p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-gray-400">AI Marketing Captions</p>
@@ -1561,7 +1561,7 @@ export default function ListingDetailPage() {
 
             {/* Inquiries */}
             {analytics?.inquiries?.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+              <div className="card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">
                   Inquiries ({analytics.inquiries.length})
                 </p>
@@ -1586,7 +1586,7 @@ export default function ListingDetailPage() {
             )}
 
             {analytics && analytics.inquiries?.length === 0 && (
-              <div className="text-center py-6 text-sm text-gray-400 bg-white rounded-xl border border-gray-200">
+              <div className="text-center py-6 text-sm text-gray-400 card">
                 No inquiries yet. Share the listing URL to start getting leads.
               </div>
             )}
@@ -1596,7 +1596,7 @@ export default function ListingDetailPage() {
         {/* ── ACTIVITY TAB ─────────────────────────────────────────────────── */}
         {tab === "activity" && (
           <div className="max-w-2xl space-y-4">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-card p-5">
+            <div className="card p-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs uppercase tracking-wide text-gray-400">Gallery Activity Log</p>
                 <button onClick={() => loadActivity(gallery?.id)}
@@ -1647,11 +1647,12 @@ export default function ListingDetailPage() {
 
       {/* Deliver modal */}
       {showDeliver && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
-              <h2 className="font-display text-navy text-lg">Deliver Gallery</h2>
-              <button onClick={() => setShowDeliver(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+        <div className="modal-backdrop">
+          <div className="absolute inset-0" onClick={() => setShowDeliver(false)} />
+          <div className="modal-card relative w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              <h2 className="font-semibold text-[#0F172A] text-base">Deliver Gallery</h2>
+              <button onClick={() => setShowDeliver(false)} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
             </div>
             <div className="p-6 space-y-4">
               <div>

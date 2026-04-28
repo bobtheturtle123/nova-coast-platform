@@ -350,7 +350,7 @@ export default function AgentsPage() {
         /* ── TEAMS TAB ─────────────────────────────────────────────────────── */
         <div>
           {teams.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-16 text-center text-gray-400">
+            <div className="card p-16 text-center text-gray-400">
               <p className="font-medium text-gray-600 mb-1">No teams yet</p>
               <p className="text-sm mt-1 mb-4">Group your customers into teams for bulk gallery delivery.</p>
               <button onClick={() => { setEditingTeam(null); setShowTeamModal(true); }} className="btn-primary text-sm px-5 py-2">
@@ -441,7 +441,7 @@ export default function AgentsPage() {
               <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
             </div>
           ) : agents.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-16 text-center text-gray-400">
+            <div className="card p-16 text-center text-gray-400">
               <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                 <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -452,7 +452,7 @@ export default function AgentsPage() {
               <button onClick={() => setShowModal(true)} className="btn-primary text-sm px-5 py-2">+ Add First Customer</button>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400 text-sm">
+            <div className="card p-8 text-center text-gray-400 text-sm">
               No customers match your search.
             </div>
           ) : (

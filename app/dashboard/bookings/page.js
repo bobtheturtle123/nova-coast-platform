@@ -171,8 +171,8 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-backdrop" style={{ zIndex: 60 }} onClick={onClose}>
+      <div className="modal-card relative w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
         <div className="p-5">
           {/* Month nav */}
           <div className="flex items-center justify-between mb-4">
@@ -527,7 +527,10 @@ export default function BookingsPage() {
     <div className="p-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-2xl text-navy">Bookings</h1>
+        <div>
+          <h1 className="page-title">Bookings</h1>
+          <p className="page-subtitle">Track and manage your shoot appointments</p>
+        </div>
         <div className="flex items-center gap-2">
           {bookings.length > 0 && (
             <button onClick={exportBookingsCSV}
@@ -561,7 +564,7 @@ export default function BookingsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name, address…"
-            className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-full bg-white focus:outline-none focus:ring-1 focus:ring-navy/30 w-52"
+            className="input-field pl-8 text-sm w-52"
           />
         </div>
       </div>
@@ -572,11 +575,11 @@ export default function BookingsPage() {
           <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-100 p-16 text-center text-gray-400 text-sm">
+        <div className="card p-16 text-center text-gray-400 text-sm">
           No bookings found.
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50">
+        <div className="card-section overflow-hidden">
           {filtered.map((b) => {
             const s = STATUS_LABELS[b.status] || { label: b.status, cls: "bg-gray-50 text-gray-500" };
             const dateStr = b.preferredDate
@@ -585,7 +588,10 @@ export default function BookingsPage() {
             const timeStr = b.preferredTime && !["flexible","morning","afternoon"].includes(b.preferredTime)
               ? ` · ${b.preferredTime}` : "";
             return (
-              <div key={b.id} className="px-6 py-4 flex items-center gap-4 hover:bg-gray-50/50 transition-colors">
+              <div key={b.id} className="px-6 py-4 flex items-center gap-4 transition-colors"
+                style={{ borderBottom: "1px solid var(--border-subtle)" }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "rgb(15 23 42 / 0.022)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <p className="text-sm font-medium text-navy truncate">{b.clientName}</p>
@@ -614,24 +620,25 @@ export default function BookingsPage() {
 
       {/* ── Create booking modal ──────────────────────────────────────────────── */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto py-6 px-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto py-6 px-4"
+          style={{ background: "rgb(0 0 0 / 0.48)", backdropFilter: "blur(6px)" }}>
+          <div className="relative bg-white w-full max-w-4xl my-auto" style={{ borderRadius: "18px", boxShadow: "var(--shadow-modal)" }}>
 
             {/* Modal header */}
-            <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100">
+            <div className="flex items-center justify-between px-8 py-5" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
               <div>
-                <h2 className="font-display text-xl text-navy">New Booking</h2>
+                <h2 className="font-semibold text-[#0F172A] text-base">New Booking</h2>
                 <p className="text-xs text-gray-400 mt-0.5">Manually create a confirmed booking for a phone or in-person client.</p>
               </div>
               <button
                 onClick={() => { setShowCreate(false); setCreateError(""); setForm(EMPTY_FORM); setAgentQuery(""); setShowAgentDD(false); }}
-                className="text-gray-300 hover:text-gray-500 transition-colors text-2xl leading-none w-8 h-8 flex items-center justify-center">
+                className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">
                 ×
               </button>
             </div>
 
             <form onSubmit={createBooking}>
-              <div className="flex divide-x divide-gray-100">
+              <div className="flex" style={{ borderTop: "none" }}>
 
                 {/* ── LEFT: form fields ─────────────────────────────────────── */}
                 <div className="flex-1 px-8 py-6 space-y-7 overflow-y-auto max-h-[70vh]">
@@ -960,7 +967,8 @@ export default function BookingsPage() {
                 </div>
 
                 {/* ── RIGHT: order summary ──────────────────────────────────── */}
-                <div className="w-72 flex-shrink-0 px-6 py-6 flex flex-col bg-gray-50/60">
+                <div className="w-72 flex-shrink-0 px-6 py-6 flex flex-col"
+                  style={{ background: "var(--bg-subtle)", borderLeft: "1px solid var(--border-subtle)", borderRadius: "0 18px 18px 0" }}>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Order Summary</p>
 
                   {/* Line items */}

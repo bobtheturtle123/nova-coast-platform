@@ -98,11 +98,12 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-display text-navy text-lg">{member ? "Edit Team Member" : "Add Team Member"}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+    <div className="modal-backdrop">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="modal-card relative w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <h2 className="font-semibold text-[#0F172A] text-base">{member ? "Edit Team Member" : "Add Team Member"}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
         </div>
 
         <div className="p-6 space-y-4">
@@ -261,9 +262,9 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+        <div className="px-6 py-4 flex items-center justify-between sticky bottom-0 bg-white" style={{ borderTop: "1px solid var(--border-subtle)" }}>
           {member
-            ? <button onClick={handleDelete} disabled={deleting} className="text-sm text-red-500 hover:text-red-700">
+            ? <button onClick={handleDelete} disabled={deleting} className="text-sm text-red-500 hover:text-red-700 disabled:opacity-50">
                 {deleting ? "Removing…" : "Remove member"}
               </button>
             : <div />
@@ -323,11 +324,12 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-display text-navy text-lg">Calendar Sync — {member.name}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+    <div className="modal-backdrop">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="modal-card relative w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <h2 className="font-semibold text-[#0F172A] text-base">Calendar Sync — {member.name}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
         </div>
 
         <div className="p-6 space-y-5">
@@ -438,7 +440,7 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+        <div className="px-6 py-4 flex justify-end sticky bottom-0 bg-white" style={{ borderTop: "1px solid var(--border-subtle)" }}>
           <button onClick={onClose} className="btn-outline px-5 py-2 text-sm">Close</button>
         </div>
       </div>
@@ -475,14 +477,15 @@ function BlockTimeModal({ members, onSave, onClose, timeBlocks, onDeleteBlock })
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-display text-navy text-lg">Block Time</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+    <div className="modal-backdrop">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="modal-card relative w-full max-w-md">
+        <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <h2 className="font-semibold text-[#0F172A] text-base">Block Time</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
         </div>
 
-        <div className="flex border-b border-gray-200">
+        <div className="flex" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           {["new", "existing"].map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors capitalize ${
@@ -810,8 +813,8 @@ export default function TeamPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-display text-2xl text-navy">Team</h1>
-          <p className="text-gray-400 text-sm mt-0.5">{members.length} team member{members.length !== 1 ? "s" : ""}</p>
+          <h1 className="page-title">Team</h1>
+          <p className="page-subtitle">{members.length} team member{members.length !== 1 ? "s" : ""}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowBlockModal(true)} className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
@@ -830,7 +833,7 @@ export default function TeamPage() {
       {members.length > 0 && (
         <div className="flex gap-3 flex-wrap mb-6">
           {members.map((m) => (
-            <div key={m.id} className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3 hover:shadow-sm transition-shadow">
+            <div key={m.id} className="flex items-center gap-3 card px-4 py-3 card-hover">
               <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
                 style={{ background: m.color || "#0b2a55" }}>
                 {m.name?.[0]?.toUpperCase() || "?"}
@@ -862,9 +865,9 @@ export default function TeamPage() {
       )}
 
       {/* Calendar section */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">
+      <div className="card-section overflow-hidden mb-6">
         {/* Calendar toolbar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-wrap gap-2">
+        <div className="flex items-center justify-between px-4 py-3 flex-wrap gap-2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div className="flex items-center gap-3">
             <button onClick={prevPeriod} className="p-1.5 hover:bg-gray-100 rounded">
               <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -1335,12 +1338,15 @@ export default function TeamPage() {
 
       {/* Unscheduled list */}
       {unscheduled.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl">
-          <div className="px-4 py-3 border-b border-gray-200">
+        <div className="card-section overflow-hidden">
+          <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
             <p className="font-semibold text-charcoal text-sm">Needs Scheduling ({unscheduled.length})</p>
           </div>
           {unscheduled.map((b) => (
-            <div key={b.id} className="flex items-center gap-4 px-4 py-3 border-b last:border-b-0 border-gray-50">
+            <div key={b.id} className="flex items-center gap-4 px-4 py-3 transition-colors"
+              style={{ borderBottom: "1px solid var(--border-subtle)" }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "rgb(15 23 42 / 0.022)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-charcoal truncate">{b.address}</p>
                 <p className="text-xs text-gray-400">{b.clientName} · {b.preferredDate ? new Date(b.preferredDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "No date"} · {b.preferredTime}</p>
@@ -1371,12 +1377,13 @@ export default function TeamPage() {
 
       {/* Invite modal */}
       {showInvite && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="font-display text-navy text-lg">Invite Photographer</h2>
+        <div className="modal-backdrop">
+          <div className="absolute inset-0" onClick={() => { setShowInvite(false); setInviteEmail(""); setInviteMsg(""); }} />
+          <div className="modal-card relative w-full max-w-md">
+            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              <h2 className="font-semibold text-[#0F172A] text-base">Invite Photographer</h2>
               <button onClick={() => { setShowInvite(false); setInviteEmail(""); setInviteMsg(""); }}
-                className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+                className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm text-gray-500">
@@ -1401,7 +1408,7 @@ export default function TeamPage() {
                 </p>
               )}
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+            <div className="px-6 py-4 flex justify-end gap-3" style={{ borderTop: "1px solid var(--border-subtle)" }}>
               <button onClick={() => { setShowInvite(false); setInviteEmail(""); setInviteMsg(""); }}
                 className="btn-outline px-4 py-2 text-sm">Cancel</button>
               <button onClick={sendInvite} disabled={inviteSending || !inviteEmail.trim()}
@@ -1437,16 +1444,16 @@ export default function TeamPage() {
 
       {/* Block detail popover */}
       {blockDetail && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setBlockDetail(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="modal-backdrop" onClick={() => setBlockDetail(null)}>
+          <div className="modal-card relative w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
               <div>
                 <p className="font-semibold text-charcoal text-sm">
                   {blockDetail.member.name} — {DAYS_SHORT[blockDetail.date.getDay()]}, {MONTHS[blockDetail.date.getMonth()]} {blockDetail.date.getDate()}
                 </p>
                 <p className="text-xs mt-0.5 font-medium" style={{ color: blockDetail.member.color || "#0b2a55" }}>Blocked</p>
               </div>
-              <button onClick={() => setBlockDetail(null)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+              <button onClick={() => setBlockDetail(null)} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
             </div>
             <div className="p-5 space-y-3">
               {blockDetail.blocks.map((bl) => {
