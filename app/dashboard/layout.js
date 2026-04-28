@@ -125,7 +125,23 @@ export default function DashboardLayout({ children }) {
       // Force-refresh so custom claims (tenantId, role) are always current
       await u.getIdToken(true);
       const tokenResult = await u.getIdTokenResult();
-      if (!tokenResult.claims.tenantId) { router.push("/onboarding"); return; }
+      if (!tokenResult.claims.tenantId) {
+        // Claims missing — attempt auto-repair before sending to onboarding
+        let repaired = false;
+        try {
+          const repairRes = await fetch("/api/auth/repair-claims", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${tokenResult.token}` },
+          });
+          const repairData = await repairRes.json();
+          if (repairData.ok) {
+            await u.getIdToken(true);
+            const refreshed = await u.getIdTokenResult();
+            repaired = !!refreshed.claims.tenantId;
+          }
+        } catch {}
+        if (!repaired) { router.push("/onboarding"); return; }
+      }
       setUser(u);
       fetch("/api/dashboard/tenant", {
         headers: { Authorization: `Bearer ${await u.getIdToken()}` },

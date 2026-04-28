@@ -38,27 +38,48 @@ export default function OnboardingPage() {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) { router.push("/auth/login"); return; }
       setUser(u);
-      const idToken = await u.getIdToken();
-      const res = await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${idToken}` } });
-      if (res.ok) {
+
+      async function loadTenant(token) {
+        const res = await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) return null;
         const d = await res.json();
-        const t = d.tenant;
+        return d.tenant ?? null;
+      }
+
+      let idToken = await u.getIdToken();
+      let t = await loadTenant(idToken);
+
+      // If tenant API failed (claims missing), attempt repair then retry once
+      if (!t) {
+        try {
+          const repairRes = await fetch("/api/auth/repair-claims", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${idToken}` },
+          });
+          const repairData = await repairRes.json();
+          if (repairData.ok) {
+            await u.getIdToken(true);
+            idToken = await u.getIdToken();
+            t = await loadTenant(idToken);
+          }
+        } catch {}
+      }
+
+      if (t) {
         setTenant(t);
-        if (t?.slug)     setSlug(t.slug);
-        if (t?.phone)    setPhone(t.phone);
-        if (t?.fromZip)  setFromZip(t.fromZip);
-        // If they already completed onboarding, go straight to dashboard
-        if (t?.onboardingCompleted) { router.push("/dashboard"); return; }
-        // Resume from where they left off
-        if (t?.onboardingStep) setStep(t.onboardingStep);
+        if (t.slug)    setSlug(t.slug);
+        if (t.phone)   setPhone(t.phone);
+        if (t.fromZip) setFromZip(t.fromZip);
+        if (t.onboardingCompleted) { router.push("/dashboard"); return; }
+        if (t.onboardingStep)      setStep(t.onboardingStep);
       }
     });
     return unsub;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router]);
+  }, []);
 
   async function patch(fields) {
-    const token = await user.getIdToken(true);
+    const token = await user.getIdToken();
     return fetch("/api/tenants/update", {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -78,15 +99,13 @@ export default function OnboardingPage() {
 
   async function skip() {
     setError("");
-    await patch({ onboardingStep: step + 1 }).catch(() => {});
     const nextStep = step + 1;
-    // If skipping past the last real step, mark complete and go to dashboard
     if (nextStep >= STEPS.length - 1) {
       await patch({ onboardingCompleted: true, onboardingStep: STEPS.length }).catch(() => {});
-      await user.getIdToken(true);
       router.push("/dashboard");
       return;
     }
+    await patch({ onboardingStep: nextStep }).catch(() => {});
     next();
   }
 
@@ -160,7 +179,6 @@ export default function OnboardingPage() {
         <button
           onClick={async () => {
             await patch({ onboardingCompleted: true, onboardingStep: STEPS.length }).catch(() => {});
-            await user.getIdToken(true);
             router.push("/dashboard");
           }}
           className="text-xs text-gray-400 hover:text-navy transition-colors">
