@@ -8,29 +8,30 @@
     "start": "next start"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.3",
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/s3-request-presigner": "^3.600.0",
+    "@stripe/react-stripe-js": "^2.7.1",
+    "@stripe/stripe-js": "^3.4.1",
+    "archiver": "^7.0.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "firebase": "^10.12.0",
     "next": "14.2.3",
     "react": "^18",
     "react-dom": "^18",
-    "firebase": "^10.12.0",
-    "firebase-admin": "^12.2.0",
-    "stripe": "^15.8.0",
-    "@stripe/stripe-js": "^3.4.1",
-    "@stripe/react-stripe-js": "^2.7.1",
-    "zustand": "^4.5.2",
     "resend": "^3.2.0",
-    "uuid": "^9.0.1",
-    "date-fns": "^3.6.0",
-    "clsx": "^2.1.1",
-    "@aws-sdk/client-s3": "^3.600.0",
-    "@aws-sdk/s3-request-presigner": "^3.600.0",
     "sharp": "^0.33.4",
-    "archiver": "^7.0.1",
-    "@anthropic-ai/sdk": "^0.27.3"
+    "stripe": "^15.8.0",
+    "uuid": "^9.0.1",
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
-    "tailwindcss": "^3.4.4",
-    "postcss": "^8",
+    "@types/uuid": "^9",
     "autoprefixer": "^10",
-    "@types/uuid": "^9"
+    "dotenv": "^17.4.2",
+    "firebase-admin": "^13.8.0",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.4"
   }
 }
