@@ -64,7 +64,11 @@ export default function RegisterPage() {
       router.push("/onboarding");
     } catch (err) {
       if (err.code === "auth/email-already-in-use") {
-        setError("An account with this email already exists.");
+        setError("An account with this email already exists. Try signing in instead.");
+      } else if (err.code === "auth/too-many-requests") {
+        setError("Too many attempts from this device. Please wait a few minutes and try again, or reset your password.");
+      } else if (err.code === "auth/weak-password") {
+        setError("Password must be at least 6 characters.");
       } else {
         setError(err.message || "Something went wrong. Please try again.");
       }

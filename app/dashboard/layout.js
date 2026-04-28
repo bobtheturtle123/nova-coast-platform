@@ -122,6 +122,8 @@ export default function DashboardLayout({ children }) {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) { router.push("/auth/login"); return; }
+      // Force-refresh so custom claims (tenantId, role) are always current
+      await u.getIdToken(true);
       const tokenResult = await u.getIdTokenResult();
       if (!tokenResult.claims.tenantId) { router.push("/onboarding"); return; }
       setUser(u);

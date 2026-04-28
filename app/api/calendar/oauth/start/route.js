@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { randomBytes } from "crypto";
 

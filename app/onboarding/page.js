@@ -78,8 +78,15 @@ export default function OnboardingPage() {
 
   async function skip() {
     setError("");
-    // Save progress so they can resume
     await patch({ onboardingStep: step + 1 }).catch(() => {});
+    const nextStep = step + 1;
+    // If skipping past the last real step, mark complete and go to dashboard
+    if (nextStep >= STEPS.length - 1) {
+      await patch({ onboardingCompleted: true, onboardingStep: STEPS.length }).catch(() => {});
+      await user.getIdToken(true);
+      router.push("/dashboard");
+      return;
+    }
     next();
   }
 
@@ -150,9 +157,15 @@ export default function OnboardingPage() {
       {/* Header */}
       <header className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
         <span className="font-display text-navy text-lg tracking-wide">KyoriaOS</span>
-        <Link href="/dashboard" className="text-xs text-gray-400 hover:text-navy transition-colors">
+        <button
+          onClick={async () => {
+            await patch({ onboardingCompleted: true, onboardingStep: STEPS.length }).catch(() => {});
+            await user.getIdToken(true);
+            router.push("/dashboard");
+          }}
+          className="text-xs text-gray-400 hover:text-navy transition-colors">
           Skip setup → Dashboard
-        </Link>
+        </button>
       </header>
 
       {/* Progress */}
