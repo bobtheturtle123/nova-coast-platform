@@ -109,7 +109,7 @@ function StaffAccessSection() {
   }
 
   return (
-    <div id="settings-staff-access" className="card mt-6 scroll-mt-6">
+    <div id="settings-staff-access" className="card mt-6 scroll-mt-24">
       <h2 className="font-semibold text-charcoal text-base mb-1">Staff Access</h2>
       <p className="text-sm text-gray-500 mb-6">
         Invite employees or virtual assistants to manage bookings and galleries. They get dashboard access but cannot change billing or settings.
@@ -267,14 +267,14 @@ function SmsNotificationsSection() {
 
   if (!prefs) {
     return (
-      <div id="settings-sms" className="card mt-6 scroll-mt-6">
+      <div id="settings-sms" className="card mt-6 scroll-mt-24">
         <div className="animate-pulse h-4 bg-gray-100 rounded w-32" />
       </div>
     );
   }
 
   return (
-    <div id="settings-sms" className="card mt-6 scroll-mt-6">
+    <div id="settings-sms" className="card mt-6 scroll-mt-24">
       <div className="flex items-start justify-between mb-1">
         <div>
           <h2 className="font-semibold text-charcoal text-base">SMS Notifications</h2>
@@ -387,7 +387,7 @@ function CustomDomainSection() {
   const platformHost = process.env.NEXT_PUBLIC_APP_DOMAIN || "novaos.app";
 
   return (
-    <div id="settings-custom-domain" className="card mt-6 scroll-mt-6">
+    <div id="settings-custom-domain" className="card mt-6 scroll-mt-24">
       <div className="flex items-start justify-between mb-1">
         <div>
           <h2 className="font-semibold text-charcoal text-base">Custom Domain</h2>
@@ -544,14 +544,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
 
-  // Support ?tab=Communications redirect from notifications page
-  const [sg, setSg] = useState(() => {
-    if (typeof window !== "undefined") {
-      const tab = new URLSearchParams(window.location.search).get("tab");
-      if (tab) return tab;
-    }
-    return "Business";
-  });
+  const [activeSection, setActiveSection] = useState("settings-branding");
 
   const [form, setForm] = useState({
     businessName: "", phone: "", fromZip: "",
@@ -667,6 +660,27 @@ export default function SettingsPage() {
       if (res.ok) { const d = await res.json(); setPromoCodes(d.codes || []); }
     });
   }, []);
+
+  // Scroll-spy: highlight active nav item based on which section is in view
+  useEffect(() => {
+    const ids = [
+      "settings-branding",
+      "settings-pricing","settings-booking","settings-availability",
+      "settings-service-areas","settings-travel","settings-promos",
+      "settings-agreement","settings-terms",
+      "settings-cost-rates","settings-staff-access",
+      "settings-email","settings-notifications",
+      "settings-integrations",
+    ];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => { if (e.isIntersecting) setActiveSection(e.target.id); });
+      },
+      { rootMargin: "-10% 0px -65% 0px", threshold: 0 }
+    );
+    ids.forEach((id) => { const el = document.getElementById(id); if (el) observer.observe(el); });
+    return () => observer.disconnect();
+  }, [loading]);
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
@@ -1155,94 +1169,103 @@ export default function SettingsPage() {
   };
 
   const SECTION_GROUPS = [
-    {
-      group: "Business",
-      items: [
-        { id: "branding", label: "Branding" },
-      ],
-    },
-    {
-      group: "Booking",
-      items: [
-        { id: "booking",       label: "Booking" },
-        { id: "pricing",       label: "Pricing Tiers" },
-        { id: "availability",  label: "Availability" },
-        { id: "travel",        label: "Travel Fees" },
-        { id: "service-areas", label: "Service Areas" },
-        { id: "promos",        label: "Promo Codes" },
-      ],
-    },
-    {
-      group: "Communications",
-      items: [
-        { id: "email", label: "Email Templates" },
-        { id: "sms",   label: "SMS Alerts" },
-      ],
-    },
-    {
-      group: "Legal",
-      items: [
-        { id: "agreement", label: "Service Agreement" },
-        { id: "terms",     label: "Terms & Privacy" },
-      ],
-    },
-    {
-      group: "Team",
-      items: [
-        { id: "cost-rates",   label: "Cost Rates" },
-        { id: "staff-access", label: "Staff Access" },
-      ],
-    },
-    {
-      group: "Integrations",
-      items: [
-        { id: "integrations", label: "Integrations" },
-      ],
-    },
+    { group: "Business", items: [
+      { id: "settings-branding",      label: "Business & Branding" },
+    ]},
+    { group: "Booking", items: [
+      { id: "settings-pricing",       label: "Pricing Tiers" },
+      { id: "settings-booking",       label: "Booking Settings" },
+      { id: "settings-availability",  label: "Availability" },
+      { id: "settings-service-areas", label: "Service Areas" },
+      { id: "settings-travel",        label: "Travel Fees" },
+      { id: "settings-promos",        label: "Promo Codes" },
+    ]},
+    { group: "Legal", items: [
+      { id: "settings-agreement", label: "Service Agreement" },
+      { id: "settings-terms",     label: "Terms & Privacy" },
+    ]},
+    { group: "Team", items: [
+      { id: "settings-cost-rates",   label: "Cost Rates" },
+      { id: "settings-staff-access", label: "Staff Access" },
+    ]},
+    { group: "Communications", items: [
+      { id: "settings-email",          label: "Email Templates" },
+      { id: "settings-notifications",  label: "Notifications" },
+    ]},
+    { group: "Integrations", items: [
+      { id: "settings-integrations", label: "Integrations" },
+    ]},
   ];
 
   return (
-    <div className="p-6 max-w-5xl">
-      <div className="mb-6">
+    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
+    <div className="max-w-[1140px] mx-auto px-6 py-8">
+      <div className="mb-8">
         <h1 className="page-title mb-1">Settings</h1>
-        <p className="text-gray-400 text-sm">Select a category to configure your account.</p>
+        <p className="page-subtitle">Configure your business, booking flow, and communications.</p>
       </div>
 
-      {/* Mobile tab bar */}
-      <div className="flex gap-1 flex-wrap mb-6 lg:hidden">
+      {/* Mobile section jumper */}
+      <div className="flex gap-1.5 flex-wrap mb-6 lg:hidden">
         {SECTION_GROUPS.map((grp) => (
-          <button key={grp.group} onClick={() => setSg(grp.group)}
-            className={`text-xs py-1.5 px-3 rounded-full font-medium transition-colors border ${
-              sg === grp.group
-                ? "bg-navy text-white border-navy"
-                : "text-gray-500 border-gray-200 hover:border-navy/30 hover:text-navy"
-            }`}>
+          <button key={grp.group}
+            onClick={() => document.getElementById(grp.items[0]?.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="text-xs py-1.5 px-3 rounded-full font-medium border text-gray-500 border-gray-200 hover:border-navy/30 hover:text-navy transition-colors">
             {grp.group}
           </button>
         ))}
       </div>
 
       <div className="flex gap-8 items-start">
-        {/* Sticky side nav — tabs */}
-        <nav className="hidden lg:block w-44 flex-shrink-0 sticky top-6">
-          <div className="space-y-0.5">
-            {SECTION_GROUPS.map((grp) => (
-              <button key={grp.group} onClick={() => setSg(grp.group)}
-                className={`w-full text-left text-sm py-2 px-3 rounded-lg font-medium transition-colors ${
-                  sg === grp.group
-                    ? "bg-navy text-white"
-                    : "text-gray-500 hover:text-navy hover:bg-navy/5"
-                }`}>
-                {grp.group}
-              </button>
-            ))}
+        {/* Sticky frosted-glass scroll-spy nav */}
+        <nav className="hidden lg:flex flex-col w-52 flex-shrink-0 sticky top-8"
+          style={{ maxHeight: "calc(100vh - 5rem)" }}>
+          <div className="rounded-2xl overflow-hidden flex-1 overflow-y-auto" style={{
+            background: "rgba(10,35,80,0.74)",
+            backdropFilter: "blur(24px) saturate(140%)",
+            WebkitBackdropFilter: "blur(24px) saturate(140%)",
+            border: "1px solid rgba(255,255,255,0.15)",
+            boxShadow: "0 4px 32px rgba(7,22,56,0.18), inset 0 1px 0 rgba(255,255,255,0.12)",
+          }}>
+            <div className="p-3">
+              {SECTION_GROUPS.map((grp, gi) => (
+                <div key={grp.group} className={gi > 0 ? "mt-3 pt-3 border-t" : ""} style={gi > 0 ? { borderColor: "rgba(255,255,255,0.09)" } : {}}>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] px-2.5 mb-1.5"
+                    style={{ color: "rgba(255,255,255,0.32)" }}>
+                    {grp.group}
+                  </p>
+                  {grp.items.map((item) => {
+                    const isActive = activeSection === item.id;
+                    return (
+                      <button key={item.id}
+                        onClick={() => document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                        className="w-full text-left py-1.5 px-2.5 rounded-lg text-[12.5px] font-medium transition-all mb-0.5 block"
+                        style={{
+                          color: isActive ? "#fff" : "rgba(255,255,255,0.54)",
+                          background: isActive ? "rgba(255,255,255,0.12)" : "transparent",
+                          boxShadow: isActive ? "inset 0 0 0 1px rgba(255,255,255,0.1)" : "none",
+                        }}
+                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = "rgba(255,255,255,0.07)"; }}
+                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent"; }}>
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
         </nav>
 
-        {/* Main content */}
+        {/* Main content — all sections always visible, scroll-linked to nav */}
         <div className="flex-1 min-w-0">
 
-      {sg === "Business" && (<>
+      {/* ─── BUSINESS ──────────────────────────────────────────────────────── */}
+      <div className="mb-4 flex items-center gap-3">
+        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.35)" }}>Business</span>
+        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+      </div>
       {/* Booking URL */}
       <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-4">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Your Booking Page</p>
@@ -1270,7 +1293,7 @@ export default function SettingsPage() {
         <p className="text-[10px] text-gray-400 mt-2">Tip: Add this to your website, bio page, or anywhere clients should be able to book directly.</p>
       </div>
 
-      <form id="settings-branding" onSubmit={saveBranding} className="space-y-6 scroll-mt-6">
+      <form id="settings-branding" onSubmit={saveBranding} className="space-y-6 scroll-mt-24">
         {/* Business info */}
         <div className="card">
           <h2 className="font-semibold text-charcoal text-base mb-4">Business Info</h2>
@@ -1367,11 +1390,15 @@ export default function SettingsPage() {
           {saving ? "Saving…" : "Save Settings"}
         </button>
       </form>
-      </>)}
 
-      {sg === "Booking" && (<>
+      {/* ─── BOOKING ──────────────────────────────────────────────────────────── */}
+      <div className="mt-10 mb-4 flex items-center gap-3">
+        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.35)" }}>Booking</span>
+        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+      </div>
       {/* ─── Pricing Tiers ─────────────────────────────────────────────────────── */}
-      <div id="settings-pricing" className="card mt-6 scroll-mt-6">
+      <div id="settings-pricing" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-display text-navy text-base">Pricing Tiers</h2>
           <button onClick={resetTiers} className="text-xs text-gray-400 hover:text-navy">Reset to defaults</button>
@@ -1485,7 +1512,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Booking Config ──────────────────────────────────────────────────── */}
-      <div id="settings-booking" className="card mt-8 space-y-8 scroll-mt-6">
+      <div id="settings-booking" className="card mt-8 space-y-8 scroll-mt-24">
         <div>
           <h2 className="font-semibold text-charcoal text-base mb-1">Booking Settings</h2>
           <p className="text-sm text-gray-500">Configure deposit requirements, time slots, and custom form fields.</p>
@@ -1625,55 +1652,9 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
-      </>)}
-
-      {/* ─── Job Cost Rates ──────────────────────────────────────────────────── */}
-      {sg === "Team" && (
-      <div id="settings-cost-rates" className="card mt-6 scroll-mt-6">
-        <h2 className="font-semibold text-charcoal text-base mb-1">Default Job Cost Rates</h2>
-        <p className="text-sm text-gray-500 mb-6">
-          These default rates auto-fill the Job Costs card on each booking. You can still override them per booking.
-        </p>
-        <div className="grid grid-cols-2 gap-4 max-w-lg">
-          <div>
-            <label className="label-field">Shooter Rate ($/hr)</label>
-            <input type="number" min="0" step="1" value={costRates.shooterHourly}
-              onChange={(e) => setCostRates((r) => ({ ...r, shooterHourly: Number(e.target.value) || 0 }))}
-              className="input-field w-full" placeholder="75" />
-          </div>
-          <div>
-            <label className="label-field">Editor Rate ($/photo)</label>
-            <input type="number" min="0" step="0.25" value={costRates.editorPerPhoto}
-              onChange={(e) => setCostRates((r) => ({ ...r, editorPerPhoto: Number(e.target.value) || 0 }))}
-              className="input-field w-full" placeholder="2.00" />
-          </div>
-          <div>
-            <label className="label-field">Travel Rate ($/mile)</label>
-            <input type="number" min="0" step="0.01" value={costRates.travelPerMile}
-              onChange={(e) => setCostRates((r) => ({ ...r, travelPerMile: Number(e.target.value) || 0 }))}
-              className="input-field w-full" placeholder="0.67" />
-          </div>
-          <div>
-            <label className="label-field">Other Flat Cost ($)</label>
-            <input type="number" min="0" step="1" value={costRates.otherFlat}
-              onChange={(e) => setCostRates((r) => ({ ...r, otherFlat: Number(e.target.value) || 0 }))}
-              className="input-field w-full" placeholder="0" />
-          </div>
-        </div>
-        <p className="text-xs text-gray-400 mt-3">
-          Shooter fee = rate × shoot hours. Editor fee = rate × photo count. Travel = rate × miles (from your ZIP to property).
-        </p>
-        <div className="pt-4 border-t border-gray-100 mt-4">
-          <button onClick={saveCostRates} disabled={savingCosts} className="btn-primary px-8 py-3">
-            {savingCosts ? "Saving…" : "Save Cost Rates"}
-          </button>
-        </div>
-      </div>
-      )}
 
       {/* ─── Availability ────────────────────────────────────────────────────── */}
-      {sg === "Booking" && (<>
-      <div id="settings-availability" className="card mt-6 scroll-mt-6">
+      <div id="settings-availability" className="card mt-6 scroll-mt-24">
         <h2 className="font-semibold text-charcoal text-base mb-1">Availability & Scheduling</h2>
         <p className="text-sm text-gray-500 mb-6">
           Control how time slots are offered to clients on the booking schedule step.
@@ -1957,7 +1938,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Service Areas ──────────────────────────────────────────────────────── */}
-      <div id="settings-service-areas" className="card mt-6 scroll-mt-6">
+      <div id="settings-service-areas" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-charcoal text-base">Service Areas & Zones</h2>
@@ -1969,153 +1950,8 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      </>)}
-
-      {/* ─── Service Agreement ───────────────────────────────────────────────── */}
-      {sg === "Legal" && (<>
-      <div id="settings-agreement" className="card mt-6 scroll-mt-6">
-        <div className="flex items-start justify-between mb-1">
-          <div>
-            <h2 className="font-semibold text-charcoal text-base">Service Agreement</h2>
-            <p className="text-sm text-gray-500 mt-0.5">
-              Require clients to read and electronically sign a service agreement before completing a booking.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setServiceAgreementEnabled((v) => !v)}
-            className={`relative w-10 h-6 rounded-full flex-shrink-0 transition-colors ml-4 ${serviceAgreementEnabled ? "bg-charcoal" : "bg-gray-200"}`}>
-            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${serviceAgreementEnabled ? "translate-x-5" : "translate-x-1"}`} />
-          </button>
-        </div>
-
-        {!serviceAgreementEnabled && (
-          <p className="text-xs text-gray-400 mb-4">Toggle on to require clients to sign a contract during checkout.</p>
-        )}
-
-        {serviceAgreementEnabled && (
-          <div className="mt-4 space-y-3">
-            <div className="flex items-start gap-2 text-xs bg-blue-50 border border-blue-100 text-blue-800 px-3 py-2.5 rounded">
-              <span>ℹ️</span>
-              <span>
-                When enabled, clients must read the agreement, type their full legal name, and click "I agree and electronically sign" to complete booking.
-                The signed agreement text, client name, timestamp, and IP address are recorded on the booking. Your counter-signature is applied automatically.
-                Electronic consent collected this way is generally enforceable — have your attorney review the agreement text to ensure it covers your jurisdiction's requirements.
-              </span>
-            </div>
-            <label className="label-field">Agreement Text</label>
-            <textarea
-              value={serviceAgreementText}
-              onChange={(e) => setServiceAgreementText(e.target.value)}
-              rows={16}
-              placeholder={`REAL ESTATE MEDIA SERVICES AGREEMENT\n\nThis agreement is entered into between [Your Business Name] ("Photographer") and the client ("Client") as identified at the time of booking.\n\n1. SCOPE OF SERVICES\n...\n\n2. PAYMENT TERMS\n...\n\nBy clicking "I agree" below, Client acknowledges they have read and agree to the terms of this agreement.`}
-              className="input-field w-full text-sm font-mono leading-relaxed resize-y"
-            />
-            <p className="text-xs text-gray-400">
-              Clients will see this text in full, must scroll through it, and type their name to confirm before payment is processed.
-            </p>
-          </div>
-        )}
-
-        <div className="mt-4 flex items-center gap-4">
-          <button onClick={saveAgreement} disabled={savingAgreement} className="btn-primary px-8 py-3">
-            {savingAgreement ? "Saving…" : "Save Agreement Settings"}
-          </button>
-        </div>
-      </div>
-
-      {/* ─── Terms of Service ─────────────────────────────────────────────────── */}
-      <div id="settings-terms" className="card mt-6 scroll-mt-6">
-        <h2 className="font-semibold text-charcoal text-base mb-1">Terms of Service</h2>
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-gray-500">
-            Clients must agree to these terms before completing a booking. Leave blank to disable the checkbox.
-            Shown at <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">/{tenant?.slug}/terms</code>.
-          </p>
-        </div>
-        {!termsText && (
-          <div className="mb-3 space-y-2">
-            <div className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2 rounded">
-              <span className="text-base leading-none mt-0.5">⚠️</span>
-              <span>The default template is a <strong>placeholder only</strong> — not a legal document. Have an attorney review before use. You are responsible for your own terms.</span>
-            </div>
-            <button type="button" onClick={() => setTermsText(DEFAULT_TERMS)}
-              className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5 transition-colors">
-              Load default template (review before publishing)
-            </button>
-          </div>
-        )}
-        <textarea
-          value={termsText}
-          onChange={(e) => setTermsText(e.target.value)}
-          rows={18}
-          placeholder="Paste your Terms of Service here…"
-          className="input-field w-full text-sm font-mono leading-relaxed resize-y"
-        />
-        <div className="mt-4 flex items-center gap-4 flex-wrap">
-          <button onClick={saveTerms} disabled={savingTerms} className="btn-primary px-8 py-3">
-            {savingTerms ? "Saving…" : "Save Terms"}
-          </button>
-          {termsText && (
-            <button type="button" onClick={() => setTermsText("")}
-              className="text-xs text-gray-400 hover:text-red-500 transition-colors">
-              Clear
-            </button>
-          )}
-          {tenant?.slug && (
-            <a href={`/${tenant.slug}/terms`} target="_blank" rel="noopener noreferrer"
-              className="text-sm text-navy underline underline-offset-2 hover:opacity-70">
-              Preview public terms page →
-            </a>
-          )}
-        </div>
-      </div>
-      {/* ─── Privacy Policy ──────────────────────────────────────────────────── */}
-      <div className="card mt-6">
-        <h2 className="font-semibold text-charcoal text-base mb-1">Privacy Policy</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Shown at <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">/{tenant?.slug}/privacy</code>.
-          Linked from the checkout terms checkbox. Leave blank to disable.
-        </p>
-        {!privacyText && (
-          <div className="mb-3">
-            <button type="button" onClick={() => setPrivacyText(DEFAULT_PRIVACY)}
-              className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5 transition-colors">
-              Use default template
-            </button>
-          </div>
-        )}
-        <textarea
-          value={privacyText}
-          onChange={(e) => setPrivacyText(e.target.value)}
-          rows={14}
-          placeholder="Paste your Privacy Policy here…"
-          className="input-field w-full text-sm font-mono leading-relaxed resize-y"
-        />
-        <div className="mt-4 flex items-center gap-4 flex-wrap">
-          <button onClick={savePrivacy} disabled={savingPrivacy} className="btn-primary px-8 py-3">
-            {savingPrivacy ? "Saving…" : "Save Privacy Policy"}
-          </button>
-          {privacyText && (
-            <button type="button" onClick={() => setPrivacyText("")}
-              className="text-xs text-gray-400 hover:text-red-500 transition-colors">
-              Clear
-            </button>
-          )}
-          {tenant?.slug && (
-            <a href={`/${tenant.slug}/privacy`} target="_blank" rel="noopener noreferrer"
-              className="text-sm text-navy underline underline-offset-2 hover:opacity-70">
-              Preview public privacy page →
-            </a>
-          )}
-        </div>
-      </div>
-
-      </>)}
-
       {/* ─── Travel Fees ─────────────────────────────────────────────────────── */}
-      {sg === "Booking" && (
-      <div id="settings-travel" className="card mt-6 scroll-mt-6">
+      <div id="settings-travel" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-semibold text-charcoal text-base">Travel Fees</h2>
           <button
@@ -2269,14 +2105,8 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      )}
-
-      {/* ─── Staff Access ────────────────────────────────────────────────────── */}
-      {sg === "Team" && <StaffAccessSection />}
-
       {/* ─── Promo Codes ─────────────────────────────────────────────────────── */}
-      {sg === "Booking" && (
-      <div id="settings-promos" className="card mt-6 scroll-mt-6">
+      <div id="settings-promos" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="font-semibold text-charcoal text-base">Promo Codes</h2>
@@ -2386,11 +2216,211 @@ export default function SettingsPage() {
         )}
       </div>
 
-      )}
+      {/* ─── LEGAL ────────────────────────────────────────────────────────────── */}
+      <div className="mt-10 mb-4 flex items-center gap-3">
+        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.35)" }}>Legal</span>
+        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+      </div>
+      {/* ─── Service Agreement ───────────────────────────────────────────────── */}
+      <div id="settings-agreement" className="card mt-6 scroll-mt-24">
+        <div className="flex items-start justify-between mb-1">
+          <div>
+            <h2 className="font-semibold text-charcoal text-base">Service Agreement</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Require clients to read and electronically sign a service agreement before completing a booking.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setServiceAgreementEnabled((v) => !v)}
+            className={`relative w-10 h-6 rounded-full flex-shrink-0 transition-colors ml-4 ${serviceAgreementEnabled ? "bg-charcoal" : "bg-gray-200"}`}>
+            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${serviceAgreementEnabled ? "translate-x-5" : "translate-x-1"}`} />
+          </button>
+        </div>
+
+        {!serviceAgreementEnabled && (
+          <p className="text-xs text-gray-400 mb-4">Toggle on to require clients to sign a contract during checkout.</p>
+        )}
+
+        {serviceAgreementEnabled && (
+          <div className="mt-4 space-y-3">
+            <div className="flex items-start gap-2 text-xs bg-blue-50 border border-blue-100 text-blue-800 px-3 py-2.5 rounded">
+              <span>ℹ️</span>
+              <span>
+                When enabled, clients must read the agreement, type their full legal name, and click "I agree and electronically sign" to complete booking.
+                The signed agreement text, client name, timestamp, and IP address are recorded on the booking. Your counter-signature is applied automatically.
+                Electronic consent collected this way is generally enforceable — have your attorney review the agreement text to ensure it covers your jurisdiction's requirements.
+              </span>
+            </div>
+            <label className="label-field">Agreement Text</label>
+            <textarea
+              value={serviceAgreementText}
+              onChange={(e) => setServiceAgreementText(e.target.value)}
+              rows={16}
+              placeholder={`REAL ESTATE MEDIA SERVICES AGREEMENT\n\nThis agreement is entered into between [Your Business Name] ("Photographer") and the client ("Client") as identified at the time of booking.\n\n1. SCOPE OF SERVICES\n...\n\n2. PAYMENT TERMS\n...\n\nBy clicking "I agree" below, Client acknowledges they have read and agree to the terms of this agreement.`}
+              className="input-field w-full text-sm font-mono leading-relaxed resize-y"
+            />
+            <p className="text-xs text-gray-400">
+              Clients will see this text in full, must scroll through it, and type their name to confirm before payment is processed.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-4 flex items-center gap-4">
+          <button onClick={saveAgreement} disabled={savingAgreement} className="btn-primary px-8 py-3">
+            {savingAgreement ? "Saving…" : "Save Agreement Settings"}
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Terms of Service ─────────────────────────────────────────────────── */}
+      <div id="settings-terms" className="card mt-6 scroll-mt-24">
+        <h2 className="font-semibold text-charcoal text-base mb-1">Terms of Service</h2>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-gray-500">
+            Clients must agree to these terms before completing a booking. Leave blank to disable the checkbox.
+            Shown at <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">/{tenant?.slug}/terms</code>.
+          </p>
+        </div>
+        {!termsText && (
+          <div className="mb-3 space-y-2">
+            <div className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2 rounded">
+              <span className="text-base leading-none mt-0.5">⚠️</span>
+              <span>The default template is a <strong>placeholder only</strong> — not a legal document. Have an attorney review before use. You are responsible for your own terms.</span>
+            </div>
+            <button type="button" onClick={() => setTermsText(DEFAULT_TERMS)}
+              className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5 transition-colors">
+              Load default template (review before publishing)
+            </button>
+          </div>
+        )}
+        <textarea
+          value={termsText}
+          onChange={(e) => setTermsText(e.target.value)}
+          rows={18}
+          placeholder="Paste your Terms of Service here…"
+          className="input-field w-full text-sm font-mono leading-relaxed resize-y"
+        />
+        <div className="mt-4 flex items-center gap-4 flex-wrap">
+          <button onClick={saveTerms} disabled={savingTerms} className="btn-primary px-8 py-3">
+            {savingTerms ? "Saving…" : "Save Terms"}
+          </button>
+          {termsText && (
+            <button type="button" onClick={() => setTermsText("")}
+              className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+              Clear
+            </button>
+          )}
+          {tenant?.slug && (
+            <a href={`/${tenant.slug}/terms`} target="_blank" rel="noopener noreferrer"
+              className="text-sm text-navy underline underline-offset-2 hover:opacity-70">
+              Preview public terms page →
+            </a>
+          )}
+        </div>
+      </div>
+      {/* ─── Privacy Policy ──────────────────────────────────────────────────── */}
+      <div className="card mt-6">
+        <h2 className="font-semibold text-charcoal text-base mb-1">Privacy Policy</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Shown at <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">/{tenant?.slug}/privacy</code>.
+          Linked from the checkout terms checkbox. Leave blank to disable.
+        </p>
+        {!privacyText && (
+          <div className="mb-3">
+            <button type="button" onClick={() => setPrivacyText(DEFAULT_PRIVACY)}
+              className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5 transition-colors">
+              Use default template
+            </button>
+          </div>
+        )}
+        <textarea
+          value={privacyText}
+          onChange={(e) => setPrivacyText(e.target.value)}
+          rows={14}
+          placeholder="Paste your Privacy Policy here…"
+          className="input-field w-full text-sm font-mono leading-relaxed resize-y"
+        />
+        <div className="mt-4 flex items-center gap-4 flex-wrap">
+          <button onClick={savePrivacy} disabled={savingPrivacy} className="btn-primary px-8 py-3">
+            {savingPrivacy ? "Saving…" : "Save Privacy Policy"}
+          </button>
+          {privacyText && (
+            <button type="button" onClick={() => setPrivacyText("")}
+              className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+              Clear
+            </button>
+          )}
+          {tenant?.slug && (
+            <a href={`/${tenant.slug}/privacy`} target="_blank" rel="noopener noreferrer"
+              className="text-sm text-navy underline underline-offset-2 hover:opacity-70">
+              Preview public privacy page →
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* ─── TEAM ─────────────────────────────────────────────────────────────── */}
+      <div className="mt-10 mb-4 flex items-center gap-3">
+        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.35)" }}>Team</span>
+        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+      </div>
+      {/* ─── Job Cost Rates ──────────────────────────────────────────────────── */}
+      <div id="settings-cost-rates" className="card mt-6 scroll-mt-24">
+        <h2 className="font-semibold text-charcoal text-base mb-1">Default Job Cost Rates</h2>
+        <p className="text-sm text-gray-500 mb-6">
+          These default rates auto-fill the Job Costs card on each booking. You can still override them per booking.
+        </p>
+        <div className="grid grid-cols-2 gap-4 max-w-lg">
+          <div>
+            <label className="label-field">Shooter Rate ($/hr)</label>
+            <input type="number" min="0" step="1" value={costRates.shooterHourly}
+              onChange={(e) => setCostRates((r) => ({ ...r, shooterHourly: Number(e.target.value) || 0 }))}
+              className="input-field w-full" placeholder="75" />
+          </div>
+          <div>
+            <label className="label-field">Editor Rate ($/photo)</label>
+            <input type="number" min="0" step="0.25" value={costRates.editorPerPhoto}
+              onChange={(e) => setCostRates((r) => ({ ...r, editorPerPhoto: Number(e.target.value) || 0 }))}
+              className="input-field w-full" placeholder="2.00" />
+          </div>
+          <div>
+            <label className="label-field">Travel Rate ($/mile)</label>
+            <input type="number" min="0" step="0.01" value={costRates.travelPerMile}
+              onChange={(e) => setCostRates((r) => ({ ...r, travelPerMile: Number(e.target.value) || 0 }))}
+              className="input-field w-full" placeholder="0.67" />
+          </div>
+          <div>
+            <label className="label-field">Other Flat Cost ($)</label>
+            <input type="number" min="0" step="1" value={costRates.otherFlat}
+              onChange={(e) => setCostRates((r) => ({ ...r, otherFlat: Number(e.target.value) || 0 }))}
+              className="input-field w-full" placeholder="0" />
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 mt-3">
+          Shooter fee = rate × shoot hours. Editor fee = rate × photo count. Travel = rate × miles (from your ZIP to property).
+        </p>
+        <div className="pt-4 border-t border-gray-100 mt-4">
+          <button onClick={saveCostRates} disabled={savingCosts} className="btn-primary px-8 py-3">
+            {savingCosts ? "Saving…" : "Save Cost Rates"}
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Staff Access ────────────────────────────────────────────────────── */}
+      <StaffAccessSection />
+
+      {/* ─── Communications ──────────────────────────────────────────────────── */}
+      <div className="mt-10 mb-4 flex items-center gap-3">
+        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.35)" }}>Communications</span>
+        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+      </div>
 
       {/* ─── Email Templates ─────────────────────────────────────────────────── */}
-      {sg === "Communications" && (<>
-      <div id="settings-email" className="card mt-6 scroll-mt-6">
+      <div id="settings-email" className="card mt-6 scroll-mt-24">
         <h2 className="font-semibold text-charcoal text-base mb-1">Email Templates</h2>
         <p className="text-sm text-gray-500 mb-4">
           Customize what each email says. Click any <span className="font-medium text-navy">insert field</span> button to add dynamic content like the client name or property address.
@@ -2558,7 +2588,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Notification channel toggles */}
-      <div className="card mt-6">
+      <div id="settings-notifications" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-semibold text-charcoal text-base">Notification Channels</h2>
           <button onClick={saveNotifPrefs} disabled={savingNotifs} className="btn-primary px-5 py-2 text-sm">
@@ -2589,21 +2619,25 @@ export default function SettingsPage() {
             onToggle={(ch) => toggleNotifChannel(notif.id, ch)} />
         ))}
       </div>
-      </>)}
 
-      {/* Integrations */}
-      {sg === "Integrations" && (
-        <div className="card mt-6">
-          <h2 className="font-semibold text-charcoal text-base mb-1">Integrations</h2>
-          <p className="text-sm text-gray-500">More integrations coming soon.</p>
-        </div>
-      )}
+      {/* ─── Integrations ────────────────────────────────────────────────────── */}
+      <div className="mt-10 mb-4 flex items-center gap-3">
+        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.35)" }}>Integrations</span>
+        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+      </div>
+
+      <div id="settings-integrations" className="card mt-6 scroll-mt-24">
+        <h2 className="font-semibold text-charcoal text-base mb-1">Integrations</h2>
+        <p className="text-sm text-gray-500">More integrations coming soon.</p>
+      </div>
 
       {/* Custom Domain */}
-      {sg === "Business" && <CustomDomainSection />}
+      <CustomDomainSection />
 
         </div>{/* end main content */}
       </div>{/* end flex */}
-    </div>
+    </div>{/* end max-w */}
+  </div>
   );
 }
