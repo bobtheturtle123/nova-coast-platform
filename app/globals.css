@@ -80,20 +80,23 @@
   /* ── Buttons ─────────────────────────────────────────────────────────── */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
-           text-white font-medium
+           font-medium
            px-4 py-2.5 text-[13px] tracking-tight
            active:scale-[0.98]
            transition-all duration-200
            disabled:opacity-35 disabled:cursor-not-allowed;
     border-radius: var(--radius-btn);
     letter-spacing: -0.01em;
-    background: linear-gradient(145deg, #0e3580 0%, #081e4a 100%);
-    box-shadow: 0 1px 4px rgba(8,30,74,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
+    color: #0d3282;
+    background: transparent;
+    border: 1.5px solid rgba(13,50,130,0.32);
+    box-shadow: none;
   }
 
   .btn-primary:hover {
-    background: linear-gradient(145deg, #1040a0 0%, #0a2660 100%);
-    box-shadow: 0 3px 12px rgba(8,30,74,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
+    background: rgba(13,50,130,0.05);
+    border-color: rgba(13,50,130,0.5);
+    box-shadow: none;
   }
 
   .btn-outline {

@@ -174,7 +174,7 @@ export default function DashboardLayout({ children }) {
     <aside
       className="w-56 flex flex-col h-full"
       style={{
-        background: "linear-gradient(175deg, rgba(12,40,80,0.88) 0%, rgba(7,22,50,0.94) 100%)",
+        background: "linear-gradient(175deg, rgba(18,58,140,0.72) 0%, rgba(12,38,100,0.82) 100%)",
         backdropFilter: "blur(24px) saturate(140%)",
         WebkitBackdropFilter: "blur(24px) saturate(140%)",
         borderRight: "1px solid rgba(255,255,255,0.1)",
@@ -211,7 +211,7 @@ export default function DashboardLayout({ children }) {
               onClick={() => setSidebarOpen(false)}
               className="relative flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[12.5px] font-medium transition-all duration-150 group"
               style={{
-                color:      active ? "#ffffff" : "rgba(255,255,255,0.56)",
+                color:      active ? "#ffffff" : "rgba(255,255,255,0.80)",
                 background: active
                   ? "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.07) 100%)"
                   : "transparent",

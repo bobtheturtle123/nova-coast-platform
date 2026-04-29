@@ -1205,60 +1205,34 @@ export default function SettingsPage() {
         <p className="page-subtitle">Configure your business, booking flow, and communications.</p>
       </div>
 
-      {/* Mobile section jumper */}
-      <div className="flex gap-1.5 flex-wrap mb-6 lg:hidden">
-        {SECTION_GROUPS.map((grp) => (
-          <button key={grp.group}
-            onClick={() => document.getElementById(grp.items[0]?.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-            className="text-xs py-1.5 px-3 rounded-full font-medium border text-gray-500 border-gray-200 hover:border-navy/30 hover:text-navy transition-colors">
-            {grp.group}
-          </button>
-        ))}
+      {/* Sticky section nav */}
+      <div className="sticky top-0 z-10 -mx-6 px-6 mb-8"
+        style={{
+          background: "rgba(242,244,248,0.92)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: "1px solid rgba(0,0,0,0.06)",
+        }}>
+        <div className="flex gap-0.5 py-2 overflow-x-auto">
+          {SECTION_GROUPS.map((grp) => {
+            const isActive = grp.items.some((item) => item.id === activeSection);
+            return (
+              <button key={grp.group}
+                onClick={() => document.getElementById(grp.items[0]?.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                className="flex-shrink-0 text-[12.5px] font-medium px-3.5 py-1.5 rounded-full transition-all"
+                style={{
+                  color: isActive ? "#0d3282" : "rgba(0,0,0,0.45)",
+                  background: isActive ? "rgba(13,50,130,0.08)" : "transparent",
+                  border: isActive ? "1px solid rgba(13,50,130,0.14)" : "1px solid transparent",
+                }}>
+                {grp.group}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="flex gap-8 items-start">
-        {/* Sticky frosted-glass scroll-spy nav */}
-        <nav className="hidden lg:flex flex-col w-52 flex-shrink-0 sticky top-8"
-          style={{ maxHeight: "calc(100vh - 5rem)" }}>
-          <div className="rounded-2xl overflow-hidden flex-1 overflow-y-auto" style={{
-            background: "rgba(10,35,80,0.74)",
-            backdropFilter: "blur(24px) saturate(140%)",
-            WebkitBackdropFilter: "blur(24px) saturate(140%)",
-            border: "1px solid rgba(255,255,255,0.15)",
-            boxShadow: "0 4px 32px rgba(7,22,56,0.18), inset 0 1px 0 rgba(255,255,255,0.12)",
-          }}>
-            <div className="p-3">
-              {SECTION_GROUPS.map((grp, gi) => (
-                <div key={grp.group} className={gi > 0 ? "mt-3 pt-3 border-t" : ""} style={gi > 0 ? { borderColor: "rgba(255,255,255,0.09)" } : {}}>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] px-2.5 mb-1.5"
-                    style={{ color: "rgba(255,255,255,0.32)" }}>
-                    {grp.group}
-                  </p>
-                  {grp.items.map((item) => {
-                    const isActive = activeSection === item.id;
-                    return (
-                      <button key={item.id}
-                        onClick={() => document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                        className="w-full text-left py-1.5 px-2.5 rounded-lg text-[12.5px] font-medium transition-all mb-0.5 block"
-                        style={{
-                          color: isActive ? "#fff" : "rgba(255,255,255,0.54)",
-                          background: isActive ? "rgba(255,255,255,0.12)" : "transparent",
-                          boxShadow: isActive ? "inset 0 0 0 1px rgba(255,255,255,0.1)" : "none",
-                        }}
-                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = "rgba(255,255,255,0.07)"; }}
-                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent"; }}>
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
-        </nav>
-
-        {/* Main content — all sections always visible, scroll-linked to nav */}
-        <div className="flex-1 min-w-0">
+      <div>
 
       {/* ─── BUSINESS ──────────────────────────────────────────────────────── */}
       <div className="mb-4 flex items-center gap-3">
@@ -2635,9 +2609,8 @@ export default function SettingsPage() {
       {/* Custom Domain */}
       <CustomDomainSection />
 
-        </div>{/* end main content */}
-      </div>{/* end flex */}
-    </div>{/* end max-w */}
+      </div>
+    </div>
   </div>
   );
 }
