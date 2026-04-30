@@ -51,14 +51,14 @@ const MOCK_DATA = {
 const STATUS_META = {
   pending_payment: { label: "Awaiting Payment", color: "#D97706", bg: "#FFFBEB" },
   requested:       { label: "Pending Review",   color: "#B45309", bg: "#FEF3C7" },
-  confirmed:       { label: "Confirmed",         color: "#1B4BB8", bg: "#EBF0FF" },
+  confirmed:       { label: "Confirmed",         color: "#3486cf", bg: "#E8F2FD" },
   completed:       { label: "Completed",         color: "#059669", bg: "#ECFDF5" },
   cancelled:       { label: "Cancelled",         color: "#6B7280", bg: "#F9FAFB" },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function avatarColor(str) {
-  const p = ["#1B4BB8","#1e6091","#2e7d32","#6a1b9a","#d84315","#00695c","#b5872d","#c0392b"];
+  const p = ["#3486cf","#1e6091","#2e7d32","#6a1b9a","#d84315","#00695c","#b5872d","#c0392b"];
   let h = 0;
   for (let i = 0; i < (str || "").length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
   return p[Math.abs(h) % p.length];
@@ -70,7 +70,7 @@ function initials(name) {
 
 function payLabel(l) {
   if (l.paidInFull || l.balancePaid) return { label: "Paid in full", color: "#059669", bg: "#ECFDF5" };
-  if (l.depositPaid)                 return { label: "Deposit paid",  color: "#1B4BB8", bg: "#EBF0FF" };
+  if (l.depositPaid)                 return { label: "Deposit paid",  color: "#3486cf", bg: "#E8F2FD" };
   return                                    { label: "Unpaid",        color: "#9CA3AF", bg: "#F9FAFB" };
 }
 
@@ -127,11 +127,19 @@ function StatusBadge({ status }) {
 }
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, badge }) {
+function StatCard({ label, value, sub, badge, icon, iconBg }) {
   return (
     <div className="bg-white rounded-xl p-6" style={{ border: "1px solid #E9ECF0" }}>
-      <div className="flex items-start justify-between mb-3">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.07em]" style={{ color: "#6B7280" }}>{label}</p>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          {icon && (
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: iconBg || "#EBF5FF" }}>
+              {icon}
+            </div>
+          )}
+          <p className="text-[12px] font-semibold uppercase tracking-[0.07em]" style={{ color: "#6B7280" }}>{label}</p>
+        </div>
         {badge != null && badge > 0 && (
           <span className="text-[10px] font-bold w-5 h-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
             {badge}
@@ -151,7 +159,7 @@ function AreaChart({ data, formatY }) {
   const cW = W - padL - padR;
   const cH = H - padT - padB;
   const max = Math.max(...data.map(d => d.value), 1);
-  const accent = "#1B4BB8";
+  const accent = "#3486cf";
 
   const pts = data.map((d, i) => ({
     x: padL + (data.length > 1 ? (i / (data.length - 1)) * cW : cW * 0.5),
@@ -282,7 +290,7 @@ function RevenueSection({ listings, isMock }) {
                 {change.up ? "↑" : "↓"} {Math.abs(change.pct)}% vs prev
               </span>
             )}
-            <Link href="/dashboard/reports" className="text-[11.5px] text-gray-400 hover:text-[#1B4BB8] transition-colors">
+            <Link href="/dashboard/reports" className="text-[11.5px] text-gray-400 hover:text-[#3486cf] transition-colors">
               Full report →
             </Link>
           </div>
@@ -294,7 +302,7 @@ function RevenueSection({ listings, isMock }) {
               <button key={p.id} onClick={() => setPeriod(p.id)}
                 className="px-3 py-1.5 text-[12.5px] font-semibold transition-colors"
                 style={period === p.id
-                  ? { background: "#1B4BB8", color: "#fff" }
+                  ? { background: "#3486cf", color: "#fff" }
                   : { color: "#6B7280", background: "#fff" }}>
                 {p.label}
               </button>
@@ -305,7 +313,7 @@ function RevenueSection({ listings, isMock }) {
               <button key={m.id} onClick={() => setMetric(m.id)}
                 className="px-3 py-1.5 text-[12.5px] font-semibold transition-colors"
                 style={metric === m.id
-                  ? { background: "#1B4BB8", color: "#fff" }
+                  ? { background: "#3486cf", color: "#fff" }
                   : { color: "#6B7280", background: "#fff" }}>
                 {m.label}
               </button>
@@ -430,11 +438,14 @@ export default function DashboardHome() {
         {/* ── Header ───────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-[26px] font-semibold tracking-tight" style={{ color: "#0F172A" }}>
+            <h1 className="text-[26px] font-bold tracking-tight" style={{ color: "#0F172A" }}>
               {greeting}{firstName ? `, ${firstName}` : ""}
               {isMock && <span className="ml-2 text-sm font-normal" style={{ color: "#9CA3AF" }}>· sample data</span>}
             </h1>
-            <p className="text-[13.5px] mt-0.5" style={{ color: "#6B7280" }}>{dateLabel}</p>
+            <p className="text-[13.5px] mt-1 flex items-center gap-1.5" style={{ color: "#6B7280" }}>
+              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 inline-block" style={{ background: "#3486cf" }} />
+              {dateLabel}
+            </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {bookingUrl && (
@@ -457,9 +468,9 @@ export default function DashboardHome() {
             )}
             <Link href="/dashboard/listings/new"
               className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white px-4 py-2 rounded-lg transition-colors"
-              style={{ background: "#1B4BB8" }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#1640A0"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "#1B4BB8"}>
+              style={{ background: "#3486cf" }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#2a6dab"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "#3486cf"}>
               <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
@@ -478,11 +489,11 @@ export default function DashboardHome() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-32 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-[#1B4BB8] transition-all duration-500"
+                  <div className="h-full rounded-full bg-[#3486cf] transition-all duration-500"
                     style={{ width: `${Math.round((doneCount / setupSteps.length) * 100)}%` }} />
                 </div>
                 <Link href="/onboarding"
-                  className="text-xs font-medium text-[#1B4BB8] hover:text-[#1640A0] transition-colors whitespace-nowrap">
+                  className="text-xs font-medium text-[#3486cf] hover:text-[#2a6dab] transition-colors whitespace-nowrap">
                   Continue setup →
                 </Link>
               </div>
@@ -492,7 +503,7 @@ export default function DashboardHome() {
                 <div key={i} className="flex items-center gap-4 px-6 py-3.5"
                   style={{ borderBottom: i < setupSteps.length - 1 ? "1px solid #F3F4F6" : "none" }}>
                   <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all ${
-                    step.done ? "bg-[#1B4BB8]" : "border-2 border-gray-200"
+                    step.done ? "bg-[#3486cf]" : "border-2 border-gray-200"
                   }`}>
                     {step.done && (
                       <svg width="10" height="10" fill="none" viewBox="0 0 12 12">
@@ -506,7 +517,7 @@ export default function DashboardHome() {
                   </span>
                   {!step.done && step.href && (
                     <Link href={step.href}
-                      className="text-xs font-medium text-[#1B4BB8] hover:text-[#1640A0] transition-colors">
+                      className="text-xs font-medium text-[#3486cf] hover:text-[#2a6dab] transition-colors">
                       Set up →
                     </Link>
                   )}
@@ -519,10 +530,22 @@ export default function DashboardHome() {
 
         {/* ── Stats row ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard label="Total Listings"     value={stats.total}     sub="all time" />
-          <StatCard label="Pending Review"     value={stats.pending}   sub={stats.pending > 0 ? "need your action" : "all clear"} badge={stats.pending} />
-          <StatCard label="Active Shoots"      value={stats.confirmed} sub="confirmed" />
-          <StatCard label="Revenue Collected"  value={`$${stats.revenue.toLocaleString()}`} sub="deposits + paid" />
+          <StatCard label="Total Listings" value={stats.total} sub="all time"
+            iconBg="#EBF5FF"
+            icon={<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>}
+          />
+          <StatCard label="Pending Review" value={stats.pending} sub={stats.pending > 0 ? "need your action" : "all clear"} badge={stats.pending}
+            iconBg="#FEF3C7"
+            icon={<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
+          />
+          <StatCard label="Active Shoots" value={stats.confirmed} sub="confirmed"
+            iconBg="#EBF5FF"
+            icon={<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}
+          />
+          <StatCard label="Revenue Collected" value={`$${stats.revenue.toLocaleString()}`} sub="deposits + paid"
+            iconBg="#ECFDF5"
+            icon={<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#059669" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
+          />
         </div>
 
         {/* ── Revenue chart ─────────────────────────────────────────────── */}
@@ -532,14 +555,19 @@ export default function DashboardHome() {
         <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
           <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #E9ECF0" }}>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-[15px] font-semibold" style={{ color: "#0F172A" }}>Upcoming Shoots</h2>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "#EBF5FF" }}>
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <h2 className="text-[15px] font-semibold" style={{ color: "#0F172A" }}>Upcoming Shoots</h2>
+              </div>
               {upcoming.length > 0 && (
                 <span className="text-[12px] bg-gray-100 px-2 py-0.5 rounded-full" style={{ color: "#6B7280" }}>
                   {upcoming.length} confirmed
                 </span>
               )}
             </div>
-            <Link href="/dashboard/listings" className="text-[12.5px] hover:text-[#1B4BB8] transition-colors" style={{ color: "#6B7280" }}>
+            <Link href="/dashboard/listings" className="text-[12.5px] hover:text-[#3486cf] transition-colors" style={{ color: "#6B7280" }}>
               View all →
             </Link>
           </div>
@@ -573,14 +601,14 @@ export default function DashboardHome() {
                     style={{ borderBottom: idx < upcoming.length - 1 ? "1px solid #F3F4F6" : "none" }}>
 
                     {/* Date block */}
-                    <div className="w-11 flex-shrink-0 text-center rounded-lg py-1.5"
+                    <div className="w-11 flex-shrink-0 text-center rounded-xl py-1.5"
                       style={{
-                        background: isToday ? "#1B4BB8" : "#F8F9FA",
-                        border: isToday ? "none" : "1px solid #E9ECF0",
+                        background: isToday ? "#3486cf" : "#F0F7FE",
+                        border: isToday ? "none" : "1px solid #D4E9F7",
                       }}>
-                      <div className={`text-[9px] font-semibold uppercase tracking-wide leading-tight ${isToday ? "text-white/70" : "text-gray-400"}`}>{mo}</div>
-                      <div className={`text-[20px] font-bold leading-none my-0.5 ${isToday ? "text-white" : "text-gray-800"}`}>{dd}</div>
-                      <div className={`text-[9px] font-medium uppercase ${isToday ? "text-white/60" : "text-gray-400"}`}>{dow}</div>
+                      <div className="text-[9px] font-semibold uppercase tracking-wide leading-tight" style={{ color: isToday ? "rgba(255,255,255,0.75)" : "#6B9EC7" }}>{mo}</div>
+                      <div className="text-[20px] font-bold leading-none my-0.5" style={{ color: isToday ? "#fff" : "#0F172A" }}>{dd}</div>
+                      <div className="text-[9px] font-medium uppercase" style={{ color: isToday ? "rgba(255,255,255,0.6)" : "#6B9EC7" }}>{dow}</div>
                     </div>
 
                     {/* Info */}
@@ -592,7 +620,7 @@ export default function DashboardHome() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-[14.5px] font-medium truncate" style={{ color: "#0F172A" }}>{l.clientName}</p>
-                          {isToday    && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[#EBF0FF] text-[#1B4BB8] flex-shrink-0">Today</span>}
+                          {isToday    && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[#E8F2FD] text-[#3486cf] flex-shrink-0">Today</span>}
                           {isTomorrow && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-600 flex-shrink-0">Tomorrow</span>}
                         </div>
                         <p className="text-[12.5px] truncate mt-0.5" style={{ color: "#6B7280" }}>{l.address?.split(",")[0]}</p>
@@ -624,10 +652,15 @@ export default function DashboardHome() {
         <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
           <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #E9ECF0" }}>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-[15px] font-semibold" style={{ color: "#0F172A" }}>Recent Listings</h2>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "#EBF5FF" }}>
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                </div>
+                <h2 className="text-[15px] font-semibold" style={{ color: "#0F172A" }}>Recent Listings</h2>
+              </div>
               {isMock && <span className="text-[12px] bg-gray-100 px-2 py-0.5 rounded-full" style={{ color: "#6B7280" }}>sample</span>}
             </div>
-            <Link href="/dashboard/listings" className="text-[12.5px] hover:text-[#1B4BB8] transition-colors" style={{ color: "#6B7280" }}>
+            <Link href="/dashboard/listings" className="text-[12.5px] hover:text-[#3486cf] transition-colors" style={{ color: "#6B7280" }}>
               View all →
             </Link>
           </div>
@@ -657,7 +690,7 @@ export default function DashboardHome() {
                           <span className="font-medium line-clamp-1 block text-[14px]" style={{ color: "#0F172A" }}>{l.address?.split(",")[0]}</span>
                         ) : (
                           <Link href={`/dashboard/listings/${l.id}`}
-                            className="font-medium group-hover:text-[#1B4BB8] transition-colors line-clamp-1 block text-[14px]" style={{ color: "#0F172A" }}>
+                            className="font-medium group-hover:text-[#3486cf] transition-colors line-clamp-1 block text-[14px]" style={{ color: "#0F172A" }}>
                             {l.address?.split(",")[0]}
                           </Link>
                         )}

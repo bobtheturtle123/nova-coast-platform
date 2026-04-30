@@ -211,8 +211,8 @@
     top: 0;
     display: flex;
     flex-direction: column;
-    background: #ffffff;
-    border-right: 1px solid #E9ECF0;
+    background: #F5F8FF;
+    border-right: 1px solid #E0EAF8;
     z-index: 40;
     overflow: hidden;
   }
@@ -221,22 +221,23 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 20px 16px 16px;
-    border-bottom: 1px solid #F3F4F6;
+    padding: 22px 18px 18px;
+    border-bottom: 1px solid #E0EAF8;
     flex-shrink: 0;
   }
 
   .ky-logo-icon {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: #1B4BB8;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #3486cf 0%, #2266aa 100%);
+    box-shadow: 0 2px 8px rgba(52, 134, 207, 0.3);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
+    font-weight: 800;
     color: white;
-    font-size: 13px;
+    font-size: 14px;
     flex-shrink: 0;
     letter-spacing: -0.5px;
   }
@@ -275,7 +276,7 @@
     align-items: center;
     gap: 9px;
     padding: 9px 12px;
-    border-radius: 7px;
+    border-radius: 10px;
     color: #374151;
     font-size: 14px;
     font-weight: 500;
@@ -284,22 +285,22 @@
   }
 
   .ky-nav-item:hover {
-    background: #F3F4F6;
+    background: #EBF3FB;
     color: #0F172A;
   }
 
   .ky-nav-item.active {
-    background: #EBF0FF;
-    color: #1B4BB8;
+    background: #DCEEFA;
+    color: #2a6dab;
     font-weight: 600;
   }
 
   .ky-upgrade-card {
     margin: 10px;
     padding: 14px;
-    border-radius: 10px;
-    background: #F8F9FF;
-    border: 1px solid #E0E7FF;
+    border-radius: 12px;
+    background: #EBF5FF;
+    border: 1px solid #C8E0F4;
     flex-shrink: 0;
   }
 
@@ -308,8 +309,8 @@
     margin-top: 10px;
     width: 100%;
     padding: 8px;
-    border-radius: 7px;
-    background: #1B4BB8;
+    border-radius: 8px;
+    background: #3486cf;
     color: white;
     font-size: 12px;
     font-weight: 600;
@@ -317,14 +318,14 @@
     text-decoration: none;
     transition: background .15s;
   }
-  .ky-upgrade-btn:hover { background: #1640A0; }
+  .ky-upgrade-btn:hover { background: #2a6dab; }
 
   .ky-user-card {
-    margin: 0 10px 10px;
+    margin: 0 10px 12px;
     padding: 10px 12px;
-    border-radius: 8px;
-    background: #F9FAFB;
-    border: 1px solid #F3F4F6;
+    border-radius: 10px;
+    background: #EBF3FB;
+    border: 1px solid #D4E8F5;
     display: flex;
     align-items: center;
     gap: 9px;

@@ -172,6 +172,9 @@ export default function DashboardLayout({ children }) {
 
   const Sidebar = () => (
     <aside className="ky-sidebar">
+      {/* Branded top accent */}
+      <div style={{ height: 3, background: "linear-gradient(90deg, #3486cf 0%, #5ba8e5 60%, transparent 100%)", flexShrink: 0 }} />
+
       {/* Brand */}
       <div className="ky-logo-wrap">
         <div className="ky-logo-icon">K</div>
@@ -201,7 +204,7 @@ export default function DashboardLayout({ children }) {
 
       {/* Upgrade CTA */}
       <div className="ky-upgrade-card">
-        <p className="text-[11.5px] font-semibold text-[#1B4BB8]">Upgrade to Pro</p>
+        <p className="text-[11.5px] font-semibold text-[#2a6dab]">Upgrade to Pro</p>
         <p className="text-[11px] mt-1 leading-relaxed text-gray-500">
           Unlock advanced analytics, custom branding, and priority support.
         </p>
@@ -212,7 +215,7 @@ export default function DashboardLayout({ children }) {
       <div className="ky-user-card">
         <div
           className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white"
-          style={{ background: "#1B4BB8" }}
+          style={{ background: "#3486cf" }}
         >
           {initials}
         </div>
