@@ -118,7 +118,7 @@ function buildChartData(listings, period, metric) {
 function StatusBadge({ status }) {
   const m = STATUS_META[status] || STATUS_META.requested;
   return (
-    <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium px-2 py-0.5 rounded-md"
+    <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium px-2 py-0.5 rounded-md"
       style={{ color: m.color, background: m.bg }}>
       <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: m.color }} />
       {m.label}
@@ -129,17 +129,17 @@ function StatusBadge({ status }) {
 // ── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, badge }) {
   return (
-    <div className="bg-white rounded-xl p-5" style={{ border: "1px solid #E9ECF0" }}>
+    <div className="bg-white rounded-xl p-6" style={{ border: "1px solid #E9ECF0" }}>
       <div className="flex items-start justify-between mb-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-gray-400">{label}</p>
+        <p className="text-[12px] font-semibold uppercase tracking-[0.07em]" style={{ color: "#6B7280" }}>{label}</p>
         {badge != null && badge > 0 && (
           <span className="text-[10px] font-bold w-5 h-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
             {badge}
           </span>
         )}
       </div>
-      <p className="text-[28px] font-bold text-gray-900 leading-none tracking-tight">{value}</p>
-      {sub && <p className="text-[11.5px] text-gray-400 mt-2 leading-snug">{sub}</p>}
+      <p className="text-[32px] font-bold leading-none tracking-tight" style={{ color: "#0F172A" }}>{value}</p>
+      {sub && <p className="text-[12.5px] mt-2 leading-snug" style={{ color: "#6B7280" }}>{sub}</p>}
     </div>
   );
 }
@@ -202,8 +202,8 @@ function AreaChart({ data, formatY }) {
           stroke="#F0F1F3" strokeWidth="1" />
       ))}
       {yTicks.map((t, i) => (
-        <text key={i} x={padL - 8} y={t.y + 4} textAnchor="end" fontSize="10"
-          fill="#C4CBD8" fontFamily="system-ui,sans-serif">{t.label}</text>
+        <text key={i} x={padL - 8} y={t.y + 4} textAnchor="end" fontSize="11"
+          fill="#9CA3AF" fontFamily="system-ui,sans-serif">{t.label}</text>
       ))}
 
       <path d={areaPath} fill="url(#chartGrad)" />
@@ -219,7 +219,7 @@ function AreaChart({ data, formatY }) {
         <g>
           <rect x={lastP.x - 28} y={lastP.y - 34} width={56} height={18} rx={5}
             fill={accent} />
-          <text x={lastP.x} y={lastP.y - 21} textAnchor="middle" fontSize="10.5"
+          <text x={lastP.x} y={lastP.y - 21} textAnchor="middle" fontSize="11.5"
             fill="white" fontFamily="system-ui,sans-serif" fontWeight="600">
             {formatY(data[data.length - 1].value)}
           </text>
@@ -227,8 +227,8 @@ function AreaChart({ data, formatY }) {
       )}
 
       {pts.map((p, i) => (
-        <text key={i} x={p.x} y={H - 2} textAnchor="middle" fontSize="10.5"
-          fill={i === pts.length - 1 ? accent : "#C4CBD8"}
+        <text key={i} x={p.x} y={H - 2} textAnchor="middle" fontSize="11.5"
+          fill={i === pts.length - 1 ? accent : "#9CA3AF"}
           fontWeight={i === pts.length - 1 ? "600" : "400"}
           fontFamily="system-ui,sans-serif">
           {p.label}
@@ -247,8 +247,7 @@ function RevenueSection({ listings, isMock }) {
     if (isMock) {
       return MOCK_DATA[period].map(d => ({ label: d.label, value: metric === "revenue" ? d.revenue : d.bookings }));
     }
-    const built = buildChartData(listings, period, metric);
-    return built.some(d => d.value > 0) ? built : MOCK_DATA[period].map(d => ({ label: d.label, value: metric === "revenue" ? d.revenue : d.bookings }));
+    return buildChartData(listings, period, metric);
   }, [period, metric, listings, isMock]);
 
   const total  = chartData.reduce((s, d) => s + d.value, 0);
@@ -272,11 +271,11 @@ function RevenueSection({ listings, isMock }) {
     <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
       <div className="px-6 pt-5 pb-4 flex items-start justify-between gap-6" style={{ borderBottom: "1px solid #E9ECF0" }}>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-gray-400 mb-1.5">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.07em] mb-1.5" style={{ color: "#6B7280" }}>
             {periodLabel} · {metric === "revenue" ? "Revenue" : "Bookings"}
             {isMock && <span className="ml-2 font-normal normal-case tracking-normal text-gray-300 italic">sample</span>}
           </p>
-          <p className="text-[32px] font-bold text-gray-900 leading-none tracking-tight mb-2">{displayTotal}</p>
+          <p className="text-[32px] font-bold leading-none tracking-tight mb-2" style={{ color: "#0F172A" }}>{displayTotal}</p>
           <div className="flex items-center gap-3">
             {change && (
               <span className={`inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-0.5 rounded-md ${change.up ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
@@ -293,10 +292,10 @@ function RevenueSection({ listings, isMock }) {
           <div className="flex items-center rounded-lg overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
             {[{ id: "30d", label: "30D" }, { id: "6m", label: "6M" }, { id: "12m", label: "12M" }].map(p => (
               <button key={p.id} onClick={() => setPeriod(p.id)}
-                className="px-3 py-1.5 text-[11.5px] font-semibold transition-colors"
+                className="px-3 py-1.5 text-[12.5px] font-semibold transition-colors"
                 style={period === p.id
                   ? { background: "#1B4BB8", color: "#fff" }
-                  : { color: "#9CA3AF", background: "#fff" }}>
+                  : { color: "#6B7280", background: "#fff" }}>
                 {p.label}
               </button>
             ))}
@@ -304,10 +303,10 @@ function RevenueSection({ listings, isMock }) {
           <div className="flex items-center rounded-lg overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
             {[{ id: "revenue", label: "Revenue" }, { id: "bookings", label: "Bookings" }].map(m => (
               <button key={m.id} onClick={() => setMetric(m.id)}
-                className="px-3 py-1.5 text-[11.5px] font-semibold transition-colors"
+                className="px-3 py-1.5 text-[12.5px] font-semibold transition-colors"
                 style={metric === m.id
                   ? { background: "#1B4BB8", color: "#fff" }
-                  : { color: "#9CA3AF", background: "#fff" }}>
+                  : { color: "#6B7280", background: "#fff" }}>
                 {m.label}
               </button>
             ))}
@@ -431,17 +430,17 @@ export default function DashboardHome() {
         {/* ── Header ───────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-[22px] font-semibold text-gray-900 tracking-tight">
+            <h1 className="text-[26px] font-semibold tracking-tight" style={{ color: "#0F172A" }}>
               {greeting}{firstName ? `, ${firstName}` : ""}
-              {isMock && <span className="ml-2 text-sm font-normal text-gray-400">· sample data</span>}
+              {isMock && <span className="ml-2 text-sm font-normal" style={{ color: "#9CA3AF" }}>· sample data</span>}
             </h1>
-            <p className="text-sm text-gray-400 mt-0.5">{dateLabel}</p>
+            <p className="text-[13.5px] mt-0.5" style={{ color: "#6B7280" }}>{dateLabel}</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {bookingUrl && (
               <button onClick={copyLink}
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 px-3.5 py-2 rounded-lg transition-colors"
-                style={{ border: "1px solid #E9ECF0", background: "#fff" }}
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium px-3.5 py-2 rounded-lg transition-colors"
+                style={{ border: "1px solid #E9ECF0", background: "#fff", color: "#475569" }}
                 onMouseEnter={(e) => e.currentTarget.style.borderColor = "#C7D2E8"}
                 onMouseLeave={(e) => e.currentTarget.style.borderColor = "#E9ECF0"}>
                 {linkCopied ? "✓ Copied" : "Copy Booking Link"}
@@ -449,19 +448,19 @@ export default function DashboardHome() {
             )}
             {bookingUrl && (
               <a href={bookingUrl} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 px-3.5 py-2 rounded-lg transition-colors"
-                style={{ border: "1px solid #E9ECF0", background: "#fff" }}
+                className="inline-flex items-center gap-1.5 text-[13px] font-medium px-3.5 py-2 rounded-lg transition-colors"
+                style={{ border: "1px solid #E9ECF0", background: "#fff", color: "#475569" }}
                 onMouseEnter={(e) => e.currentTarget.style.borderColor = "#C7D2E8"}
                 onMouseLeave={(e) => e.currentTarget.style.borderColor = "#E9ECF0"}>
                 Booking Page ↗
               </a>
             )}
             <Link href="/dashboard/listings/new"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-white px-4 py-2 rounded-lg transition-colors"
+              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white px-4 py-2 rounded-lg transition-colors"
               style={{ background: "#1B4BB8" }}
               onMouseEnter={(e) => e.currentTarget.style.background = "#1640A0"}
               onMouseLeave={(e) => e.currentTarget.style.background = "#1B4BB8"}>
-              <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
               New Listing
@@ -474,8 +473,8 @@ export default function DashboardHome() {
           <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
             <div className="px-6 py-4 flex items-center gap-4" style={{ borderBottom: "1px solid #E9ECF0" }}>
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-gray-900">Get your workspace ready</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{doneCount} of {setupSteps.length} steps complete</p>
+                <h3 className="text-[15px] font-semibold" style={{ color: "#0F172A" }}>Get your workspace ready</h3>
+                <p className="text-[12.5px] mt-0.5" style={{ color: "#6B7280" }}>{doneCount} of {setupSteps.length} steps complete</p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-32 h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -502,7 +501,7 @@ export default function DashboardHome() {
                       </svg>
                     )}
                   </div>
-                  <span className={`text-sm flex-1 ${step.done ? "text-gray-400 line-through decoration-gray-300" : "text-gray-700"}`}>
+                  <span className={`text-[14px] flex-1 ${step.done ? "line-through decoration-gray-300" : ""}`} style={{ color: step.done ? "#9CA3AF" : "#374151" }}>
                     {step.label}
                   </span>
                   {!step.done && step.href && (
@@ -533,14 +532,14 @@ export default function DashboardHome() {
         <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
           <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #E9ECF0" }}>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-sm font-semibold text-gray-900">Upcoming Shoots</h2>
+              <h2 className="text-[15px] font-semibold" style={{ color: "#0F172A" }}>Upcoming Shoots</h2>
               {upcoming.length > 0 && (
-                <span className="text-[11px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                <span className="text-[12px] bg-gray-100 px-2 py-0.5 rounded-full" style={{ color: "#6B7280" }}>
                   {upcoming.length} confirmed
                 </span>
               )}
             </div>
-            <Link href="/dashboard/listings" className="text-xs text-gray-400 hover:text-[#1B4BB8] transition-colors">
+            <Link href="/dashboard/listings" className="text-[12.5px] hover:text-[#1B4BB8] transition-colors" style={{ color: "#6B7280" }}>
               View all →
             </Link>
           </div>
@@ -570,7 +569,7 @@ export default function DashboardHome() {
                 return (
                   <Link key={l.id}
                     href={isMock ? "/dashboard/listings" : `/dashboard/listings/${l.id}`}
-                    className="group flex items-center gap-4 px-6 py-3.5 transition-colors hover:bg-gray-50"
+                    className="group flex items-center gap-4 px-6 py-4 transition-colors hover:bg-gray-50"
                     style={{ borderBottom: idx < upcoming.length - 1 ? "1px solid #F3F4F6" : "none" }}>
 
                     {/* Date block */}
@@ -592,17 +591,17 @@ export default function DashboardHome() {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-[13.5px] font-medium text-gray-900 truncate">{l.clientName}</p>
+                          <p className="text-[14.5px] font-medium truncate" style={{ color: "#0F172A" }}>{l.clientName}</p>
                           {isToday    && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[#EBF0FF] text-[#1B4BB8] flex-shrink-0">Today</span>}
                           {isTomorrow && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-600 flex-shrink-0">Tomorrow</span>}
                         </div>
-                        <p className="text-[11.5px] text-gray-400 truncate mt-0.5">{l.address?.split(",")[0]}</p>
+                        <p className="text-[12.5px] truncate mt-0.5" style={{ color: "#6B7280" }}>{l.address?.split(",")[0]}</p>
                       </div>
                     </div>
 
                     {/* Price + payment */}
                     <div className="flex-shrink-0 text-right">
-                      <p className="text-[13.5px] font-semibold text-gray-900">${l.totalPrice?.toLocaleString()}</p>
+                      <p className="text-[14.5px] font-semibold" style={{ color: "#0F172A" }}>${l.totalPrice?.toLocaleString()}</p>
                       <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-md"
                         style={{ color: pay.color, background: pay.bg }}>
                         {pay.label}
@@ -625,10 +624,10 @@ export default function DashboardHome() {
         <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
           <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #E9ECF0" }}>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-sm font-semibold text-gray-900">Recent Listings</h2>
-              {isMock && <span className="text-[11px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">sample</span>}
+              <h2 className="text-[15px] font-semibold" style={{ color: "#0F172A" }}>Recent Listings</h2>
+              {isMock && <span className="text-[12px] bg-gray-100 px-2 py-0.5 rounded-full" style={{ color: "#6B7280" }}>sample</span>}
             </div>
-            <Link href="/dashboard/listings" className="text-xs text-gray-400 hover:text-[#1B4BB8] transition-colors">
+            <Link href="/dashboard/listings" className="text-[12.5px] hover:text-[#1B4BB8] transition-colors" style={{ color: "#6B7280" }}>
               View all →
             </Link>
           </div>
@@ -639,9 +638,9 @@ export default function DashboardHome() {
                 <tr style={{ background: "#FAFAFA", borderBottom: "1px solid #E9ECF0" }}>
                   {["Property", "Client", "Shoot Date", "Status", "Payment", "Total"].map((h, i) => (
                     <th key={h}
-                      className={`text-[10.5px] font-semibold text-gray-400 uppercase tracking-[0.07em] py-3 whitespace-nowrap ${
+                      className={`text-[11.5px] font-semibold uppercase tracking-[0.07em] py-3 whitespace-nowrap ${
                         i === 0 ? "text-left px-6" : i === 5 ? "text-right px-6" : "text-left px-4"
-                      }`}>
+                      }`} style={{ color: "#6B7280" }}>
                       {h}
                     </th>
                   ))}
@@ -653,37 +652,37 @@ export default function DashboardHome() {
                   return (
                     <tr key={l.id} className="group transition-colors hover:bg-gray-50"
                       style={{ borderBottom: idx < Math.min(display.length, 8) - 1 ? "1px solid #F3F4F6" : "none" }}>
-                      <td className="px-6 py-3.5 max-w-[220px]">
+                      <td className="px-6 py-4 max-w-[220px]">
                         {isMock ? (
-                          <span className="font-medium text-gray-900 line-clamp-1 block text-[13px]">{l.address?.split(",")[0]}</span>
+                          <span className="font-medium line-clamp-1 block text-[14px]" style={{ color: "#0F172A" }}>{l.address?.split(",")[0]}</span>
                         ) : (
                           <Link href={`/dashboard/listings/${l.id}`}
-                            className="font-medium text-gray-900 group-hover:text-[#1B4BB8] transition-colors line-clamp-1 block text-[13px]">
+                            className="font-medium group-hover:text-[#1B4BB8] transition-colors line-clamp-1 block text-[14px]" style={{ color: "#0F172A" }}>
                             {l.address?.split(",")[0]}
                           </Link>
                         )}
-                        <span className="text-[11px] text-gray-400">{l.address?.split(",").slice(1, 2).join(",").trim()}</span>
+                        <span className="text-[12px]" style={{ color: "#6B7280" }}>{l.address?.split(",").slice(1, 2).join(",").trim()}</span>
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
                             style={{ background: avatarColor(l.clientName || "") }}>
                             {initials(l.clientName)}
                           </div>
-                          <span className="text-[13px] text-gray-600 whitespace-nowrap">{l.clientName}</span>
+                          <span className="text-[14px] whitespace-nowrap" style={{ color: "#475569" }}>{l.clientName}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-[12px] text-gray-400 whitespace-nowrap">
+                      <td className="px-4 py-4 text-[13px] whitespace-nowrap" style={{ color: "#6B7280" }}>
                         {l.shootDate ? new Date(l.shootDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                       </td>
-                      <td className="px-4 py-3.5"><StatusBadge status={l.status} /></td>
-                      <td className="px-4 py-3.5">
-                        <span className="text-[11.5px] font-medium px-1.5 py-0.5 rounded-md"
+                      <td className="px-4 py-4"><StatusBadge status={l.status} /></td>
+                      <td className="px-4 py-4">
+                        <span className="text-[12px] font-medium px-1.5 py-0.5 rounded-md"
                           style={{ color: pay.color, background: pay.bg }}>
                           {pay.label}
                         </span>
                       </td>
-                      <td className="px-6 py-3.5 text-right font-semibold text-gray-900 text-[13px] whitespace-nowrap">
+                      <td className="px-6 py-4 text-right font-semibold text-[14px] whitespace-nowrap" style={{ color: "#0F172A" }}>
                         ${l.totalPrice?.toLocaleString()}
                       </td>
                     </tr>

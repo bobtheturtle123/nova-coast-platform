@@ -185,7 +185,7 @@ export async function POST(req) {
           }
 
           // Helper: send assignment email to one photographer
-          function sendToPhotographer(pEmail, pName) {
+          const sendToPhotographer = (pEmail, pName) => {
             if (!pEmail) return;
             sends.push(resend.emails.send({
               from,

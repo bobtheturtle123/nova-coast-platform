@@ -242,16 +242,16 @@
   }
 
   .ky-logo-title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
-    color: #111827;
+    color: #0F172A;
     line-height: 1.2;
     letter-spacing: -0.3px;
   }
 
   .ky-logo-sub {
     font-size: 11px;
-    color: #9CA3AF;
+    color: #6B7280;
     margin-top: 1px;
     white-space: nowrap;
     overflow: hidden;
@@ -274,10 +274,10 @@
     display: flex;
     align-items: center;
     gap: 9px;
-    padding: 7px 10px;
+    padding: 9px 12px;
     border-radius: 7px;
-    color: #4B5563;
-    font-size: 13px;
+    color: #374151;
+    font-size: 14px;
     font-weight: 500;
     transition: background .12s ease, color .12s ease;
     text-decoration: none;
@@ -285,7 +285,7 @@
 
   .ky-nav-item:hover {
     background: #F3F4F6;
-    color: #111827;
+    color: #0F172A;
   }
 
   .ky-nav-item.active {
