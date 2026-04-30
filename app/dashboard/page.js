@@ -49,16 +49,16 @@ const MOCK_DATA = {
 };
 
 const STATUS_META = {
-  pending_payment: { label: "Awaiting Payment", bg: "bg-orange-50",  text: "text-orange-700",  dot: "bg-orange-400" },
-  requested:       { label: "Pending Review",   bg: "bg-amber-50",   text: "text-amber-700",   dot: "bg-amber-400"  },
-  confirmed:       { label: "Confirmed",         bg: "bg-blue-50",    text: "text-blue-700",    dot: "bg-blue-500"   },
-  completed:       { label: "Completed",         bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" },
-  cancelled:       { label: "Cancelled",         bg: "bg-gray-100",   text: "text-gray-500",    dot: "bg-gray-400"   },
+  pending_payment: { label: "Awaiting Payment", color: "#D97706", bg: "#FFFBEB" },
+  requested:       { label: "Pending Review",   color: "#B45309", bg: "#FEF3C7" },
+  confirmed:       { label: "Confirmed",         color: "#1B4BB8", bg: "#EBF0FF" },
+  completed:       { label: "Completed",         color: "#059669", bg: "#ECFDF5" },
+  cancelled:       { label: "Cancelled",         color: "#6B7280", bg: "#F9FAFB" },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function avatarColor(str) {
-  const p = ["#0B2A55","#1e6091","#2e7d32","#6a1b9a","#d84315","#00695c","#b5872d","#c0392b"];
+  const p = ["#1B4BB8","#1e6091","#2e7d32","#6a1b9a","#d84315","#00695c","#b5872d","#c0392b"];
   let h = 0;
   for (let i = 0; i < (str || "").length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
   return p[Math.abs(h) % p.length];
@@ -69,9 +69,9 @@ function initials(name) {
 }
 
 function payLabel(l) {
-  if (l.paidInFull || l.balancePaid) return { label: "Paid in full", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" };
-  if (l.depositPaid)                 return { label: "Deposit paid",  cls: "bg-blue-50 text-blue-700 border-blue-200" };
-  return { label: "Unpaid", cls: "bg-gray-50 text-gray-500 border-gray-200" };
+  if (l.paidInFull || l.balancePaid) return { label: "Paid in full", color: "#059669", bg: "#ECFDF5" };
+  if (l.depositPaid)                 return { label: "Deposit paid",  color: "#1B4BB8", bg: "#EBF0FF" };
+  return                                    { label: "Unpaid",        color: "#9CA3AF", bg: "#F9FAFB" };
 }
 
 function buildChartData(listings, period, metric) {
@@ -114,72 +114,44 @@ function buildChartData(listings, period, metric) {
     .map((b) => ({ label: b.label, value: metric === "revenue" ? b.revenue : b.bookings }));
 }
 
-// ── StatusDot ─────────────────────────────────────────────────────────────────
-function StatusDot({ status }) {
+// ── Status badge ──────────────────────────────────────────────────────────────
+function StatusBadge({ status }) {
   const m = STATUS_META[status] || STATUS_META.requested;
   return (
-    <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${m.bg} ${m.text}`}>
-      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${m.dot}`} />
+    <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium px-2 py-0.5 rounded-md"
+      style={{ color: m.color, background: m.bg }}>
+      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: m.color }} />
       {m.label}
     </span>
   );
 }
 
-// ── KPI Widget ────────────────────────────────────────────────────────────────
-function KpiWidget({ label, value, sub, icon, accentColor, accentBg, dark, alert }) {
+// ── Stat card ─────────────────────────────────────────────────────────────────
+function StatCard({ label, value, sub, badge }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl p-5 flex flex-col gap-3"
-      style={dark
-        ? {
-            background: "linear-gradient(145deg, rgba(13,53,115,0.88) 0%, rgba(8,28,68,0.94) 100%)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-            boxShadow: "0 4px 24px rgba(7,22,56,0.2), inset 0 1px 0 rgba(255,255,255,0.14)",
-            border: "1px solid rgba(255,255,255,0.09)",
-          }
-        : { background: "#fff", border: "1px solid var(--border-subtle)", boxShadow: "0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)" }
-      }>
-      {dark && (
-        <div className="absolute inset-0 pointer-events-none opacity-[0.06]"
-          style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
-      )}
-      <div className="relative flex items-center justify-between">
-        <div className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0"
-          style={{ background: dark ? "rgba(255,255,255,0.14)" : accentBg }}>
-          <svg width="17" height="17" fill="none" viewBox="0 0 24 24"
-            stroke={dark ? "#fff" : accentColor} strokeWidth="2">
-            {icon}
-          </svg>
-        </div>
-        {alert && (
-          <span className="text-[11px] font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ background: "rgba(251,191,36,0.2)", color: "#B45309" }}>
-            {alert}
+    <div className="bg-white rounded-xl p-5" style={{ border: "1px solid #E9ECF0" }}>
+      <div className="flex items-start justify-between mb-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-gray-400">{label}</p>
+        {badge != null && badge > 0 && (
+          <span className="text-[10px] font-bold w-5 h-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
+            {badge}
           </span>
         )}
       </div>
-      <div className="relative">
-        <p className={`text-[32px] font-bold leading-none tracking-tight mb-1.5 ${dark ? "text-white" : "text-[#0F172A]"}`}>
-          {value}
-        </p>
-        <p className={`text-[10.5px] font-semibold uppercase tracking-[0.09em] ${dark ? "text-white/45" : "text-gray-400"}`}>
-          {label}
-        </p>
-        {sub && (
-          <p className={`text-xs mt-0.5 ${dark ? "text-white/30" : "text-gray-400"}`}>{sub}</p>
-        )}
-      </div>
+      <p className="text-[28px] font-bold text-gray-900 leading-none tracking-tight">{value}</p>
+      {sub && <p className="text-[11.5px] text-gray-400 mt-2 leading-snug">{sub}</p>}
     </div>
   );
 }
 
 // ── Area chart ────────────────────────────────────────────────────────────────
-function RevenueAreaChart({ data, formatY, isBookings }) {
-  const W = 820, H = 215;
-  const padL = 52, padR = 18, padT = 26, padB = 40;
+function AreaChart({ data, formatY }) {
+  const W = 820, H = 200;
+  const padL = 48, padR = 16, padT = 20, padB = 36;
   const cW = W - padL - padR;
   const cH = H - padT - padB;
   const max = Math.max(...data.map(d => d.value), 1);
+  const accent = "#1B4BB8";
 
   const pts = data.map((d, i) => ({
     x: padL + (data.length > 1 ? (i / (data.length - 1)) * cW : cW * 0.5),
@@ -206,103 +178,59 @@ function RevenueAreaChart({ data, formatY, isBookings }) {
   }
 
   const linePath = smoothPath(pts);
+  const bottom   = padT + cH;
   const lastP    = pts[pts.length - 1];
   const firstP   = pts[0];
-  const bottom   = padT + cH;
   const areaPath = `${linePath} L ${lastP.x.toFixed(1)},${bottom} L ${firstP.x.toFixed(1)},${bottom} Z`;
-  const peakIdx  = data.reduce((bi, d, i) => d.value > data[bi].value ? i : bi, 0);
-  const accent   = isBookings ? "#0891B2" : "#1040a0";
-  const goldC    = "#C9A96E";
 
   const yTicks = [0.25, 0.5, 0.75, 1].map(t => ({
-    y:     padT + cH - t * cH,
+    y: padT + cH - t * cH,
     label: formatY(Math.round(max * t)),
   }));
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ display: "block", overflow: "visible" }}>
       <defs>
-        <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor={accent} stopOpacity="0.16" />
-          <stop offset="60%"  stopColor={accent} stopOpacity="0.05" />
+        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor={accent} stopOpacity="0.10" />
           <stop offset="100%" stopColor={accent} stopOpacity="0"    />
-        </linearGradient>
-        <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor={goldC} stopOpacity="0.18" />
-          <stop offset="100%" stopColor={goldC} stopOpacity="0"    />
         </linearGradient>
       </defs>
 
       {yTicks.map((t, i) => (
         <line key={i} x1={padL} y1={t.y} x2={W - padR} y2={t.y}
-          stroke="#EEF0F6" strokeWidth="1" strokeDasharray="5 4" />
+          stroke="#F0F1F3" strokeWidth="1" />
       ))}
       {yTicks.map((t, i) => (
-        <text key={i} x={padL - 10} y={t.y + 4} textAnchor="end" fontSize="10"
-          fill="#C4CBD8" fontFamily="system-ui,-apple-system,sans-serif">
-          {t.label}
-        </text>
+        <text key={i} x={padL - 8} y={t.y + 4} textAnchor="end" fontSize="10"
+          fill="#C4CBD8" fontFamily="system-ui,sans-serif">{t.label}</text>
       ))}
 
-      {pts.length >= 2 && (() => {
-        const a = pts[pts.length - 2];
-        const b = pts[pts.length - 1];
-        const mx = (b.x - a.x) / 3;
-        return (
-          <path
-            d={`M ${a.x.toFixed(1)},${bottom} L ${a.x.toFixed(1)},${a.y.toFixed(1)} C ${(a.x+mx).toFixed(1)},${a.y.toFixed(1)} ${(b.x-mx).toFixed(1)},${b.y.toFixed(1)} ${b.x.toFixed(1)},${b.y.toFixed(1)} L ${b.x.toFixed(1)},${bottom} Z`}
-            fill="url(#goldGrad)" opacity="0.6"
-          />
-        );
-      })()}
-
-      <path d={areaPath} fill="url(#revGrad)" />
-      <path d={linePath} fill="none" stroke={accent} strokeWidth="2.5"
+      <path d={areaPath} fill="url(#chartGrad)" />
+      <path d={linePath} fill="none" stroke={accent} strokeWidth="2"
         strokeLinecap="round" strokeLinejoin="round" />
 
       {pts.map((p, i) => (
-        <g key={i}>
-          {i === pts.length - 1 ? (
-            <>
-              <circle cx={p.x} cy={p.y} r="10" fill={goldC}  fillOpacity="0.15" />
-              <circle cx={p.x} cy={p.y} r="5.5" fill={accent} />
-              <circle cx={p.x} cy={p.y} r="2.5" fill="white"  />
-            </>
-          ) : (
-            <circle cx={p.x} cy={p.y} r="4" fill="white" stroke={accent} strokeWidth="2" />
-          )}
-        </g>
+        <circle key={i} cx={p.x} cy={p.y} r={i === pts.length - 1 ? 4 : 3}
+          fill="white" stroke={accent} strokeWidth={i === pts.length - 1 ? 2.5 : 1.5} />
       ))}
-
-      {pts[peakIdx] && peakIdx !== pts.length - 1 && (
-        <g>
-          <line x1={pts[peakIdx].x} y1={pts[peakIdx].y - 8}  x2={pts[peakIdx].x} y2={pts[peakIdx].y - 22}
-            stroke={accent} strokeWidth="1" strokeDasharray="2,2" opacity="0.4" />
-          <rect x={pts[peakIdx].x - 28} y={pts[peakIdx].y - 38} width={56} height={18} rx={5} fill={accent} />
-          <text x={pts[peakIdx].x} y={pts[peakIdx].y - 25} textAnchor="middle" fontSize="10.5"
-            fill="white" fontFamily="system-ui,-apple-system" fontWeight="700">
-            {formatY(data[peakIdx].value)}
-          </text>
-        </g>
-      )}
 
       {lastP && (
         <g>
-          <line x1={lastP.x} y1={lastP.y - 12} x2={lastP.x} y2={lastP.y - 28}
-            stroke={goldC} strokeWidth="1.5" strokeDasharray="2,2" opacity="0.7" />
-          <rect x={lastP.x - 30} y={lastP.y - 46} width={60} height={20} rx={5} fill={goldC} />
-          <text x={lastP.x} y={lastP.y - 31} textAnchor="middle" fontSize="11"
-            fill="white" fontFamily="system-ui,-apple-system" fontWeight="700">
+          <rect x={lastP.x - 28} y={lastP.y - 34} width={56} height={18} rx={5}
+            fill={accent} />
+          <text x={lastP.x} y={lastP.y - 21} textAnchor="middle" fontSize="10.5"
+            fill="white" fontFamily="system-ui,sans-serif" fontWeight="600">
             {formatY(data[data.length - 1].value)}
           </text>
         </g>
       )}
 
       {pts.map((p, i) => (
-        <text key={i} x={p.x} y={H - 4} textAnchor="middle" fontSize="11"
-          fill={i === pts.length - 1 ? goldC : "#A0AEC0"}
-          fontWeight={i === pts.length - 1 ? "700" : "400"}
-          fontFamily="system-ui,-apple-system,sans-serif">
+        <text key={i} x={p.x} y={H - 2} textAnchor="middle" fontSize="10.5"
+          fill={i === pts.length - 1 ? accent : "#C4CBD8"}
+          fontWeight={i === pts.length - 1 ? "600" : "400"}
+          fontFamily="system-ui,sans-serif">
           {p.label}
         </text>
       ))}
@@ -310,7 +238,7 @@ function RevenueAreaChart({ data, formatY, isBookings }) {
   );
 }
 
-// ── Revenue section (self-contained with toggles) ─────────────────────────────
+// ── Revenue section ───────────────────────────────────────────────────────────
 function RevenueSection({ listings, isMock }) {
   const [period, setPeriod] = useState("6m");
   const [metric, setMetric] = useState("revenue");
@@ -323,7 +251,7 @@ function RevenueSection({ listings, isMock }) {
     return built.some(d => d.value > 0) ? built : MOCK_DATA[period].map(d => ({ label: d.label, value: metric === "revenue" ? d.revenue : d.bookings }));
   }, [period, metric, listings, isMock]);
 
-  const total = chartData.reduce((s, d) => s + d.value, 0);
+  const total  = chartData.reduce((s, d) => s + d.value, 0);
   const change = useMemo(() => {
     if (chartData.length < 2) return null;
     const prev = chartData[chartData.length - 2]?.value || 0;
@@ -335,58 +263,51 @@ function RevenueSection({ listings, isMock }) {
 
   const formatY = metric === "revenue"
     ? (v) => v >= 1000 ? `$${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k` : `$${v}`
-    : (v) => `${v}`;
+    : (v) => String(v);
 
   const displayTotal = metric === "revenue" ? `$${total.toLocaleString()}` : total.toLocaleString();
-  const periodLabel  = { "30d": "30 Days", "6m": "6 Months", "12m": "12 Months" }[period];
+  const periodLabel  = { "30d": "30 days", "6m": "6 months", "12m": "12 months" }[period];
 
   return (
-    <div className="rounded-2xl overflow-hidden"
-      style={{ background: "#fff", border: "1px solid var(--border-subtle)", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-
-      <div className="px-7 pt-6 pb-4 flex items-start justify-between gap-6"
-        style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+    <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
+      <div className="px-6 pt-5 pb-4 flex items-start justify-between gap-6" style={{ borderBottom: "1px solid #E9ECF0" }}>
         <div>
-          <p className="text-[10.5px] font-semibold text-gray-400 uppercase tracking-[0.09em] mb-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-gray-400 mb-1.5">
             {periodLabel} · {metric === "revenue" ? "Revenue" : "Bookings"}
-            {isMock && <span className="ml-2 text-gray-300 font-normal normal-case tracking-normal italic">sample</span>}
+            {isMock && <span className="ml-2 font-normal normal-case tracking-normal text-gray-300 italic">sample</span>}
           </p>
-          <p className="text-[34px] font-bold text-[#0F172A] leading-none tracking-tight mb-2">
-            {displayTotal}
-          </p>
+          <p className="text-[32px] font-bold text-gray-900 leading-none tracking-tight mb-2">{displayTotal}</p>
           <div className="flex items-center gap-3">
             {change && (
-              <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${change.up ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+              <span className={`inline-flex items-center gap-1 text-[11.5px] font-semibold px-2 py-0.5 rounded-md ${change.up ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
                 {change.up ? "↑" : "↓"} {Math.abs(change.pct)}% vs prev
               </span>
             )}
-            <Link href="/dashboard/reports" className="text-xs text-gray-400 hover:text-[#0B2A55] transition-colors">
+            <Link href="/dashboard/reports" className="text-[11.5px] text-gray-400 hover:text-[#1B4BB8] transition-colors">
               Full report →
             </Link>
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-2.5 flex-shrink-0">
-          <div className="flex items-center gap-0.5 p-1 rounded-xl"
-            style={{ background: "var(--bg-subtle)", border: "1px solid var(--border-subtle)" }}>
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          <div className="flex items-center rounded-lg overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
             {[{ id: "30d", label: "30D" }, { id: "6m", label: "6M" }, { id: "12m", label: "12M" }].map(p => (
               <button key={p.id} onClick={() => setPeriod(p.id)}
-                className="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150"
+                className="px-3 py-1.5 text-[11.5px] font-semibold transition-colors"
                 style={period === p.id
-                  ? { background: "#fff", color: "#0F172A", boxShadow: "0 1px 3px rgba(0,0,0,0.12)" }
-                  : { color: "#94A3B8" }}>
+                  ? { background: "#1B4BB8", color: "#fff" }
+                  : { color: "#9CA3AF", background: "#fff" }}>
                 {p.label}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-0.5 p-1 rounded-xl"
-            style={{ background: "var(--bg-subtle)", border: "1px solid var(--border-subtle)" }}>
+          <div className="flex items-center rounded-lg overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
             {[{ id: "revenue", label: "Revenue" }, { id: "bookings", label: "Bookings" }].map(m => (
               <button key={m.id} onClick={() => setMetric(m.id)}
-                className="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150"
+                className="px-3 py-1.5 text-[11.5px] font-semibold transition-colors"
                 style={metric === m.id
-                  ? { background: "#fff", color: "#0F172A", boxShadow: "0 1px 3px rgba(0,0,0,0.12)" }
-                  : { color: "#94A3B8" }}>
+                  ? { background: "#1B4BB8", color: "#fff" }
+                  : { color: "#9CA3AF", background: "#fff" }}>
                 {m.label}
               </button>
             ))}
@@ -394,39 +315,10 @@ function RevenueSection({ listings, isMock }) {
         </div>
       </div>
 
-      <div className="px-5 pt-5 pb-4">
-        <RevenueAreaChart data={chartData} formatY={formatY} isBookings={metric === "bookings"} />
+      <div className="px-4 pt-4 pb-3">
+        <AreaChart data={chartData} formatY={formatY} />
       </div>
     </div>
-  );
-}
-
-// ── Copy link button ──────────────────────────────────────────────────────────
-function CopyLinkButton({ text }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      onClick={() => { if (!text) return; navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }}
-      className="inline-flex items-center gap-2 text-xs font-semibold border bg-white text-gray-600 px-4 py-2.5 rounded-xl transition-colors"
-      style={{ borderColor: "var(--border)" }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#0B2A55"; e.currentTarget.style.color = "#0B2A55"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = ""; }}>
-      {copied ? (
-        <>
-          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
-          Copied!
-        </>
-      ) : (
-        <>
-          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-          </svg>
-          Copy Booking Link
-        </>
-      )}
-    </button>
   );
 }
 
@@ -436,6 +328,7 @@ export default function DashboardHome() {
   const [tenant,      setTenant]      = useState(null);
   const [hasProducts, setHasProducts] = useState(false);
   const [loading,     setLoading]     = useState(true);
+  const [linkCopied,  setLinkCopied]  = useState(false);
 
   useEffect(() => {
     auth.currentUser?.getIdToken(true).then(async (token) => {
@@ -480,15 +373,15 @@ export default function DashboardHome() {
     { done: !!(tenant.branding?.primaryColor && tenant.branding?.businessName),            label: "Configure branding",      href: "/dashboard/settings#settings-branding" },
     { done: !!(tenant.bookingConfig || tenant.pricingConfig || tenant.availabilityConfig), label: "Review booking settings", href: "/dashboard/settings" },
     { done: !!tenant.stripeConnectOnboarded,                                               label: "Connect Stripe",          href: "/dashboard/billing" },
-    { done: hasProducts,                                                                   label: "Add services",            href: "/dashboard/products" },
-    { done: listings.length > 0,                                                           label: "First booking received",  href: null },
+    { done: hasProducts,                                                                   label: "Add services or packages", href: "/dashboard/products" },
+    { done: listings.length > 0,                                                           label: "Receive your first booking", href: null },
   ] : [];
   const doneCount     = setupSteps.filter(s => s.done).length;
   const setupComplete = doneCount === setupSteps.length;
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-5 h-5 border-2 border-gray-200 border-t-[#1040a0] rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-gray-200 border-t-[#1B4BB8] rounded-full animate-spin" />
     </div>
   );
 
@@ -496,107 +389,78 @@ export default function DashboardHome() {
   const hour     = today.getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const bizName  = tenant?.businessName || "";
-  const firstName = bizName.split(" ")[0] || "there";
+  const firstName = bizName.split(" ")[0] || "";
   const dateLabel = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   const bookingUrl = tenant
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/${tenant.slug}/book`
     : "";
 
+  function copyLink() {
+    if (!bookingUrl) return;
+    navigator.clipboard.writeText(bookingUrl).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1500);
+    });
+  }
+
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-      <div className="max-w-[1340px] mx-auto px-6 py-8 space-y-5">
+    <div className="min-h-screen" style={{ background: "#F7F8FA" }}>
+      <div className="max-w-[1200px] mx-auto px-6 py-8 space-y-6">
 
-        {/* ── Setup hero ──────────────────────────────────────────────────── */}
-        {tenant && !setupComplete && (
-          <div className="relative overflow-hidden rounded-2xl px-8 py-7"
-            style={{
-              background: "linear-gradient(145deg, rgba(13,53,115,0.9) 0%, rgba(8,28,68,0.96) 60%, rgba(6,18,46,1) 100%)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-              boxShadow: "0 8px 40px rgba(6,18,46,0.22), inset 0 1px 0 rgba(255,255,255,0.12)",
-              border: "1px solid rgba(255,255,255,0.09)",
-            }}>
-            <div className="absolute inset-0 pointer-events-none opacity-[0.07]"
-              style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "22px 22px" }} />
-            <div className="relative z-10">
-              <div className="flex items-start justify-between gap-6 mb-5">
-                <div>
-                  <p className="text-white/50 text-[11px] font-semibold uppercase tracking-widest mb-1">Getting started</p>
-                  <h2 className="text-white text-xl font-semibold">{doneCount} of {setupSteps.length} steps complete</h2>
-                  <p className="text-white/50 text-sm mt-1">Finish setup to start accepting bookings.</p>
-                </div>
-                <Link href="/onboarding"
-                  className="flex-shrink-0 text-xs font-semibold bg-white text-[#0B2A55] px-5 py-2.5 rounded-xl hover:bg-white/90 transition-colors whitespace-nowrap">
-                  Continue Setup →
-                </Link>
-              </div>
-              <div className="w-full bg-white/10 rounded-full h-1 mb-4">
-                <div className="bg-[#C9A96E] h-1 rounded-full transition-all duration-700"
-                  style={{ width: `${(doneCount / setupSteps.length) * 100}%` }} />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {setupSteps.map((s, i) => (
-                  <span key={i} className={`text-[11px] font-medium px-3 py-1 rounded-full ${s.done ? "bg-white/10 text-white/35 line-through" : "bg-white/15 text-white/80"}`}>
-                    {s.done ? "✓ " : ""}{s.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Stripe banner ───────────────────────────────────────────────── */}
+        {/* ── Stripe banner ────────────────────────────────────────────── */}
         {tenant && !tenant.stripeConnectOnboarded && setupComplete && (
-          <div className="rounded-2xl px-6 py-4 flex items-center justify-between gap-4"
-            style={{ background: "#FFFBEB", border: "1px solid #FDE68A" }}>
+          <div className="rounded-xl px-5 py-3.5 flex items-center justify-between gap-4 bg-white"
+            style={{ border: "1px solid #FDE68A" }}>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ background: "#FEF3C7" }}>
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
               <div>
-                <p className="text-amber-900 font-semibold text-sm">Connect Stripe to accept payments</p>
-                <p className="text-amber-700/70 text-xs mt-0.5">Deposits won't be collected until Stripe Connect is active.</p>
+                <p className="text-sm font-medium text-gray-800">Connect Stripe to accept payments</p>
+                <p className="text-xs text-gray-400 mt-0.5">Deposits won't be collected until Stripe Connect is active.</p>
               </div>
             </div>
             <Link href="/dashboard/billing"
-              className="flex-shrink-0 text-xs font-semibold text-amber-900 border border-amber-300 bg-white px-4 py-2.5 rounded-xl hover:bg-amber-50 transition-colors whitespace-nowrap">
+              className="flex-shrink-0 text-xs font-semibold text-amber-700 border border-amber-200 bg-amber-50 px-3.5 py-2 rounded-lg hover:bg-amber-100 transition-colors whitespace-nowrap">
               Connect Stripe →
             </Link>
           </div>
         )}
 
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-4 pt-1">
+        {/* ── Header ───────────────────────────────────────────────────── */}
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-[0.1em] mb-0.5">{dateLabel}</p>
-            <h1 className="text-[26px] font-bold text-[#0F172A] leading-tight tracking-tight">
-              {greeting}, {firstName}
-              {isMock && (
-                <span className="ml-3 align-middle text-xs font-normal text-gray-400 bg-gray-100 px-2.5 py-0.5 rounded-full">
-                  sample data
-                </span>
-              )}
+            <h1 className="text-[22px] font-semibold text-gray-900 tracking-tight">
+              {greeting}{firstName ? `, ${firstName}` : ""}
+              {isMock && <span className="ml-2 text-sm font-normal text-gray-400">· sample data</span>}
             </h1>
+            <p className="text-sm text-gray-400 mt-0.5">{dateLabel}</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {bookingUrl && <CopyLinkButton text={bookingUrl} />}
+            {bookingUrl && (
+              <button onClick={copyLink}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 px-3.5 py-2 rounded-lg transition-colors"
+                style={{ border: "1px solid #E9ECF0", background: "#fff" }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = "#C7D2E8"}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = "#E9ECF0"}>
+                {linkCopied ? "✓ Copied" : "Copy Booking Link"}
+              </button>
+            )}
             {bookingUrl && (
               <a href={bookingUrl} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-xs font-semibold border bg-white text-gray-600 px-4 py-2.5 rounded-xl transition-colors"
-                style={{ borderColor: "var(--border)" }}>
-                <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-                Booking Page
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 px-3.5 py-2 rounded-lg transition-colors"
+                style={{ border: "1px solid #E9ECF0", background: "#fff" }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = "#C7D2E8"}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = "#E9ECF0"}>
+                Booking Page ↗
               </a>
             )}
             <Link href="/dashboard/listings/new"
-              className="inline-flex items-center gap-2 text-xs font-semibold text-white px-4 py-2.5 rounded-xl transition-colors"
-              style={{ background: "linear-gradient(135deg, #1040a0 0%, #0a2a5e 100%)", boxShadow: "0 2px 12px rgba(10,42,94,0.28), inset 0 1px 0 rgba(255,255,255,0.14)" }}>
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-white px-4 py-2 rounded-lg transition-colors"
+              style={{ background: "#1B4BB8" }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#1640A0"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "#1B4BB8"}>
               <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
@@ -605,88 +469,91 @@ export default function DashboardHome() {
           </div>
         </div>
 
-        {/* ── KPI row ─────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <KpiWidget
-            dark
-            label="Total Listings"
-            value={stats.total}
-            sub="all time"
-            icon={<path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />}
-            accentColor="#0B2A55"
-            accentBg="#EEF2F8"
-          />
-          <KpiWidget
-            label="Pending Review"
-            value={stats.pending}
-            sub={stats.pending > 0 ? "need your action" : "all clear"}
-            alert={stats.pending > 0 ? stats.pending : null}
-            icon={<path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />}
-            accentColor="#D97706"
-            accentBg="#FFF8ED"
-          />
-          <KpiWidget
-            label="Active Shoots"
-            value={stats.confirmed}
-            sub="confirmed"
-            icon={<path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />}
-            accentColor="#0891B2"
-            accentBg="#ECFEFF"
-          />
-          <KpiWidget
-            label="Completed"
-            value={stats.completed}
-            sub="delivered"
-            icon={<path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />}
-            accentColor="#059669"
-            accentBg="#ECFDF5"
-          />
-          <KpiWidget
-            label="Revenue Collected"
-            value={`$${stats.revenue.toLocaleString()}`}
-            sub="deposits + paid"
-            icon={<path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />}
-            accentColor="#B5872D"
-            accentBg="#FDF6EB"
-          />
+        {/* ── Setup checklist ───────────────────────────────────────────── */}
+        {tenant && !setupComplete && (
+          <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
+            <div className="px-6 py-4 flex items-center gap-4" style={{ borderBottom: "1px solid #E9ECF0" }}>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-gray-900">Get your workspace ready</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{doneCount} of {setupSteps.length} steps complete</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-32 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-[#1B4BB8] transition-all duration-500"
+                    style={{ width: `${Math.round((doneCount / setupSteps.length) * 100)}%` }} />
+                </div>
+                <Link href="/onboarding"
+                  className="text-xs font-medium text-[#1B4BB8] hover:text-[#1640A0] transition-colors whitespace-nowrap">
+                  Continue setup →
+                </Link>
+              </div>
+            </div>
+            <div>
+              {setupSteps.map((step, i) => (
+                <div key={i} className="flex items-center gap-4 px-6 py-3.5"
+                  style={{ borderBottom: i < setupSteps.length - 1 ? "1px solid #F3F4F6" : "none" }}>
+                  <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all ${
+                    step.done ? "bg-[#1B4BB8]" : "border-2 border-gray-200"
+                  }`}>
+                    {step.done && (
+                      <svg width="10" height="10" fill="none" viewBox="0 0 12 12">
+                        <path d="M2.5 6L5 8.5 9.5 3.5" stroke="white" strokeWidth="1.8"
+                          strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  <span className={`text-sm flex-1 ${step.done ? "text-gray-400 line-through decoration-gray-300" : "text-gray-700"}`}>
+                    {step.label}
+                  </span>
+                  {!step.done && step.href && (
+                    <Link href={step.href}
+                      className="text-xs font-medium text-[#1B4BB8] hover:text-[#1640A0] transition-colors">
+                      Set up →
+                    </Link>
+                  )}
+                  {step.done && <span className="text-[11px] text-gray-300 font-medium">Done</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Stats row ─────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatCard label="Total Listings"     value={stats.total}     sub="all time" />
+          <StatCard label="Pending Review"     value={stats.pending}   sub={stats.pending > 0 ? "need your action" : "all clear"} badge={stats.pending} />
+          <StatCard label="Active Shoots"      value={stats.confirmed} sub="confirmed" />
+          <StatCard label="Revenue Collected"  value={`$${stats.revenue.toLocaleString()}`} sub="deposits + paid" />
         </div>
 
-        {/* ── Revenue — full-width hero ────────────────────────────────────── */}
+        {/* ── Revenue chart ─────────────────────────────────────────────── */}
         <RevenueSection listings={display} isMock={isMock} />
 
-        {/* ── Upcoming Shoots ──────────────────────────────────────────────── */}
-        <div className="rounded-2xl overflow-hidden"
-          style={{ background: "#fff", border: "1px solid var(--border-subtle)", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-          <div className="px-6 py-4 flex items-center justify-between"
-            style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+        {/* ── Upcoming Shoots ───────────────────────────────────────────── */}
+        <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
+          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #E9ECF0" }}>
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-                style={{ background: "#EEF2F8" }}>
-                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#0B2A55" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h2 className="font-semibold text-[#0F172A] text-sm">Upcoming Shoots</h2>
+              <h2 className="text-sm font-semibold text-gray-900">Upcoming Shoots</h2>
               {upcoming.length > 0 && (
                 <span className="text-[11px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
                   {upcoming.length} confirmed
                 </span>
               )}
             </div>
-            <Link href="/dashboard/listings" className="text-xs text-gray-400 hover:text-[#0B2A55] transition-colors">
+            <Link href="/dashboard/listings" className="text-xs text-gray-400 hover:text-[#1B4BB8] transition-colors">
               View all →
             </Link>
           </div>
 
           {upcoming.length === 0 ? (
             <div className="px-6 py-12 text-center">
-              <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg, #EEF2F8 0%, #DBEAFE 100%)" }}>
-                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#0B2A55" strokeWidth="1.5">
+              <div className="w-10 h-10 rounded-xl mx-auto mb-3 flex items-center justify-center bg-gray-50"
+                style={{ border: "1px solid #E9ECF0" }}>
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" strokeWidth="1.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <p className="text-sm font-semibold text-[#0F172A]">No confirmed shoots</p>
+              <p className="text-sm font-medium text-gray-500">No confirmed shoots yet</p>
               <p className="text-xs text-gray-400 mt-1">Confirmed bookings will appear here.</p>
             </div>
           ) : (
@@ -696,68 +563,55 @@ export default function DashboardHome() {
                 const mo    = date ? date.toLocaleDateString("en-US", { month: "short" }).toUpperCase() : "--";
                 const dd    = date ? date.getDate() : "--";
                 const dow   = date ? date.toLocaleDateString("en-US", { weekday: "short" }) : "";
-                const aColor = avatarColor(l.clientName || "");
-                const pay   = payLabel(l);
                 const isToday    = date && date.toDateString() === new Date().toDateString();
                 const isTomorrow = date && (() => { const t = new Date(); t.setDate(t.getDate() + 1); return date.toDateString() === t.toDateString(); })();
+                const pay   = payLabel(l);
 
                 return (
                   <Link key={l.id}
                     href={isMock ? "/dashboard/listings" : `/dashboard/listings/${l.id}`}
-                    className="group flex items-center gap-5 px-6 py-4 transition-colors"
-                    style={{ borderBottom: idx < upcoming.length - 1 ? "1px solid var(--border-subtle)" : "none" }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = "rgb(15 23 42 / 0.022)"}
-                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                    className="group flex items-center gap-4 px-6 py-3.5 transition-colors hover:bg-gray-50"
+                    style={{ borderBottom: idx < upcoming.length - 1 ? "1px solid #F3F4F6" : "none" }}>
 
-                    {/* Date chip */}
-                    <div className="w-14 flex-shrink-0 text-center"
+                    {/* Date block */}
+                    <div className="w-11 flex-shrink-0 text-center rounded-lg py-1.5"
                       style={{
-                        background:   isToday ? "linear-gradient(145deg, rgba(13,53,115,0.88) 0%, rgba(8,28,68,0.94) 100%)" : "#F8F9FC",
-                        border:       isToday ? "1px solid rgba(255,255,255,0.1)" : "1px solid var(--border-subtle)",
-                        boxShadow:    isToday ? "inset 0 1px 0 rgba(255,255,255,0.12)" : "none",
-                        borderRadius: 12, padding: "6px 0 8px",
+                        background: isToday ? "#1B4BB8" : "#F8F9FA",
+                        border: isToday ? "none" : "1px solid #E9ECF0",
                       }}>
-                      <div className={`text-[10px] font-bold uppercase tracking-wider leading-tight ${isToday ? "text-white/60" : "text-[#0B2A55]/40"}`}>{mo}</div>
-                      <div className={`text-2xl font-bold leading-none my-0.5 ${isToday ? "text-white" : "text-[#0B2A55]"}`}>{dd}</div>
-                      <div className={`text-[9px] font-semibold uppercase ${isToday ? "text-white/50" : "text-gray-400"}`}>{dow}</div>
+                      <div className={`text-[9px] font-semibold uppercase tracking-wide leading-tight ${isToday ? "text-white/70" : "text-gray-400"}`}>{mo}</div>
+                      <div className={`text-[20px] font-bold leading-none my-0.5 ${isToday ? "text-white" : "text-gray-800"}`}>{dd}</div>
+                      <div className={`text-[9px] font-medium uppercase ${isToday ? "text-white/60" : "text-gray-400"}`}>{dow}</div>
                     </div>
 
-                    {/* Avatar + info */}
+                    {/* Info */}
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                        style={{ background: aColor }}>
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
+                        style={{ background: avatarColor(l.clientName || "") }}>
                         {initials(l.clientName)}
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-semibold text-[#0F172A] truncate">{l.clientName}</p>
-                          {isToday    && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white flex-shrink-0" style={{ background: "linear-gradient(135deg, #1040a0 0%, #0a2a5e 100%)" }}>Today</span>}
-                          {isTomorrow && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex-shrink-0">Tomorrow</span>}
+                        <div className="flex items-center gap-2">
+                          <p className="text-[13.5px] font-medium text-gray-900 truncate">{l.clientName}</p>
+                          {isToday    && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[#EBF0FF] text-[#1B4BB8] flex-shrink-0">Today</span>}
+                          {isTomorrow && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-600 flex-shrink-0">Tomorrow</span>}
                         </div>
-                        <p className="text-[11px] text-gray-400 truncate mt-0.5">
-                          {l.address?.split(",")[0]}
-                          <span className="text-gray-300">{l.address?.split(",").slice(1, 2).join(",")}</span>
-                        </p>
+                        <p className="text-[11.5px] text-gray-400 truncate mt-0.5">{l.address?.split(",")[0]}</p>
                       </div>
-                    </div>
-
-                    {/* Service tier tags */}
-                    <div className="hidden md:flex items-center gap-1.5 flex-shrink-0">
-                      {l.totalPrice >= 1500 && <span className="text-[10.5px] font-medium px-2 py-0.5 rounded-full bg-[#FDF6EB] text-[#B5872D]">Luxury</span>}
-                      {l.totalPrice >= 500  && <span className="text-[10.5px] font-medium px-2 py-0.5 rounded-full bg-[#EEF2F8] text-[#0B2A55]">Photos</span>}
-                      {l.totalPrice >= 1000 && <span className="text-[10.5px] font-medium px-2 py-0.5 rounded-full bg-[#ECFEFF] text-[#0891B2]">Drone</span>}
                     </div>
 
                     {/* Price + payment */}
                     <div className="flex-shrink-0 text-right">
-                      <p className="text-sm font-bold text-[#0F172A]">${l.totalPrice?.toLocaleString()}</p>
-                      <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full border ${pay.cls}`}>
+                      <p className="text-[13.5px] font-semibold text-gray-900">${l.totalPrice?.toLocaleString()}</p>
+                      <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-md"
+                        style={{ color: pay.color, background: pay.bg }}>
                         {pay.label}
                       </span>
                     </div>
 
-                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#CBD5E1" strokeWidth="2"
-                      className="flex-shrink-0 group-hover:stroke-[#0B2A55] transition-colors">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"
+                      stroke="#D1D5DB" strokeWidth="2"
+                      className="flex-shrink-0 group-hover:stroke-[#1B4BB8] transition-colors">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </Link>
@@ -767,16 +621,14 @@ export default function DashboardHome() {
           )}
         </div>
 
-        {/* ── Recent Listings ──────────────────────────────────────────────── */}
-        <div className="rounded-2xl overflow-hidden"
-          style={{ background: "#fff", border: "1px solid var(--border-subtle)", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-          <div className="px-6 py-4 flex items-center justify-between"
-            style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-            <h2 className="font-semibold text-[#0F172A] text-sm">
-              Recent Listings
-              {isMock && <span className="ml-2 text-xs font-normal text-gray-400">(sample data)</span>}
-            </h2>
-            <Link href="/dashboard/listings" className="text-xs text-gray-400 hover:text-[#0B2A55] transition-colors">
+        {/* ── Recent Listings ───────────────────────────────────────────── */}
+        <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
+          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid #E9ECF0" }}>
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-sm font-semibold text-gray-900">Recent Listings</h2>
+              {isMock && <span className="text-[11px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">sample</span>}
+            </div>
+            <Link href="/dashboard/listings" className="text-xs text-gray-400 hover:text-[#1B4BB8] transition-colors">
               View all →
             </Link>
           </div>
@@ -784,9 +636,12 @@ export default function DashboardHome() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-subtle)" }}>
+                <tr style={{ background: "#FAFAFA", borderBottom: "1px solid #E9ECF0" }}>
                   {["Property", "Client", "Shoot Date", "Status", "Payment", "Total"].map((h, i) => (
-                    <th key={h} className={`text-[10.5px] font-semibold text-gray-400 uppercase tracking-[0.08em] py-3 whitespace-nowrap ${i === 0 ? "text-left px-6" : i === 5 ? "text-right px-6" : "text-left px-4"}`}>
+                    <th key={h}
+                      className={`text-[10.5px] font-semibold text-gray-400 uppercase tracking-[0.07em] py-3 whitespace-nowrap ${
+                        i === 0 ? "text-left px-6" : i === 5 ? "text-right px-6" : "text-left px-4"
+                      }`}>
                       {h}
                     </th>
                   ))}
@@ -796,16 +651,14 @@ export default function DashboardHome() {
                 {display.slice(0, 8).map((l, idx) => {
                   const pay = payLabel(l);
                   return (
-                    <tr key={l.id} className="group transition-colors"
-                      style={{ borderBottom: idx < Math.min(display.length, 8) - 1 ? "1px solid var(--border-subtle)" : "none" }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = "rgb(15 23 42 / 0.022)"}
-                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-                      <td className="px-6 py-3.5 max-w-[240px]">
+                    <tr key={l.id} className="group transition-colors hover:bg-gray-50"
+                      style={{ borderBottom: idx < Math.min(display.length, 8) - 1 ? "1px solid #F3F4F6" : "none" }}>
+                      <td className="px-6 py-3.5 max-w-[220px]">
                         {isMock ? (
-                          <span className="font-medium text-[#0F172A] line-clamp-1 block text-[13px]">{l.address?.split(",")[0]}</span>
+                          <span className="font-medium text-gray-900 line-clamp-1 block text-[13px]">{l.address?.split(",")[0]}</span>
                         ) : (
                           <Link href={`/dashboard/listings/${l.id}`}
-                            className="font-medium text-[#0F172A] group-hover:text-[#0B2A55] transition-colors line-clamp-1 block text-[13px]">
+                            className="font-medium text-gray-900 group-hover:text-[#1B4BB8] transition-colors line-clamp-1 block text-[13px]">
                             {l.address?.split(",")[0]}
                           </Link>
                         )}
@@ -823,13 +676,14 @@ export default function DashboardHome() {
                       <td className="px-4 py-3.5 text-[12px] text-gray-400 whitespace-nowrap">
                         {l.shootDate ? new Date(l.shootDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                       </td>
-                      <td className="px-4 py-3.5"><StatusDot status={l.status} /></td>
+                      <td className="px-4 py-3.5"><StatusBadge status={l.status} /></td>
                       <td className="px-4 py-3.5">
-                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${pay.cls}`}>
+                        <span className="text-[11.5px] font-medium px-1.5 py-0.5 rounded-md"
+                          style={{ color: pay.color, background: pay.bg }}>
                           {pay.label}
                         </span>
                       </td>
-                      <td className="px-6 py-3.5 text-right font-bold text-[#0F172A] text-[13px] whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-right font-semibold text-gray-900 text-[13px] whitespace-nowrap">
                         ${l.totalPrice?.toLocaleString()}
                       </td>
                     </tr>

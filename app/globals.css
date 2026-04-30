@@ -204,62 +204,55 @@
 
   /* ── Sidebar ─────────────────────────────────────────────────────────── */
   .ky-sidebar {
-    width: 260px;
+    width: 240px;
     height: 100vh;
     position: fixed;
     left: 0;
     top: 0;
-    padding: 24px 18px;
     display: flex;
     flex-direction: column;
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    background: linear-gradient(
-      180deg,
-      rgba(33,64,122,0.82) 0%,
-      rgba(56,92,158,0.78) 55%,
-      rgba(72,108,176,0.74) 100%
-    );
-    border-right: 1px solid rgba(255,255,255,0.18);
-    box-shadow:
-      inset -1px 0 0 rgba(255,255,255,0.08),
-      8px 0 32px rgba(18,32,64,0.08);
+    background: #ffffff;
+    border-right: 1px solid #E9ECF0;
     z-index: 40;
+    overflow: hidden;
   }
 
   .ky-logo-wrap {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 28px;
+    gap: 10px;
+    padding: 20px 16px 16px;
+    border-bottom: 1px solid #F3F4F6;
+    flex-shrink: 0;
   }
 
   .ky-logo-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
-    background: rgba(255,255,255,0.22);
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: #1B4BB8;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
     color: white;
-    box-shadow: inset 0 1px 2px rgba(255,255,255,0.2);
+    font-size: 13px;
     flex-shrink: 0;
-    font-size: 18px;
+    letter-spacing: -0.5px;
   }
 
   .ky-logo-title {
-    font-size: 17px;
+    font-size: 14px;
     font-weight: 700;
-    color: white;
+    color: #111827;
     line-height: 1.2;
+    letter-spacing: -0.3px;
   }
 
   .ky-logo-sub {
     font-size: 11px;
-    color: rgba(255,255,255,0.65);
-    margin-top: 2px;
+    color: #9CA3AF;
+    margin-top: 1px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -268,7 +261,8 @@
   .ky-nav {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
+    padding: 12px 10px;
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
@@ -279,70 +273,62 @@
   .ky-nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 11px 14px;
-    border-radius: 14px;
-    color: rgba(255,255,255,0.82);
-    font-size: 13.5px;
+    gap: 9px;
+    padding: 7px 10px;
+    border-radius: 7px;
+    color: #4B5563;
+    font-size: 13px;
     font-weight: 500;
-    transition: all .2s ease;
+    transition: background .12s ease, color .12s ease;
     text-decoration: none;
   }
 
   .ky-nav-item:hover {
-    background: rgba(255,255,255,0.09);
-    color: #fff;
+    background: #F3F4F6;
+    color: #111827;
   }
 
   .ky-nav-item.active {
-    background: rgba(255,255,255,0.18);
-    color: #fff;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.15),
-      0 6px 16px rgba(17,31,60,0.1);
+    background: #EBF0FF;
+    color: #1B4BB8;
+    font-weight: 600;
   }
 
   .ky-upgrade-card {
-    margin-top: 16px;
-    padding: 16px;
-    border-radius: 20px;
-    background: rgba(255,255,255,0.10);
-    border: 1px solid rgba(255,255,255,0.14);
+    margin: 10px;
+    padding: 14px;
+    border-radius: 10px;
+    background: #F8F9FF;
+    border: 1px solid #E0E7FF;
+    flex-shrink: 0;
   }
 
   .ky-upgrade-btn {
     display: block;
-    margin-top: 12px;
+    margin-top: 10px;
     width: 100%;
-    padding: 10px;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.14);
+    padding: 8px;
+    border-radius: 7px;
+    background: #1B4BB8;
     color: white;
     font-size: 12px;
     font-weight: 600;
     text-align: center;
     text-decoration: none;
-    transition: background .2s;
+    transition: background .15s;
   }
-  .ky-upgrade-btn:hover { background: rgba(255,255,255,0.22); }
+  .ky-upgrade-btn:hover { background: #1640A0; }
 
   .ky-user-card {
-    margin-top: 12px;
-    padding: 12px 14px;
-    border-radius: 16px;
-    background: rgba(255,255,255,0.09);
+    margin: 0 10px 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #F9FAFB;
+    border: 1px solid #F3F4F6;
     display: flex;
     align-items: center;
-    gap: 10px;
-  }
-
-  .ky-soft-navy {
-    background: linear-gradient(180deg, rgba(23,52,108,0.88), rgba(31,67,138,0.78));
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.08),
-      0 10px 24px rgba(16,32,70,0.10);
-    backdrop-filter: blur(8px);
+    gap: 9px;
+    flex-shrink: 0;
   }
 
   /* ── Booking flow ────────────────────────────────────────────────────── */

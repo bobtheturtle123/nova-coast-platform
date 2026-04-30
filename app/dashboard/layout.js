@@ -192,8 +192,8 @@ export default function DashboardLayout({ children }) {
               onClick={() => setSidebarOpen(false)}
               className={`ky-nav-item${active ? " active" : ""}`}
             >
-              <span className="flex-shrink-0 opacity-80">{item.icon}</span>
-              <span className="tracking-tight leading-none">{item.label}</span>
+              <span className="flex-shrink-0">{item.icon}</span>
+              <span className="leading-none">{item.label}</span>
             </Link>
           );
         })}
@@ -201,8 +201,8 @@ export default function DashboardLayout({ children }) {
 
       {/* Upgrade CTA */}
       <div className="ky-upgrade-card">
-        <p className="text-[11.5px] font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>Upgrade to Pro</p>
-        <p className="text-[10.5px] mt-1 leading-relaxed" style={{ color: "rgba(255,255,255,0.50)" }}>
+        <p className="text-[11.5px] font-semibold text-[#1B4BB8]">Upgrade to Pro</p>
+        <p className="text-[11px] mt-1 leading-relaxed text-gray-500">
           Unlock advanced analytics, custom branding, and priority support.
         </p>
         <Link href="/dashboard/billing" className="ky-upgrade-btn">View Plans →</Link>
@@ -211,20 +211,17 @@ export default function DashboardLayout({ children }) {
       {/* User area */}
       <div className="ky-user-card">
         <div
-          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-semibold text-white"
-          style={{ background: "rgba(201,169,110,0.38)" }}
+          className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white"
+          style={{ background: "#1B4BB8" }}
         >
           {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[10.5px] truncate leading-none" style={{ color: "rgba(255,255,255,0.55)" }}>{user?.email}</p>
+          <p className="text-[11px] text-gray-500 truncate leading-none">{user?.email}</p>
         </div>
         <button
           onClick={() => auth.signOut().then(() => router.push("/auth/login"))}
-          className="flex-shrink-0 p-1 rounded transition-colors"
-          style={{ color: "rgba(255,255,255,0.35)" }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.80)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.35)"; }}
+          className="flex-shrink-0 p-1 rounded text-gray-400 hover:text-gray-700 transition-colors"
           title="Sign out"
         >
           <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -257,23 +254,21 @@ export default function DashboardLayout({ children }) {
           </div>
         )}
 
-        <div className="flex flex-col min-h-screen md:ml-[260px]">
+        <div className="flex flex-col min-h-screen md:ml-[240px]">
           {/* Mobile top bar */}
           <div
             className="md:hidden flex items-center gap-3 px-4 py-3"
             style={{
-              background: "linear-gradient(90deg, rgba(33,64,122,0.95) 0%, rgba(56,92,158,0.92) 100%)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              borderBottom: "1px solid rgba(255,255,255,0.09)",
+              background: "#ffffff",
+              borderBottom: "1px solid #E9ECF0",
             }}
           >
-            <button onClick={() => setSidebarOpen(true)} className="text-white/60 hover:text-white transition-colors">
+            <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-gray-800 transition-colors">
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <span className="font-semibold text-white text-[13px] tracking-tight">KyoriaOS</span>
+            <span className="font-semibold text-gray-900 text-[13px] tracking-tight">KyoriaOS</span>
           </div>
 
           <main className="flex-1 overflow-auto">{children}</main>
