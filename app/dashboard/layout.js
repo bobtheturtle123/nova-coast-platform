@@ -204,7 +204,7 @@ export default function DashboardLayout({ children }) {
 
       {/* Upgrade CTA */}
       <div className="ky-upgrade-card">
-        <p className="text-[11.5px] font-semibold text-[#2a6dab]">Upgrade to Pro</p>
+        <p className="text-[11.5px] font-semibold text-[#1E5A8A]">Upgrade to Pro</p>
         <p className="text-[11px] mt-1 leading-relaxed text-gray-500">
           Unlock advanced analytics, custom branding, and priority support.
         </p>

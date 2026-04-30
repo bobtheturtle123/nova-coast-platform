@@ -285,13 +285,13 @@
   }
 
   .ky-nav-item:hover {
-    background: #EBF3FB;
-    color: #0F172A;
+    background: #F2F6FA;
+    color: #374151;
   }
 
   .ky-nav-item.active {
-    background: #DCEEFA;
-    color: #2a6dab;
+    background: #EEF5FC;
+    color: #1E5A8A;
     font-weight: 600;
   }
 
@@ -310,15 +310,16 @@
     width: 100%;
     padding: 8px;
     border-radius: 8px;
-    background: #3486cf;
-    color: white;
+    background: rgba(255, 255, 255, 0.8);
+    color: #1E5A8A;
+    border: 1.5px solid #B8D8EF;
     font-size: 12px;
     font-weight: 600;
     text-align: center;
     text-decoration: none;
-    transition: background .15s;
+    transition: background .15s, border-color .15s;
   }
-  .ky-upgrade-btn:hover { background: #2a6dab; }
+  .ky-upgrade-btn:hover { background: #fff; border-color: #93C4E6; }
 
   .ky-user-card {
     margin: 0 10px 12px;
