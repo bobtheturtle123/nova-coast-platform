@@ -12,7 +12,7 @@ export async function POST(req) {
   }
 
   try {
-    const { uid, email, businessName } = await req.json();
+    const { uid, email, businessName, accessCode = "" } = await req.json();
 
     if (!uid || !email || !businessName) {
       return Response.json({ error: "Missing required fields" }, { status: 400 });
@@ -22,6 +22,22 @@ export async function POST(req) {
     const user = await adminAuth.getUser(uid);
     if (user.email !== email) {
       return Response.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    // Resolve trial length — check access code against env var
+    // Format: SIGNUP_ACCESS_CODES=FRIENDS2025:60,BETA2025:30  (code:days)
+    // or simply FRIENDS2025,BETA2025  (defaults to 60 days)
+    let trialDays = 14;
+    if (accessCode) {
+      const rawCodes = (process.env.SIGNUP_ACCESS_CODES || "").split(",").map((s) => s.trim()).filter(Boolean);
+      const upper = accessCode.toUpperCase();
+      for (const entry of rawCodes) {
+        const [code, days] = entry.split(":");
+        if (code.toUpperCase() === upper) {
+          trialDays = days ? parseInt(days, 10) : 60;
+          break;
+        }
+      }
     }
 
     // Generate slug
@@ -41,7 +57,7 @@ export async function POST(req) {
     const referralCode = generateReferralCode(businessName);
 
     // Create tenant + seed subcollections + set custom claims
-    const tenantId = await createTenant({ uid, email, businessName, slug, referralCode, referredBy });
+    const tenantId = await createTenant({ uid, email, businessName, slug, referralCode, referredBy, trialDays });
 
     // Record referral relationship (status: pending until first payment)
     if (referredBy && referredBy !== tenantId) {

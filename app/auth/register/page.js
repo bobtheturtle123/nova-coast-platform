@@ -13,9 +13,11 @@ export default function RegisterPage() {
     email: "",
     password: "",
     confirm: "",
+    accessCode: "",
   });
-  const [error,   setError]   = useState("");
-  const [loading, setLoading] = useState(false);
+  const [error,       setError]       = useState("");
+  const [loading,     setLoading]     = useState(false);
+  const [showCode,    setShowCode]    = useState(false);
 
   function set(field) {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -49,6 +51,7 @@ export default function RegisterPage() {
           uid:          cred.user.uid,
           email:        form.email,
           businessName: form.businessName,
+          accessCode:   form.accessCode.trim() || undefined,
         }),
       });
 
@@ -81,7 +84,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="font-display text-navy text-2xl tracking-wide">KyoriaOS</Link>
-          <p className="text-gray-500 text-sm mt-2">Create your account — 14 days free</p>
+          <p className="text-gray-500 text-sm mt-2">Create your account — free trial included</p>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
@@ -145,6 +148,26 @@ export default function RegisterPage() {
                 className="input-field w-full"
                 placeholder="••••••••"
               />
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowCode((v) => !v)}
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {showCode ? "▾ Hide access code" : "▸ Have an access code?"}
+              </button>
+              {showCode && (
+                <input
+                  type="text"
+                  value={form.accessCode}
+                  onChange={set("accessCode")}
+                  className="input-field w-full mt-2"
+                  placeholder="Enter your access code"
+                  autoComplete="off"
+                />
+              )}
             </div>
 
             <button type="submit" disabled={loading} className="btn-primary w-full py-3 mt-2">

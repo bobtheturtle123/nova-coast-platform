@@ -85,6 +85,7 @@ export default function CreateBookingPage() {
     depositPaid: false,
     photographerId: "", photographerEmail: "", photographerName: "", photographerPhone: "",
     photographerTbd: false,
+    additionalPhotographers: [],  // [{id, name, email, phone}]
     sendNotification: true,
     status: "confirmed",
   });
@@ -364,6 +365,18 @@ export default function CreateBookingPage() {
       photographerPhone: "",
       photographerTbd:   true,
     }));
+  }
+
+  function toggleAdditional(member) {
+    setForm((f) => {
+      const already = f.additionalPhotographers.some((p) => p.id === member.id);
+      return {
+        ...f,
+        additionalPhotographers: already
+          ? f.additionalPhotographers.filter((p) => p.id !== member.id)
+          : [...f.additionalPhotographers, { id: member.id, name: member.name, email: member.email || "", phone: member.phone || "" }],
+      };
+    });
   }
 
   function addCustomItem() {
@@ -688,19 +701,20 @@ export default function CreateBookingPage() {
                     ? allServiceIds.filter((id) => !m.skills.map(String).includes(String(id)))
                     : [];
 
+                  const isAdditional = form.additionalPhotographers.some((p) => p.id === m.id);
+
                   return (
                     <div key={m.id}
-                      onClick={() => canSelect && assignPhotographer(m)}
                       className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
                         isSelected   ? "border-navy bg-navy/5"
-                        : canSelect  ? "border-gray-200 hover:border-navy/40 cursor-pointer"
-                        : "border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed"
+                        : canSelect  ? "border-gray-200 hover:border-navy/40"
+                        : "border-gray-100 bg-gray-50 opacity-60"
                       }`}>
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5"
                         style={{ background: m.color || "#0b2a55" }}>
                         {m.name?.[0]?.toUpperCase()}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => canSelect && assignPhotographer(m)}>
                         <p className="text-sm font-medium text-charcoal">{m.name}</p>
                         <p className="text-xs text-gray-400 truncate">
                           {m.skills?.length > 0 ? m.skills.slice(0, 3).join(", ") + (m.skills.length > 3 ? ` +${m.skills.length-3}` : "") : "All services"}
@@ -737,7 +751,22 @@ export default function CreateBookingPage() {
                             🚗 {travel.durationText} · {travel.distanceText}
                           </div>
                         )}
-                        {isSelected && <span className="text-navy text-xs font-semibold">✓</span>}
+                        {isSelected
+                          ? <span className="text-navy text-xs font-semibold">✓ Primary</span>
+                          : (
+                            <button
+                              type="button"
+                              onClick={() => toggleAdditional(m)}
+                              className={`text-[11px] px-2 py-0.5 rounded-full border font-medium transition-colors ${
+                                isAdditional
+                                  ? "bg-navy/10 text-navy border-navy/20"
+                                  : "text-gray-400 border-gray-200 hover:border-navy/30 hover:text-navy"
+                              }`}
+                            >
+                              {isAdditional ? "✓ Co-photographer" : "+ Add as co-photographer"}
+                            </button>
+                          )
+                        }
                       </div>
                     </div>
                   );
@@ -758,11 +787,20 @@ export default function CreateBookingPage() {
                 </div>
               </div>
 
-              {form.photographerName && (
-                <p className="text-xs text-green-600 mt-3">
-                  Assigned: <strong>{form.photographerName}</strong>
-                  {form.photographerTbd && <span className="text-amber-600"> — remember to assign before shoot day</span>}
-                </p>
+              {(form.photographerName || form.additionalPhotographers.length > 0) && (
+                <div className="mt-3 space-y-0.5">
+                  {form.photographerName && (
+                    <p className="text-xs text-green-600">
+                      Primary: <strong>{form.photographerName}</strong>
+                      {form.photographerTbd && <span className="text-amber-600"> — assign before shoot day</span>}
+                    </p>
+                  )}
+                  {form.additionalPhotographers.map((p) => (
+                    <p key={p.id} className="text-xs text-blue-600">
+                      Co-photographer: <strong>{p.name}</strong>
+                    </p>
+                  ))}
+                </div>
               )}
             </div>
           )}

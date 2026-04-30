@@ -202,6 +202,149 @@
     transform: translateY(-1px);
   }
 
+  /* ── Sidebar ─────────────────────────────────────────────────────────── */
+  .ky-sidebar {
+    width: 260px;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    padding: 24px 18px;
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    background: linear-gradient(
+      180deg,
+      rgba(33,64,122,0.82) 0%,
+      rgba(56,92,158,0.78) 55%,
+      rgba(72,108,176,0.74) 100%
+    );
+    border-right: 1px solid rgba(255,255,255,0.18);
+    box-shadow:
+      inset -1px 0 0 rgba(255,255,255,0.08),
+      8px 0 32px rgba(18,32,64,0.08);
+    z-index: 40;
+  }
+
+  .ky-logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .ky-logo-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: white;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.2);
+    flex-shrink: 0;
+    font-size: 18px;
+  }
+
+  .ky-logo-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: white;
+    line-height: 1.2;
+  }
+
+  .ky-logo-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.65);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ky-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+  }
+  .ky-nav::-webkit-scrollbar { display: none; }
+
+  .ky-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 14px;
+    color: rgba(255,255,255,0.82);
+    font-size: 13.5px;
+    font-weight: 500;
+    transition: all .2s ease;
+    text-decoration: none;
+  }
+
+  .ky-nav-item:hover {
+    background: rgba(255,255,255,0.09);
+    color: #fff;
+  }
+
+  .ky-nav-item.active {
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.15),
+      0 6px 16px rgba(17,31,60,0.1);
+  }
+
+  .ky-upgrade-card {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.14);
+  }
+
+  .ky-upgrade-btn {
+    display: block;
+    margin-top: 12px;
+    width: 100%;
+    padding: 10px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.14);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    transition: background .2s;
+  }
+  .ky-upgrade-btn:hover { background: rgba(255,255,255,0.22); }
+
+  .ky-user-card {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.09);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ky-soft-navy {
+    background: linear-gradient(180deg, rgba(23,52,108,0.88), rgba(31,67,138,0.78));
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.08),
+      0 10px 24px rgba(16,32,70,0.10);
+    backdrop-filter: blur(8px);
+  }
+
   /* ── Booking flow ────────────────────────────────────────────────────── */
   .step-container {
     @apply max-w-3xl mx-auto px-4 py-10 animate-fade-up;

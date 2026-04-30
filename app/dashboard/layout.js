@@ -171,37 +171,18 @@ export default function DashboardLayout({ children }) {
     : (user?.email?.[0] || "K").toUpperCase();
 
   const Sidebar = () => (
-    <aside
-      className="w-56 flex flex-col h-full"
-      style={{
-        background: "linear-gradient(175deg, rgba(18,58,140,0.72) 0%, rgba(12,38,100,0.82) 100%)",
-        backdropFilter: "blur(24px) saturate(140%)",
-        WebkitBackdropFilter: "blur(24px) saturate(140%)",
-        borderRight: "1px solid rgba(255,255,255,0.1)",
-        boxShadow: "inset -1px 0 0 rgba(255,255,255,0.05)",
-      }}
-    >
+    <aside className="ky-sidebar">
       {/* Brand */}
-      <div className="px-4 pt-5 pb-4 flex items-center gap-3">
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-[13px] text-white"
-          style={{ background: "linear-gradient(135deg, #C9A96E 0%, #9a7535 100%)" }}
-        >
-          K
-        </div>
+      <div className="ky-logo-wrap">
+        <div className="ky-logo-icon">K</div>
         <div className="min-w-0">
-          <p className="font-semibold text-white text-[13px] tracking-tight leading-tight">KyoriaOS</p>
-          {tenantName && (
-            <p className="text-white/45 text-[11px] mt-0.5 truncate leading-none">{tenantName}</p>
-          )}
+          <p className="ky-logo-title">KyoriaOS</p>
+          {tenantName && <p className="ky-logo-sub">{tenantName}</p>}
         </div>
       </div>
 
-      {/* Separator */}
-      <div className="mx-4 mb-2" style={{ height: 1, background: "rgba(255,255,255,0.1)" }} />
-
       {/* Nav */}
-      <nav className="px-2.5 pt-1 flex-1 overflow-y-auto space-y-0.5">
+      <nav className="ky-nav">
         {NAV.map((item) => {
           const active = isActive(item);
           return (
@@ -209,33 +190,9 @@ export default function DashboardLayout({ children }) {
               key={item.href}
               href={item.href}
               onClick={() => setSidebarOpen(false)}
-              className="relative flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[12.5px] font-medium transition-all duration-150 group"
-              style={{
-                color:      active ? "#ffffff" : "rgba(255,255,255,0.80)",
-                background: active
-                  ? "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.07) 100%)"
-                  : "transparent",
-                boxShadow: active ? "inset 0 0 0 1px rgba(255,255,255,0.1)" : "none",
-              }}
-              onMouseEnter={(e) => {
-                if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.07)";
-              }}
-              onMouseLeave={(e) => {
-                if (!active) e.currentTarget.style.background = "transparent";
-              }}
+              className={`ky-nav-item${active ? " active" : ""}`}
             >
-              {active && (
-                <span
-                  className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full"
-                  style={{ width: 3, height: 18, background: "#C9A96E" }}
-                />
-              )}
-              <span
-                className="flex-shrink-0 w-[28px] h-[28px] rounded-lg flex items-center justify-center transition-all"
-                style={{ background: active ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.06)" }}
-              >
-                {item.icon}
-              </span>
+              <span className="flex-shrink-0 opacity-80">{item.icon}</span>
               <span className="tracking-tight leading-none">{item.label}</span>
             </Link>
           );
@@ -243,86 +200,69 @@ export default function DashboardLayout({ children }) {
       </nav>
 
       {/* Upgrade CTA */}
-      <div className="px-3 pb-3">
-        <div className="rounded-xl p-3"
-          style={{ background: "linear-gradient(135deg, rgba(201,169,110,0.16) 0%, rgba(201,169,110,0.08) 100%)", border: "1px solid rgba(201,169,110,0.24)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)" }}>
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
-              style={{ background: "rgba(201,169,110,0.22)" }}>
-              <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="#C9A96E" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <p className="text-[11.5px] font-semibold" style={{ color: "rgba(255,255,255,0.82)" }}>Upgrade to Pro</p>
-          </div>
-          <p className="text-[10px] mb-2.5 leading-relaxed" style={{ color: "rgba(255,255,255,0.35)" }}>
-            Unlock advanced analytics, custom branding, and priority support.
-          </p>
-          <Link href="/dashboard/billing"
-            className="block w-full text-center text-[11px] font-semibold py-1.5 rounded-lg transition-colors"
-            style={{ background: "rgba(201,169,110,0.18)", color: "#C9A96E", border: "1px solid rgba(201,169,110,0.28)" }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(201,169,110,0.28)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(201,169,110,0.18)"; }}>
-            View Plans →
-          </Link>
-        </div>
+      <div className="ky-upgrade-card">
+        <p className="text-[11.5px] font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>Upgrade to Pro</p>
+        <p className="text-[10.5px] mt-1 leading-relaxed" style={{ color: "rgba(255,255,255,0.50)" }}>
+          Unlock advanced analytics, custom branding, and priority support.
+        </p>
+        <Link href="/dashboard/billing" className="ky-upgrade-btn">View Plans →</Link>
       </div>
 
-      {/* Footer — user area */}
-      <div className="px-2.5 pb-3.5">
-        <div className="mx-1 mb-3" style={{ height: 1, background: "rgba(255,255,255,0.1)" }} />
-        <div className="flex items-center gap-2.5 px-2">
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-semibold text-white"
-            style={{ background: "rgba(201,169,110,0.32)" }}
-          >
-            {initials}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10.5px] text-white/45 truncate leading-none">{user?.email}</p>
-          </div>
-          <button
-            onClick={() => auth.signOut().then(() => router.push("/auth/login"))}
-            className="text-white/30 hover:text-white/70 transition-colors p-1 rounded flex-shrink-0"
-            title="Sign out"
-          >
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
+      {/* User area */}
+      <div className="ky-user-card">
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-semibold text-white"
+          style={{ background: "rgba(201,169,110,0.38)" }}
+        >
+          {initials}
         </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10.5px] truncate leading-none" style={{ color: "rgba(255,255,255,0.55)" }}>{user?.email}</p>
+        </div>
+        <button
+          onClick={() => auth.signOut().then(() => router.push("/auth/login"))}
+          className="flex-shrink-0 p-1 rounded transition-colors"
+          style={{ color: "rgba(255,255,255,0.35)" }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.80)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.35)"; }}
+          title="Sign out"
+        >
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+        </button>
       </div>
     </aside>
   );
 
   return (
     <ToastProvider>
-      <div className="min-h-screen flex" style={{ background: "var(--bg-base)" }}>
-        {/* Desktop sidebar */}
-        <div className="hidden md:flex flex-col flex-shrink-0 w-56 sticky top-0 h-screen">
+      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
+        {/* Desktop sidebar — fixed position, see .ky-sidebar */}
+        <div className="hidden md:block">
           <Sidebar />
         </div>
 
         {/* Mobile overlay */}
         {sidebarOpen && (
-          <div className="fixed inset-0 z-40 flex md:hidden">
+          <div className="fixed inset-0 z-50 flex md:hidden">
             <div
               className="absolute inset-0"
               style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
               onClick={() => setSidebarOpen(false)}
             />
-            <div className="relative w-56 flex flex-col">
+            <div className="relative">
               <Sidebar />
             </div>
           </div>
         )}
 
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex flex-col min-h-screen md:ml-[260px]">
           {/* Mobile top bar */}
           <div
             className="md:hidden flex items-center gap-3 px-4 py-3"
             style={{
-              background: "linear-gradient(90deg, rgba(12,40,80,0.9) 0%, rgba(7,22,50,0.96) 100%)",
+              background: "linear-gradient(90deg, rgba(33,64,122,0.95) 0%, rgba(56,92,158,0.92) 100%)",
               backdropFilter: "blur(20px)",
               WebkitBackdropFilter: "blur(20px)",
               borderBottom: "1px solid rgba(255,255,255,0.09)",

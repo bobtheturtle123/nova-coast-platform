@@ -1,6 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
-import { sendBookingCreatedNotifications } from "@/lib/email";
+import { sendBookingCreatedNotifications, generateCalendarICS } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendBookingConfirmedSms } from "@/lib/sms";
 import { getListingLimit } from "@/lib/plans";
@@ -31,6 +31,7 @@ export async function POST(req) {
       photographerId = null, photographerEmail = "", photographerName = "", photographerPhone = "",
       shootDate = "", shootTime = "",
       additionalAppointments = [],
+      additionalPhotographers = [],
       sendNotification = true,
     } = await req.json();
 
@@ -95,10 +96,11 @@ export async function POST(req) {
       serviceIds:      serviceIds || [],
       addonIds:        addonIds || [],
       customLineItems: customLineItems || [],
-      photographerId:    photographerId    || null,
-      photographerEmail: photographerEmail || null,
-      photographerName:  photographerName  || null,
-      shootDate:              shootDate              || null,
+      photographerId:          photographerId          || null,
+      photographerEmail:       photographerEmail       || null,
+      photographerName:        photographerName        || null,
+      additionalPhotographers: additionalPhotographers || [],
+      shootDate:               shootDate               || null,
       shootTime:              shootTime              || null,
       additionalAppointments: additionalAppointments || [],
       createdAt:       new Date(),
@@ -167,13 +169,53 @@ export async function POST(req) {
             }).catch(() => {}));
           }
 
-          // Photographer email notification
-          if (photographerEmail) {
+          // Build .ics attachment for photographer calendar invites
+          let icsAttachment = [];
+          if (shootDate && shootTime) {
+            const icsContent = generateCalendarICS({
+              summary:         `Photo Shoot — ${fullAddress}`,
+              description:     `Client: ${clientName}\nProperty: ${fullAddress}${notes ? `\nNotes: ${notes}` : ""}`,
+              location:        fullAddress,
+              startISO:        `${shootDate}T${shootTime}:00`,
+              durationMinutes: 120,
+            });
+            if (icsContent) {
+              icsAttachment = [{ filename: "shoot-assignment.ics", content: Buffer.from(icsContent).toString("base64") }];
+            }
+          }
+
+          // Helper: send assignment email to one photographer
+          function sendToPhotographer(pEmail, pName) {
+            if (!pEmail) return;
             sends.push(resend.emails.send({
-              from, to: [photographerEmail],
-              subject: `New booking assigned to you — ${fullAddress}`,
-              html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:40px 20px"><h2 style="color:${primary};font-family:Georgia,serif">New Shoot Assigned</h2><p>Hi ${photographerName || "there"},</p><p>You've been assigned a new booking:</p><ul style="line-height:1.8"><li><strong>Property:</strong> ${fullAddress}</li><li><strong>Client:</strong> ${clientName} (${clientEmail})</li>${shootInfo ? `<li><strong>Scheduled:</strong> ${shootInfo}</li>` : ""}${notes ? `<li><strong>Notes:</strong> ${notes}</li>` : ""}</ul><p>Log into the dashboard to view full details.</p><p style="color:#ccc;font-size:11px">${bizName}</p></div>`,
+              from,
+              to: [pEmail],
+              subject: `New shoot assigned to you — ${fullAddress}`,
+              html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:40px 20px">
+                <h2 style="color:${primary};font-family:Georgia,serif;margin:0 0 8px">New Shoot Assigned</h2>
+                <p style="color:#555;margin:0 0 20px">Hi ${pName || "there"},</p>
+                <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                  <tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px;width:36%">Property</td>
+                      <td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${fullAddress}</td></tr>
+                  <tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px">Client</td>
+                      <td style="padding:8px 0;border-bottom:1px solid #eee">${clientName}${clientPhone ? ` · ${clientPhone}` : ""}</td></tr>
+                  ${shootInfo ? `<tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px">Scheduled</td>
+                      <td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${shootInfo}</td></tr>` : ""}
+                  ${notes ? `<tr><td style="padding:8px 0;color:#888;font-size:13px">Notes</td>
+                      <td style="padding:8px 0;font-style:italic;color:#666">${notes}</td></tr>` : ""}
+                </table>
+                <p style="color:#888;font-size:12px">A calendar invite is attached. Log in to view full booking details.</p>
+                <p style="color:#ccc;font-size:11px">${bizName}</p>
+              </div>`,
+              ...(icsAttachment.length ? { attachments: icsAttachment } : {}),
             }).catch(() => {}));
+          }
+
+          // Primary photographer
+          sendToPhotographer(photographerEmail, photographerName);
+          // Co-photographers
+          for (const coPhoto of additionalPhotographers) {
+            sendToPhotographer(coPhoto.email, coPhoto.name);
           }
 
           await Promise.all(sends);
