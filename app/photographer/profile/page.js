@@ -42,7 +42,7 @@ export default function PhotographerProfilePage() {
 
   if (loading) return (
     <div className="p-8 flex items-center justify-center h-64">
-      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
     </div>
   );
 
@@ -58,10 +58,10 @@ export default function PhotographerProfilePage() {
 
       {/* Company info */}
       {branding?.businessName && (
-        <div className="bg-navy/5 border border-navy/10 rounded-lg px-4 py-3 flex items-center gap-3">
+        <div className="bg-[#3486cf]/5 border border-[#3486cf]/10 rounded-lg px-4 py-3 flex items-center gap-3">
           {branding.logoUrl && <img src={branding.logoUrl} alt="" className="h-8 object-contain" />}
           <div>
-            <p className="text-sm font-semibold text-navy">{branding.businessName}</p>
+            <p className="text-sm font-semibold text-[#3486cf]">{branding.businessName}</p>
             <p className="text-xs text-gray-400">You&apos;re a photographer on this team</p>
           </div>
         </div>

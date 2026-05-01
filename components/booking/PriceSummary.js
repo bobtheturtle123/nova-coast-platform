@@ -30,14 +30,14 @@ export default function PriceSummary({ showDeposit = false, catalog = null }) {
       <div className="space-y-2 text-sm font-body">
         {selectedPkg && (
           <div className="flex justify-between">
-            <span className="text-charcoal font-medium">{selectedPkg.name} Package</span>
+            <span className="text-[#0F172A] font-medium">{selectedPkg.name} Package</span>
             <span>{formatPrice(getItemPrice(selectedPkg, tier))}</span>
           </div>
         )}
 
         {selectedSvcs.map((s) => (
           <div key={s.id} className="flex justify-between">
-            <span className="text-charcoal">{s.name}</span>
+            <span className="text-[#0F172A]">{s.name}</span>
             <span>{formatPrice(getItemPrice(s, tier))}</span>
           </div>
         ))}
@@ -47,7 +47,7 @@ export default function PriceSummary({ showDeposit = false, catalog = null }) {
             <div className="border-t border-gray-100 pt-2 mt-2" />
             {selectedAddons.map((a) => (
               <div key={a.id} className="flex justify-between">
-                <span className="text-charcoal">{a.name}</span>
+                <span className="text-[#0F172A]">{a.name}</span>
                 <span>{formatPrice(getItemPrice(a, tier))}</span>
               </div>
             ))}
@@ -64,7 +64,7 @@ export default function PriceSummary({ showDeposit = false, catalog = null }) {
         <div className="border-t border-gray-200 pt-3 mt-3">
           <div className="flex justify-between font-semibold text-base">
             <span>Total</span>
-            <span className="text-navy">{formatPrice(subtotal)}</span>
+            <span className="text-[#3486cf]">{formatPrice(subtotal)}</span>
           </div>
         </div>
 

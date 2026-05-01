@@ -24,7 +24,7 @@ export default function BookPage() {
         {/* Heading */}
         <div className="mb-10">
           <p className="section-label mb-2">Step 1 of 6</p>
-          <h1 className="font-display text-4xl text-navy mb-3">
+          <h1 className="font-display text-4xl text-[#3486cf] mb-3">
             Choose your package.
           </h1>
           <p className="font-body text-gray-500">
@@ -44,8 +44,8 @@ export default function BookPage() {
                   "relative text-left p-6 border rounded-xl transition-all duration-200",
                   "focus:outline-none",
                   selected
-                    ? "border-navy bg-navy text-white shadow-lg"
-                    : "border-gray-200 bg-white hover:border-navy/40 hover:shadow-sm"
+                    ? "border-[#3486cf] bg-[#3486cf] text-white shadow-lg"
+                    : "border-gray-200 bg-white hover:border-[#3486cf]/40 hover:shadow-sm"
                 )}
               >
                 {pkg.featured && (
@@ -54,8 +54,8 @@ export default function BookPage() {
                       "absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-body font-semibold",
                       "px-3 py-1 rounded-full tracking-wide",
                       selected
-                        ? "bg-gold text-navy"
-                        : "bg-navy text-gold"
+                        ? "bg-gold text-[#3486cf]"
+                        : "bg-[#3486cf] text-gold"
                     )}
                   >
                     Most Popular
@@ -65,7 +65,7 @@ export default function BookPage() {
                 <p
                   className={clsx(
                     "font-display text-2xl mb-1",
-                    selected ? "text-white" : "text-navy"
+                    selected ? "text-white" : "text-[#3486cf]"
                   )}
                 >
                   {pkg.name}
@@ -73,7 +73,7 @@ export default function BookPage() {
                 <p
                   className={clsx(
                     "font-display text-3xl mb-3",
-                    selected ? "text-gold" : "text-navy"
+                    selected ? "text-gold" : "text-[#3486cf]"
                   )}
                 >
                   {formatPrice(pkg.price)}
@@ -93,7 +93,7 @@ export default function BookPage() {
                       key={s}
                       className={clsx(
                         "text-sm font-body flex items-center gap-2",
-                        selected ? "text-white/90" : "text-charcoal"
+                        selected ? "text-white/90" : "text-[#0F172A]"
                       )}
                     >
                       <span className={selected ? "text-gold" : "text-gold"}>✓</span>
@@ -136,15 +136,15 @@ export default function BookPage() {
                   "text-left p-5 border rounded-xl transition-all duration-200",
                   "flex items-start justify-between gap-4 focus:outline-none",
                   selected
-                    ? "border-navy bg-navy/5 shadow-sm"
-                    : "border-gray-200 bg-white hover:border-navy/30"
+                    ? "border-[#3486cf] bg-[#3486cf]/5 shadow-sm"
+                    : "border-gray-200 bg-white hover:border-[#3486cf]/30"
                 )}
               >
                 <div>
                   <p
                     className={clsx(
                       "font-body font-semibold mb-1",
-                      selected ? "text-navy" : "text-charcoal"
+                      selected ? "text-[#3486cf]" : "text-[#0F172A]"
                     )}
                   >
                     {svc.name}
@@ -152,13 +152,13 @@ export default function BookPage() {
                   <p className="text-sm text-gray-500 font-body">{svc.description}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className={clsx("font-display text-xl", selected ? "text-navy" : "text-charcoal")}>
+                  <p className={clsx("font-display text-xl", selected ? "text-[#3486cf]" : "text-[#0F172A]")}>
                     {formatPrice(svc.price)}
                   </p>
                   <div
                     className={clsx(
                       "mt-2 w-5 h-5 rounded border-2 flex items-center justify-center ml-auto",
-                      selected ? "bg-navy border-navy" : "border-gray-300"
+                      selected ? "bg-[#3486cf] border-[#3486cf]" : "border-gray-300"
                     )}
                   >
                     {selected && <span className="text-white text-xs">✓</span>}

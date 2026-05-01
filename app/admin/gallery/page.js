@@ -23,7 +23,7 @@ export default function AdminGalleriesPage() {
 
   return (
     <div className="p-8">
-      <h1 className="font-display text-3xl text-navy mb-6">Galleries</h1>
+      <h1 className="font-display text-3xl text-[#3486cf] mb-6">Galleries</h1>
 
       {loading ? (
         <p className="text-gray-400 font-body">Loading...</p>
@@ -71,7 +71,7 @@ export default function AdminGalleriesPage() {
                   <td className="px-4 py-3">
                     <Link
                       href={`/admin/gallery/${g.bookingId}`}
-                      className="text-navy text-xs underline underline-offset-2 font-medium"
+                      className="text-[#3486cf] text-xs underline underline-offset-2 font-medium"
                     >
                       Manage →
                     </Link>

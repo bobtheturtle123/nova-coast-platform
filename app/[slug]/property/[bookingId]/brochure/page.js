@@ -66,7 +66,7 @@ export default async function BrochurePage({ params }) {
     }));
 
     const branding = {
-      primary: tenant.branding?.primaryColor  || "#0b2a55",
+      primary: tenant.branding?.primaryColor  || "#3486cf",
       accent:  tenant.branding?.accentColor   || "#c9a96e",
       bizName: tenant.branding?.businessName  || tenant.businessName || "",
       tagline: tenant.branding?.tagline       || "",

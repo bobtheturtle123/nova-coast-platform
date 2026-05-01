@@ -32,20 +32,20 @@ function ConfirmationContent() {
     <div className="min-h-screen bg-cream flex items-center justify-center px-4">
       <div className="max-w-lg w-full text-center animate-fade-up">
         {/* Check icon */}
-        <div className="w-16 h-16 bg-navy rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="w-16 h-16 bg-[#3486cf] rounded-full flex items-center justify-center mx-auto mb-6">
           <svg className="w-8 h-8 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
 
         <p className="section-label mb-3">Booking Submitted</p>
-        <h1 className="font-display text-4xl text-navy mb-4">
+        <h1 className="font-display text-4xl text-[#3486cf] mb-4">
           You're all set, {clientName?.split(" ")[0] || "there"}.
         </h1>
         <p className="font-body text-gray-500 mb-8 leading-relaxed">
           Your booking request has been received. We'll review and confirm within
           24 hours — you'll get an email at{" "}
-          <span className="font-medium text-charcoal">{clientEmail}</span>.
+          <span className="font-medium text-[#0F172A]">{clientEmail}</span>.
         </p>
 
         {/* Booking details card */}
@@ -54,24 +54,24 @@ function ConfirmationContent() {
             {bookingId && (
               <div className="flex justify-between">
                 <span className="text-gray-400">Booking ID</span>
-                <span className="font-mono text-xs text-charcoal">{bookingId.slice(0, 8).toUpperCase()}</span>
+                <span className="font-mono text-xs text-[#0F172A]">{bookingId.slice(0, 8).toUpperCase()}</span>
               </div>
             )}
             <div className="flex justify-between">
               <span className="text-gray-400">Property</span>
-              <span className="text-charcoal font-medium text-right max-w-[60%]">
+              <span className="text-[#0F172A] font-medium text-right max-w-[60%]">
                 {[address, city, state].filter(Boolean).join(", ")}
               </span>
             </div>
             {formattedDate && (
               <div className="flex justify-between">
                 <span className="text-gray-400">Requested Date</span>
-                <span className="text-charcoal">{formattedDate}</span>
+                <span className="text-[#0F172A]">{formattedDate}</span>
               </div>
             )}
             <div className="flex justify-between border-t border-gray-100 pt-3">
               <span className="text-gray-400">Deposit Paid</span>
-              <span className="text-navy font-semibold">
+              <span className="text-[#3486cf] font-semibold">
                 {formatPrice(pricing?.deposit ?? 0)}
               </span>
             </div>
@@ -91,7 +91,7 @@ function ConfirmationContent() {
         <div>
           <Link
             href="/"
-            className="text-sm font-body text-navy underline underline-offset-4"
+            className="text-sm font-body text-[#3486cf] underline underline-offset-4"
           >
             Back to KyoriaOS
           </Link>

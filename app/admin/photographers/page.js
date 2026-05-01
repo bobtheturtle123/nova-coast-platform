@@ -146,7 +146,7 @@ export default function PhotographersPage() {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-3xl text-navy">Photographers</h1>
+        <h1 className="font-display text-3xl text-[#3486cf]">Photographers</h1>
         <button onClick={openNew} className="btn-primary">+ Add Photographer</button>
       </div>
 
@@ -170,18 +170,18 @@ export default function PhotographersPage() {
             <div key={p.id} className="card flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 {/* Avatar */}
-                <div className="w-10 h-10 rounded-full bg-navy/10 flex items-center justify-center
-                                font-display text-navy text-lg flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-[#3486cf]/10 flex items-center justify-center
+                                font-display text-[#3486cf] text-lg flex-shrink-0">
                   {p.name?.[0]?.toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-body font-semibold text-charcoal">{p.name}</p>
+                  <p className="font-body font-semibold text-[#0F172A]">{p.name}</p>
                   <p className="text-xs text-gray-400">{p.email}</p>
                   <div className="flex gap-1 mt-1 flex-wrap">
                     {Object.entries(p.services || {})
                       .filter(([, v]) => v)
                       .map(([k]) => (
-                        <span key={k} className="text-xs bg-navy/10 text-navy px-2 py-0.5 rounded-full">
+                        <span key={k} className="text-xs bg-[#3486cf]/10 text-[#3486cf] px-2 py-0.5 rounded-full">
                           {SERVICE_LABELS[k]}
                         </span>
                       ))}
@@ -203,7 +203,7 @@ export default function PhotographersPage() {
                 </button>
                 <button
                   onClick={() => openEdit(p)}
-                  className="text-xs text-navy font-body underline underline-offset-2"
+                  className="text-xs text-[#3486cf] font-body underline underline-offset-2"
                 >
                   Edit
                 </button>
@@ -218,7 +218,7 @@ export default function PhotographersPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex justify-end">
           <div className="bg-white w-full max-w-lg h-full overflow-y-auto p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="font-display text-2xl text-navy">
+              <h2 className="font-display text-2xl text-[#3486cf]">
                 {editing ? "Edit Photographer" : "Add Photographer"}
               </h2>
               <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
@@ -255,8 +255,8 @@ export default function PhotographersPage() {
                       className={clsx(
                         "text-left text-sm font-body px-3 py-2 border rounded-sm transition-colors",
                         form.services[key]
-                          ? "bg-navy text-white border-navy"
-                          : "border-gray-200 text-gray-600 hover:border-navy/30"
+                          ? "bg-[#3486cf] text-white border-[#3486cf]"
+                          : "border-gray-200 text-gray-600 hover:border-[#3486cf]/30"
                       )}
                     >
                       {form.services[key] ? "✓ " : ""}{label}
@@ -279,7 +279,7 @@ export default function PhotographersPage() {
                           className={clsx(
                             "w-24 text-left px-2 py-1 rounded-sm border text-xs capitalize transition-colors",
                             h.active
-                              ? "bg-navy/10 border-navy/20 text-navy font-medium"
+                              ? "bg-[#3486cf]/10 border-[#3486cf]/20 text-[#3486cf] font-medium"
                               : "border-gray-200 text-gray-400"
                           )}
                         >

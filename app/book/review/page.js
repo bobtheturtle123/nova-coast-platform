@@ -70,7 +70,7 @@ export default function ReviewPage() {
       <div className="step-container max-w-xl">
         <div className="mb-8">
           <p className="section-label mb-2">Step 4 of 6</p>
-          <h1 className="font-display text-4xl text-navy mb-3">
+          <h1 className="font-display text-4xl text-[#3486cf] mb-3">
             Review your order.
           </h1>
           <p className="font-body text-gray-500">{fullAddress}</p>
@@ -81,10 +81,10 @@ export default function ReviewPage() {
           <div className="space-y-3 mb-4">
             {lineItems.map((item, i) => (
               <div key={i} className="flex justify-between text-sm font-body">
-                <span className={item.muted ? "text-gray-400" : "text-charcoal"}>
+                <span className={item.muted ? "text-gray-400" : "text-[#0F172A]"}>
                   {item.label}
                 </span>
-                <span className={item.muted ? "text-gray-400" : "text-charcoal font-medium"}>
+                <span className={item.muted ? "text-gray-400" : "text-[#0F172A] font-medium"}>
                   {formatPrice(item.price)}
                 </span>
               </div>
@@ -94,7 +94,7 @@ export default function ReviewPage() {
           {/* Travel fee loading state */}
           {loadingFee && (
             <div className="flex items-center gap-2 text-sm text-gray-400 font-body py-2">
-              <div className="w-3 h-3 border-2 border-gray-300 border-t-navy rounded-full animate-spin" />
+              <div className="w-3 h-3 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
               Calculating travel fee...
             </div>
           )}
@@ -105,8 +105,8 @@ export default function ReviewPage() {
           {/* Total */}
           <div className="border-t border-gray-200 pt-4 mt-4">
             <div className="flex justify-between items-baseline">
-              <span className="font-body font-semibold text-charcoal">Total</span>
-              <span className="font-display text-3xl text-navy">
+              <span className="font-body font-semibold text-[#0F172A]">Total</span>
+              <span className="font-display text-3xl text-[#3486cf]">
                 {pricing ? formatPrice(pricing.subtotal) : "—"}
               </span>
             </div>
@@ -115,13 +115,13 @@ export default function ReviewPage() {
 
         {/* Deposit breakdown */}
         {pricing && (
-          <div className="bg-navy/5 border border-navy/10 rounded-xl p-4 mb-8 space-y-2">
-            <p className="text-xs font-body font-medium text-navy uppercase tracking-widest mb-3">
+          <div className="bg-[#3486cf]/5 border border-[#3486cf]/10 rounded-xl p-4 mb-8 space-y-2">
+            <p className="text-xs font-body font-medium text-[#3486cf] uppercase tracking-widest mb-3">
               Payment Schedule
             </p>
             <div className="flex justify-between text-sm font-body">
-              <span className="text-charcoal">Deposit due today</span>
-              <span className="font-semibold text-navy">{formatPrice(pricing.deposit)}</span>
+              <span className="text-[#0F172A]">Deposit due today</span>
+              <span className="font-semibold text-[#3486cf]">{formatPrice(pricing.deposit)}</span>
             </div>
             <div className="flex justify-between text-sm font-body">
               <span className="text-gray-500">Balance due at delivery</span>

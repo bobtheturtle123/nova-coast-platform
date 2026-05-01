@@ -56,12 +56,12 @@ export async function POST(req) {
       subject: `${company} invited you to join their photography team`,
       html: `
         <div style="font-family: -apple-system, sans-serif; max-width: 520px; margin: 0 auto; padding: 40px 24px;">
-          <h2 style="color: #0b2a55; margin-bottom: 8px;">You've been invited!</h2>
+          <h2 style="color: #3486cf; margin-bottom: 8px;">You've been invited!</h2>
           <p style="color: #555; margin-bottom: 24px;">
             <strong>${company}</strong> has invited you to join their team on KyoriaOS.
           </p>
           <a href="${inviteUrl}"
-            style="display: inline-block; background: #0b2a55; color: white; padding: 12px 28px; border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 15px;">
+            style="display: inline-block; background: #3486cf; color: white; padding: 12px 28px; border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 15px;">
             Accept Invitation
           </a>
           <p style="color: #999; font-size: 12px; margin-top: 24px;">

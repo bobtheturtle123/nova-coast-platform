@@ -83,7 +83,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-cream flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="font-display text-navy text-2xl tracking-wide">KyoriaOS</Link>
+          <Link href="/" className="font-display text-[#3486cf] text-2xl tracking-wide">KyoriaOS</Link>
           <p className="text-gray-500 text-sm mt-2">Create your account — free trial included</p>
         </div>
 
@@ -181,7 +181,7 @@ export default function RegisterPage() {
 
           <p className="text-center text-sm text-gray-500 mt-4">
             Already have an account?{" "}
-            <Link href="/auth/login" className="text-navy font-medium hover:underline">
+            <Link href="/auth/login" className="text-[#3486cf] font-medium hover:underline">
               Sign in
             </Link>
           </p>

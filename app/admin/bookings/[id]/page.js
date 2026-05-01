@@ -82,7 +82,7 @@ export default function BookingDetailPage() {
   if (loading) {
     return (
       <div className="p-8 text-gray-400 font-body flex items-center gap-2">
-        <div className="w-4 h-4 border-2 border-gray-300 border-t-navy rounded-full animate-spin" />
+        <div className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
         Loading...
       </div>
     );
@@ -97,13 +97,13 @@ export default function BookingDetailPage() {
   return (
     <div className="p-8 max-w-4xl">
       {/* Back */}
-      <Link href="/admin/bookings" className="text-sm text-gray-400 font-body hover:text-navy mb-6 inline-block">
+      <Link href="/admin/bookings" className="text-sm text-gray-400 font-body hover:text-[#3486cf] mb-6 inline-block">
         ← All bookings
       </Link>
 
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="font-display text-3xl text-navy">{booking.clientName}</h1>
+          <h1 className="font-display text-3xl text-[#3486cf]">{booking.clientName}</h1>
           <p className="text-gray-500 font-body mt-1">{booking.fullAddress || booking.address}</p>
         </div>
         <span className={`text-xs px-3 py-1.5 rounded-full font-medium font-body ${STATUS_COLORS[booking.status] || "bg-gray-100"}`}>
@@ -122,7 +122,7 @@ export default function BookingDetailPage() {
             <div className="grid grid-cols-2 gap-3 text-sm font-body">
               <div><p className="text-gray-400 text-xs mb-0.5">Name</p><p>{booking.clientName}</p></div>
               <div><p className="text-gray-400 text-xs mb-0.5">Email</p>
-                <a href={`mailto:${booking.clientEmail}`} className="text-navy underline">{booking.clientEmail}</a>
+                <a href={`mailto:${booking.clientEmail}`} className="text-[#3486cf] underline">{booking.clientEmail}</a>
               </div>
               <div><p className="text-gray-400 text-xs mb-0.5">Phone</p>
                 <a href={`tel:${booking.clientPhone}`}>{booking.clientPhone}</a>
@@ -134,7 +134,7 @@ export default function BookingDetailPage() {
             {booking.notes && (
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <p className="text-gray-400 text-xs mb-1">Client Notes</p>
-                <p className="text-sm font-body text-charcoal">{booking.notes}</p>
+                <p className="text-sm font-body text-[#0F172A]">{booking.notes}</p>
               </div>
             )}
           </div>
@@ -169,7 +169,7 @@ export default function BookingDetailPage() {
               )}
               <div className="flex justify-between font-semibold pt-2 border-t border-gray-100">
                 <span>Total</span>
-                <span className="text-navy">{formatPrice(booking.totalPrice || 0)}</span>
+                <span className="text-[#3486cf]">{formatPrice(booking.totalPrice || 0)}</span>
               </div>
             </div>
           </div>
@@ -262,10 +262,10 @@ export default function BookingDetailPage() {
             <p className="section-label mb-3">Booking Info</p>
             <div className="space-y-2 text-xs font-body text-gray-400">
               <div><span className="block">Booking ID</span>
-                <span className="font-mono text-charcoal">{id.slice(0, 8).toUpperCase()}</span>
+                <span className="font-mono text-[#0F172A]">{id.slice(0, 8).toUpperCase()}</span>
               </div>
               <div><span className="block">Created</span>
-                <span className="text-charcoal">
+                <span className="text-[#0F172A]">
                   {booking.createdAt?.seconds
                     ? new Date(booking.createdAt.seconds * 1000).toLocaleDateString()
                     : "—"}

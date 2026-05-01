@@ -40,7 +40,7 @@ export async function GET(req) {
   const branding = {
     businessName: tenantData.businessName || "",
     logoUrl:      tenantData.branding?.logoUrl || null,
-    primaryColor: tenantData.branding?.primaryColor || "#0b2a55",
+    primaryColor: tenantData.branding?.primaryColor || "#3486cf",
   };
 
   return Response.json({ member, branding });

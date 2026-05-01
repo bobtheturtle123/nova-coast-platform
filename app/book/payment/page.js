@@ -72,7 +72,7 @@ function PaymentForm({ clientSecret, deposit, onSuccess }) {
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
-            <span className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+            <span className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
             Processing...
           </span>
         ) : (
@@ -161,7 +161,7 @@ export default function PaymentPage() {
           <div className="lg:col-span-2 space-y-6">
             <div className="mb-2">
               <p className="section-label mb-2">Step 6 of 6</p>
-              <h1 className="font-display text-4xl text-navy mb-3">
+              <h1 className="font-display text-4xl text-[#3486cf] mb-3">
                 Almost there.
               </h1>
               <p className="font-body text-gray-500">
@@ -171,11 +171,11 @@ export default function PaymentPage() {
 
             {/* Contact info */}
             <div className="card space-y-4">
-              <p className="font-body font-semibold text-charcoal text-sm uppercase tracking-wider">
+              <p className="font-body font-semibold text-[#0F172A] text-sm uppercase tracking-wider">
                 Your Information
               </p>
               <div>
-                <label className="block text-sm font-body font-medium text-charcoal mb-1.5">
+                <label className="block text-sm font-body font-medium text-[#0F172A] mb-1.5">
                   Full Name <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -187,7 +187,7 @@ export default function PaymentPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-body font-medium text-charcoal mb-1.5">
+                <label className="block text-sm font-body font-medium text-[#0F172A] mb-1.5">
                   Email <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -200,7 +200,7 @@ export default function PaymentPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-body font-medium text-charcoal mb-1.5">
+                <label className="block text-sm font-body font-medium text-[#0F172A] mb-1.5">
                   Phone <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -231,7 +231,7 @@ export default function PaymentPage() {
             {/* Stripe payment form */}
             {clientSecret && (
               <div>
-                <p className="font-body font-semibold text-charcoal text-sm uppercase tracking-wider mb-3">
+                <p className="font-body font-semibold text-[#0F172A] text-sm uppercase tracking-wider mb-3">
                   Payment
                 </p>
                 <Elements
@@ -241,7 +241,7 @@ export default function PaymentPage() {
                     appearance: {
                       theme: "stripe",
                       variables: {
-                        colorPrimary:    "#0b2a55",
+                        colorPrimary:    "#3486cf",
                         colorBackground: "#ffffff",
                         fontFamily:      "DM Sans, sans-serif",
                         borderRadius:    "2px",
@@ -266,7 +266,7 @@ export default function PaymentPage() {
               <div className="space-y-2 text-sm font-body">
                 <div className="flex justify-between font-semibold">
                   <span>Total</span>
-                  <span className="text-navy">{formatPrice(pricing?.subtotal ?? 0)}</span>
+                  <span className="text-[#3486cf]">{formatPrice(pricing?.subtotal ?? 0)}</span>
                 </div>
                 <div className="flex justify-between text-gold-dark font-medium pt-2 border-t border-gray-100">
                   <span>Deposit today</span>
@@ -282,7 +282,7 @@ export default function PaymentPage() {
             <div className="mt-4 card bg-cream border-0">
               <p className="text-xs font-body text-gray-500 leading-relaxed">
                 Your booking will show as{" "}
-                <span className="font-semibold text-navy">"Requested"</span> until we
+                <span className="font-semibold text-[#3486cf]">"Requested"</span> until we
                 confirm it. You won't be charged the remaining balance until your
                 media is delivered.
               </p>

@@ -1334,22 +1334,14 @@ export default function GalleryDetailPage() {
               </div>
             </div>
 
-            {/* Auto-generated search links (read-only preview) */}
-            {gallery?.bookingAddress && (
-              <div className="mb-4 flex flex-wrap gap-2">
-                {[
-                  { label: "Search Zillow", url: `https://www.zillow.com/homes/${encodeURIComponent(gallery.bookingAddress)}_rb/` },
-                  { label: "Search Redfin", url: `https://www.redfin.com/query/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "+")}` },
-                  { label: "Search Realtor.com", url: `https://www.realtor.com/realestateandhomes-search/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "-")}` },
-                ].map((l) => (
-                  <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded-full hover:bg-[#3486cf]/5 transition-colors font-medium">
-                    {l.label} →
-                  </a>
-                ))}
-                <span className="text-xs text-gray-400 self-center">auto-generated from address</span>
-              </div>
-            )}
+            {/* MLS syndication info */}
+            <div className="mb-4 px-3 py-2.5 bg-gray-50 rounded-xl text-xs text-gray-500 flex items-center gap-2">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              To enable Zillow, Redfin, and Realtor.com links — open the{" "}
+              <a href={gallery?.bookingId ? `/dashboard/listings/${gallery.bookingId}` : "#"}
+                className="text-[#3486cf] underline hover:opacity-70">Listing Workspace → Property Site</a>
+              {" "}and toggle <strong>MLS Syndication Links</strong>. Direct listing URLs can be set there.
+            </div>
 
             {/* Manual MLS link */}
             <div className="flex gap-2 items-center">

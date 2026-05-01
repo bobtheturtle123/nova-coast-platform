@@ -30,14 +30,14 @@ export default function SuperadminLayout({ children }) {
 
   if (user === undefined) return (
     <div className="min-h-screen bg-cream flex items-center justify-center">
-      <div className="w-6 h-6 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
     </div>
   );
   if (!isSuper) return null;
 
   return (
     <div className="min-h-screen bg-cream flex">
-      <aside className="w-56 bg-navy flex-shrink-0 flex flex-col">
+      <aside className="w-56 bg-[#3486cf] flex-shrink-0 flex flex-col">
         <div className="p-6 border-b border-white/10">
           <p className="font-display text-white text-sm tracking-widest uppercase">KyoriaOS</p>
           <p className="text-red-400/70 text-xs font-body mt-0.5">Superadmin</p>

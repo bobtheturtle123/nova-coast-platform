@@ -2,7 +2,7 @@ import { getTenantBySlug } from "@/lib/tenants";
 
 export default async function AgentPortalLayout({ children, params }) {
   const tenant = await getTenantBySlug(params.slug);
-  const primary = tenant?.branding?.primaryColor || "#0b2a55";
+  const primary = tenant?.branding?.primaryColor || "#3486cf";
   const accent  = tenant?.branding?.accentColor  || "#c9a96e";
   const name    = tenant?.branding?.businessName || tenant?.businessName || "";
   const logo    = tenant?.branding?.logoUrl || null;

@@ -45,7 +45,7 @@ export default function PropertyPage() {
           <div className="lg:col-span-2">
             <div className="mb-8">
               <p className="section-label mb-2">Step 3 of 6</p>
-              <h1 className="font-display text-4xl text-navy mb-3">
+              <h1 className="font-display text-4xl text-[#3486cf] mb-3">
                 Property details.
               </h1>
               <p className="font-body text-gray-500">
@@ -56,7 +56,7 @@ export default function PropertyPage() {
             <div className="card space-y-5">
               {/* Street address */}
               <div>
-                <label className="block text-sm font-body font-medium text-charcoal mb-1.5">
+                <label className="block text-sm font-body font-medium text-[#0F172A] mb-1.5">
                   Street Address <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -71,7 +71,7 @@ export default function PropertyPage() {
               {/* City / State / Zip */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-body font-medium text-charcoal mb-1.5">
+                  <label className="block text-sm font-body font-medium text-[#0F172A] mb-1.5">
                     City <span className="text-red-400">*</span>
                   </label>
                   <input
@@ -83,7 +83,7 @@ export default function PropertyPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-body font-medium text-charcoal mb-1.5">
+                  <label className="block text-sm font-body font-medium text-[#0F172A] mb-1.5">
                     State
                   </label>
                   <input
@@ -96,7 +96,7 @@ export default function PropertyPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-body font-medium text-charcoal mb-1.5">
+                  <label className="block text-sm font-body font-medium text-[#0F172A] mb-1.5">
                     ZIP <span className="text-red-400">*</span>
                   </label>
                   <input
@@ -112,7 +112,7 @@ export default function PropertyPage() {
 
               {/* Property type */}
               <div>
-                <label className="block text-sm font-body font-medium text-charcoal mb-1.5">
+                <label className="block text-sm font-body font-medium text-[#0F172A] mb-1.5">
                   Property Type
                 </label>
                 <select
@@ -131,7 +131,7 @@ export default function PropertyPage() {
 
               {/* Square footage */}
               <div>
-                <label className="block text-sm font-body font-medium text-charcoal mb-1.5">
+                <label className="block text-sm font-body font-medium text-[#0F172A] mb-1.5">
                   Square Footage
                   <span className="text-gray-400 font-normal ml-1">(approximate)</span>
                 </label>
@@ -147,7 +147,7 @@ export default function PropertyPage() {
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-body font-medium text-charcoal mb-1.5">
+                <label className="block text-sm font-body font-medium text-[#0F172A] mb-1.5">
                   Notes for the Photographer
                   <span className="text-gray-400 font-normal ml-1">(optional)</span>
                 </label>

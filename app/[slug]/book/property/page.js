@@ -112,13 +112,13 @@ export default function TenantPropertyPage() {
           <div className="lg:col-span-2">
             <div className="mb-8">
               <p className="section-label mb-2">Step 3 of 6</p>
-              <h1 className="font-display text-4xl text-navy mb-3">Property details.</h1>
+              <h1 className="font-display text-4xl text-[#3486cf] mb-3">Property details.</h1>
               <p className="font-body text-gray-500">We'll use your address to calculate any travel fee and confirm availability.</p>
             </div>
 
             <div className="card space-y-5">
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-1.5">
+                <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
                   Street Address <span className="text-red-400">*</span>
                 </label>
                 <PlacesAutocomplete
@@ -141,14 +141,14 @@ export default function TenantPropertyPage() {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-charcoal mb-1.5">
+                  <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
                     City <span className="text-red-400">*</span>
                   </label>
                   <input name="city" value={city} onChange={handleChange}
                     placeholder="San Diego" className="input-field" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-1.5">
+                  <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
                     {tenantCountry === "CA" ? "Province" : tenantCountry === "AU" ? "State/Territory" : "State"}
                   </label>
                   <input name="state" value={state} onChange={handleChange}
@@ -156,7 +156,7 @@ export default function TenantPropertyPage() {
                     maxLength={tenantCountry === "US" ? 2 : 50} className="input-field uppercase" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-charcoal mb-1.5">
+                  <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
                     {tenantCountry === "US" ? "ZIP" : "Postal Code"} <span className="text-red-400">*</span>
                   </label>
                   <input name="zip" value={zip} onChange={handleChange}
@@ -165,7 +165,7 @@ export default function TenantPropertyPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-1.5">Property Type</label>
+                <label className="block text-sm font-medium text-[#0F172A] mb-1.5">Property Type</label>
                 <select name="propertyType" value={propertyType} onChange={handleChange} className="input-field">
                   {PROPERTY_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>{t.label}</option>
@@ -173,7 +173,7 @@ export default function TenantPropertyPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-1.5">
+                <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
                   Square Footage <span className="text-gray-400 font-normal ml-1">(approximate)</span>
                 </label>
                 <input name="squareFootage" value={squareFootage} onChange={handleChange}
@@ -183,7 +183,7 @@ export default function TenantPropertyPage() {
               {/* Admin-configured custom fields */}
               {configFields.map((field) => (
                 <div key={field.id}>
-                  <label className="block text-sm font-medium text-charcoal mb-1.5">
+                  <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
                     {field.label}
                     {field.required
                       ? <span className="text-red-400 ml-1">*</span>
@@ -202,7 +202,7 @@ export default function TenantPropertyPage() {
               ))}
 
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-1.5">
+                <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
                   Notes for the Photographer <span className="text-gray-400 font-normal ml-1">(optional)</span>
                 </label>
                 <textarea name="notes" value={notes} onChange={handleChange} rows={3}

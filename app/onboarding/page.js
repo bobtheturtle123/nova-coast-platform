@@ -164,7 +164,7 @@ export default function OnboardingPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
       </div>
     );
   }
@@ -175,13 +175,13 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-        <span className="font-display text-navy text-lg tracking-wide">KyoriaOS</span>
+        <span className="font-display text-[#3486cf] text-lg tracking-wide">KyoriaOS</span>
         <button
           onClick={async () => {
             await patch({ onboardingCompleted: true, onboardingStep: STEPS.length }).catch(() => {});
             router.push("/dashboard");
           }}
-          className="text-xs text-gray-400 hover:text-navy transition-colors">
+          className="text-xs text-gray-400 hover:text-[#3486cf] transition-colors">
           Skip setup → Dashboard
         </button>
       </header>
@@ -196,12 +196,12 @@ export default function OnboardingPage() {
             <span className="text-xs text-gray-400">{pct}%</span>
           </div>
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full bg-navy rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+            <div className="h-full bg-[#3486cf] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
           <div className="flex justify-between mt-2">
             {STEPS.map((s, i) => (
               <span key={s.id} className={`text-[10px] font-medium transition-colors ${
-                i < step ? "text-emerald-600" : i === step ? "text-navy" : "text-gray-300"
+                i < step ? "text-emerald-600" : i === step ? "text-[#3486cf]" : "text-gray-300"
               }`}>{s.label}</span>
             ))}
           </div>
@@ -217,7 +217,7 @@ export default function OnboardingPage() {
         {/* ── STEP 0: Business basics ──────────────────────────────────────── */}
         {step === 0 && (
           <div>
-            <h1 className="font-display text-3xl text-navy mb-1">Let's set up your account</h1>
+            <h1 className="font-display text-3xl text-[#3486cf] mb-1">Let's set up your account</h1>
             <p className="text-gray-500 mb-8 leading-relaxed">
               Two quick fields so we can calculate travel fees and make sure your clients can reach you.
             </p>
@@ -249,7 +249,7 @@ export default function OnboardingPage() {
         {/* ── STEP 1: Services ─────────────────────────────────────────────── */}
         {step === 1 && (
           <div>
-            <h1 className="font-display text-3xl text-navy mb-1">Add your services</h1>
+            <h1 className="font-display text-3xl text-[#3486cf] mb-1">Add your services</h1>
             <p className="text-gray-500 mb-6 leading-relaxed">
               Services and packages are what clients see when they book. Without at least one, your booking form won't have anything to choose from.
             </p>
@@ -262,7 +262,7 @@ export default function OnboardingPage() {
                 <div key={item.title} className={`flex items-start gap-4 px-5 py-4 ${i > 0 ? "border-t border-gray-100" : ""}`}>
                   <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center text-lg flex-shrink-0">{item.icon}</div>
                   <div>
-                    <p className="font-medium text-charcoal text-sm">{item.title}</p>
+                    <p className="font-medium text-[#0F172A] text-sm">{item.title}</p>
                     <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
@@ -286,7 +286,7 @@ export default function OnboardingPage() {
         {/* ── STEP 2: Stripe ───────────────────────────────────────────────── */}
         {step === 2 && (
           <div>
-            <h1 className="font-display text-3xl text-navy mb-1">Connect Stripe to get paid</h1>
+            <h1 className="font-display text-3xl text-[#3486cf] mb-1">Connect Stripe to get paid</h1>
             <p className="text-gray-500 mb-6 leading-relaxed">
               Deposits are collected when clients book, and balances are collected before they can download their media. Funds go directly to your bank — you never have to ask twice.
             </p>
@@ -312,7 +312,7 @@ export default function OnboardingPage() {
                   <div key={item.title} className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-base flex-shrink-0">{item.icon}</div>
                     <div>
-                      <p className="font-medium text-charcoal text-sm">{item.title}</p>
+                      <p className="font-medium text-[#0F172A] text-sm">{item.title}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
                     </div>
                   </div>
@@ -325,8 +325,8 @@ export default function OnboardingPage() {
               </button>
             )}
             <div className="flex gap-3 mt-1">
-              <button onClick={prev} className="flex-1 text-center text-sm text-gray-400 hover:text-navy transition-colors">← Back</button>
-              <button onClick={next} className="flex-1 text-center text-sm text-gray-400 hover:text-navy transition-colors">
+              <button onClick={prev} className="flex-1 text-center text-sm text-gray-400 hover:text-[#3486cf] transition-colors">← Back</button>
+              <button onClick={next} className="flex-1 text-center text-sm text-gray-400 hover:text-[#3486cf] transition-colors">
                 {tenant?.stripeConnectOnboarded ? "Continue →" : "Skip for now →"}
               </button>
             </div>
@@ -336,7 +336,7 @@ export default function OnboardingPage() {
         {/* ── STEP 3: Service areas ─────────────────────────────────────────── */}
         {step === 3 && (
           <div>
-            <h1 className="font-display text-3xl text-navy mb-1">Define where you work</h1>
+            <h1 className="font-display text-3xl text-[#3486cf] mb-1">Define where you work</h1>
             <p className="text-gray-500 mb-6 leading-relaxed">
               Draw coverage zones on a map so the booking form auto-calculates travel fees and prevents out-of-area bookings. Totally optional — skip if you work everywhere.
             </p>
@@ -349,14 +349,14 @@ export default function OnboardingPage() {
                 <div key={item.title} className={`flex items-start gap-4 px-5 py-4 ${i > 0 ? "border-t border-gray-100" : ""}`}>
                   <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center text-lg flex-shrink-0">{item.icon}</div>
                   <div>
-                    <p className="font-medium text-charcoal text-sm">{item.title}</p>
+                    <p className="font-medium text-[#0F172A] text-sm">{item.title}</p>
                     <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
               ))}
               <div className="px-5 py-4 border-t border-gray-100 bg-gray-50">
                 <Link href="/dashboard/service-areas" target="_blank" rel="noopener noreferrer"
-                  className="btn-outline text-sm px-5 py-2.5 inline-flex items-center gap-1.5 text-navy border-navy/30">
+                  className="btn-outline text-sm px-5 py-2.5 inline-flex items-center gap-1.5 text-[#3486cf] border-[#3486cf]/30">
                   Set Up Service Areas ↗
                 </Link>
                 <p className="text-xs text-gray-400 mt-2">Opens in a new tab — come back here when done.</p>
@@ -373,7 +373,7 @@ export default function OnboardingPage() {
         {/* ── STEP 4: Team ─────────────────────────────────────────────────── */}
         {step === 4 && (
           <div>
-            <h1 className="font-display text-3xl text-navy mb-1">Invite your team</h1>
+            <h1 className="font-display text-3xl text-[#3486cf] mb-1">Invite your team</h1>
             <p className="text-gray-500 mb-6 leading-relaxed">
               Everyone gets their own login and sees only what their role allows. Photographers and editors see assigned shoots; managers see everything except billing; admins have full access.
             </p>
@@ -387,7 +387,7 @@ export default function OnboardingPage() {
                   ["Admin",        "Full access except owner billing"],
                 ].map(([role, desc]) => (
                   <div key={role} className="flex items-start gap-1.5">
-                    <span className="text-[11px] font-semibold text-navy mt-px w-24 flex-shrink-0">{role}</span>
+                    <span className="text-[11px] font-semibold text-[#3486cf] mt-px w-24 flex-shrink-0">{role}</span>
                     <span className="text-[11px] text-gray-400 leading-snug">{desc}</span>
                   </div>
                 ))}
@@ -415,7 +415,7 @@ export default function OnboardingPage() {
               ))}
               {invites.length < 5 && (
                 <button onClick={() => setInvites((arr) => [...arr, { email: "", role: "photographer" }])}
-                  className="text-xs text-navy hover:underline">+ Add another</button>
+                  className="text-xs text-[#3486cf] hover:underline">+ Add another</button>
               )}
               {inviteSent && (
                 <div className="flex items-center gap-2 text-emerald-600 text-sm font-medium pt-1">
@@ -445,7 +445,7 @@ export default function OnboardingPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h1 className="font-display text-3xl text-navy mb-2">You're ready to go.</h1>
+            <h1 className="font-display text-3xl text-[#3486cf] mb-2">You're ready to go.</h1>
             <p className="text-gray-500 mb-8 leading-relaxed max-w-sm mx-auto">
               Your booking page is live. Share the link with clients and start collecting deposits today.
             </p>
@@ -454,12 +454,12 @@ export default function OnboardingPage() {
               <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 text-left shadow-sm">
                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-2 font-medium">Your booking page</p>
                 <div className="flex items-center gap-3">
-                  <code className="text-sm text-navy font-mono flex-1 truncate">
+                  <code className="text-sm text-[#3486cf] font-mono flex-1 truncate">
                     {typeof window !== "undefined" ? window.location.origin : ""}/{slug}/book
                   </code>
                   <button onClick={copyUrl}
                     className={`text-xs font-medium border px-3 py-1.5 rounded-lg transition-colors flex-shrink-0 ${
-                      copied ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-navy/20 text-navy hover:bg-navy/5"
+                      copied ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-[#3486cf]/20 text-[#3486cf] hover:bg-[#3486cf]/5"
                     }`}>
                     {copied ? "Copied!" : "Copy"}
                   </button>
@@ -476,9 +476,9 @@ export default function OnboardingPage() {
               ].filter((i) => !i.skip).map((item) => (
                 <Link key={item.href} href={item.href}
                   className="flex items-start gap-3 py-2.5 border-b border-gray-50 last:border-0 group">
-                  <div className="w-5 h-5 rounded-full border-2 border-gray-200 group-hover:border-navy flex-shrink-0 mt-0.5 transition-colors" />
+                  <div className="w-5 h-5 rounded-full border-2 border-gray-200 group-hover:border-[#3486cf] flex-shrink-0 mt-0.5 transition-colors" />
                   <div>
-                    <p className="text-sm font-medium text-navy group-hover:underline">{item.label}</p>
+                    <p className="text-sm font-medium text-[#3486cf] group-hover:underline">{item.label}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
                   </div>
                 </Link>

@@ -141,7 +141,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const [activeTab,    setActiveTab]    = useState("images");
   const [lightboxIdx,  setLightboxIdx]  = useState(null);
 
-  const primary = tenant.branding?.primaryColor || "#0b2a55";
+  const primary = tenant.branding?.primaryColor || "#3486cf";
   const accent  = tenant.branding?.accentColor  || "#c9a96e";
   const name    = tenant.branding?.businessName || tenant.businessName;
 
@@ -236,24 +236,36 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         </div>
       </div>
 
-      {/* Agent listing hub — search portal links */}
-      {gallery.bookingAddress && (
+      {/* Agent listing hub — MLS syndication links */}
+      {booking?.propertyWebsite?.mlsSyndication && (
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center gap-3 overflow-x-auto">
             <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex-shrink-0">View listing on</span>
             {[
-              { label: "Zillow",       url: `https://www.zillow.com/homes/${encodeURIComponent(gallery.bookingAddress)}_rb/` },
-              { label: "Redfin",       url: `https://www.redfin.com/query/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "+")}` },
-              { label: "Realtor.com",  url: `https://www.realtor.com/realestateandhomes-search/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "-")}` },
-            ].map((l) => (
+              {
+                label: "Zillow",
+                url: booking.propertyWebsite.zillowUrl
+                  || (gallery.bookingAddress ? `https://www.zillow.com/homes/${encodeURIComponent(gallery.bookingAddress)}_rb/` : null),
+              },
+              {
+                label: "Redfin",
+                url: booking.propertyWebsite.redfinUrl
+                  || (gallery.bookingAddress ? `https://www.redfin.com/query/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "+")}` : null),
+              },
+              {
+                label: "Realtor.com",
+                url: booking.propertyWebsite.realtorUrl
+                  || (gallery.bookingAddress ? `https://www.realtor.com/realestateandhomes-search/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "-")}` : null),
+              },
+            ].filter((l) => l.url).map((l) => (
               <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
-                className="flex-shrink-0 text-xs font-medium text-navy border border-navy/20 px-3 py-1 rounded-full hover:bg-navy/5 transition-colors">
+                className="flex-shrink-0 text-xs font-medium text-[#3486cf] border border-[#3486cf]/20 px-3 py-1 rounded-full hover:bg-[#3486cf]/5 transition-colors">
                 {l.label} ↗
               </a>
             ))}
             {gallery.mlsUrl && (
               <a href={gallery.mlsUrl} target="_blank" rel="noopener noreferrer"
-                className="flex-shrink-0 text-xs font-medium text-white bg-navy px-3 py-1 rounded-full hover:bg-navy/90 transition-colors">
+                className="flex-shrink-0 text-xs font-medium text-white bg-[#3486cf] px-3 py-1 rounded-full hover:bg-[#3486cf]/90 transition-colors">
                 MLS Listing ↗
               </a>
             )}
@@ -312,7 +324,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
               <button key={t.id} onClick={() => setActiveTab(t.id)}
                 className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === t.id
-                    ? "border-navy text-navy"
+                    ? "border-[#3486cf] text-[#3486cf]"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}>
                 {t.label}
@@ -345,7 +357,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                       <a
                         href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=print`}
                         className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider text-white"
-                        style={{ background: "#0b2a55" }}
+                        style={{ background: "#3486cf" }}
                         download
                       >
                         ↓ Print Quality
@@ -414,7 +426,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                           <div className="flex gap-2">
                             <a href={downloadUrl(m.key, "print", m.fileName)}
                               className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider text-white"
-                              style={{ background: "#0b2a55" }}
+                              style={{ background: "#3486cf" }}
                               download>
                               Print
                             </a>
@@ -468,7 +480,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                       <a
                         href={`/api/gallery/video-download?token=${gallery.accessToken}&key=${encodeURIComponent(v.key)}&name=${encodeURIComponent(v.fileName || "video.mp4")}`}
                         className="absolute top-3 right-3 px-3 py-1.5 rounded text-xs font-bold text-white"
-                        style={{ background: "#0b2a55" }}>
+                        style={{ background: "#3486cf" }}>
                         Download
                       </a>
                     )}
@@ -523,7 +535,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                     <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-red-400 flex-shrink-0">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
-                    <span className="text-sm font-medium text-charcoal">{fp.fileName}</span>
+                    <span className="text-sm font-medium text-[#0F172A]">{fp.fileName}</span>
                     <span className="ml-auto text-xs text-gray-400">View PDF →</span>
                   </a>
                 ) : (
@@ -553,7 +565,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 flex-shrink-0">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
-                <span className="text-sm font-medium text-charcoal flex-1">{f.fileName}</span>
+                <span className="text-sm font-medium text-[#0F172A] flex-1">{f.fileName}</span>
                 <span className="text-[10px] text-gray-300 font-mono uppercase">{f.fileType?.split("/")[1] || "file"}</span>
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

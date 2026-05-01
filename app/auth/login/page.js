@@ -80,7 +80,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-11 h-11 rounded-2xl flex items-center justify-center mx-auto mb-4 font-bold text-white text-base"
-            style={{ background: "linear-gradient(135deg, #0e2f5a, #091e3e)" }}>
+            style={{ background: "linear-gradient(135deg, #3486cf, #2a6dab)" }}>
             K
           </div>
           <Link href="/" className="font-semibold text-[#0F172A] text-xl tracking-tight">KyoriaOS</Link>
@@ -122,7 +122,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => switchMode("reset")}
-                    className="text-xs text-gray-400 hover:text-[#0B2A55] transition-colors">
+                    className="text-xs text-gray-400 hover:text-[#3486cf] transition-colors">
                     Forgot password?
                   </button>
                 </div>
@@ -165,7 +165,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => switchMode("login")}
-                className="w-full text-sm text-gray-500 hover:text-[#0B2A55] transition-colors text-center">
+                className="w-full text-sm text-gray-500 hover:text-[#3486cf] transition-colors text-center">
                 ← Back to sign in
               </button>
             </form>
@@ -174,7 +174,7 @@ export default function LoginPage() {
           {mode === "login" && (
             <p className="text-center text-sm text-gray-500 mt-6">
               Don't have an account?{" "}
-              <Link href="/auth/register" className="text-navy font-medium hover:underline">
+              <Link href="/auth/register" className="text-[#3486cf] font-medium hover:underline">
                 Start free trial
               </Link>
             </p>

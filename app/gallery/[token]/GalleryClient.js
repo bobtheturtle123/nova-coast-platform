@@ -88,7 +88,7 @@ function PaymentModal({ booking, onClose, onUnlock }) {
         >
           ×
         </button>
-        <h2 className="font-display text-2xl text-navy mb-2">Unlock Downloads</h2>
+        <h2 className="font-display text-2xl text-[#0F172A] mb-2">Unlock Downloads</h2>
         <p className="text-sm text-gray-500 font-body mb-6">
           Pay your remaining balance to unlock full-resolution downloads of all your media.
         </p>
@@ -98,7 +98,7 @@ function PaymentModal({ booking, onClose, onUnlock }) {
             <div className="bg-cream rounded-xl p-4 mb-6">
               <div className="flex justify-between text-sm font-body">
                 <span>Balance due</span>
-                <span className="font-semibold text-navy">{formatPrice(booking.remainingBalance)}</span>
+                <span className="font-semibold text-[#0F172A]">{formatPrice(booking.remainingBalance)}</span>
               </div>
             </div>
             {error && <p className="text-red-600 text-sm font-body mb-3">{error}</p>}
@@ -113,7 +113,7 @@ function PaymentModal({ booking, onClose, onUnlock }) {
             stripe={stripePromise}
             options={{
               clientSecret,
-              appearance: { theme: "stripe", variables: { colorPrimary: "#0b2a55" } },
+              appearance: { theme: "stripe", variables: { colorPrimary: "#3486cf" } },
             }}
           >
             <BalancePaymentForm
@@ -169,7 +169,7 @@ export default function GalleryClient({ gallery, booking }) {
             onClick={handleDownloadAll}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-body font-medium transition-all
               ${isUnlocked
-                ? "bg-gold text-navy hover:bg-gold-dark"
+                ? "bg-gold text-[#0F172A] hover:bg-gold-dark"
                 : "bg-white/10 text-white/60 border border-white/20 hover:bg-white/20"
               }`}
           >
@@ -191,7 +191,7 @@ export default function GalleryClient({ gallery, booking }) {
           </p>
           <button
             onClick={() => setShowPayment(true)}
-            className="bg-gold text-navy text-xs font-semibold px-4 py-1.5 rounded-xl hover:bg-gold-dark ml-4 flex-shrink-0"
+            className="bg-gold text-[#0F172A] text-xs font-semibold px-4 py-1.5 rounded-xl hover:bg-gold-dark ml-4 flex-shrink-0"
           >
             Pay & Unlock
           </button>

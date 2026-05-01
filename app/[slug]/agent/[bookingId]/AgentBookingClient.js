@@ -148,7 +148,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
             <div className="bg-white border border-gray-200 rounded-xl p-5">
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Listing URL</p>
               <div className="flex items-center gap-2">
-                <code className="text-sm text-navy flex-1 truncate bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                <code className="text-sm text-[#3486cf] flex-1 truncate bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
                   {listingUrl}
                 </code>
                 <button onClick={() => copy(listingUrl, "url")}
@@ -211,7 +211,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-medium text-gray-500">{icon} {label}</span>
                       <button onClick={() => copy(captions[key], key)}
-                        className="text-xs text-navy hover:opacity-70">
+                        className="text-xs text-[#3486cf] hover:opacity-70">
                         {captionsCopied === key ? "✓ Copied!" : "Copy"}
                       </button>
                     </div>
@@ -257,7 +257,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Your Property Website</p>
             <div className="flex items-center gap-2 mb-4">
-              <code className="text-sm text-navy flex-1 truncate bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+              <code className="text-sm text-[#3486cf] flex-1 truncate bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
                 {listingUrl}
               </code>
               <button onClick={() => copy(listingUrl, "url")}

@@ -44,7 +44,7 @@ export async function POST(req) {
     email:         (body.email || "").toLowerCase(),
     phone:         body.phone || "",
     skills:        Array.isArray(body.skills) ? body.skills.map(String).slice(0, 50) : [],
-    color:         body.color || "#0b2a55",
+    color:         body.color || "#3486cf",
     active:        body.active !== false,
     payRate:       body.payRate != null ? Number(body.payRate) || 0 : 0,
     serviceRates:  body.serviceRates && typeof body.serviceRates === "object" ? body.serviceRates : {},

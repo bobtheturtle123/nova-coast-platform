@@ -55,7 +55,7 @@ function ProductLightbox({ item, images, price, onClose }) {
               <div className="flex gap-2 p-3 overflow-x-auto bg-gray-50">
                 {images.map((img, i) => (
                   <button key={i} onClick={() => setIdx(i)}
-                    className={`w-14 h-10 flex-shrink-0 rounded overflow-hidden border-2 transition-colors ${i === idx ? "border-navy" : "border-transparent"}`}>
+                    className={`w-14 h-10 flex-shrink-0 rounded overflow-hidden border-2 transition-colors ${i === idx ? "border-[#3486cf]" : "border-transparent"}`}>
                     <img src={img} alt="" className="w-full h-full object-cover" />
                   </button>
                 ))}
@@ -67,10 +67,10 @@ function ProductLightbox({ item, images, price, onClose }) {
         {/* Content */}
         <div className="p-6">
           <div className="flex items-start justify-between mb-3">
-            <h2 className="font-display text-2xl text-navy">{item.name}</h2>
+            <h2 className="font-display text-2xl text-[#3486cf]">{item.name}</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none ml-4">×</button>
           </div>
-          {price && <p className="font-display text-3xl text-navy mb-4">{price}</p>}
+          {price && <p className="font-display text-3xl text-[#3486cf] mb-4">{price}</p>}
           {item.description && (
             <p className="text-gray-600 leading-relaxed mb-4">{item.description}</p>
           )}
@@ -79,7 +79,7 @@ function ProductLightbox({ item, images, price, onClose }) {
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Includes</p>
               <ul className="space-y-1">
                 {item.includes.map((s, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-charcoal">
+                  <li key={i} className="flex items-center gap-2 text-sm text-[#0F172A]">
                     <span className="text-gold font-bold">✓</span>{s}
                   </li>
                 ))}
@@ -173,7 +173,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
         <div className="step-container">
           <div className="max-w-md mx-auto text-center">
             <p className="section-label mb-4">Step 1 of 6</p>
-            <h1 className="font-display text-4xl text-navy mb-3 leading-tight">{gateQuestion}</h1>
+            <h1 className="font-display text-4xl text-[#3486cf] mb-3 leading-tight">{gateQuestion}</h1>
             <p className="font-body text-gray-400 mb-10 leading-relaxed">{gateSubtext}</p>
 
             <div className="bg-white border border-gray-100 rounded-xl p-8 shadow-sm">
@@ -186,7 +186,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                 value={sqftInput}
                 onChange={(e) => setSqftInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && canConfirm && confirmSqft()}
-                className="w-full bg-transparent border-0 border-b border-gray-200 focus:border-navy focus:ring-0 outline-none font-display text-5xl text-navy text-center pb-3 mb-2 transition-colors"
+                className="w-full bg-transparent border-0 border-b border-gray-200 focus:border-[#3486cf] focus:ring-0 outline-none font-display text-5xl text-[#3486cf] text-center pb-3 mb-2 transition-colors"
               />
               <p className="text-xs text-gray-400 mb-7 tracking-widest uppercase">
                 {tier && pricingMode !== "photos"
@@ -214,13 +214,13 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <p className="section-label mb-2">Step 1 of 6</p>
-            <h1 className="font-display text-4xl text-navy mb-1">Choose your package.</h1>
+            <h1 className="font-display text-4xl text-[#3486cf] mb-1">Choose your package.</h1>
             <p className="font-body text-gray-500">Select a package below, or scroll down to build your own.</p>
           </div>
           {usesGate && (
             <button
               onClick={() => setConfirmed(false)}
-              className="text-xs text-gray-400 hover:text-navy underline underline-offset-2 whitespace-nowrap pb-1"
+              className="text-xs text-gray-400 hover:text-[#3486cf] underline underline-offset-2 whitespace-nowrap pb-1"
             >
               {sqftInput} {pricingMode === "photos" ? "photos" : "sqft"}{tier && pricingMode !== "photos" ? ` · ${TIER_LABELS[tier]}` : ""} ✎
             </button>
@@ -238,13 +238,13 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                 className={clsx(
                   "relative text-left border rounded-xl transition-all duration-200 focus:outline-none overflow-hidden flex flex-col",
                   selected
-                    ? "border-navy shadow-lg ring-2 ring-navy/20"
-                    : "border-gray-200 bg-white hover:border-navy/40 hover:shadow-sm"
+                    ? "border-[#3486cf] shadow-lg ring-2 ring-navy/20"
+                    : "border-gray-200 bg-white hover:border-[#3486cf]/40 hover:shadow-sm"
                 )}>
                 {pkg.featured && (
                   <span className={clsx(
                     "absolute top-3 left-3 z-10 text-xs font-semibold px-3 py-1 rounded-full tracking-wide",
-                    selected ? "bg-gold text-navy" : "bg-navy text-gold"
+                    selected ? "bg-gold text-[#3486cf]" : "bg-[#3486cf] text-gold"
                   )}>Most Popular</span>
                 )}
                 {img && (
@@ -258,14 +258,14 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                     )}
                   </div>
                 )}
-                <div className={clsx("p-5 flex flex-col flex-1", selected ? "bg-navy" : "bg-white")}>
+                <div className={clsx("p-5 flex flex-col flex-1", selected ? "bg-[#3486cf]" : "bg-white")}>
                   {PACKAGE_TIER_TAGS[pkg.id] && (
                     <p className={clsx("text-xs font-semibold uppercase tracking-wider mb-2", selected ? "text-gold" : "text-gold/80")}>
                       {PACKAGE_TIER_TAGS[pkg.id]}
                     </p>
                   )}
-                  <p className={clsx("font-display text-2xl mb-1", selected ? "text-white" : "text-navy")}>{pkg.name}</p>
-                  <p className={clsx("font-display text-3xl mb-3", selected ? "text-gold" : "text-navy")}>
+                  <p className={clsx("font-display text-2xl mb-1", selected ? "text-white" : "text-[#3486cf]")}>{pkg.name}</p>
+                  <p className={clsx("font-display text-3xl mb-3", selected ? "text-gold" : "text-[#3486cf]")}>
                     {displayPrice(pkg)}
                   </p>
                   <p className={clsx("text-sm mb-4 leading-relaxed flex-1", selected ? "text-white/80" : "text-gray-500")}>{pkg.tagline}</p>
@@ -273,7 +273,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                     {(pkg.includes || []).map((sid) => {
                       const svc = services.find((s) => s.id === sid);
                       return (
-                        <li key={sid} className={clsx("text-sm flex items-center gap-2", selected ? "text-white/90" : "text-charcoal")}>
+                        <li key={sid} className={clsx("text-sm flex items-center gap-2", selected ? "text-white/90" : "text-[#0F172A]")}>
                           <span className="text-gold font-bold">✓</span>
                           {svc?.name || sid}
                         </li>
@@ -289,7 +289,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setLightboxItem({ item: pkg, images, price: displayPrice(pkg) }); }}
-                      className={clsx("text-xs mt-2 underline underline-offset-2 text-left", selected ? "text-white/60 hover:text-white" : "text-navy/50 hover:text-navy")}
+                      className={clsx("text-xs mt-2 underline underline-offset-2 text-left", selected ? "text-white/60 hover:text-white" : "text-[#3486cf]/50 hover:text-[#3486cf]")}
                     >
                       View details {images.length > 1 ? `(${images.length} photos)` : ""}
                     </button>
@@ -316,7 +316,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                   <button key={svc.id} onClick={() => toggleService(svc.id)}
                     className={clsx(
                       "text-left border rounded-xl transition-all duration-200 overflow-hidden focus:outline-none",
-                      selected ? "border-navy shadow-sm ring-1 ring-navy/20" : "border-gray-200 bg-white hover:border-navy/30"
+                      selected ? "border-[#3486cf] shadow-sm ring-1 ring-navy/20" : "border-gray-200 bg-white hover:border-[#3486cf]/30"
                     )}>
                     {img && (
                       <div className="relative h-36 overflow-hidden">
@@ -328,24 +328,24 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                         )}
                       </div>
                     )}
-                    <div className={clsx("p-4 flex items-start justify-between gap-4", selected ? "bg-navy/5" : "bg-white")}>
+                    <div className={clsx("p-4 flex items-start justify-between gap-4", selected ? "bg-[#3486cf]/5" : "bg-white")}>
                       <div className="flex-1 min-w-0">
-                        <p className={clsx("font-semibold mb-1", selected ? "text-navy" : "text-charcoal")}>{svc.name}</p>
+                        <p className={clsx("font-semibold mb-1", selected ? "text-[#3486cf]" : "text-[#0F172A]")}>{svc.name}</p>
                         <p className="text-sm text-gray-500 line-clamp-2">{svc.description}</p>
                         {(svc.description?.length > 80 || images.length > 0) && (
                           <button type="button"
                             onClick={(e) => { e.stopPropagation(); setLightboxItem({ item: svc, images, price: displayPrice(svc) }); }}
-                            className="text-xs text-navy/50 hover:text-navy underline underline-offset-2 mt-1">
+                            className="text-xs text-[#3486cf]/50 hover:text-[#3486cf] underline underline-offset-2 mt-1">
                             View details
                           </button>
                         )}
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className={clsx("font-display text-xl", selected ? "text-navy" : "text-charcoal")}>
+                        <p className={clsx("font-display text-xl", selected ? "text-[#3486cf]" : "text-[#0F172A]")}>
                           {displayPrice(svc)}
                         </p>
                         <div className={clsx("mt-2 w-5 h-5 rounded border-2 flex items-center justify-center ml-auto",
-                          selected ? "bg-navy border-navy" : "border-gray-300")}>
+                          selected ? "bg-[#3486cf] border-[#3486cf]" : "border-gray-300")}>
                           {selected && <span className="text-white text-xs">✓</span>}
                         </div>
                       </div>

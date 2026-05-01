@@ -164,10 +164,10 @@ export default function AdminGalleryPage() {
 
   return (
     <div className="p-8 max-w-3xl">
-      <Link href={`/admin/bookings/${bookingId}`} className="text-sm text-gray-400 font-body hover:text-navy mb-4 inline-block">
+      <Link href={`/admin/bookings/${bookingId}`} className="text-sm text-gray-400 font-body hover:text-[#3486cf] mb-4 inline-block">
         ← Back to booking
       </Link>
-      <h1 className="font-display text-3xl text-navy mb-2">Gallery Manager</h1>
+      <h1 className="font-display text-3xl text-[#3486cf] mb-2">Gallery Manager</h1>
       <p className="text-gray-500 font-body mb-8">
         {booking?.fullAddress || booking?.address}
       </p>
@@ -181,7 +181,7 @@ export default function AdminGalleryPage() {
       {/* Create gallery */}
       {!gallery ? (
         <div className="card">
-          <p className="font-body text-charcoal mb-4">
+          <p className="font-body text-[#0F172A] mb-4">
             No gallery exists yet for this booking. Create one to start uploading media.
           </p>
           <button onClick={createGallery} disabled={saving} className="btn-primary">
@@ -275,7 +275,7 @@ export default function AdminGalleryPage() {
             <p className="section-label mb-3">Delivery</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-body text-sm text-charcoal">
+                <p className="font-body text-sm text-[#0F172A]">
                   Send gallery link to {booking?.clientEmail}
                 </p>
                 {gallery.emailSentAt && (

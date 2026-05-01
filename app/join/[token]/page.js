@@ -42,7 +42,7 @@ function InviteError({ icon = "🔗", title = "Invite not found", message }) {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-md w-full text-center">
         <p className="text-4xl mb-4">{icon}</p>
-        <h1 className="text-xl font-bold text-charcoal mb-2">{title}</h1>
+        <h1 className="text-xl font-bold text-[#0F172A] mb-2">{title}</h1>
         <p className="text-gray-500 text-sm">{message}</p>
       </div>
     </div>

@@ -142,10 +142,11 @@ function SignedAgreementPanel({ booking }) {
 export default function BookingDetailPage() {
   const { id }   = useParams();
   const router   = useRouter();
-  const [booking, setBooking]  = useState(null);
-  const [loading, setLoading]  = useState(true);
-  const [saving,  setSaving]   = useState(false);
-  const [msg,     setMsg]      = useState("");
+  const [booking,         setBooking]         = useState(null);
+  const [loading,         setLoading]         = useState(true);
+  const [saving,          setSaving]          = useState(false);
+  const [msg,             setMsg]             = useState("");
+  const [convertingToListing, setConvertingToListing] = useState(false);
   const [shootDate, setShootDate] = useState("");
   const [showWeather, setShowWeather] = useState(true);
   const [tempUnit,    setTempUnit]    = useState("F");
@@ -536,6 +537,56 @@ export default function BookingDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Convert to Listing Workspace */}
+      {booking.isListing === false && (
+        <div className="card mb-6 border-[#3486cf]/20 bg-[#EEF5FC]">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-[#1E5A8A] mb-0.5">Create Listing Workspace</p>
+              <p className="text-xs text-[#3486cf]/80">
+                This booking is an order record only. Promote it to a listing workspace to access the Property Site, Marketing tools, and Gallery delivery — and to count it against your listing credit.
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                setConvertingToListing(true);
+                setMsg("");
+                try {
+                  const token = await auth.currentUser.getIdToken();
+                  const res = await fetch(`/api/dashboard/bookings/${id}/convert-to-listing`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  const data = await res.json();
+                  if (res.ok) {
+                    setBooking((b) => ({ ...b, isListing: true }));
+                    setMsg("Listing workspace created. You can now open it from the Listings page.");
+                  } else {
+                    setMsg(data.error || "Failed to create listing workspace.");
+                  }
+                } catch {
+                  setMsg("Something went wrong.");
+                } finally {
+                  setConvertingToListing(false);
+                }
+              }}
+              disabled={convertingToListing}
+              className="flex-shrink-0 bg-[#3486cf] text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-[#3486cf]/90 transition-colors disabled:opacity-50 whitespace-nowrap"
+            >
+              {convertingToListing ? "Creating…" : "Create Listing Workspace →"}
+            </button>
+          </div>
+        </div>
+      )}
+      {booking.isListing === true && (
+        <div className="mb-6">
+          <Link href={`/dashboard/listings/${id}`}
+            className="inline-flex items-center gap-1.5 text-xs text-[#3486cf] border border-[#3486cf]/30 px-4 py-2 rounded-xl hover:bg-[#3486cf]/5 transition-colors font-medium">
+            Open Listing Workspace →
+          </Link>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex flex-wrap gap-3">

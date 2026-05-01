@@ -17,12 +17,12 @@ export default function StepProgress({ current }) {
       {/* Mobile */}
       <div className="flex items-center justify-between sm:hidden mb-1">
         <span className="text-xs text-gray-400 font-body">
-          Step {current} of {STEPS.length} — <span className="text-navy font-medium">{STEPS[current - 1]?.label}</span>
+          Step {current} of {STEPS.length} — <span className="text-[#3486cf] font-medium">{STEPS[current - 1]?.label}</span>
         </span>
         <span className="text-xs text-gray-300">{Math.round(pct)}%</span>
       </div>
       <div className="sm:hidden h-0.5 bg-gray-100 rounded-full">
-        <div className="h-0.5 bg-navy rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+        <div className="h-0.5 bg-[#3486cf] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
       </div>
 
       {/* Desktop */}
@@ -31,7 +31,7 @@ export default function StepProgress({ current }) {
         <div className="absolute top-2.5 left-0 right-0 h-px bg-gray-150" style={{ backgroundColor: "#e8e4de" }} />
         {/* Progress line */}
         <div
-          className="absolute top-2.5 left-0 h-px bg-navy transition-all duration-500"
+          className="absolute top-2.5 left-0 h-px bg-[#3486cf] transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
 
@@ -46,8 +46,8 @@ export default function StepProgress({ current }) {
                 className={`
                   w-5 h-5 rounded-full flex items-center justify-center
                   transition-all duration-300
-                  ${done    ? "bg-navy"                                               : ""}
-                  ${active  ? "bg-navy ring-4 ring-navy/15"                           : ""}
+                  ${done    ? "bg-[#3486cf]"                                               : ""}
+                  ${active  ? "bg-[#3486cf] ring-4 ring-[#3486cf]/15"                           : ""}
                   ${pending ? "bg-white border border-gray-200"                       : ""}
                 `}
               >
@@ -62,7 +62,7 @@ export default function StepProgress({ current }) {
                 )}
               </div>
               <span className={`text-[10px] font-body tracking-wider uppercase ${
-                active ? "text-navy font-semibold" : done ? "text-gray-400" : "text-gray-300"
+                active ? "text-[#3486cf] font-semibold" : done ? "text-gray-400" : "text-gray-300"
               }`}>
                 {step.label}
               </span>

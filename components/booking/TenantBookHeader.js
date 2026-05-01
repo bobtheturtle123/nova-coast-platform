@@ -17,7 +17,7 @@ export default function TenantBookHeader({ tenant }) {
     }
   }, [searchParams]);
 
-  const primary = tenant.branding?.primaryColor || "#0b2a55";
+  const primary = tenant.branding?.primaryColor || "#3486cf";
   const accent  = tenant.branding?.accentColor  || "#c9a96e";
   const name    = tenant.branding?.businessName || tenant.businessName || "Your Photographer";
   const tagline = tenant.branding?.tagline || "";

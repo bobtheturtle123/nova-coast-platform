@@ -14,18 +14,18 @@ export default async function TenantTermsPage({ params }) {
       <header className="border-b border-gray-200 bg-white">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href={`/${params.slug}/book`}
-            className="font-display text-navy text-lg tracking-wide hover:opacity-70 transition-opacity">
+            className="font-display text-[#3486cf] text-lg tracking-wide hover:opacity-70 transition-opacity">
             {tenant.branding?.businessName || tenant.businessName}
           </Link>
           <Link href={`/${params.slug}/book`}
-            className="text-sm text-gray-500 hover:text-navy underline underline-offset-2">
+            className="text-sm text-gray-500 hover:text-[#3486cf] underline underline-offset-2">
             ← Back to booking
           </Link>
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-12">
-        <h1 className="font-display text-3xl text-navy mb-2">Terms of Service</h1>
+        <h1 className="font-display text-3xl text-[#3486cf] mb-2">Terms of Service</h1>
         <p className="text-sm text-gray-400 mb-8">
           {tenant.branding?.businessName || tenant.businessName}
         </p>

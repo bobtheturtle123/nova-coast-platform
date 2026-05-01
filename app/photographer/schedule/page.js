@@ -32,7 +32,7 @@ export default function PhotographerSchedulePage() {
   const [showBlock, setShowBlock] = useState(false);
   const [blockForm, setBlockForm] = useState({ startDate: "", endDate: "", reason: "Day Off", note: "" });
   const [saving,    setSaving]    = useState(false);
-  const [memberColor, setMemberColor] = useState("#0b2a55");
+  const [memberColor, setMemberColor] = useState("#3486cf");
 
   const getToken = () => auth.currentUser?.getIdToken();
 
@@ -47,7 +47,7 @@ export default function PhotographerSchedulePage() {
       const [bData, blData, meData] = await Promise.all([bRes.json(), blRes.json(), meRes.json()]);
       setBookings(bData.bookings || []);
       setBlocks(blData.blocks   || []);
-      setMemberColor(meData.member?.color || "#0b2a55");
+      setMemberColor(meData.member?.color || "#3486cf");
       setLoading(false);
     }
     load();
@@ -120,7 +120,7 @@ export default function PhotographerSchedulePage() {
 
   if (loading) return (
     <div className="p-8 flex items-center justify-center h-64">
-      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
     </div>
   );
 
@@ -161,7 +161,7 @@ export default function PhotographerSchedulePage() {
             {["week","month"].map((v) => (
               <button key={v} onClick={() => setView(v)}
                 className={`px-3 py-1.5 capitalize font-medium transition-colors ${
-                  view === v ? "bg-navy text-white" : "text-gray-500 hover:bg-gray-50"
+                  view === v ? "bg-[#3486cf] text-white" : "text-gray-500 hover:bg-gray-50"
                 }`}>{v}</button>
             ))}
           </div>
@@ -174,9 +174,9 @@ export default function PhotographerSchedulePage() {
               {weekDates.map((d) => {
                 const isToday = isSameDay(d, today);
                 return (
-                  <div key={d.toISOString()} className={`px-2 py-2 text-center border-r last:border-r-0 border-gray-100 ${isToday ? "bg-navy/4" : ""}`}>
+                  <div key={d.toISOString()} className={`px-2 py-2 text-center border-r last:border-r-0 border-gray-100 ${isToday ? "bg-[#3486cf]/4" : ""}`}>
                     <p className="text-xs text-gray-400 uppercase tracking-wide">{DAYS_SHORT[d.getDay()]}</p>
-                    <p className={`text-sm font-bold mt-0.5 ${isToday ? "w-7 h-7 rounded-full bg-navy text-white flex items-center justify-center mx-auto" : "text-gray-800"}`}>
+                    <p className={`text-sm font-bold mt-0.5 ${isToday ? "w-7 h-7 rounded-full bg-[#3486cf] text-white flex items-center justify-center mx-auto" : "text-gray-800"}`}>
                       {d.getDate()}
                     </p>
                   </div>
@@ -190,7 +190,7 @@ export default function PhotographerSchedulePage() {
                 const dayStr    = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
                 const dayBlocks = blocks.filter((b) => dayStr >= b.startDate.slice(0,10) && dayStr <= b.endDate.slice(0,10));
                 return (
-                  <div key={d.toISOString()} className={`p-1.5 border-r last:border-r-0 border-gray-100 min-h-32 relative ${isToday ? "bg-navy/2" : ""}`}>
+                  <div key={d.toISOString()} className={`p-1.5 border-r last:border-r-0 border-gray-100 min-h-32 relative ${isToday ? "bg-[#3486cf]/2" : ""}`}>
                     {dayBlocks.length > 0 && (
                       <div className="absolute inset-0 pointer-events-none"
                         style={{ background: "repeating-linear-gradient(-45deg,#fee2e2,#fee2e2 3px,transparent 3px,transparent 10px)", opacity: 0.6 }} />
@@ -233,7 +233,7 @@ export default function PhotographerSchedulePage() {
                 const hasBlock  = blocks.some((b) => dayStr >= b.startDate.slice(0,10) && dayStr <= b.endDate.slice(0,10));
                 return (
                   <div key={d.toISOString()} className={`border-r last:border-r-0 border-b border-gray-100 min-h-20 p-1 ${isToday ? "bg-blue-50/30" : ""} ${hasBlock ? "bg-red-50/40" : ""}`}>
-                    <p className={`text-xs font-bold mb-1 w-6 h-6 flex items-center justify-center rounded-full ${isToday ? "bg-navy text-white" : "text-gray-800"}`}>
+                    <p className={`text-xs font-bold mb-1 w-6 h-6 flex items-center justify-center rounded-full ${isToday ? "bg-[#3486cf] text-white" : "text-gray-800"}`}>
                       {d.getDate()}
                     </p>
                     {dayEvents.slice(0,2).map((ev) => (

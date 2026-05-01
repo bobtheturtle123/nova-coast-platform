@@ -29,7 +29,7 @@ export default function AddonsPage() {
           <div className="lg:col-span-2">
             <div className="mb-8">
               <p className="section-label mb-2">Step 2 of 6</p>
-              <h1 className="font-display text-4xl text-navy mb-3">
+              <h1 className="font-display text-4xl text-[#3486cf] mb-3">
                 Enhance your shoot.
               </h1>
               <p className="font-body text-gray-500">
@@ -48,13 +48,13 @@ export default function AddonsPage() {
                       "w-full text-left p-5 border rounded-xl transition-all duration-200",
                       "flex items-center justify-between gap-4 focus:outline-none",
                       selected
-                        ? "border-navy bg-navy/5"
-                        : "border-gray-200 bg-white hover:border-navy/30"
+                        ? "border-[#3486cf] bg-[#3486cf]/5"
+                        : "border-gray-200 bg-white hover:border-[#3486cf]/30"
                     )}
                   >
                     <div>
                       <p className={clsx("font-body font-semibold mb-0.5",
-                        selected ? "text-navy" : "text-charcoal")}>
+                        selected ? "text-[#3486cf]" : "text-[#0F172A]")}>
                         {addon.name}
                       </p>
                       <p className="text-sm text-gray-500 font-body">
@@ -64,14 +64,14 @@ export default function AddonsPage() {
 
                     <div className="flex items-center gap-4 flex-shrink-0">
                       <span className={clsx("font-display text-xl",
-                        selected ? "text-navy" : "text-charcoal")}>
+                        selected ? "text-[#3486cf]" : "text-[#0F172A]")}>
                         +{formatPrice(addon.price)}
                       </span>
 
                       {/* Toggle pill */}
                       <div className={clsx(
                         "w-12 h-6 rounded-full transition-colors duration-200 relative flex-shrink-0",
-                        selected ? "bg-navy" : "bg-gray-200"
+                        selected ? "bg-[#3486cf]" : "bg-gray-200"
                       )}>
                         <div className={clsx(
                           "absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-200",

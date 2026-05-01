@@ -88,7 +88,7 @@ export async function POST(req) {
         html: `
           <p>Hi,</p>
           <p>You've been invited to join <strong>${tenant.businessName || "a photography studio"}</strong> as a <strong>${staffRole}</strong> on KyoriaOS.</p>
-          <p><a href="${inviteUrl}" style="background:#0b2a55;color:#fff;padding:12px 24px;border-radius:4px;text-decoration:none;display:inline-block;font-weight:600;margin:16px 0;">Accept Invitation</a></p>
+          <p><a href="${inviteUrl}" style="background:#3486cf;color:#fff;padding:12px 24px;border-radius:4px;text-decoration:none;display:inline-block;font-weight:600;margin:16px 0;">Accept Invitation</a></p>
           <p>This invite expires in 7 days.</p>
         `,
       });

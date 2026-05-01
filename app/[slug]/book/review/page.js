@@ -83,7 +83,7 @@ export default function TenantReviewPage() {
   if (loading) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+        <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
       </div>
     );
   }
@@ -94,7 +94,7 @@ export default function TenantReviewPage() {
       <div className="step-container">
         <div className="mb-8">
           <p className="section-label mb-2">Step 4 of 6</p>
-          <h1 className="font-display text-4xl text-navy mb-3">Review your booking.</h1>
+          <h1 className="font-display text-4xl text-[#3486cf] mb-3">Review your booking.</h1>
           <p className="font-body text-gray-500">Everything look right? Hit Continue to choose a date.</p>
         </div>
 
@@ -106,9 +106,9 @@ export default function TenantReviewPage() {
               <div className="flex items-center justify-between mb-3">
                 <p className="section-label">Property</p>
                 <button onClick={() => router.push(`/${params.slug}/book/property`)}
-                  className="text-xs text-navy hover:underline">Edit</button>
+                  className="text-xs text-[#3486cf] hover:underline">Edit</button>
               </div>
-              <p className="font-medium text-charcoal">{fullAddress}</p>
+              <p className="font-medium text-[#0F172A]">{fullAddress}</p>
               <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
                 <span className="capitalize">{propertyType || "Residential"}</span>
                 {squareFootage && (
@@ -116,7 +116,7 @@ export default function TenantReviewPage() {
                     <span className="text-gray-300">·</span>
                     <span>{Number(squareFootage).toLocaleString()} sq ft</span>
                     <span className="text-gray-300">·</span>
-                    <span className="text-navy font-medium">{tier} tier</span>
+                    <span className="text-[#3486cf] font-medium">{tier} tier</span>
                   </>
                 )}
               </div>
@@ -132,18 +132,18 @@ export default function TenantReviewPage() {
               <div className="flex items-center justify-between mb-3">
                 <p className="section-label">Services</p>
                 <button onClick={() => router.push(`/${params.slug}/book`)}
-                  className="text-xs text-navy hover:underline">Edit</button>
+                  className="text-xs text-[#3486cf] hover:underline">Edit</button>
               </div>
               <div className="space-y-2">
                 {pkgItem && (
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-charcoal">{pkgItem.name}</p>
+                      <p className="text-sm font-semibold text-[#0F172A]">{pkgItem.name}</p>
                       {pkgItem.description && (
                         <p className="text-xs text-gray-400 mt-0.5">{pkgItem.description}</p>
                       )}
                     </div>
-                    <p className="text-sm font-semibold text-navy flex-shrink-0 ml-4">
+                    <p className="text-sm font-semibold text-[#3486cf] flex-shrink-0 ml-4">
                       ${pricing?.base?.toLocaleString()}
                     </p>
                   </div>
@@ -151,10 +151,10 @@ export default function TenantReviewPage() {
                 {svcItems.map((s) => (
                   <div key={s.id} className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-charcoal">{s.name}</p>
+                      <p className="text-sm font-medium text-[#0F172A]">{s.name}</p>
                       {s.description && <p className="text-xs text-gray-400 mt-0.5">{s.description}</p>}
                     </div>
-                    <p className="text-sm font-semibold text-navy flex-shrink-0 ml-4">
+                    <p className="text-sm font-semibold text-[#3486cf] flex-shrink-0 ml-4">
                       ${pricing?.base?.toLocaleString()}
                     </p>
                   </div>
@@ -164,8 +164,8 @@ export default function TenantReviewPage() {
                     <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Add-ons</p>
                     {adnItems.map((a) => (
                       <div key={a.id} className="flex items-center justify-between">
-                        <p className="text-sm text-charcoal">{a.name}</p>
-                        <p className="text-sm text-navy font-medium flex-shrink-0 ml-4">
+                        <p className="text-sm text-[#0F172A]">{a.name}</p>
+                        <p className="text-sm text-[#3486cf] font-medium flex-shrink-0 ml-4">
                           +${(a.price || 0).toLocaleString()}
                         </p>
                       </div>
@@ -206,7 +206,7 @@ export default function TenantReviewPage() {
                   )}
                   <div className="flex justify-between font-semibold border-t border-gray-100 pt-2">
                     <span>Total</span>
-                    <span className="text-navy">${(pricing.finalTotal ?? pricing.subtotal)?.toLocaleString()}</span>
+                    <span className="text-[#3486cf]">${(pricing.finalTotal ?? pricing.subtotal)?.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-gold-dark font-semibold">
                     <span>Deposit (50%)</span>
@@ -243,8 +243,8 @@ export default function TenantReviewPage() {
                 </div>
 
                 {squareFootage && (
-                  <div className="mt-4 bg-navy/4 rounded-xl p-3 text-xs text-gray-500">
-                    Pricing based on <span className="font-medium text-navy">{tier} tier</span>
+                  <div className="mt-4 bg-[#3486cf]/4 rounded-xl p-3 text-xs text-gray-500">
+                    Pricing based on <span className="font-medium text-[#3486cf]">{tier} tier</span>
                     {" "}({Number(squareFootage).toLocaleString()} sq ft)
                   </div>
                 )}

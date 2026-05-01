@@ -14,7 +14,7 @@ export default async function TenantLayout({ children, params }) {
   const tenant = await getTenantBySlug(params.slug);
   if (!tenant) notFound();
 
-  const primary = tenant.branding?.primaryColor || "#0b2a55";
+  const primary = tenant.branding?.primaryColor || "#3486cf";
   const accent  = tenant.branding?.accentColor  || "#c9a96e";
 
   return (

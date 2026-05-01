@@ -36,7 +36,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-navy flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#3486cf] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <p className="font-display text-white text-2xl tracking-wide">NOVA COAST</p>
@@ -45,7 +45,7 @@ export default function AdminLoginPage() {
 
         <form onSubmit={handleLogin} className="card space-y-4">
           <div>
-            <label className="block text-sm font-body font-medium text-charcoal mb-1.5">
+            <label className="block text-sm font-body font-medium text-[#0F172A] mb-1.5">
               Email
             </label>
             <input
@@ -58,7 +58,7 @@ export default function AdminLoginPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-body font-medium text-charcoal mb-1.5">
+            <label className="block text-sm font-body font-medium text-[#0F172A] mb-1.5">
               Password
             </label>
             <input

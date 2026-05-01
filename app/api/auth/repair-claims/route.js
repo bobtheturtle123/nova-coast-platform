@@ -52,7 +52,7 @@ export async function POST(req) {
         branding: {
           businessName: defaultName,
           tagline:      "Professional real estate photography",
-          primaryColor: "#0b2a55",
+          primaryColor: "#3486cf",
           accentColor:  "#c9a96e",
           logoUrl:      "",
         },

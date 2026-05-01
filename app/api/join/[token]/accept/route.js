@@ -61,7 +61,7 @@ export async function POST(req, { params }) {
     phone:           phone?.trim() || "",
     skills:          [],
     active:          true,
-    color:           "#0b2a55",
+    color:           "#3486cf",
     joinedViaInvite: true,
     joinedAt:        new Date(),
     calendarToken,

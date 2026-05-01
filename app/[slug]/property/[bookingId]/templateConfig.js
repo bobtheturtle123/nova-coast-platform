@@ -5,7 +5,7 @@ export const TEMPLATES = {
     label: "Modern",
     description: "Full-bleed hero, dark overlays, bold stats bar",
     presets: {
-      preset1: { primary: "#0b2a55", accent: "#c9a96e", label: "Navy & Gold" },
+      preset1: { primary: "#3486cf", accent: "#c9a96e", label: "Blue & Gold" },
       preset2: { primary: "#1a1a2e", accent: "#10b981", label: "Charcoal & Emerald" },
     },
   },

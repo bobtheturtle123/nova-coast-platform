@@ -33,10 +33,10 @@ function ConfirmationContent() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="font-display text-4xl text-navy mb-3">Booking received.</h1>
+          <h1 className="font-display text-4xl text-[#3486cf] mb-3">Booking received.</h1>
           <p className="text-gray-500 max-w-sm">
             {clientEmail
-              ? <>A confirmation has been sent to <span className="font-medium text-charcoal">{clientEmail}</span>.</>
+              ? <>A confirmation has been sent to <span className="font-medium text-[#0F172A]">{clientEmail}</span>.</>
               : "You'll receive an email confirmation shortly."
             }
             {" "}We'll reach out within 24 hours to confirm your shoot.
@@ -45,25 +45,25 @@ function ConfirmationContent() {
 
         {/* Booking details card */}
         <div className="card space-y-3 mb-6">
-          <p className="font-semibold text-charcoal text-sm uppercase tracking-wider border-b border-gray-100 pb-3">
+          <p className="font-semibold text-[#0F172A] text-sm uppercase tracking-wider border-b border-gray-100 pb-3">
             Booking Details
           </p>
 
           {clientName && (
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Name</span>
-              <span className="font-medium text-charcoal">{clientName}</span>
+              <span className="font-medium text-[#0F172A]">{clientName}</span>
             </div>
           )}
           {fullAddress && (
             <div className="flex justify-between text-sm gap-4">
               <span className="text-gray-400 flex-shrink-0">Property</span>
-              <span className="font-medium text-charcoal text-right">{fullAddress}</span>
+              <span className="font-medium text-[#0F172A] text-right">{fullAddress}</span>
             </div>
           )}
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Requested date</span>
-            <span className="font-medium text-charcoal">{formattedDate}</span>
+            <span className="font-medium text-[#0F172A]">{formattedDate}</span>
           </div>
           {bId && (
             <div className="flex justify-between text-sm">
@@ -89,7 +89,7 @@ function ConfirmationContent() {
                   {pricing.balance > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-400">Balance due at delivery</span>
-                      <span className="font-medium text-charcoal">${pricing.balance?.toLocaleString()}</span>
+                      <span className="font-medium text-[#0F172A]">${pricing.balance?.toLocaleString()}</span>
                     </div>
                   )}
                 </>
@@ -99,8 +99,8 @@ function ConfirmationContent() {
         </div>
 
         {/* What's next */}
-        <div className="bg-navy/4 rounded-xl p-5 mb-8 space-y-3">
-          <p className="font-semibold text-navy text-sm">What happens next?</p>
+        <div className="bg-[#3486cf]/4 rounded-xl p-5 mb-8 space-y-3">
+          <p className="font-semibold text-[#3486cf] text-sm">What happens next?</p>
           <ol className="space-y-2 text-sm text-gray-600">
             {[
               "We'll review your booking and confirm availability.",
@@ -109,7 +109,7 @@ function ConfirmationContent() {
               "Media will be delivered to your gallery link — balance due upon delivery.",
             ].map((step, i) => (
               <li key={i} className="flex gap-3">
-                <span className="w-5 h-5 rounded-full bg-navy/10 text-navy text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="w-5 h-5 rounded-full bg-[#3486cf]/10 text-[#3486cf] text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
                   {i + 1}
                 </span>
                 <span>{step}</span>
@@ -135,7 +135,7 @@ export default function TenantConfirmationPage() {
   return (
     <Suspense fallback={
       <div className="min-h-[50vh] flex items-center justify-center">
-        <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+        <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
       </div>
     }>
       <ConfirmationContent />

@@ -55,12 +55,12 @@ export default function StaffInviteClient({ token, tenantId, companyName, invite
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-md w-full text-center">
           <p className="text-5xl mb-4">🎉</p>
-          <h1 className="text-2xl font-bold text-navy mb-2">Access granted!</h1>
+          <h1 className="text-2xl font-bold text-[#3486cf] mb-2">Access granted!</h1>
           <p className="text-gray-500 text-sm mb-6">
             You now have <strong>{ROLE_LABELS[role] || role}</strong> access to <strong>{companyName}</strong>.
           </p>
           <a href="/dashboard"
-            className="inline-block bg-navy text-white font-semibold py-3 px-8 rounded-xl text-sm hover:bg-navy/90 transition-colors">
+            className="inline-block bg-[#3486cf] text-white font-semibold py-3 px-8 rounded-xl text-sm hover:bg-[#3486cf]/90 transition-colors">
             Go to Dashboard →
           </a>
         </div>
@@ -72,14 +72,14 @@ export default function StaffInviteClient({ token, tenantId, companyName, invite
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 w-full max-w-md">
         <div className="p-8 pb-0 text-center">
-          <div className="w-14 h-14 rounded-full bg-navy/10 flex items-center justify-center mx-auto mb-4">
-            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#0b2a55" strokeWidth="1.8">
+          <div className="w-14 h-14 rounded-full bg-[#3486cf]/10 flex items-center justify-center mx-auto mb-4">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="1.8">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
-          <h1 className="text-xl font-bold text-navy mb-1">Join {companyName}</h1>
+          <h1 className="text-xl font-bold text-[#3486cf] mb-1">Join {companyName}</h1>
           <p className="text-sm text-gray-500 mb-1">
-            You&apos;ve been invited as <span className="font-semibold text-charcoal">{ROLE_LABELS[role] || role}</span>
+            You&apos;ve been invited as <span className="font-semibold text-[#0F172A]">{ROLE_LABELS[role] || role}</span>
           </p>
           <p className="text-xs text-gray-400 mb-6">Create an account or sign in to accept.</p>
 
@@ -88,7 +88,7 @@ export default function StaffInviteClient({ token, tenantId, companyName, invite
             {["signup", "login"].map((m) => (
               <button key={m} onClick={() => { setMode(m); setError(""); }}
                 className={`flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                  mode === m ? "border-navy text-navy" : "border-transparent text-gray-400 hover:text-gray-600"
+                  mode === m ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-400 hover:text-gray-600"
                 }`}>
                 {m === "signup" ? "Create Account" : "Sign In"}
               </button>
@@ -101,14 +101,14 @@ export default function StaffInviteClient({ token, tenantId, companyName, invite
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Email</label>
             <input type="email" value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#3486cf]/60 transition-colors"
               placeholder="you@example.com" required />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Password</label>
             <input type="password" value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#3486cf]/60 transition-colors"
               placeholder="Min. 6 characters" required />
           </div>
           {mode === "signup" && (
@@ -116,7 +116,7 @@ export default function StaffInviteClient({ token, tenantId, companyName, invite
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Confirm Password</label>
               <input type="password" value={password2}
                 onChange={(e) => setPassword2(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-navy/60 transition-colors"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#3486cf]/60 transition-colors"
                 placeholder="Repeat password" required />
             </div>
           )}
@@ -126,7 +126,7 @@ export default function StaffInviteClient({ token, tenantId, companyName, invite
           )}
 
           <button type="submit" disabled={submitting}
-            className="w-full bg-navy text-white font-semibold py-3 rounded-xl text-sm hover:bg-navy/90 transition-colors disabled:opacity-50">
+            className="w-full bg-[#3486cf] text-white font-semibold py-3 rounded-xl text-sm hover:bg-[#3486cf]/90 transition-colors disabled:opacity-50">
             {submitting ? "Processing…" : mode === "signup" ? "Create Account & Accept" : "Sign In & Accept"}
           </button>
         </form>

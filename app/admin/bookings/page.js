@@ -47,7 +47,7 @@ export default function BookingsPage() {
 
   return (
     <div className="p-8">
-      <h1 className="font-display text-3xl text-navy mb-6">Bookings</h1>
+      <h1 className="font-display text-3xl text-[#3486cf] mb-6">Bookings</h1>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
@@ -65,8 +65,8 @@ export default function BookingsPage() {
               onClick={() => setFilter(s)}
               className={`px-3 py-1.5 text-xs font-body rounded-sm border transition-colors capitalize
                 ${filter === s
-                  ? "bg-navy text-white border-navy"
-                  : "border-gray-200 text-gray-500 hover:border-navy/30"
+                  ? "bg-[#3486cf] text-white border-[#3486cf]"
+                  : "border-gray-200 text-gray-500 hover:border-[#3486cf]/30"
                 }`}
             >
               {s}
@@ -77,7 +77,7 @@ export default function BookingsPage() {
 
       {loading ? (
         <div className="flex items-center gap-2 text-gray-400 font-body">
-          <div className="w-4 h-4 border-2 border-gray-300 border-t-navy rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
           Loading bookings...
         </div>
       ) : (
@@ -135,7 +135,7 @@ export default function BookingsPage() {
                   <td className="px-4 py-3">
                     <Link
                       href={`/admin/bookings/${b.id}`}
-                      className="text-navy text-xs font-medium underline underline-offset-2"
+                      className="text-[#3486cf] text-xs font-medium underline underline-offset-2"
                     >
                       Manage →
                     </Link>

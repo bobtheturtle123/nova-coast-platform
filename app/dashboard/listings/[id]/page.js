@@ -246,6 +246,7 @@ export default function ListingDetailPage() {
 
   // Role-based access
   const [userRole, setUserRole] = useState("owner"); // "owner" | "admin" | "manager"
+  const [convertingToListing, setConvertingToListing] = useState(false);
 
   // Activity log
   const [activityLog,     setActivityLog]     = useState([]);
@@ -561,7 +562,7 @@ export default function ListingDetailPage() {
         <div className="flex gap-0">
           {[
             { id: "overview",  label: "Overview" },
-            { id: "orders",    label: "Orders" },
+            { id: "orders",    label: "Booking Details" },
             { id: "property",  label: "Property Site" },
             { id: "marketing", label: "Marketing" },
             { id: "activity",  label: "Activity" },
@@ -851,9 +852,119 @@ export default function ListingDetailPage() {
           </div>
         )}
 
-        {/* ── ORDERS TAB ───────────────────────────────────────────────────── */}
+        {/* ── BOOKING DETAILS TAB ─────────────────────────────────────────── */}
         {tab === "orders" && (
           <div className="space-y-4 max-w-lg">
+
+            {/* Appointment Record */}
+            <div className="card p-5">
+              <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Appointment Record</p>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Client</span>
+                  <span className="font-medium text-[#0F172A]">{booking.clientName}</span>
+                </div>
+                {booking.clientEmail && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Email</span>
+                    <a href={`mailto:${booking.clientEmail}`} className="text-[#3486cf] hover:underline">{booking.clientEmail}</a>
+                  </div>
+                )}
+                {booking.clientPhone && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Phone</span>
+                    <span className="text-[#0F172A]">{booking.clientPhone}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Property</span>
+                  <span className="text-[#0F172A] text-right max-w-[60%]">{booking.fullAddress || booking.address}</span>
+                </div>
+                {booking.shootDate && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Shoot Date</span>
+                    <span className="font-medium text-[#0F172A]">
+                      {new Date(booking.shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                      {booking.shootTime ? ` · ${booking.shootTime}` : ""}
+                    </span>
+                  </div>
+                )}
+                {!booking.shootDate && booking.preferredDate && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Requested</span>
+                    <span className="text-amber-700">
+                      {new Date(booking.preferredDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {booking.preferredTime ? ` · ${booking.preferredTime}` : ""}
+                    </span>
+                  </div>
+                )}
+                {booking.photographerName && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Photographer</span>
+                    <span className="text-[#0F172A]">{booking.photographerName}</span>
+                  </div>
+                )}
+                {booking.source && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Source</span>
+                    <span className="text-gray-400 capitalize">{booking.source}</span>
+                  </div>
+                )}
+                {booking.notes && (
+                  <div className="pt-2 border-t border-gray-100">
+                    <p className="text-xs text-gray-400 mb-1">Notes</p>
+                    <p className="text-gray-600 italic">"{booking.notes}"</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Services Ordered */}
+            {(booking.packageId || booking.serviceIds?.length > 0 || booking.customLineItems?.length > 0) && (
+              <div className="card p-5">
+                <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Services Ordered</p>
+                {(() => {
+                  const allItems = [
+                    ...(catalog?.packages || []),
+                    ...(catalog?.services  || []),
+                    ...(catalog?.addons    || []),
+                  ];
+                  const nameOf = (svcId) => allItems.find((x) => x.id === svcId)?.name || svcId;
+                  return (
+                    <div className="space-y-2 text-sm">
+                      {booking.packageId && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">Package</span>
+                          <span className="font-medium text-[#0F172A]">{nameOf(booking.packageId)}</span>
+                        </div>
+                      )}
+                      {booking.serviceIds?.map((s) => (
+                        <div key={s} className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-medium">Service</span>
+                          <span className="text-[#0F172A]">{nameOf(s)}</span>
+                        </div>
+                      ))}
+                      {booking.addonIds?.map((a) => (
+                        <div key={a} className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium">Add-on</span>
+                          <span className="text-[#0F172A]">{nameOf(a)}</span>
+                        </div>
+                      ))}
+                      {booking.customLineItems?.map((l, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">Custom</span>
+                            <span className="text-[#0F172A]">{l.label}</span>
+                          </div>
+                          <span className="text-sm font-medium text-[#3486cf]">${l.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             {userRole === "manager" ? (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-800">
                 Pricing details are visible to account owners and admins only.
@@ -1209,6 +1320,39 @@ export default function ListingDetailPage() {
                       className="input-field w-full" placeholder="e.g. 24123456" />
                   </div>
                 </div>
+
+                {/* MLS Syndication toggle */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div>
+                    <p className="text-sm font-medium text-[#0F172A]">MLS Syndication Links</p>
+                    <p className="text-xs text-gray-400">Show Zillow, Redfin, and Realtor.com links in the agent gallery. Disable for non-real-estate jobs.</p>
+                  </div>
+                  <button type="button"
+                    onClick={() => setPropField("mlsSyndication", !propSite.mlsSyndication)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${propSite.mlsSyndication ? "bg-[#3486cf]" : "bg-gray-300"}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${propSite.mlsSyndication ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                </div>
+
+                {/* Direct listing URLs — shown when syndication enabled */}
+                {propSite.mlsSyndication && (
+                  <div className="space-y-3 border border-[#3486cf]/15 rounded-xl p-4 bg-[#EEF5FC]/50">
+                    <p className="text-xs font-semibold text-[#3486cf] uppercase tracking-wide">Direct Listing URLs</p>
+                    <p className="text-xs text-gray-400 -mt-1">Paste the direct link to this property on each portal. If left blank, a generic address search link is used.</p>
+                    {[
+                      { label: "Zillow URL", field: "zillowUrl", placeholder: "https://www.zillow.com/homedetails/..." },
+                      { label: "Redfin URL", field: "redfinUrl", placeholder: "https://www.redfin.com/..." },
+                      { label: "Realtor.com URL", field: "realtorUrl", placeholder: "https://www.realtor.com/realestateandhomes-detail/..." },
+                    ].map(({ label, field, placeholder }) => (
+                      <div key={field}>
+                        <label className="label-field">{label}</label>
+                        <input type="url" value={propSite[field] || ""}
+                          onChange={(e) => setPropField(field, e.target.value)}
+                          className="input-field w-full" placeholder={placeholder} />
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="label-field">Listing Price</label>

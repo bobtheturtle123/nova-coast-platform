@@ -24,7 +24,7 @@ export default async function StaffInvitePage({ params }) {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-md w-full text-center">
           <p className="text-4xl mb-4">🔗</p>
-          <h1 className="text-xl font-bold text-charcoal mb-2">Invite not found</h1>
+          <h1 className="text-xl font-bold text-[#0F172A] mb-2">Invite not found</h1>
           <p className="text-gray-500 text-sm">This invite link may have expired or already been used.</p>
         </div>
       </div>
@@ -36,7 +36,7 @@ export default async function StaffInvitePage({ params }) {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-md w-full text-center">
           <p className="text-4xl mb-4">✅</p>
-          <h1 className="text-xl font-bold text-charcoal mb-2">Already accepted</h1>
+          <h1 className="text-xl font-bold text-[#0F172A] mb-2">Already accepted</h1>
           <p className="text-gray-500 text-sm">This invite has already been used. You can log in at your dashboard.</p>
         </div>
       </div>
@@ -49,7 +49,7 @@ export default async function StaffInvitePage({ params }) {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-md w-full text-center">
           <p className="text-4xl mb-4">⏰</p>
-          <h1 className="text-xl font-bold text-charcoal mb-2">Invite expired</h1>
+          <h1 className="text-xl font-bold text-[#0F172A] mb-2">Invite expired</h1>
           <p className="text-gray-500 text-sm">Ask your admin to send a new invite.</p>
         </div>
       </div>

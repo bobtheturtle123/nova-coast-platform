@@ -25,18 +25,18 @@ export default function SuperadminTenantsPage() {
 
   return (
     <div className="p-8">
-      <h1 className="font-display text-2xl text-navy mb-6">All Accounts</h1>
+      <h1 className="font-display text-2xl text-[#3486cf] mb-6">All Accounts</h1>
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
         </div>
       ) : (
         <div className="bg-white rounded-sm border border-gray-200 divide-y divide-gray-50">
           {tenants.map((t) => (
             <div key={t.id} className="px-6 py-4 flex items-center justify-between gap-4">
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-navy text-sm">{t.businessName}</p>
+                <p className="font-medium text-[#3486cf] text-sm">{t.businessName}</p>
                 <p className="text-xs text-gray-400">{t.email}</p>
                 <p className="text-xs text-gray-400">/{t.slug}</p>
               </div>
@@ -52,7 +52,7 @@ export default function SuperadminTenantsPage() {
                   {t.stripeConnectOnboarded ? "Stripe ✓" : "No Stripe"}
                 </span>
                 <a href={`${APP_URL}/${t.slug}/book`} target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-navy hover:underline">
+                  className="text-xs text-[#3486cf] hover:underline">
                   View →
                 </a>
               </div>

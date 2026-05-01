@@ -78,7 +78,7 @@ export default async function AgentPortalPage({ params, searchParams }) {
     );
   }
 
-  const primary  = tenant.branding?.primaryColor || "#0b2a55";
+  const primary  = tenant.branding?.primaryColor || "#3486cf";
   const accent   = tenant.branding?.accentColor  || "#c9a96e";
   const appUrl   = process.env.NEXT_PUBLIC_APP_URL || "";
 

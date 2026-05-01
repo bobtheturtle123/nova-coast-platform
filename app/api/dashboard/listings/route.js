@@ -47,7 +47,9 @@ export async function GET(req) {
     }
   }
 
-  const listings = bookingSnap.docs.map((doc) => {
+  const listings = bookingSnap.docs
+    .filter((doc) => doc.data().isListing !== false)
+    .map((doc) => {
     const b = serialize(doc.data());
     return {
       id:           doc.id,

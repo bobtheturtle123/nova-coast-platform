@@ -81,7 +81,7 @@ export async function POST(req, { params }) {
 
   // Send email if requested and Resend is configured
   if (sendEmail && process.env.RESEND_API_KEY) {
-    const primary  = tenant.branding?.primaryColor || "#0b2a55";
+    const primary  = tenant.branding?.primaryColor || "#3486cf";
     const bizName  = tenant.branding?.businessName || tenant.businessName || "Your Photographer";
     const from     = tenant.branding?.fromEmail
       ? `${bizName} <${tenant.branding.fromEmail}>`

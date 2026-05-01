@@ -56,7 +56,7 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="p-8 flex items-center gap-2 text-gray-400">
-        <div className="w-4 h-4 border-2 border-gray-300 border-t-navy rounded-full animate-spin" />
+        <div className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
         Loading...
       </div>
     );
@@ -64,7 +64,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-8">
-      <h1 className="font-display text-3xl text-navy mb-8">Dashboard</h1>
+      <h1 className="font-display text-3xl text-[#3486cf] mb-8">Dashboard</h1>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
@@ -76,7 +76,7 @@ export default function AdminDashboard() {
           { label: "Outstanding",       value: formatPrice(stats?.outstanding ?? 0) },
         ].map((s) => (
           <div key={s.label} className={`card ${s.highlight ? "border-amber-200 bg-amber-50" : ""}`}>
-            <p className="text-2xl font-display text-navy mb-1">{s.value}</p>
+            <p className="text-2xl font-display text-[#3486cf] mb-1">{s.value}</p>
             <p className="text-xs font-body text-gray-400 uppercase tracking-wide">{s.label}</p>
           </div>
         ))}
@@ -85,8 +85,8 @@ export default function AdminDashboard() {
       {/* Recent bookings */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-xl text-navy">Recent Bookings</h2>
-          <Link href="/admin/bookings" className="text-sm text-navy font-body underline underline-offset-4">
+          <h2 className="font-display text-xl text-[#3486cf]">Recent Bookings</h2>
+          <Link href="/admin/bookings" className="text-sm text-[#3486cf] font-body underline underline-offset-4">
             View all →
           </Link>
         </div>
@@ -119,7 +119,7 @@ export default function AdminDashboard() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={`/admin/bookings/${b.id}`} className="text-navy text-xs underline">
+                    <Link href={`/admin/bookings/${b.id}`} className="text-[#3486cf] text-xs underline">
                       View
                     </Link>
                   </td>

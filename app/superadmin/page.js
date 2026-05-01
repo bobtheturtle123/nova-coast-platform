@@ -20,12 +20,12 @@ export default function SuperadminDashboard() {
 
   return (
     <div className="p-8">
-      <h1 className="font-display text-2xl text-navy mb-2">Platform Overview</h1>
+      <h1 className="font-display text-2xl text-[#3486cf] mb-2">Platform Overview</h1>
       <p className="text-gray-500 text-sm mb-8">KyoriaOS platform metrics.</p>
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -37,7 +37,7 @@ export default function SuperadminDashboard() {
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-sm border border-gray-200 p-5">
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{s.label}</p>
-              <p className="text-2xl font-bold font-display text-navy">{s.value}</p>
+              <p className="text-2xl font-bold font-display text-[#3486cf]">{s.value}</p>
             </div>
           ))}
         </div>

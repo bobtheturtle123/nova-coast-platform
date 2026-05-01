@@ -56,7 +56,7 @@ export default function PhotographerShootsPage() {
 
   if (loading) return (
     <div className="p-8 flex items-center justify-center h-64">
-      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
     </div>
   );
 
@@ -102,7 +102,7 @@ export default function PhotographerShootsPage() {
         {[["upcoming","Upcoming"], ["all","All"], ["completed","Completed"]].map(([val, label]) => (
           <button key={val} onClick={() => setFilter(val)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
-              filter === val ? "border-navy text-navy" : "border-transparent text-gray-400 hover:text-gray-600"
+              filter === val ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-400 hover:text-gray-600"
             }`}>
             {label}
           </button>
@@ -140,7 +140,7 @@ export default function PhotographerShootsPage() {
                 {/* Services */}
                 {(b.serviceIds?.length > 0 || b.packageId) && (
                   <div className="flex flex-wrap gap-1.5 mt-3">
-                    {b.packageId && <span className="text-xs bg-navy/8 text-navy px-2 py-0.5 rounded-xl">{b.packageId}</span>}
+                    {b.packageId && <span className="text-xs bg-[#3486cf]/8 text-[#3486cf] px-2 py-0.5 rounded-xl">{b.packageId}</span>}
                     {(b.serviceIds || []).map((s) => (
                       <span key={s} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-xl">{s}</span>
                     ))}

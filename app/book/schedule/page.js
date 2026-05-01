@@ -43,7 +43,7 @@ export default function SchedulePage() {
       <div className="step-container max-w-xl">
         <div className="mb-8">
           <p className="section-label mb-2">Step 5 of 6</p>
-          <h1 className="font-display text-4xl text-navy mb-3">
+          <h1 className="font-display text-4xl text-[#3486cf] mb-3">
             When works for you?
           </h1>
           <p className="font-body text-gray-500">
@@ -54,7 +54,7 @@ export default function SchedulePage() {
 
         {/* Date picker */}
         <div className="card mb-5">
-          <label className="block text-sm font-body font-medium text-charcoal mb-2">
+          <label className="block text-sm font-body font-medium text-[#0F172A] mb-2">
             Preferred Date
           </label>
           <input
@@ -69,7 +69,7 @@ export default function SchedulePage() {
 
         {/* Time preference */}
         <div className="card mb-8">
-          <label className="block text-sm font-body font-medium text-charcoal mb-3">
+          <label className="block text-sm font-body font-medium text-[#0F172A] mb-3">
             Preferred Time of Day
           </label>
           <div className="grid grid-cols-3 gap-3">
@@ -80,12 +80,12 @@ export default function SchedulePage() {
                 className={clsx(
                   "p-4 border rounded-xl text-center transition-all duration-150 focus:outline-none",
                   time === t.value
-                    ? "border-navy bg-navy text-white"
-                    : "border-gray-200 hover:border-navy/30"
+                    ? "border-[#3486cf] bg-[#3486cf] text-white"
+                    : "border-gray-200 hover:border-[#3486cf]/30"
                 )}
               >
                 <p className={clsx("font-body font-medium text-sm",
-                  time === t.value ? "text-white" : "text-charcoal")}>
+                  time === t.value ? "text-white" : "text-[#0F172A]")}>
                   {t.label}
                 </p>
                 <p className={clsx("text-xs mt-0.5",
@@ -99,8 +99,8 @@ export default function SchedulePage() {
 
         {/* Phase 2 note */}
         <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mb-8">
-          <p className="text-sm font-body text-charcoal">
-            <span className="font-semibold text-navy">How scheduling works:</span>{" "}
+          <p className="text-sm font-body text-[#0F172A]">
+            <span className="font-semibold text-[#3486cf]">How scheduling works:</span>{" "}
             After your deposit, we'll review your request and confirm your exact
             shoot time within 24 hours. You'll receive a confirmation email with
             your assigned photographer.

@@ -29,10 +29,10 @@ function AddonLightbox({ addon, images, price, onClose }) {
         )}
         <div className="p-6">
           <div className="flex items-start justify-between mb-2">
-            <h2 className="font-display text-xl text-navy">{addon.name}</h2>
+            <h2 className="font-display text-xl text-[#3486cf]">{addon.name}</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none ml-4">×</button>
           </div>
-          {price && <p className="font-display text-2xl text-navy mb-3">+{price}</p>}
+          {price && <p className="font-display text-2xl text-[#3486cf] mb-3">+{price}</p>}
           {addon.description && <p className="text-gray-600 leading-relaxed">{addon.description}</p>}
         </div>
       </div>
@@ -82,7 +82,7 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
           <div className="lg:col-span-2">
             <div className="mb-8">
               <p className="section-label mb-2">Step 2 of 6</p>
-              <h1 className="font-display text-4xl text-navy mb-3">Enhance your shoot.</h1>
+              <h1 className="font-display text-4xl text-[#3486cf] mb-3">Enhance your shoot.</h1>
               <p className="font-body text-gray-500">Add-ons are optional. Toggle any you'd like included.</p>
             </div>
 
@@ -95,7 +95,7 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
                   <button key={addon.id} onClick={() => toggleAddon(addon.id)}
                     className={clsx(
                       "w-full text-left border rounded-xl transition-all duration-200 overflow-hidden focus:outline-none",
-                      selected ? "border-navy bg-navy/5 ring-1 ring-navy/20" : "border-gray-200 bg-white hover:border-navy/30"
+                      selected ? "border-[#3486cf] bg-[#3486cf]/5 ring-1 ring-navy/20" : "border-gray-200 bg-white hover:border-[#3486cf]/30"
                     )}>
                     <div className="flex items-center gap-4 p-4">
                       {img && (
@@ -104,24 +104,24 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className={clsx("font-body font-semibold mb-0.5", selected ? "text-navy" : "text-charcoal")}>
+                        <p className={clsx("font-body font-semibold mb-0.5", selected ? "text-[#3486cf]" : "text-[#0F172A]")}>
                           {addon.name}
                         </p>
                         <p className="text-sm text-gray-500 line-clamp-2">{addon.description}</p>
                         {(addon.description?.length > 80 || images.length > 1) && (
                           <button type="button"
                             onClick={(e) => { e.stopPropagation(); setLightboxAddon({ addon, images, price: `$${getItemPrice(addon, getSqftTier(squareFootage)).toLocaleString()}` }); }}
-                            className="text-xs text-navy/50 hover:text-navy underline underline-offset-2 mt-0.5">
+                            className="text-xs text-[#3486cf]/50 hover:text-[#3486cf] underline underline-offset-2 mt-0.5">
                             View details
                           </button>
                         )}
                       </div>
                       <div className="flex items-center gap-4 flex-shrink-0">
-                        <span className={clsx("font-display text-xl", selected ? "text-navy" : "text-charcoal")}>
+                        <span className={clsx("font-display text-xl", selected ? "text-[#3486cf]" : "text-[#0F172A]")}>
                           +${getItemPrice(addon, getSqftTier(squareFootage)).toLocaleString()}
                         </span>
                         <div className={clsx("w-12 h-6 rounded-full transition-colors duration-200 relative flex-shrink-0",
-                          selected ? "bg-navy" : "bg-gray-200")}>
+                          selected ? "bg-[#3486cf]" : "bg-gray-200")}>
                           <div className={clsx("absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-200",
                             selected ? "left-7" : "left-1")} />
                         </div>

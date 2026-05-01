@@ -51,7 +51,7 @@ function PaymentForm({ chargeAmount, payLabel, onSuccess }) {
         className="btn-gold w-full py-4 text-base relative">
         {loading
           ? <span className="flex items-center justify-center gap-2">
-              <span className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+              <span className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
               Processing…
             </span>
           : `${payLabel} — $${chargeAmount?.toLocaleString()}`}
@@ -87,12 +87,12 @@ function OrderSummary({ pricing, catalog, packageId, serviceIds, addonIds, addre
 
   return (
     <div className="card sticky top-6 space-y-4">
-      <p className="font-semibold text-charcoal text-sm uppercase tracking-wider">Order Summary</p>
+      <p className="font-semibold text-[#0F172A] text-sm uppercase tracking-wider">Order Summary</p>
 
       {/* Property */}
       {address && (
         <div className="text-xs text-gray-500 border-b border-gray-100 pb-3">
-          <p className="font-medium text-charcoal truncate">{address}</p>
+          <p className="font-medium text-[#0F172A] truncate">{address}</p>
           {city && <p className="text-gray-400">{city}</p>}
         </div>
       )}
@@ -101,14 +101,14 @@ function OrderSummary({ pricing, catalog, packageId, serviceIds, addonIds, addre
       <div className="space-y-2 text-sm">
         {pkgItem && (
           <div className="flex justify-between gap-2">
-            <span className="text-charcoal font-medium flex-1">{pkgItem.name}</span>
-            <span className="text-navy font-semibold flex-shrink-0">${pricing.base?.toLocaleString()}</span>
+            <span className="text-[#0F172A] font-medium flex-1">{pkgItem.name}</span>
+            <span className="text-[#3486cf] font-semibold flex-shrink-0">${pricing.base?.toLocaleString()}</span>
           </div>
         )}
         {services.map((s) => (
           <div key={s.id} className="flex justify-between gap-2">
-            <span className="text-charcoal flex-1">{s.name}</span>
-            <span className="text-navy flex-shrink-0">${pricing.base?.toLocaleString()}</span>
+            <span className="text-[#0F172A] flex-1">{s.name}</span>
+            <span className="text-[#3486cf] flex-shrink-0">${pricing.base?.toLocaleString()}</span>
           </div>
         ))}
         {addons.map((a) => (
@@ -137,7 +137,7 @@ function OrderSummary({ pricing, catalog, packageId, serviceIds, addonIds, addre
       <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
         <div className="flex justify-between font-semibold">
           <span>Total</span>
-          <span className="text-navy">${pricing.subtotal?.toLocaleString()}</span>
+          <span className="text-[#3486cf]">${pricing.subtotal?.toLocaleString()}</span>
         </div>
         {!payFull && pricing.deposit > 0 && (
           <>
@@ -158,7 +158,7 @@ function OrderSummary({ pricing, catalog, packageId, serviceIds, addonIds, addre
           </div>
         )}
         {tip > 0 && (
-          <div className="flex justify-between font-bold text-navy border-t border-gray-100 pt-1.5">
+          <div className="flex justify-between font-bold text-[#3486cf] border-t border-gray-100 pt-1.5">
             <span>Charged today</span>
             <span>${totalCharge?.toLocaleString()}</span>
           </div>
@@ -319,14 +319,14 @@ export default function TenantPaymentPage() {
           <div className="lg:col-span-2 space-y-6">
             <div>
               <p className="section-label mb-2">Step 6 of 6</p>
-              <h1 className="font-display text-4xl text-navy mb-3">Almost there.</h1>
+              <h1 className="font-display text-4xl text-[#3486cf] mb-3">Almost there.</h1>
               <p className="font-body text-gray-500">Enter your contact info to confirm your booking.</p>
             </div>
 
             {/* Contact info card */}
             <div className="card space-y-4">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-charcoal text-sm uppercase tracking-wider">Your Information</p>
+                <p className="font-semibold text-[#0F172A] text-sm uppercase tracking-wider">Your Information</p>
                 {lookupState === "found" && (
                   <span className="text-xs px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-xl font-medium">
                     Welcome back!
@@ -336,7 +336,7 @@ export default function TenantPaymentPage() {
 
               {/* Email first — drives agent lookup */}
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-1.5">
+                <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
                   Email <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -356,7 +356,7 @@ export default function TenantPaymentPage() {
 
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-1.5">
+                <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
                   Full Name <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -372,7 +372,7 @@ export default function TenantPaymentPage() {
 
               {/* Phone */}
               <div>
-                <label className="block text-sm font-medium text-charcoal mb-1.5">
+                <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
                   Phone <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -395,13 +395,13 @@ export default function TenantPaymentPage() {
                       <div className="flex gap-2">
                         <button type="button" onClick={() => setPayFull(false)}
                           className={`flex-1 py-2.5 px-3 border rounded-xl text-sm font-medium transition-colors ${
-                            !payFull ? "border-navy bg-navy/5 text-navy" : "border-gray-200 text-gray-500 hover:border-gray-300"
+                            !payFull ? "border-[#3486cf] bg-[#3486cf]/5 text-[#3486cf]" : "border-gray-200 text-gray-500 hover:border-gray-300"
                           }`}>
                           {depositLabel(depositConfig)} — ${deposit?.toLocaleString()}
                         </button>
                         <button type="button" onClick={() => setPayFull(true)}
                           className={`flex-1 py-2.5 px-3 border rounded-xl text-sm font-medium transition-colors ${
-                            payFull ? "border-navy bg-navy/5 text-navy" : "border-gray-200 text-gray-500 hover:border-gray-300"
+                            payFull ? "border-[#3486cf] bg-[#3486cf]/5 text-[#3486cf]" : "border-gray-200 text-gray-500 hover:border-gray-300"
                           }`}>
                           Pay in full — ${pricing?.subtotal?.toLocaleString()}
                         </button>
@@ -424,7 +424,7 @@ export default function TenantPaymentPage() {
                         <button key={amt} type="button" onClick={() => { setTip(amt); setCustomTip(""); }}
                           className={`px-3 py-1.5 border rounded-xl text-sm transition-colors ${
                             tip === amt && customTip === ""
-                              ? "border-navy bg-navy/5 text-navy font-medium"
+                              ? "border-[#3486cf] bg-[#3486cf]/5 text-[#3486cf] font-medium"
                               : "border-gray-200 text-gray-600 hover:border-gray-300"
                           }`}>
                           {amt === 0 ? "None" : `$${amt}`}
@@ -457,17 +457,17 @@ export default function TenantPaymentPage() {
                             setAgreedToTerms(e.target.checked);
                             if (e.target.checked) setFieldErrors((err) => { const n = { ...err }; delete n.terms; return n; });
                           }}
-                          className="mt-0.5 flex-shrink-0 w-4 h-4 rounded border-gray-300 text-navy focus:ring-navy"
+                          className="mt-0.5 flex-shrink-0 w-4 h-4 rounded border-gray-300 text-[#3486cf] focus:ring-navy"
                         />
                         <span className="text-sm text-gray-600">
                           I agree to the{" "}
                           <a href={`/${params.slug}/terms`} target="_blank" rel="noopener noreferrer"
-                            className="text-navy underline underline-offset-2 hover:opacity-70">
+                            className="text-[#3486cf] underline underline-offset-2 hover:opacity-70">
                             Terms of Service
                           </a>
                           {" "}and{" "}
                           <a href={`/${params.slug}/privacy`} target="_blank" rel="noopener noreferrer"
-                            className="text-navy underline underline-offset-2 hover:opacity-70">
+                            className="text-[#3486cf] underline underline-offset-2 hover:opacity-70">
                             Privacy Policy
                           </a>.
                         </span>
@@ -488,7 +488,7 @@ export default function TenantPaymentPage() {
                             {catalog.bookingConfig.serviceAgreement.text}
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-charcoal mb-1.5">
+                            <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
                               Type your full name to sign <span className="text-red-400">*</span>
                             </label>
                             <input
@@ -548,13 +548,13 @@ export default function TenantPaymentPage() {
             {/* Stripe payment section */}
             {clientSecret && (
               <div className="card">
-                <p className="font-semibold text-charcoal text-sm uppercase tracking-wider mb-4">Payment</p>
+                <p className="font-semibold text-[#0F172A] text-sm uppercase tracking-wider mb-4">Payment</p>
                 <Elements stripe={stripePromise} options={{
                   clientSecret,
                   appearance: {
                     theme: "stripe",
                     variables: {
-                      colorPrimary:      "#0b2a55",
+                      colorPrimary:      "#3486cf",
                       fontFamily:        "DM Sans, sans-serif",
                       borderRadius:      "2px",
                       colorBackground:   "#ffffff",

@@ -177,7 +177,7 @@ export default function TenantSchedulePage() {
       <div className="step-container">
         <div className="mb-8">
           <p className="section-label mb-2">Step 5 of 6</p>
-          <h1 className="font-display text-4xl text-navy mb-3">When works for you?</h1>
+          <h1 className="font-display text-4xl text-[#3486cf] mb-3">When works for you?</h1>
           <p className="font-body text-gray-500">
             {isTwilightBooking
               ? "Select a date and two times — one for the daytime shoot and one for the twilight shoot."
@@ -190,13 +190,13 @@ export default function TenantSchedulePage() {
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <button onClick={prevMonth} disabled={isPrevDisabled}
-                className={`p-1.5 rounded-xl transition-colors ${isPrevDisabled ? "text-gray-200 cursor-not-allowed" : "text-navy hover:bg-navy/5"}`}>
+                className={`p-1.5 rounded-xl transition-colors ${isPrevDisabled ? "text-gray-200 cursor-not-allowed" : "text-[#3486cf] hover:bg-[#3486cf]/5"}`}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <p className="font-semibold text-charcoal text-sm">{MONTHS[calMonth]} {calYear}</p>
-              <button onClick={nextMonth} className="p-1.5 rounded-xl text-navy hover:bg-navy/5 transition-colors">
+              <p className="font-semibold text-[#0F172A] text-sm">{MONTHS[calMonth]} {calYear}</p>
+              <button onClick={nextMonth} className="p-1.5 rounded-xl text-[#3486cf] hover:bg-[#3486cf]/5 transition-colors">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
@@ -225,12 +225,12 @@ export default function TenantSchedulePage() {
                   <button key={day} onClick={() => selectDay(day)} disabled={isDisabled}
                     className={`relative mx-auto w-9 h-9 rounded-full text-sm transition-all duration-100 font-medium
                       ${isDisabled ? "text-gray-200 cursor-not-allowed" : "cursor-pointer"}
-                      ${isSelected ? "bg-navy text-white shadow-sm"
-                        : isToday  ? "border border-navy/30 text-navy hover:bg-navy/5"
-                        : !isDisabled ? "text-charcoal hover:bg-navy/8" : ""}`}>
+                      ${isSelected ? "bg-[#3486cf] text-white shadow-sm"
+                        : isToday  ? "border border-[#3486cf]/30 text-[#3486cf] hover:bg-[#3486cf]/5"
+                        : !isDisabled ? "text-[#0F172A] hover:bg-[#3486cf]/8" : ""}`}>
                     {day}
                     {isToday && !isSelected && (
-                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-navy/40" />
+                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#3486cf]/40" />
                     )}
                   </button>
                 );
@@ -238,7 +238,7 @@ export default function TenantSchedulePage() {
             </div>
 
             {formattedDate && (
-              <p className="mt-4 text-xs text-center text-navy font-medium border-t border-gray-100 pt-3">
+              <p className="mt-4 text-xs text-center text-[#3486cf] font-medium border-t border-gray-100 pt-3">
                 {formattedDate}
               </p>
             )}
@@ -248,7 +248,7 @@ export default function TenantSchedulePage() {
           <div className="space-y-5">
             {/* Daytime slot */}
             <div>
-              <p className="font-semibold text-charcoal text-sm uppercase tracking-wider mb-3">
+              <p className="font-semibold text-[#0F172A] text-sm uppercase tracking-wider mb-3">
                 {isTwilightBooking ? "Daytime Shoot Time" : "Available Times"}
               </p>
 
@@ -256,7 +256,7 @@ export default function TenantSchedulePage() {
                 <p className="text-sm text-gray-400">Select a date to see available times.</p>
               ) : slotsLoading ? (
                 <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <span className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+                  <span className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
                   Checking availability…
                 </div>
               ) : slots && slots.length === 0 ? (
@@ -270,8 +270,8 @@ export default function TenantSchedulePage() {
                       onClick={() => setSchedule({ preferredTime: t })}
                       className={`py-2.5 px-2 border rounded-xl text-sm font-medium text-center transition-all duration-150
                         ${preferredTime === t
-                          ? "border-navy bg-navy text-white shadow-sm"
-                          : "border-gray-200 text-charcoal hover:border-navy/30 hover:bg-gray-50"
+                          ? "border-[#3486cf] bg-[#3486cf] text-white shadow-sm"
+                          : "border-gray-200 text-[#0F172A] hover:border-[#3486cf]/30 hover:bg-gray-50"
                         }`}>
                       {formatTime12(t)}
                     </button>
@@ -284,13 +284,13 @@ export default function TenantSchedulePage() {
             {isTwilightBooking && preferredDate && (
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <p className="font-semibold text-charcoal text-sm uppercase tracking-wider">Twilight Shoot Time</p>
+                  <p className="font-semibold text-[#0F172A] text-sm uppercase tracking-wider">Twilight Shoot Time</p>
                   <span className="text-xs text-amber-600 font-medium">🌅 Sunset-based</span>
                 </div>
 
                 {sunsetLoading ? (
                   <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                    <span className="w-3 h-3 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+                    <span className="w-3 h-3 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
                     Calculating sunset time…
                   </div>
                 ) : sunsetTime ? (
@@ -316,7 +316,7 @@ export default function TenantSchedulePage() {
                   {sunsetTime && (
                     <button type="button"
                       onClick={() => setSchedule({ twilightTime: sunsetTime })}
-                      className="text-xs text-navy hover:underline">
+                      className="text-xs text-[#3486cf] hover:underline">
                       Reset to sunset default
                     </button>
                   )}
@@ -325,7 +325,7 @@ export default function TenantSchedulePage() {
                   Twilight shoots often run past normal business hours — this is expected.
                 </p>
                 {twilightTime && (
-                  <p className="text-xs text-navy font-medium mt-2">
+                  <p className="text-xs text-[#3486cf] font-medium mt-2">
                     Twilight: {formatTime12(twilightTime)}
                   </p>
                 )}
@@ -333,15 +333,15 @@ export default function TenantSchedulePage() {
             )}
 
             {preferredTime && !isTwilightBooking && (
-              <p className="text-xs text-navy font-medium">
+              <p className="text-xs text-[#3486cf] font-medium">
                 Selected: {formatTime12(preferredTime)} on {formattedDate}
               </p>
             )}
             {preferredTime && isTwilightBooking && twilightTime && (
-              <div className="bg-navy/5 rounded-xl px-3 py-2 text-xs text-navy font-medium space-y-0.5">
+              <div className="bg-[#3486cf]/5 rounded-xl px-3 py-2 text-xs text-[#3486cf] font-medium space-y-0.5">
                 <p>Daytime: {formatTime12(preferredTime)}</p>
                 <p>Twilight: {formatTime12(twilightTime)}</p>
-                <p className="text-navy/50 font-normal">{formattedDate}</p>
+                <p className="text-[#3486cf]/50 font-normal">{formattedDate}</p>
               </div>
             )}
 
@@ -356,14 +356,14 @@ export default function TenantSchedulePage() {
         {/* Photographer selection */}
         {photographers.length > 0 && (
           <div className="max-w-3xl mt-8">
-            <p className="font-semibold text-charcoal text-sm uppercase tracking-wider mb-3">
+            <p className="font-semibold text-[#0F172A] text-sm uppercase tracking-wider mb-3">
               Preferred Photographer <span className="font-normal text-gray-400 normal-case text-xs">(optional)</span>
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               <button type="button"
                 onClick={() => setSchedule({ photographerId: null })}
                 className={`p-3 border rounded-xl text-center transition-colors ${
-                  !photographerId ? "border-navy bg-navy/5" : "border-gray-200 hover:border-gray-300"
+                  !photographerId ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300"
                 }`}>
                 <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2 text-gray-400 text-lg">
                   ?
@@ -374,7 +374,7 @@ export default function TenantSchedulePage() {
                 <button key={p.id} type="button"
                   onClick={() => setSchedule({ photographerId: p.id })}
                   className={`p-3 border rounded-xl text-center transition-colors ${
-                    photographerId === p.id ? "border-navy bg-navy/5" : "border-gray-200 hover:border-gray-300"
+                    photographerId === p.id ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300"
                   }`}>
                   {p.photoUrl ? (
                     <img src={p.photoUrl} alt={p.name}
@@ -385,7 +385,7 @@ export default function TenantSchedulePage() {
                       {p.name?.[0]?.toUpperCase()}
                     </div>
                   )}
-                  <p className="text-xs font-medium text-charcoal truncate">{p.name}</p>
+                  <p className="text-xs font-medium text-[#0F172A] truncate">{p.name}</p>
                 </button>
               ))}
             </div>
