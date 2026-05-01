@@ -1320,49 +1320,6 @@ export default function GalleryDetailPage() {
             )}
           </div>
 
-          {/* ── Listing Links (Agent Hub) ─────────────────────────────────── */}
-          <div className="card shadow-card mt-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-[#0F172A]">Listing Links</p>
-                <p className="text-xs text-gray-400">Shown to agents in the gallery — quick links to the live listing and search portals.</p>
-              </div>
-            </div>
-
-            {/* MLS syndication info */}
-            <div className="mb-4 px-3 py-2.5 bg-gray-50 rounded-xl text-xs text-gray-500 flex items-center gap-2">
-              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              To enable Zillow, Redfin, and Realtor.com links — open the{" "}
-              <a href={gallery?.bookingId ? `/dashboard/listings/${gallery.bookingId}` : "#"}
-                className="text-[#3486cf] underline hover:opacity-70">Listing Workspace → Property Site</a>
-              {" "}and toggle <strong>MLS Syndication Links</strong>. Direct listing URLs can be set there.
-            </div>
-
-            {/* Manual MLS link */}
-            <div className="flex gap-2 items-center">
-              <div className="flex-1">
-                <label className="label-field text-xs">MLS / Portal Link (optional)</label>
-                <input type="url" value={mlsUrl} onChange={(e) => setMlsUrl(e.target.value)}
-                  placeholder="https://matrix.mlslistings.com/... or any direct listing URL"
-                  className="input-field w-full text-sm" />
-              </div>
-              <button onClick={() => saveExtras()} disabled={savingExtras}
-                className="btn-primary px-4 py-2 text-xs whitespace-nowrap mt-4">
-                {savingExtras ? "Saving…" : "Save"}
-              </button>
-            </div>
-            {mlsUrl && (
-              <p className="text-xs text-green-600 mt-1.5 flex items-center gap-1">
-                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                MLS link will appear as a button in the agent gallery.
-              </p>
-            )}
-          </div>
 
         </div>
       </div>

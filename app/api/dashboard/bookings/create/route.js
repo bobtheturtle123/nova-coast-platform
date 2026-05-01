@@ -42,6 +42,9 @@ export async function POST(req) {
     const tenantRef  = adminDb.collection("tenants").doc(ctx.tenantId);
     const bookingRef = tenantRef.collection("bookings").doc(bookingId);
 
+    const tenantSnap   = await tenantRef.get();
+    const autoConvert  = tenantSnap.data()?.bookingConfig?.autoConvertToListing === true;
+
     const fullAddress = [address, unit, city, state, zip].filter(Boolean).join(", ");
     const finalPrice  = Number(totalPrice) || 0;
 
@@ -85,7 +88,7 @@ export async function POST(req) {
       stripeDepositIntentId:  null,
       stripeBalanceIntentId:  null,
       galleryId:       null,
-      isListing:       false,
+      isListing:       autoConvert,
     };
 
     await bookingRef.set(bookingData);

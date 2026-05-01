@@ -1355,15 +1355,27 @@ export default function ListingDetailPage() {
                 )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="label-field">Listing Price</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="label-field !mb-0">Listing Price</label>
+                      <button type="button" onClick={() => setPropField("hidden_price", !propSite.hidden_price)}
+                        className={`text-[10px] font-medium px-1.5 py-0.5 rounded transition-colors ${propSite.hidden_price ? "text-gray-400 bg-gray-100" : "text-[#3486cf] bg-[#3486cf]/8"}`}>
+                        {propSite.hidden_price ? "Hidden" : "Shown"}
+                      </button>
+                    </div>
                     <input type="text" value={propSite.price || ""}
                       onChange={(e) => setPropField("price", e.target.value)}
-                      className="input-field w-full" placeholder="$450,000" />
+                      className={`input-field w-full${propSite.hidden_price ? " opacity-40" : ""}`} placeholder="$450,000" />
                   </div>
                   <div>
-                    <label className="label-field">Property Type</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="label-field !mb-0">Property Type</label>
+                      <button type="button" onClick={() => setPropField("hidden_type", !propSite.hidden_type)}
+                        className={`text-[10px] font-medium px-1.5 py-0.5 rounded transition-colors ${propSite.hidden_type ? "text-gray-400 bg-gray-100" : "text-[#3486cf] bg-[#3486cf]/8"}`}>
+                        {propSite.hidden_type ? "Hidden" : "Shown"}
+                      </button>
+                    </div>
                     <select value={propSite.type || ""} onChange={(e) => setPropField("type", e.target.value)}
-                      className="input-field w-full">
+                      className={`input-field w-full${propSite.hidden_type ? " opacity-40" : ""}`}>
                       <option value="">— Select —</option>
                       <option value="Single Family">Single Family</option>
                       <option value="Condo / Townhome">Condo / Townhome</option>
@@ -1375,68 +1387,72 @@ export default function ListingDetailPage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="label-field">Beds</label>
-                    <input type="text" value={propSite.beds || ""}
-                      onChange={(e) => setPropField("beds", e.target.value)}
-                      className="input-field w-full" placeholder="4" />
-                  </div>
-                  <div>
-                    <label className="label-field">Baths</label>
-                    <input type="text" value={propSite.baths || ""}
-                      onChange={(e) => setPropField("baths", e.target.value)}
-                      className="input-field w-full" placeholder="2.5" />
-                  </div>
-                  <div>
-                    <label className="label-field">Sq Ft</label>
-                    <input type="text" value={propSite.sqft || ""}
-                      onChange={(e) => setPropField("sqft", e.target.value)}
-                      className="input-field w-full" placeholder="2,200" />
-                  </div>
-                  <div>
-                    <label className="label-field">Lot Acres</label>
-                    <input type="text" value={propSite.lotAcres || ""}
-                      onChange={(e) => setPropField("lotAcres", e.target.value)}
-                      className="input-field w-full" placeholder="0.25" />
-                  </div>
-                  <div>
-                    <label className="label-field">Parking Spots</label>
-                    <input type="text" value={propSite.parking || ""}
-                      onChange={(e) => setPropField("parking", e.target.value)}
-                      className="input-field w-full" placeholder="2" />
-                  </div>
-                  <div>
-                    <label className="label-field">Year Built</label>
-                    <input type="text" value={propSite.yearBuilt || ""}
-                      onChange={(e) => setPropField("yearBuilt", e.target.value)}
-                      className="input-field w-full" placeholder="2005" />
-                  </div>
+                  {[
+                    { label: "Beds",          field: "beds",      placeholder: "4"    },
+                    { label: "Baths",         field: "baths",     placeholder: "2.5"  },
+                    { label: "Sq Ft",         field: "sqft",      placeholder: "2,200"},
+                    { label: "Lot Acres",     field: "lotAcres",  placeholder: "0.25" },
+                    { label: "Parking Spots", field: "parking",   placeholder: "2"    },
+                    { label: "Year Built",    field: "yearBuilt", placeholder: "2005" },
+                  ].map(({ label, field, placeholder }) => (
+                    <div key={field}>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="label-field !mb-0">{label}</label>
+                        <button type="button" onClick={() => setPropField(`hidden_${field}`, !propSite[`hidden_${field}`])}
+                          className={`text-[10px] font-medium px-1.5 py-0.5 rounded transition-colors ${propSite[`hidden_${field}`] ? "text-gray-400 bg-gray-100" : "text-[#3486cf] bg-[#3486cf]/8"}`}>
+                          {propSite[`hidden_${field}`] ? "Hidden" : "Shown"}
+                        </button>
+                      </div>
+                      <input type="text" value={propSite[field] || ""}
+                        onChange={(e) => setPropField(field, e.target.value)}
+                        className={`input-field w-full${propSite[`hidden_${field}`] ? " opacity-40" : ""}`}
+                        placeholder={placeholder} />
+                    </div>
+                  ))}
                 </div>
                 <div>
-                  <label className="label-field">Property Description</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="label-field !mb-0">Property Description</label>
+                    <button type="button" onClick={() => setPropField("hidden_description", !propSite.hidden_description)}
+                      className={`text-[10px] font-medium px-1.5 py-0.5 rounded transition-colors ${propSite.hidden_description ? "text-gray-400 bg-gray-100" : "text-[#3486cf] bg-[#3486cf]/8"}`}>
+                      {propSite.hidden_description ? "Hidden" : "Shown"}
+                    </button>
+                  </div>
                   <textarea
                     value={propSite.description || ""}
                     onChange={(e) => setPropField("description", e.target.value)}
                     rows={5}
                     placeholder="Describe the property — highlights, neighborhood, recent upgrades…"
-                    className="input-field w-full resize-y"
+                    className={`input-field w-full resize-y${propSite.hidden_description ? " opacity-40" : ""}`}
                   />
                 </div>
                 <div>
-                  <label className="label-field">Features (one per line)</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="label-field !mb-0">Features (one per line)</label>
+                    <button type="button" onClick={() => setPropField("hidden_features", !propSite.hidden_features)}
+                      className={`text-[10px] font-medium px-1.5 py-0.5 rounded transition-colors ${propSite.hidden_features ? "text-gray-400 bg-gray-100" : "text-[#3486cf] bg-[#3486cf]/8"}`}>
+                      {propSite.hidden_features ? "Hidden" : "Shown"}
+                    </button>
+                  </div>
                   <textarea
                     value={(propSite.features || []).join("\n")}
                     onChange={(e) => setPropField("features", e.target.value.split("\n"))}
                     rows={4}
                     placeholder={"Hardwood floors\nGranite countertops\nAttached 2-car garage"}
-                    className="input-field w-full resize-y text-sm"
+                    className={`input-field w-full resize-y text-sm${propSite.hidden_features ? " opacity-40" : ""}`}
                   />
                 </div>
                 <div>
-                  <label className="label-field">Video Tour URL (YouTube / Vimeo)</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="label-field !mb-0">Video Tour URL (YouTube / Vimeo)</label>
+                    <button type="button" onClick={() => setPropField("hidden_videoUrl", !propSite.hidden_videoUrl)}
+                      className={`text-[10px] font-medium px-1.5 py-0.5 rounded transition-colors ${propSite.hidden_videoUrl ? "text-gray-400 bg-gray-100" : "text-[#3486cf] bg-[#3486cf]/8"}`}>
+                      {propSite.hidden_videoUrl ? "Hidden" : "Shown"}
+                    </button>
+                  </div>
                   <input type="url" value={propSite.videoUrl || ""}
                     onChange={(e) => setPropField("videoUrl", e.target.value)}
-                    className="input-field w-full" placeholder="https://youtube.com/watch?v=..." />
+                    className={`input-field w-full${propSite.hidden_videoUrl ? " opacity-40" : ""}`} placeholder="https://youtube.com/watch?v=..." />
                 </div>
               </div>
             </div>

@@ -230,20 +230,20 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
   const sc = statusColors[pw.status] || { bg: "bg-gray-700", text: "text-white" };
 
   const stats = [
-    pw.beds     && { icon: "🛏", value: pw.beds,     label: "Beds" },
-    pw.baths    && { icon: "🚿", value: pw.baths,    label: "Baths" },
-    pw.sqft     && { icon: "📐", value: Number(String(pw.sqft).replace(/,/g,"")||0).toLocaleString(), label: "Sq Ft" },
-    pw.parking  && { icon: "🚗", value: pw.parking,  label: "Parking" },
-    pw.lotAcres && { icon: "🌿", value: pw.lotAcres, label: "Acres" },
+    pw.beds     && !pw.hidden_beds     && { icon: "🛏", value: pw.beds,     label: "Beds" },
+    pw.baths    && !pw.hidden_baths    && { icon: "🚿", value: pw.baths,    label: "Baths" },
+    pw.sqft     && !pw.hidden_sqft     && { icon: "📐", value: Number(String(pw.sqft).replace(/,/g,"")||0).toLocaleString(), label: "Sq Ft" },
+    pw.parking  && !pw.hidden_parking  && { icon: "🚗", value: pw.parking,  label: "Parking" },
+    pw.lotAcres && !pw.hidden_lotAcres && { icon: "🌿", value: pw.lotAcres, label: "Acres" },
   ].filter(Boolean);
 
   const details = [
-    pw.price     && { label: "Asking Price",   value: pw.price },
-    pw.type      && { label: "Property Type",  value: pw.type },
-    pw.yearBuilt && { label: "Year Built",     value: pw.yearBuilt },
-    pw.mlsNumber && { label: "MLS #",          value: pw.mlsNumber },
-    pw.lotAcres  && { label: "Lot",            value: `${pw.lotAcres} acres` },
-    pw.parking   && { label: "Parking",        value: pw.parking },
+    pw.price     && !pw.hidden_price     && { label: "Asking Price",   value: pw.price },
+    pw.type      && !pw.hidden_type      && { label: "Property Type",  value: pw.type },
+    pw.yearBuilt && !pw.hidden_yearBuilt && { label: "Year Built",     value: pw.yearBuilt },
+    pw.mlsNumber                         && { label: "MLS #",          value: pw.mlsNumber },
+    pw.lotAcres  && !pw.hidden_lotAcres  && { label: "Lot",            value: `${pw.lotAcres} acres` },
+    pw.parking   && !pw.hidden_parking   && { label: "Parking",        value: pw.parking },
   ].filter(Boolean);
 
   // Google Maps embed URL (free iframe, no API key)
@@ -346,7 +346,7 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-black/10" />
 
         {/* Price badge */}
-        {pw.price && (
+        {pw.price && !pw.hidden_price && (
           <div className="absolute top-6 left-6 sm:top-8 sm:left-8">
             <div className="rounded-xl px-5 py-3 backdrop-blur-md bg-black/40 border border-white/20">
               <p className="text-white/70 text-xs uppercase tracking-widest mb-0.5">Listing Price</p>
@@ -384,7 +384,7 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
           <div className="lg:col-span-2 space-y-12">
 
             {/* Description */}
-            {pw.description && (
+            {pw.description && !pw.hidden_description && (
               <section>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
                   About This Property
@@ -423,7 +423,7 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
             )}
 
             {/* Video section */}
-            {(videos.length > 0 || pw.videoUrl) && (
+            {(videos.length > 0 || (pw.videoUrl && !pw.hidden_videoUrl)) && (
               <section>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Video Tour</h2>
                 {pw.videoUrl ? (
@@ -444,7 +444,7 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
             )}
 
             {/* Features */}
-            {pw.features?.length > 0 && (
+            {pw.features?.length > 0 && !pw.hidden_features && (
               <section>
                 <h2 className="text-2xl font-bold text-gray-900 mb-5">Features & Highlights</h2>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -500,7 +500,7 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
                   <p className="text-xs uppercase tracking-widest font-semibold mb-0.5" style={{ color: theme.accent }}>
                     Property Details
                   </p>
-                  {pw.price && <p className="text-white text-2xl font-bold">{pw.price}</p>}
+                  {pw.price && !pw.hidden_price && <p className="text-white text-2xl font-bold">{pw.price}</p>}
                 </div>
                 <div className="divide-y divide-gray-100">
                   {details.map((d) => (
