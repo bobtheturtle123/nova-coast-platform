@@ -64,10 +64,10 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose }) {
                   onClick={() => setForm((f) => ({ ...f, type: opt.value }))}
                   className={`p-3 border rounded-lg text-left transition-colors ${
                     form.type === opt.value
-                      ? opt.value === "include" ? "border-charcoal bg-charcoal/5" : "border-red-300 bg-red-50"
+                      ? opt.value === "include" ? "border-[#3486cf] bg-[#3486cf]/5" : "border-red-300 bg-red-50"
                       : "border-gray-200 hover:border-gray-300"
                   }`}>
-                  <p className={`text-sm font-medium ${form.type === opt.value ? opt.value === "include" ? "text-charcoal" : "text-red-600" : "text-gray-600"}`}>
+                  <p className={`text-sm font-medium ${form.type === opt.value ? opt.value === "include" ? "text-[#0F172A]" : "text-red-600" : "text-gray-600"}`}>
                     {opt.label}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">{opt.desc}</p>
@@ -103,7 +103,7 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose }) {
                       style={{ background: m.color || "#6B7280" }}>
                       {m.name?.[0]?.toUpperCase()}
                     </div>
-                    <span className="text-sm text-charcoal">{m.name}</span>
+                    <span className="text-sm text-[#0F172A]">{m.name}</span>
                   </label>
                 ))}
               </div>
@@ -392,12 +392,12 @@ export default function ServiceAreasPage() {
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">View:</span>
           <button onClick={() => setFilterPhotog("all")}
-            className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${filterPhotog === "all" ? "bg-navy text-white border-navy" : "text-gray-500 border-gray-200 hover:border-navy/40"}`}>
+            className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${filterPhotog === "all" ? "bg-[#3486cf] text-white border-[#3486cf]" : "text-gray-500 border-gray-200 hover:border-[#3486cf]/40"}`}>
             All Zones
           </button>
           {teamMembers.map((m) => (
             <button key={m.id} onClick={() => setFilterPhotog(m.id)}
-              className={`px-3 py-1.5 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${filterPhotog === m.id ? "bg-navy text-white border-navy" : "text-gray-500 border-gray-200 hover:border-navy/40"}`}>
+              className={`px-3 py-1.5 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${filterPhotog === m.id ? "bg-[#3486cf] text-white border-[#3486cf]" : "text-gray-500 border-gray-200 hover:border-[#3486cf]/40"}`}>
               <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-bold"
                 style={{ background: m.color || "#6B7280" }}>
                 {m.name?.[0]?.toUpperCase()}
@@ -457,7 +457,7 @@ export default function ServiceAreasPage() {
               <div className="flex items-center gap-2.5 mb-1">
                 <div className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ background: zone.type === "exclude" ? "#EF4444" : (zone.color || "#3B82F6") }} />
-                <p className="text-sm font-medium text-charcoal truncate">{zone.name}</p>
+                <p className="text-sm font-medium text-[#0F172A] truncate">{zone.name}</p>
               </div>
               <p className={`text-xs font-medium mb-1.5 ${zone.type === "exclude" ? "text-red-500" : "text-green-600"}`}>
                 {zone.type === "exclude" ? "Excluded" : "Service area"}

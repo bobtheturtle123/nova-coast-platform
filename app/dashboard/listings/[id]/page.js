@@ -41,11 +41,11 @@ function AgentImageField({ label, value, onChange, folder, placeholder, hint, pr
         <label className="label-field">{label}</label>
         <div className="flex gap-3 text-xs">
           <button type="button" onClick={() => setMode("url")}
-            className={`transition-colors ${mode === "url" ? "text-navy font-semibold" : "text-gray-400 hover:text-gray-600"}`}>
+            className={`transition-colors ${mode === "url" ? "text-[#3486cf] font-semibold" : "text-gray-400 hover:text-gray-600"}`}>
             Paste URL
           </button>
           <button type="button" onClick={() => setMode("upload")}
-            className={`transition-colors ${mode === "upload" ? "text-navy font-semibold" : "text-gray-400 hover:text-gray-600"}`}>
+            className={`transition-colors ${mode === "upload" ? "text-[#3486cf] font-semibold" : "text-gray-400 hover:text-gray-600"}`}>
             Upload File
           </button>
         </div>
@@ -89,7 +89,7 @@ function AgentImageField({ label, value, onChange, folder, placeholder, hint, pr
                 type="button"
                 disabled={uploading}
                 onClick={() => fileRef.current?.click()}
-                className="w-full border-2 border-dashed border-gray-200 rounded-xl py-3 text-sm text-gray-500 hover:border-navy/30 hover:text-navy transition-colors disabled:opacity-50">
+                className="w-full border-2 border-dashed border-gray-200 rounded-xl py-3 text-sm text-gray-500 hover:border-[#3486cf]/30 hover:text-[#3486cf] transition-colors disabled:opacity-50">
                 {uploading ? "Uploading…" : value ? "Replace image" : "Click to choose image"}
               </button>
               {uploadErr && <p className="text-xs text-red-500 mt-1">{uploadErr}</p>}
@@ -149,7 +149,7 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
         <div className="p-5">
           <div className="flex items-center justify-between mb-4">
             <button type="button" onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">‹</button>
-            <p className="font-semibold text-sm text-charcoal">{MONTHS[viewMonth]} {viewYear}</p>
+            <p className="font-semibold text-sm text-[#0F172A]">{MONTHS[viewMonth]} {viewYear}</p>
             <button type="button" onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">›</button>
           </div>
           <div className="grid grid-cols-7 mb-1">{DAYS.map(d=><div key={d} className="text-center text-xs text-gray-400 py-1">{d}</div>)}</div>
@@ -158,7 +158,7 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
               if(!day) return <div key={i}/>;
               const s=ds(day), isSel=selDate===s, isToday=s===todayStr, isPast=s<todayStr;
               return <button key={i} type="button" disabled={isPast} onClick={()=>setSelDate(s)}
-                className={`w-8 h-8 mx-auto rounded-full text-sm transition-colors ${isSel?"bg-navy text-white font-semibold":isToday?"border border-navy text-navy font-semibold":isPast?"text-gray-200 cursor-not-allowed":"hover:bg-navy/10 text-charcoal"}`}>{day}</button>;
+                className={`w-8 h-8 mx-auto rounded-full text-sm transition-colors ${isSel?"bg-[#3486cf] text-white font-semibold":isToday?"border border-[#3486cf] text-[#3486cf] font-semibold":isPast?"text-gray-200 cursor-not-allowed":"hover:bg-[#3486cf]/10 text-[#0F172A]"}`}>{day}</button>;
             })}
           </div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Time</p>
@@ -166,7 +166,7 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
             {TIME_OPTIONS.map((t)=>{
               const v=timeToVal(t);
               return <button key={t} type="button" onClick={()=>setSelTime(v)}
-                className={`py-1.5 text-xs rounded transition-colors ${selTime===v?"bg-navy text-white font-semibold":"bg-gray-50 hover:bg-navy/10 text-charcoal"}`}>{t}</button>;
+                className={`py-1.5 text-xs rounded transition-colors ${selTime===v?"bg-[#3486cf] text-white font-semibold":"bg-gray-50 hover:bg-[#3486cf]/10 text-[#0F172A]"}`}>{t}</button>;
             })}
           </div>
           <div className="flex gap-2">
@@ -484,7 +484,7 @@ export default function ListingDetailPage() {
   if (!booking) return (
     <div className="p-8 text-gray-500">
       Listing not found.
-      <Link href="/dashboard/listings" className="block mt-2 text-navy text-sm hover:underline">← Back to listings</Link>
+      <Link href="/dashboard/listings" className="block mt-2 text-[#3486cf] text-sm hover:underline">← Back to listings</Link>
     </div>
   );
 
@@ -501,11 +501,11 @@ export default function ListingDetailPage() {
   return (
     <div>
       {/* Hero */}
-      <div className="relative h-52 bg-navy overflow-hidden">
+      <div className="relative h-52 bg-[#3486cf] overflow-hidden">
         {coverUrl ? (
           <img src={coverUrl} alt={address} className="absolute inset-0 w-full h-full object-cover opacity-45" />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-navy-dark to-navy" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#1e5a8a] to-[#3486cf]" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         <div className="absolute bottom-4 left-6 right-6">
@@ -542,12 +542,12 @@ export default function ListingDetailPage() {
               )}
               <button
                 onClick={openGalleryEditor}
-                className="px-4 py-2 text-sm font-semibold rounded-xl bg-white text-navy hover:bg-gray-100 transition-colors">
+                className="px-4 py-2 text-sm font-semibold rounded-xl bg-white text-[#3486cf] hover:bg-gray-100 transition-colors">
                 Upload Media
               </button>
               {gallery && (
                 <button onClick={() => { setDeliveryMode("now"); setScheduledAt(""); setShowDeliver(true); }}
-                  className="px-4 py-2 text-sm font-semibold rounded-xl bg-gold text-navy hover:bg-gold/90 transition-colors">
+                  className="px-4 py-2 text-sm font-semibold rounded-xl bg-gold text-[#0F172A] hover:bg-gold/90 transition-colors">
                   Deliver →
                 </button>
               )}
@@ -573,7 +573,7 @@ export default function ListingDetailPage() {
             }}
               className={`px-4 py-3.5 text-sm font-medium border-b-2 transition-colors ${
                 tab === t.id
-                  ? "border-charcoal text-charcoal"
+                  ? "border-[#3486cf] text-[#0F172A]"
                   : "border-transparent text-gray-400 hover:text-gray-600"
               }`}>
               {t.label}
@@ -610,11 +610,11 @@ export default function ListingDetailPage() {
             <div className="card p-5">
               <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Agent / Client</p>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-navy/10 flex items-center justify-center text-navy font-bold">
+                <div className="w-10 h-10 rounded-full bg-[#3486cf]/10 flex items-center justify-center text-[#3486cf] font-bold">
                   {booking.clientName?.[0]?.toUpperCase() || "?"}
                 </div>
                 <div>
-                  <p className="font-medium text-charcoal">{booking.clientName}</p>
+                  <p className="font-medium text-[#0F172A]">{booking.clientName}</p>
                   <p className="text-sm text-gray-500">{booking.clientEmail}</p>
                   {booking.clientPhone && <p className="text-sm text-gray-500">{booking.clientPhone}</p>}
                 </div>
@@ -634,21 +634,21 @@ export default function ListingDetailPage() {
                 {agentPortalUrl ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <code className="text-xs text-navy flex-1 bg-gray-50 px-2 py-1 rounded border border-gray-100 truncate">{agentPortalUrl}</code>
+                      <code className="text-xs text-[#3486cf] flex-1 bg-gray-50 px-2 py-1 rounded border border-gray-100 truncate">{agentPortalUrl}</code>
                       <button onClick={() => { navigator.clipboard.writeText(agentPortalUrl); setAgentAccessMsg("Copied!"); }}
                         className="text-xs px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 flex-shrink-0">
                         Copy
                       </button>
                     </div>
                     <button onClick={() => sendAgentAccess(true)} disabled={sendingAgentAccess}
-                      className="text-xs text-navy hover:underline">
+                      className="text-xs text-[#3486cf] hover:underline">
                       Resend email
                     </button>
                   </div>
                 ) : (
                   <div className="flex gap-2">
                     <button onClick={() => sendAgentAccess(true)} disabled={sendingAgentAccess || !booking.clientEmail}
-                      className="text-xs bg-navy text-white px-3 py-1.5 rounded hover:bg-navy/90 disabled:opacity-40 transition-colors">
+                      className="text-xs bg-[#3486cf] text-white px-3 py-1.5 rounded hover:bg-[#3486cf]/90 disabled:opacity-40 transition-colors">
                       {sendingAgentAccess ? "Sending…" : "📧 Send Portal Link"}
                     </button>
                     <button onClick={() => sendAgentAccess(false)} disabled={sendingAgentAccess || !booking.clientEmail}
@@ -727,12 +727,12 @@ export default function ListingDetailPage() {
                       Scheduled Shoot
                     </label>
                     <button type="button" onClick={() => setShowDatePicker((v) => !v)}
-                      className="text-xs text-navy hover:underline">
+                      className="text-xs text-[#3486cf] hover:underline">
                       {showDatePicker ? "Cancel" : booking.shootDate ? "Edit" : "Set date"}
                     </button>
                   </div>
                   {booking.shootDate && !showDatePicker ? (
-                    <p className="text-sm font-medium text-charcoal flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-[#0F172A] flex items-center gap-1.5">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500 flex-shrink-0">
                         <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                       </svg>
@@ -748,7 +748,7 @@ export default function ListingDetailPage() {
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
                           <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                         </svg>
-                        <span className={shootDate ? "text-charcoal text-sm" : "text-gray-400 text-sm"}>
+                        <span className={shootDate ? "text-[#0F172A] text-sm" : "text-gray-400 text-sm"}>
                           {shootDate
                             ? `${new Date(shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}${shootTime ? ` · ${valToLabel(shootTime)}` : ""}`
                             : "Pick date & time"}
@@ -793,28 +793,28 @@ export default function ListingDetailPage() {
                       {booking.packageId && (
                         <div className="flex items-center gap-2">
                           <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">Package</span>
-                          <span className="text-sm font-medium text-charcoal">{nameOf(booking.packageId)}</span>
+                          <span className="text-sm font-medium text-[#0F172A]">{nameOf(booking.packageId)}</span>
                         </div>
                       )}
                       {booking.serviceIds?.map((s) => (
                         <div key={s} className="flex items-center gap-2">
                           <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-medium">Service</span>
-                          <span className="text-sm text-charcoal">{nameOf(s)}</span>
+                          <span className="text-sm text-[#0F172A]">{nameOf(s)}</span>
                         </div>
                       ))}
                       {booking.addonIds?.map((a) => (
                         <div key={a} className="flex items-center gap-2">
                           <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium">Add-on</span>
-                          <span className="text-sm text-charcoal">{nameOf(a)}</span>
+                          <span className="text-sm text-[#0F172A]">{nameOf(a)}</span>
                         </div>
                       ))}
                       {booking.customLineItems?.map((l, i) => (
                         <div key={i} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">Custom</span>
-                            <span className="text-sm text-charcoal">{l.label}</span>
+                            <span className="text-sm text-[#0F172A]">{l.label}</span>
                           </div>
-                          <span className="text-sm font-medium text-navy">${l.price}</span>
+                          <span className="text-sm font-medium text-[#3486cf]">${l.price}</span>
                         </div>
                       ))}
                     </div>
@@ -835,7 +835,7 @@ export default function ListingDetailPage() {
                   }`}>
                     {gallery.delivered ? "Delivered" : gallery.unlocked ? "Unlocked" : "Locked"}
                   </span>
-                  <button onClick={toggleUnlock} className="text-xs text-navy hover:underline">
+                  <button onClick={toggleUnlock} className="text-xs text-[#3486cf] hover:underline">
                     {gallery.unlocked ? "Lock gallery" : "Unlock gallery"}
                   </button>
                 </div>
@@ -843,7 +843,7 @@ export default function ListingDetailPage() {
                 <a
                   href={`/${booking.tenantSlug || ""}/gallery/${gallery.accessToken}`}
                   target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-navy hover:underline">
+                  className="text-xs text-[#3486cf] hover:underline">
                   View agent gallery ↗
                 </a>
               </div>
@@ -998,7 +998,7 @@ export default function ListingDetailPage() {
             {/* Publish status */}
             <div className="flex items-center justify-between card p-4">
               <div>
-                <p className="text-sm font-semibold text-charcoal">
+                <p className="text-sm font-semibold text-[#0F172A]">
                   {propSite.published ? "🟢 Website is live" : "⚫ Website is draft (not public)"}
                 </p>
                 {propSite.published && (
@@ -1006,7 +1006,7 @@ export default function ListingDetailPage() {
                     href={`/${tenantSlug || ""}/property/${id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-navy underline underline-offset-2 hover:opacity-70"
+                    className="text-xs text-[#3486cf] underline underline-offset-2 hover:opacity-70"
                   >
                     View public website →
                   </a>
@@ -1054,7 +1054,7 @@ export default function ListingDetailPage() {
 
             {/* Template + Color Scheme */}
             <div className="card">
-              <h3 className="font-display text-navy text-base mb-1">Template & Style</h3>
+              <h3 className="font-display text-[#3486cf] text-base mb-1">Template & Style</h3>
               <p className="text-xs text-gray-400 mb-5">Choose a layout and color scheme for the public property website.</p>
 
               {/* Template selector */}
@@ -1070,10 +1070,10 @@ export default function ListingDetailPage() {
                       onClick={() => { setPropField("template", t.id); setPropField("colorPreset", "preset1"); }}
                       className={`text-left p-3 rounded-lg border-2 transition-all ${
                         (propSite.template || "modern") === t.id
-                          ? "border-navy bg-navy/5"
-                          : "border-gray-200 hover:border-navy/30"
+                          ? "border-[#3486cf] bg-[#3486cf]/5"
+                          : "border-gray-200 hover:border-[#3486cf]/30"
                       }`}>
-                      <p className={`text-sm font-semibold ${(propSite.template || "modern") === t.id ? "text-navy" : "text-charcoal"}`}>{t.label}</p>
+                      <p className={`text-sm font-semibold ${(propSite.template || "modern") === t.id ? "text-[#3486cf]" : "text-[#0F172A]"}`}>{t.label}</p>
                       <p className="text-xs text-gray-400 mt-0.5 leading-snug">{t.desc}</p>
                     </button>
                   ))}
@@ -1083,7 +1083,7 @@ export default function ListingDetailPage() {
               {/* Color preset */}
               {(() => {
                 const PRESETS = {
-                  modern:  [{ id: "preset1", label: "Navy & Gold",        primary: "#0b2a55", accent: "#c9a96e" }, { id: "preset2", label: "Charcoal & Emerald", primary: "#1a1a2e", accent: "#10b981" }],
+                  modern:  [{ id: "preset1", label: "Navy & Gold",        primary: "#3486cf", accent: "#c9a96e" }, { id: "preset2", label: "Charcoal & Emerald", primary: "#1a1a2e", accent: "#10b981" }],
                   classic: [{ id: "preset1", label: "Blue & Brass",       primary: "#1e3a5f", accent: "#b08d57" }, { id: "preset2", label: "Forest & Gold",      primary: "#1a3a2a", accent: "#c8a96e" }],
                   luxury:  [{ id: "preset1", label: "Obsidian & Champagne",primary: "#0d0d0d", accent: "#d4af8a" }, { id: "preset2", label: "Slate & Rose Gold",  primary: "#1e2433", accent: "#c9848a" }],
                 };
@@ -1098,21 +1098,21 @@ export default function ListingDetailPage() {
                         <button key={p.id} type="button"
                           onClick={() => setPropField("colorPreset", p.id)}
                           className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm transition-all ${
-                            current === p.id ? "border-navy" : "border-gray-200 hover:border-navy/30"
+                            current === p.id ? "border-[#3486cf]" : "border-gray-200 hover:border-[#3486cf]/30"
                           }`}>
                           <span className="flex gap-1">
                             <span className="w-4 h-4 rounded-full border border-white/30 shadow-sm" style={{ background: p.primary }} />
                             <span className="w-4 h-4 rounded-full border border-white/30 shadow-sm" style={{ background: p.accent }} />
                           </span>
-                          <span className={current === p.id ? "font-semibold text-navy" : "text-gray-600"}>{p.label}</span>
+                          <span className={current === p.id ? "font-semibold text-[#3486cf]" : "text-gray-600"}>{p.label}</span>
                         </button>
                       ))}
                       <button type="button"
                         onClick={() => setPropField("colorPreset", "custom")}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm transition-all ${
-                          current === "custom" ? "border-navy" : "border-gray-200 hover:border-navy/30"
+                          current === "custom" ? "border-[#3486cf]" : "border-gray-200 hover:border-[#3486cf]/30"
                         }`}>
-                        <span className={current === "custom" ? "font-semibold text-navy" : "text-gray-600"}>Custom…</span>
+                        <span className={current === "custom" ? "font-semibold text-[#3486cf]" : "text-gray-600"}>Custom…</span>
                       </button>
                     </div>
                     {current === "custom" && (
@@ -1120,10 +1120,10 @@ export default function ListingDetailPage() {
                         <div>
                           <label className="label-field text-xs">Primary Color</label>
                           <div className="flex items-center gap-2 mt-1">
-                            <input type="color" value={propSite.customPrimary || "#0b2a55"}
+                            <input type="color" value={propSite.customPrimary || "#3486cf"}
                               onChange={(e) => setPropField("customPrimary", e.target.value)}
                               className="w-9 h-9 rounded cursor-pointer border border-gray-200" />
-                            <input type="text" value={propSite.customPrimary || "#0b2a55"}
+                            <input type="text" value={propSite.customPrimary || "#3486cf"}
                               onChange={(e) => setPropField("customPrimary", e.target.value)}
                               className="input-field w-28 text-xs font-mono" />
                           </div>
@@ -1148,7 +1148,7 @@ export default function ListingDetailPage() {
 
             {/* Display settings */}
             <div className="card">
-              <h3 className="font-display text-navy text-base mb-5">Website Settings</h3>
+              <h3 className="font-display text-[#3486cf] text-base mb-5">Website Settings</h3>
               <div className="space-y-4">
                 <div>
                   <label className="label-field">Custom Property Name</label>
@@ -1179,12 +1179,12 @@ export default function ListingDetailPage() {
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                   <div>
-                    <p className="text-sm font-medium text-charcoal">Branded website</p>
+                    <p className="text-sm font-medium text-[#0F172A]">Branded website</p>
                     <p className="text-xs text-gray-400">Show your business name and logo on the listing page</p>
                   </div>
                   <button type="button"
                     onClick={() => setPropField("branded", propSite.branded === false ? true : false)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${propSite.branded !== false ? "bg-navy" : "bg-gray-300"}`}>
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${propSite.branded !== false ? "bg-[#3486cf]" : "bg-gray-300"}`}>
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${propSite.branded !== false ? "translate-x-6" : "translate-x-1"}`} />
                   </button>
                 </div>
@@ -1193,7 +1193,7 @@ export default function ListingDetailPage() {
 
             {/* Property details */}
             <div className="card">
-              <h3 className="font-display text-navy text-base mb-5">Property Details</h3>
+              <h3 className="font-display text-[#3486cf] text-base mb-5">Property Details</h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1299,7 +1299,7 @@ export default function ListingDetailPage() {
 
             {/* Agent info */}
             <div className="card">
-              <h3 className="font-display text-navy text-base mb-5">Listing Agent</h3>
+              <h3 className="font-display text-[#3486cf] text-base mb-5">Listing Agent</h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1355,7 +1355,7 @@ export default function ListingDetailPage() {
 
             {/* Agent Custom Domain (per-listing) */}
             <div className="card">
-              <h3 className="font-display text-navy text-base mb-1">Agent Custom Domain</h3>
+              <h3 className="font-display text-[#3486cf] text-base mb-1">Agent Custom Domain</h3>
               <p className="text-xs text-gray-400 mb-4">
                 Let the agent use their own domain (e.g. <code className="bg-gray-100 px-1 rounded">123mainst.agentdomain.com</code>) for this property website.
                 They'll need to add a CNAME record pointing to <code className="bg-gray-100 px-1 rounded">cname.vercel-dns.com</code>.
@@ -1385,7 +1385,7 @@ export default function ListingDetailPage() {
                   href={`/${tenantSlug || ""}/property/${id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-navy underline underline-offset-2 hover:opacity-70"
+                  className="text-sm text-[#3486cf] underline underline-offset-2 hover:opacity-70"
                 >
                   Preview website →
                 </a>
@@ -1407,7 +1407,7 @@ export default function ListingDetailPage() {
                     className="flex-1 input-field text-sm bg-gray-50 text-gray-600" />
                   <button
                     onClick={() => { navigator.clipboard.writeText(listingUrl); }}
-                    className="px-4 py-2 text-sm font-medium rounded-xl bg-navy text-white hover:bg-navy/90 transition-colors flex-shrink-0">
+                    className="px-4 py-2 text-sm font-medium rounded-xl bg-[#3486cf] text-white hover:bg-[#3486cf]/90 transition-colors flex-shrink-0">
                     Copy
                   </button>
                   <a href={listingUrl} target="_blank" rel="noopener noreferrer"
@@ -1426,7 +1426,7 @@ export default function ListingDetailPage() {
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs uppercase tracking-wide text-gray-400">Listing Analytics</p>
                 <button onClick={loadAnalytics} disabled={analyticsLoading}
-                  className="text-xs text-navy hover:underline disabled:opacity-50">
+                  className="text-xs text-[#3486cf] hover:underline disabled:opacity-50">
                   {analyticsLoading ? "Loading…" : "↻ Refresh"}
                 </button>
               </div>
@@ -1437,15 +1437,15 @@ export default function ListingDetailPage() {
               ) : (
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-3xl font-bold text-navy">{analytics?.views ?? "—"}</p>
+                    <p className="text-3xl font-bold text-[#3486cf]">{analytics?.views ?? "—"}</p>
                     <p className="text-xs text-gray-500 mt-1">Page Views</p>
                   </div>
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-3xl font-bold text-navy">{analytics?.inquiries?.length ?? "—"}</p>
+                    <p className="text-3xl font-bold text-[#3486cf]">{analytics?.inquiries?.length ?? "—"}</p>
                     <p className="text-xs text-gray-500 mt-1">Inquiries</p>
                   </div>
                   <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-3xl font-bold text-navy">
+                    <p className="text-3xl font-bold text-[#3486cf]">
                       {analytics?.views && analytics?.inquiries?.length
                         ? `${((analytics.inquiries.length / analytics.views) * 100).toFixed(1)}%`
                         : "—"}
@@ -1480,7 +1480,7 @@ export default function ListingDetailPage() {
                         download="listing-qr.png"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-block text-xs font-medium text-navy hover:underline">
+                        className="inline-block text-xs font-medium text-[#3486cf] hover:underline">
                         ↓ Download high-res QR
                       </a>
                     </div>
@@ -1497,7 +1497,7 @@ export default function ListingDetailPage() {
                     href={`/${tenantSlug}/property/${id}/brochure`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-navy text-white hover:bg-navy/90 transition-colors">
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[#3486cf] text-white hover:bg-[#3486cf]/90 transition-colors">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                     </svg>
@@ -1517,7 +1517,7 @@ export default function ListingDetailPage() {
                   <p className="text-xs text-gray-400 mt-0.5">Instagram, Facebook, and email subject — generated instantly</p>
                 </div>
                 <button onClick={generateCaptions} disabled={captionsLoading}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-navy text-white hover:bg-navy/90 transition-colors disabled:opacity-50">
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[#3486cf] text-white hover:bg-[#3486cf]/90 transition-colors disabled:opacity-50">
                   {captionsLoading ? (
                     <>
                       <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -1542,7 +1542,7 @@ export default function ListingDetailPage() {
                           <p className="text-xs font-semibold text-gray-500">{icon} {label}</p>
                           <button
                             onClick={() => navigator.clipboard.writeText(captions[key])}
-                            className="text-xs text-navy hover:underline">
+                            className="text-xs text-[#3486cf] hover:underline">
                             Copy
                           </button>
                         </div>
@@ -1569,8 +1569,8 @@ export default function ListingDetailPage() {
                   {analytics.inquiries.map((inq) => (
                     <div key={inq.id} className="py-3 grid grid-cols-3 gap-3 text-sm">
                       <div>
-                        <p className="font-medium text-charcoal">{inq.name}</p>
-                        <a href={`mailto:${inq.email}`} className="text-xs text-navy hover:underline">{inq.email}</a>
+                        <p className="font-medium text-[#0F172A]">{inq.name}</p>
+                        <a href={`mailto:${inq.email}`} className="text-xs text-[#3486cf] hover:underline">{inq.email}</a>
                         {inq.phone && <p className="text-xs text-gray-400">{inq.phone}</p>}
                       </div>
                       <div className="col-span-2">
@@ -1600,12 +1600,12 @@ export default function ListingDetailPage() {
               <div className="flex items-center justify-between mb-4">
                 <p className="text-xs uppercase tracking-wide text-gray-400">Gallery Activity Log</p>
                 <button onClick={() => loadActivity(gallery?.id)}
-                  className="text-xs text-navy hover:underline">Refresh</button>
+                  className="text-xs text-[#3486cf] hover:underline">Refresh</button>
               </div>
 
               {activityLoading ? (
                 <div className="flex justify-center py-8">
-                  <div className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
                 </div>
               ) : !gallery ? (
                 <p className="text-sm text-gray-400 text-center py-6">No gallery attached to this listing yet.</p>
@@ -1627,7 +1627,7 @@ export default function ListingDetailPage() {
                           {meta.icon}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-charcoal">{meta.label}</p>
+                          <p className="text-sm font-medium text-[#0F172A]">{meta.label}</p>
                           {ev.email && <p className="text-xs text-gray-500">{ev.email}</p>}
                           {ev.fileName && <p className="text-xs text-gray-500 truncate">{ev.fileName}</p>}
                           {ev.note && <p className="text-xs text-gray-500 italic">{ev.note}</p>}
@@ -1679,7 +1679,7 @@ export default function ListingDetailPage() {
                   {[["now", "Send Now"], ["later", "Schedule"]].map(([val, label]) => (
                     <button key={val} type="button" onClick={() => setDeliveryMode(val)}
                       className={`flex-1 py-2 font-medium transition-colors ${
-                        deliveryMode === val ? "bg-navy text-white" : "bg-white text-gray-500 hover:bg-gray-50"
+                        deliveryMode === val ? "bg-[#3486cf] text-white" : "bg-white text-gray-500 hover:bg-gray-50"
                       }`}>
                       {label}
                     </button>
@@ -1706,7 +1706,7 @@ export default function ListingDetailPage() {
                   <p>Hi {booking.clientName?.split(" ")[0] || "there"},</p>
                   {emailNote && <p className="italic text-gray-500">{emailNote}</p>}
                   <p>Your media for <strong>{address}</strong> is ready to view and download.</p>
-                  <p className="text-navy underline text-xs">[ View Gallery → ]</p>
+                  <p className="text-[#3486cf] underline text-xs">[ View Gallery → ]</p>
                 </div>
               )}
             </div>

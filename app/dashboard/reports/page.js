@@ -8,7 +8,7 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 const STATUS_COLORS = {
   pending_payment: "bg-gray-200 text-gray-600",
   requested:       "bg-amber-100 text-amber-700",
-  confirmed:       "bg-blue-100 text-blue-700",
+  confirmed:       "bg-[#EEF5FC] text-[#1E5A8A]",
   completed:       "bg-purple-100 text-purple-700",
   cancelled:       "bg-red-100 text-red-600",
 };
@@ -22,7 +22,7 @@ const STATUS_LABELS = {
 
 function DonutChart({ data }) {
   const total = data.reduce((s, d) => s + d.count, 0) || 1;
-  const COLORS = ["#0b2a55","#c9a96e","#3b82f6","#10b981","#ef4444","#8b5cf6","#f59e0b"];
+  const COLORS = ["#3486cf","#c9a96e","#3b82f6","#10b981","#ef4444","#8b5cf6","#f59e0b"];
   let angle = 0;
   function polarToXY(deg, r) {
     const rad = ((deg - 90) * Math.PI) / 180;
@@ -43,13 +43,13 @@ function DonutChart({ data }) {
         angle += sweep;
         return <path key={i} d={path} fill={COLORS[i % COLORS.length]} className="hover:opacity-80 transition-opacity" />;
       })}
-      <text x="50" y="46" textAnchor="middle" style={{ fontSize: 10, fill: "#0b2a55", fontWeight: "bold" }}>{total}</text>
+      <text x="50" y="46" textAnchor="middle" style={{ fontSize: 10, fill: "#3486cf", fontWeight: "bold" }}>{total}</text>
       <text x="50" y="57" textAnchor="middle" style={{ fontSize: 7, fill: "#9ca3af" }}>bookings</text>
     </svg>
   );
 }
 
-function BarChart({ data, valueKey, labelKey, color = "bg-navy", prefix = "$", formatVal, secondaryKey, secondaryColor = "bg-gold/60" }) {
+function BarChart({ data, valueKey, labelKey, color = "bg-[#3486cf]", prefix = "$", formatVal, secondaryKey, secondaryColor = "bg-gold/60" }) {
   const max = Math.max(...data.map((d) => Math.max(d[valueKey] || 0, d[secondaryKey] || 0)), 1);
   return (
     <div className="flex items-end gap-1 h-32 w-full">
@@ -60,7 +60,7 @@ function BarChart({ data, valueKey, labelKey, color = "bg-navy", prefix = "$", f
         const label = formatVal ? formatVal(val) : `${prefix}${val.toLocaleString()}`;
         return (
           <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
-            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-charcoal text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-[#0F172A] text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
               {d[labelKey]}: {label}
               {secondaryKey && d[secondaryKey] != null && ` · cost $${d[secondaryKey].toLocaleString()}`}
             </div>
@@ -306,7 +306,7 @@ export default function ReportsPage() {
 
   if (loading) return (
     <div className="p-8 flex items-center justify-center h-64">
-      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
     </div>
   );
 
@@ -362,7 +362,7 @@ export default function ReportsPage() {
       {/* Profit & Loss summary */}
       <div className="card mb-8">
         <div className="flex items-center justify-between mb-4">
-          <p className="font-semibold text-charcoal text-sm">Profit &amp; Loss</p>
+          <p className="font-semibold text-[#0F172A] text-sm">Profit &amp; Loss</p>
           {withCosts === 0 && (
             <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">
               No costs logged yet — add costs on individual booking pages
@@ -372,11 +372,11 @@ export default function ReportsPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
           <div className="bg-gray-50 rounded p-3">
             <p className="text-xs text-gray-400 mb-1">Total Revenue</p>
-            <p className="text-xl font-bold text-navy">${totalPriceAll.toLocaleString()}</p>
+            <p className="text-xl font-bold text-[#3486cf]">${totalPriceAll.toLocaleString()}</p>
           </div>
           <div className="bg-gray-50 rounded p-3">
             <p className="text-xs text-gray-400 mb-1">Total Costs</p>
-            <p className="text-xl font-bold text-charcoal">${totalCostAll.toLocaleString()}</p>
+            <p className="text-xl font-bold text-[#0F172A]">${totalCostAll.toLocaleString()}</p>
             <p className="text-xs text-gray-400">{withCosts} of {totalBookings} with costs</p>
           </div>
           <div className="bg-gray-50 rounded p-3">
@@ -403,7 +403,7 @@ export default function ReportsPage() {
                 const pct     = (Math.abs(d.profit) / maxAbs) * 100;
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1 group relative h-full">
-                    <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-charcoal text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                    <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-[#0F172A] text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                       {d.label}: ${d.profit.toLocaleString()}
                     </div>
                     <div
@@ -423,19 +423,19 @@ export default function ReportsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <p className="font-semibold text-charcoal text-sm">Revenue Per Month</p>
+            <p className="font-semibold text-[#0F172A] text-sm">Revenue Per Month</p>
             <div className="flex items-center gap-3 text-xs text-gray-400">
-              <span className="flex items-center gap-1"><span className="w-3 h-2 bg-navy rounded-lg inline-block" /> Revenue</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-2 bg-[#3486cf] rounded-lg inline-block" /> Revenue</span>
               <span className="flex items-center gap-1"><span className="w-3 h-2 bg-gold/60 rounded-lg inline-block" /> Cost</span>
             </div>
           </div>
           {revenueByMonth.length > 0
-            ? <BarChart data={revenueByMonth} valueKey="revenue" labelKey="label" color="bg-navy" prefix="$" secondaryKey="cost" />
+            ? <BarChart data={revenueByMonth} valueKey="revenue" labelKey="label" color="bg-[#3486cf]" prefix="$" secondaryKey="cost" />
             : <p className="text-gray-400 text-sm py-8 text-center">No data for this period</p>
           }
         </div>
         <div className="card">
-          <p className="font-semibold text-charcoal text-sm mb-4">Bookings Per Month</p>
+          <p className="font-semibold text-[#0F172A] text-sm mb-4">Bookings Per Month</p>
           {ordersByMonth.length > 0
             ? <BarChart data={ordersByMonth} valueKey="count" labelKey="label" color="bg-gold" prefix="" formatVal={(v) => `${v} orders`} />
             : <p className="text-gray-400 text-sm py-8 text-center">No data for this period</p>
@@ -446,7 +446,7 @@ export default function ReportsPage() {
       {/* Service breakdown + Status + Top agents */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="card">
-          <p className="font-semibold text-charcoal text-sm mb-4">Revenue by Service</p>
+          <p className="font-semibold text-[#0F172A] text-sm mb-4">Revenue by Service</p>
           {byService.length === 0
             ? <p className="text-gray-400 text-sm">No data</p>
             : (
@@ -456,11 +456,11 @@ export default function ReportsPage() {
                   return (
                     <div key={i}>
                       <div className="flex justify-between text-sm mb-0.5">
-                        <span className="text-charcoal truncate capitalize">{s.label}</span>
-                        <span className="text-navy font-semibold flex-shrink-0 ml-2">${s.revenue.toLocaleString()}</span>
+                        <span className="text-[#0F172A] truncate capitalize">{s.label}</span>
+                        <span className="text-[#3486cf] font-semibold flex-shrink-0 ml-2">${s.revenue.toLocaleString()}</span>
                       </div>
                       <div className="h-1.5 bg-gray-100 rounded-full">
-                        <div className="h-full bg-navy rounded-full" style={{ width: `${pct}%` }} />
+                        <div className="h-full bg-[#3486cf] rounded-full" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
                   );
@@ -471,7 +471,7 @@ export default function ReportsPage() {
         </div>
 
         <div className="card">
-          <p className="font-semibold text-charcoal text-sm mb-4">Booking Status</p>
+          <p className="font-semibold text-[#0F172A] text-sm mb-4">Booking Status</p>
           {statusBreakdown.length === 0
             ? <p className="text-gray-400 text-sm">No data</p>
             : (
@@ -498,21 +498,21 @@ export default function ReportsPage() {
         </div>
 
         <div className="card">
-          <p className="font-semibold text-charcoal text-sm mb-4">Top Agents</p>
+          <p className="font-semibold text-[#0F172A] text-sm mb-4">Top Agents</p>
           {topAgents.length === 0
             ? <p className="text-gray-400 text-sm">No data</p>
             : (
               <div className="space-y-3">
                 {topAgents.map((a, i) => (
                   <div key={i} className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-full bg-navy/10 text-navy font-bold text-xs flex items-center justify-center flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-[#3486cf]/10 text-[#3486cf] font-bold text-xs flex items-center justify-center flex-shrink-0">
                       {a.name?.[0]?.toUpperCase() || "?"}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-charcoal truncate">{a.name || a.email}</p>
+                      <p className="text-sm font-medium text-[#0F172A] truncate">{a.name || a.email}</p>
                       <p className="text-xs text-gray-400">{a.orders} order{a.orders !== 1 ? "s" : ""}</p>
                     </div>
-                    <span className="text-sm font-semibold text-navy flex-shrink-0">${a.revenue.toLocaleString()}</span>
+                    <span className="text-sm font-semibold text-[#3486cf] flex-shrink-0">${a.revenue.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
@@ -526,7 +526,7 @@ export default function ReportsPage() {
 
         {/* Upsell intelligence */}
         <div className="card">
-          <p className="font-semibold text-charcoal text-sm mb-1">Upsell Intelligence</p>
+          <p className="font-semibold text-[#0F172A] text-sm mb-1">Upsell Intelligence</p>
           <p className="text-xs text-gray-400 mb-4">Services most frequently booked together</p>
           {upsellData.length === 0 ? (
             <p className="text-gray-400 text-sm">Not enough data — needs bookings with multiple services.</p>
@@ -537,7 +537,7 @@ export default function ReportsPage() {
                   <span className="text-xs font-bold text-gray-300 w-4">{i + 1}</span>
                   <div className="flex-1">
                     <div className="flex flex-wrap gap-1.5 mb-0.5">
-                      <span className="text-xs bg-navy/10 text-navy px-2 py-0.5 rounded-full font-medium">{pair.a}</span>
+                      <span className="text-xs bg-[#3486cf]/10 text-[#3486cf] px-2 py-0.5 rounded-full font-medium">{pair.a}</span>
                       <span className="text-xs text-gray-300">+</span>
                       <span className="text-xs bg-gold/20 text-amber-800 px-2 py-0.5 rounded-full font-medium">{pair.b}</span>
                     </div>
@@ -554,11 +554,11 @@ export default function ReportsPage() {
 
         {/* Client retention */}
         <div className="card">
-          <p className="font-semibold text-charcoal text-sm mb-1">Client Retention</p>
+          <p className="font-semibold text-[#0F172A] text-sm mb-1">Client Retention</p>
           <p className="text-xs text-gray-400 mb-4">Repeat vs. new clients in period</p>
           <div className="flex items-center gap-6 mb-4">
             <div className="text-center">
-              <p className="text-3xl font-bold font-display text-navy">{repeatClients.rate}%</p>
+              <p className="text-3xl font-bold font-display text-[#3486cf]">{repeatClients.rate}%</p>
               <p className="text-xs text-gray-400">repeat rate</p>
             </div>
             <div className="flex-1 space-y-2">
@@ -568,7 +568,7 @@ export default function ReportsPage() {
                   <span>{repeatClients.repeat}</span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full">
-                  <div className="h-full bg-navy rounded-full" style={{ width: `${repeatClients.total > 0 ? (repeatClients.repeat / repeatClients.total) * 100 : 0}%` }} />
+                  <div className="h-full bg-[#3486cf] rounded-full" style={{ width: `${repeatClients.total > 0 ? (repeatClients.repeat / repeatClients.total) * 100 : 0}%` }} />
                 </div>
               </div>
               <div>

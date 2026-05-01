@@ -9,8 +9,8 @@ import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 const STATUS_LABELS = {
   pending_payment: { label: "Awaiting payment", cls: "bg-gray-50 text-gray-500" },
   requested:       { label: "Pending review",   cls: "bg-amber-50 text-amber-600" },
-  confirmed:       { label: "Confirmed",         cls: "bg-green-50 text-green-700" },
-  completed:       { label: "Completed",         cls: "bg-blue-50 text-blue-600" },
+  confirmed:       { label: "Confirmed",         cls: "bg-[#EEF5FC] text-[#1E5A8A]" },
+  completed:       { label: "Completed",         cls: "bg-emerald-50 text-emerald-700" },
   cancelled:       { label: "Cancelled",         cls: "bg-red-50 text-red-500" },
   payment_failed:  { label: "Payment failed",    cls: "bg-red-50 text-red-500" },
 };
@@ -39,11 +39,11 @@ function PackageCard({ pkg, tier, selected, onSelect }) {
       onClick={onSelect}
       className={`relative text-left rounded-xl border p-4 transition-all ${
         selected
-          ? "border-navy bg-navy text-white"
-          : "border-gray-200 bg-white hover:border-navy/40"
+          ? "border-[#3486cf] bg-[#3486cf] text-white"
+          : "border-gray-200 bg-white hover:border-[#3486cf]/40"
       }`}
     >
-      <p className={`text-sm font-semibold leading-tight ${selected ? "text-white" : "text-charcoal"}`}>
+      <p className={`text-sm font-semibold leading-tight ${selected ? "text-white" : "text-[#0F172A]"}`}>
         {pkg.name}
       </p>
       {pkg.description && (
@@ -51,7 +51,7 @@ function PackageCard({ pkg, tier, selected, onSelect }) {
           {pkg.description}
         </p>
       )}
-      <p className={`text-base font-bold mt-2 ${selected ? "text-gold" : "text-navy"}`}>
+      <p className={`text-base font-bold mt-2 ${selected ? "text-white/90" : "text-[#3486cf]"}`}>
         {formatPrice(price)}
       </p>
     </button>
@@ -67,7 +67,7 @@ function ServiceRow({ item, tier, checked, onToggle }) {
     <div
       className={`w-full rounded-xl border transition-all ${
         checked
-          ? "border-navy/60 bg-navy/5"
+          ? "border-[#3486cf]/60 bg-[#3486cf]/5"
           : "border-transparent bg-gray-50 hover:border-gray-200"
       }`}
     >
@@ -78,7 +78,7 @@ function ServiceRow({ item, tier, checked, onToggle }) {
       >
         <div className="flex items-center gap-2.5">
           <div className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
-            checked ? "bg-navy border-navy" : "border-gray-300"
+            checked ? "bg-[#3486cf] border-[#3486cf]" : "border-gray-300"
           }`}>
             {checked && (
               <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
@@ -87,7 +87,7 @@ function ServiceRow({ item, tier, checked, onToggle }) {
             )}
           </div>
           <div>
-            <p className="text-sm text-charcoal font-medium leading-none">{item.name}</p>
+            <p className="text-sm text-[#0F172A] font-medium leading-none">{item.name}</p>
             {item.description && !long && (
               <p className="text-xs text-gray-400 mt-0.5">{item.description}</p>
             )}
@@ -96,7 +96,7 @@ function ServiceRow({ item, tier, checked, onToggle }) {
             )}
           </div>
         </div>
-        <span className="text-sm font-semibold text-navy ml-4 flex-shrink-0">{formatPrice(price)}</span>
+        <span className="text-sm font-semibold text-[#3486cf] ml-4 flex-shrink-0">{formatPrice(price)}</span>
       </button>
       {item.description && long && (
         <div className="px-3 pb-2">
@@ -106,7 +106,7 @@ function ServiceRow({ item, tier, checked, onToggle }) {
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
-            className="text-xs text-navy/60 hover:text-navy underline underline-offset-2"
+            className="text-xs text-[#3486cf]/60 hover:text-[#3486cf] underline underline-offset-2"
           >
             {expanded ? "Show less" : "Read more"}
           </button>
@@ -177,7 +177,7 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
           {/* Month nav */}
           <div className="flex items-center justify-between mb-4">
             <button type="button" onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">‹</button>
-            <p className="font-semibold text-sm text-charcoal">{MONTHS[viewMonth]} {viewYear}</p>
+            <p className="font-semibold text-sm text-[#0F172A]">{MONTHS[viewMonth]} {viewYear}</p>
             <button type="button" onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500">›</button>
           </div>
           {/* Day headers */}
@@ -196,10 +196,10 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
                 <button key={i} type="button" disabled={isPast}
                   onClick={() => setSelDate(ds)}
                   className={`w-8 h-8 mx-auto rounded-full text-sm transition-colors ${
-                    isSelected ? "bg-navy text-white font-semibold" :
-                    isToday    ? "border border-navy text-navy font-semibold" :
+                    isSelected ? "bg-[#3486cf] text-white font-semibold" :
+                    isToday    ? "border border-[#3486cf] text-[#3486cf] font-semibold" :
                     isPast     ? "text-gray-200 cursor-not-allowed" :
-                    "hover:bg-navy/10 text-charcoal"
+                    "hover:bg-[#3486cf]/10 text-[#0F172A]"
                   }`}>
                   {day}
                 </button>
@@ -214,7 +214,7 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
               return (
                 <button key={t} type="button" onClick={() => setSelTime(val)}
                   className={`py-1.5 text-xs rounded transition-colors ${
-                    selTime === val ? "bg-navy text-white font-semibold" : "bg-gray-50 hover:bg-navy/10 text-charcoal"
+                    selTime === val ? "bg-[#3486cf] text-white font-semibold" : "bg-gray-50 hover:bg-[#3486cf]/10 text-[#0F172A]"
                   }`}>
                   {t}
                 </button>
@@ -550,7 +550,7 @@ export default function BookingsPage() {
           {["all", "requested", "confirmed", "completed", "cancelled"].map((s) => (
             <button key={s} onClick={() => setFilter(s)}
               className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors
-                ${filter === s ? "bg-navy text-white border-navy" : "text-gray-500 border-gray-200 hover:border-navy/40 hover:text-navy"}`}>
+                ${filter === s ? "bg-[#3486cf] text-white border-[#3486cf]" : "text-gray-500 border-gray-200 hover:border-[#3486cf]/40 hover:text-[#3486cf]"}`}>
               {s === "all" ? "All" : STATUS_LABELS[s]?.label || s}
             </button>
           ))}
@@ -572,7 +572,7 @@ export default function BookingsPage() {
       {/* Bookings list */}
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
         <div className="card p-16 text-center text-gray-400 text-sm">
@@ -594,7 +594,7 @@ export default function BookingsPage() {
                 onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-medium text-navy truncate">{b.clientName}</p>
+                    <p className="text-sm font-medium text-[#0F172A] truncate">{b.clientName}</p>
                     {b.source === "manual" && (
                       <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded">manual</span>
                     )}
@@ -604,11 +604,11 @@ export default function BookingsPage() {
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0">
                   <div className="text-right hidden sm:block">
-                    <p className="text-sm font-semibold text-navy">${(b.totalPrice || 0).toLocaleString()}</p>
+                    <p className="text-sm font-semibold text-[#0F172A]">${(b.totalPrice || 0).toLocaleString()}</p>
                     <p className="text-xs text-gray-400">{b.depositPaid ? "Deposit paid" : "No deposit"}</p>
                   </div>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.cls}`}>{s.label}</span>
-                  <Link href={`/dashboard/bookings/${b.id}`} className="text-xs text-navy hover:underline whitespace-nowrap">
+                  <Link href={`/dashboard/bookings/${b.id}`} className="text-xs text-[#3486cf] hover:underline whitespace-nowrap">
                     View →
                   </Link>
                 </div>
@@ -681,11 +681,11 @@ export default function BookingsPage() {
                                       setShowAgentDD(false);
                                     }}
                                     className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 border-b border-gray-50 last:border-b-0">
-                                    <div className="w-7 h-7 rounded-full bg-navy/10 flex items-center justify-center text-xs font-semibold text-navy flex-shrink-0">
+                                    <div className="w-7 h-7 rounded-full bg-[#3486cf]/10 flex items-center justify-center text-xs font-semibold text-[#3486cf] flex-shrink-0">
                                       {a.name?.[0]?.toUpperCase()}
                                     </div>
                                     <div className="min-w-0">
-                                      <p className="text-sm text-charcoal font-medium truncate">{a.name}</p>
+                                      <p className="text-sm text-[#0F172A] font-medium truncate">{a.name}</p>
                                       <p className="text-xs text-gray-400 truncate">{a.email}</p>
                                     </div>
                                   </button>
@@ -697,7 +697,7 @@ export default function BookingsPage() {
                                 <div>
                                   <p className="px-4 py-3 text-sm text-gray-400 text-center">No matching customers</p>
                                   <button type="button" onMouseDown={() => { setShowNewCustomer(true); setShowAgentDD(false); }}
-                                    className="w-full text-left px-4 py-2.5 text-sm text-navy font-medium hover:bg-navy/5 border-t border-gray-50">
+                                    className="w-full text-left px-4 py-2.5 text-sm text-[#3486cf] font-medium hover:bg-[#3486cf]/5 border-t border-gray-50">
                                     + Add as new customer
                                   </button>
                                 </div>
@@ -708,13 +708,13 @@ export default function BookingsPage() {
                       )}
                       {agents.length === 0 && !showNewCustomer && (
                         <button type="button" onClick={() => setShowNewCustomer(true)}
-                          className="text-xs text-navy underline hover:no-underline">
+                          className="text-xs text-[#3486cf] underline hover:no-underline">
                           + Add new customer
                         </button>
                       )}
                       {showNewCustomer && (
-                        <div className="bg-navy/5 border border-navy/15 rounded-lg p-3 space-y-2">
-                          <p className="text-xs font-semibold text-navy">New Customer</p>
+                        <div className="bg-[#3486cf]/5 border border-[#3486cf]/15 rounded-lg p-3 space-y-2">
+                          <p className="text-xs font-semibold text-[#1E5A8A]">New Customer</p>
                           <input type="text" value={newCustomer.name}
                             onChange={(e) => setNewCustomer((c) => ({ ...c, name: e.target.value }))}
                             placeholder="Full name *" className="input-field w-full text-sm" autoFocus />
@@ -793,7 +793,7 @@ export default function BookingsPage() {
                             min="0"
                           />
                           {tierLabel && (
-                            <span className="text-xs px-2.5 py-1.5 rounded-xl bg-navy/10 text-navy font-medium whitespace-nowrap">
+                            <span className="text-xs px-2.5 py-1.5 rounded-xl bg-[#3486cf]/10 text-[#3486cf] font-medium whitespace-nowrap">
                               {tierLabel}
                             </span>
                           )}
@@ -818,7 +818,7 @@ export default function BookingsPage() {
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                       </svg>
-                      <span className={form.preferredDate ? "text-charcoal" : "text-gray-400"}>
+                      <span className={form.preferredDate ? "text-[#0F172A]" : "text-gray-400"}>
                         {form.preferredDate
                           ? `${new Date(form.preferredDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}${form.preferredTime ? ` · ${form.preferredTime}` : ""}`
                           : "Select date & time"}
@@ -891,8 +891,8 @@ export default function BookingsPage() {
                         <p className="text-xs text-gray-400 mb-2">Custom items</p>
                         {form.customLineItems.map((line, i) => (
                           <div key={i} className="flex items-center gap-2 mb-1.5 px-3 py-2 bg-gray-50 rounded-xl">
-                            <span className="text-sm text-charcoal flex-1">{line.label}</span>
-                            <span className="text-sm font-semibold text-navy">{formatPrice(line.price || 0)}</span>
+                            <span className="text-sm text-[#0F172A] flex-1">{line.label}</span>
+                            <span className="text-sm font-semibold text-[#3486cf]">{formatPrice(line.price || 0)}</span>
                             <button type="button" onClick={() => setForm((p) => ({ ...p, customLineItems: p.customLineItems.filter((_, j) => j !== i) }))}
                               className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none">×</button>
                           </div>
@@ -925,7 +925,7 @@ export default function BookingsPage() {
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Photographer (optional)</p>
                     {zoneName && (
-                      <p className="text-xs text-navy bg-navy/5 border border-navy/10 rounded px-2 py-1 mb-2">
+                      <p className="text-xs text-[#1E5A8A] bg-[#EEF5FC] border border-[#3486cf]/10 rounded px-2 py-1 mb-2">
                         Showing photographers for <strong>{zoneName}</strong> zone
                       </p>
                     )}
@@ -979,7 +979,7 @@ export default function BookingsPage() {
                       lines.map((l, i) => (
                         <div key={i} className="flex items-center justify-between">
                           <span className="text-xs text-gray-500 flex-1 pr-2">{l.name}</span>
-                          <span className="text-xs font-semibold text-charcoal">{formatPrice(l.price || 0)}</span>
+                          <span className="text-xs font-semibold text-[#0F172A]">{formatPrice(l.price || 0)}</span>
                         </div>
                       ))
                     )}
@@ -988,7 +988,7 @@ export default function BookingsPage() {
                   {/* Tier badge */}
                   {tierLabel && form.sqft && (
                     <div className="text-xs px-2.5 py-1.5 bg-white border border-gray-200 rounded-xl text-gray-500 mb-4">
-                      Priced as <span className="font-medium text-charcoal">{tierLabel}</span>
+                      Priced as <span className="font-medium text-[#0F172A]">{tierLabel}</span>
                       <span className="text-gray-300"> ({Number(form.sqft).toLocaleString()} sqft)</span>
                     </div>
                   )}
@@ -997,7 +997,7 @@ export default function BookingsPage() {
                   <div className="border-t border-gray-200 pt-4 mb-5">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-gray-500">Total</span>
-                      <span className="text-xl font-bold text-navy font-display">{formatPrice(total)}</span>
+                      <span className="text-xl font-bold text-[#0F172A] font-display">{formatPrice(total)}</span>
                     </div>
 
                     {/* Override total */}
@@ -1028,7 +1028,7 @@ export default function BookingsPage() {
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <div
                         onClick={() => setField("depositPaid", !form.depositPaid)}
-                        className={`relative w-8 h-4 rounded-full transition-colors flex-shrink-0 ${form.depositPaid ? "bg-navy" : "bg-gray-200"}`}
+                        className={`relative w-8 h-4 rounded-full transition-colors flex-shrink-0 ${form.depositPaid ? "bg-[#3486cf]" : "bg-gray-200"}`}
                       >
                         <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${form.depositPaid ? "translate-x-4" : "translate-x-0.5"}`} />
                       </div>

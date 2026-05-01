@@ -33,7 +33,7 @@ function WeatherWidget({ booking, tempUnit = "F" }) {
     <div className="card mb-6">
       <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-2">Weather Forecast</h3>
       <div className="flex items-center gap-2 text-sm text-gray-400">
-        <div className="w-4 h-4 border-2 border-gray-200 border-t-navy rounded-full animate-spin" />
+        <div className="w-4 h-4 border-2 border-gray-200 border-t-[#3486cf] rounded-full animate-spin" />
         Loading forecast…
       </div>
     </div>
@@ -65,26 +65,26 @@ function WeatherWidget({ booking, tempUnit = "F" }) {
       <div className="flex items-center gap-4 mb-3">
         <span className="text-4xl">{wx.icon}</span>
         <div>
-          <p className="text-2xl font-semibold text-charcoal">{wx.temp}°{wx.tempUnit || "F"}</p>
+          <p className="text-2xl font-semibold text-[#0F172A]">{wx.temp}°{wx.tempUnit || "F"}</p>
           <p className="text-sm text-gray-500">{wx.description} · H:{wx.tempHigh}° L:{wx.tempLow}°</p>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3 text-sm">
         <div className="bg-gray-50 rounded p-2.5">
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">UV Index</p>
-          <p className={`font-semibold ${wx.uvLabel?.color || "text-charcoal"}`}>{wx.uvIndex}</p>
+          <p className={`font-semibold ${wx.uvLabel?.color || "text-[#0F172A]"}`}>{wx.uvIndex}</p>
           <p className={`text-xs ${wx.uvLabel?.color || "text-gray-400"}`}>{wx.uvLabel?.label}</p>
         </div>
         {wx.aqi !== null && (
           <div className="bg-gray-50 rounded p-2.5">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Air Quality</p>
-            <p className={`font-semibold ${wx.aqiLabel?.color || "text-charcoal"}`}>{wx.aqi}</p>
+            <p className={`font-semibold ${wx.aqiLabel?.color || "text-[#0F172A]"}`}>{wx.aqi}</p>
             <p className={`text-xs ${wx.aqiLabel?.color || "text-gray-400"}`}>{wx.aqiLabel?.label}</p>
           </div>
         )}
         <div className="bg-gray-50 rounded p-2.5">
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Wind</p>
-          <p className="font-semibold text-charcoal">{wx.windSpeed} {wx.tempUnit === "C" ? "km/h" : "mph"}</p>
+          <p className="font-semibold text-[#0F172A]">{wx.windSpeed} {wx.tempUnit === "C" ? "km/h" : "mph"}</p>
           {wx.precipitation > 0 && (
             <p className="text-xs text-blue-500">{wx.precipitation}{wx.tempUnit === "C" ? "mm" : "\""} precip</p>
           )}
@@ -113,19 +113,19 @@ function SignedAgreementPanel({ booking }) {
       <div className="grid grid-cols-2 gap-4 text-sm mb-3">
         <div>
           <p className="text-xs text-gray-400 mb-0.5">Client Signature</p>
-          <p className="font-medium text-charcoal italic">{booking.contractSignerName}</p>
+          <p className="font-medium text-[#0F172A] italic">{booking.contractSignerName}</p>
           {signedAt && <p className="text-xs text-gray-400 mt-0.5">{signedAt}</p>}
         </div>
         <div>
           <p className="text-xs text-gray-400 mb-0.5">Counter-signed by</p>
-          <p className="font-medium text-charcoal">{booking.contractCounterSignedBy}</p>
+          <p className="font-medium text-[#0F172A]">{booking.contractCounterSignedBy}</p>
           <p className="text-xs text-gray-400 mt-0.5">Auto-confirmed</p>
         </div>
       </div>
       {booking.contractText && (
         <div>
           <button type="button" onClick={() => setExpanded((v) => !v)}
-            className="text-xs text-navy hover:underline mb-2">
+            className="text-xs text-[#3486cf] hover:underline mb-2">
             {expanded ? "Hide agreement text ▲" : "View agreement text ▼"}
           </button>
           {expanded && (
@@ -327,19 +327,19 @@ export default function BookingDetailPage() {
   }
 
   if (loading) return (
-    <div className="p-8 flex justify-center"><div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" /></div>
+    <div className="p-8 flex justify-center"><div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" /></div>
   );
 
   if (!booking) return (
     <div className="p-8">
       <p className="text-gray-500">Booking not found.</p>
-      <Link href="/dashboard/bookings" className="text-navy text-sm hover:underline mt-2 block">← Back to bookings</Link>
+      <Link href="/dashboard/bookings" className="text-[#3486cf] text-sm hover:underline mt-2 block">← Back to bookings</Link>
     </div>
   );
 
   return (
     <div className="p-8 max-w-3xl">
-      <Link href="/dashboard/bookings" className="text-sm text-gray-400 hover:text-navy flex items-center gap-1 mb-6">
+      <Link href="/dashboard/bookings" className="text-sm text-gray-400 hover:text-[#3486cf] flex items-center gap-1 mb-6">
         ← Back to bookings
       </Link>
 
@@ -471,11 +471,11 @@ export default function BookingDetailPage() {
             <div className="bg-gray-50 rounded-xl p-3 mb-4 grid grid-cols-3 gap-3 text-sm">
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">Total Cost</p>
-                <p className="font-semibold text-charcoal">${totalCost.toLocaleString()}</p>
+                <p className="font-semibold text-[#0F172A]">${totalCost.toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">Revenue</p>
-                <p className="font-semibold text-charcoal">${totalPrice.toLocaleString()}</p>
+                <p className="font-semibold text-[#0F172A]">${totalPrice.toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-0.5">Net Profit</p>
@@ -496,7 +496,7 @@ export default function BookingDetailPage() {
                 <button
                   type="button"
                   onClick={() => setCosts((c) => ({ ...c, otherCosts: globalCostRates.otherFlat || 0 }))}
-                  className="text-xs text-navy underline"
+                  className="text-xs text-[#3486cf] underline"
                   title="Fill in default rates from Settings → Cost Rates"
                 >
                   Apply global rates
@@ -548,7 +548,7 @@ export default function BookingDetailPage() {
             </button>
             {booking.depositCheckoutUrl && (
               <a href={booking.depositCheckoutUrl} target="_blank" rel="noreferrer"
-                className="text-xs text-navy/60 hover:text-navy underline text-center">
+                className="text-xs text-[#3486cf]/60 hover:text-[#3486cf] underline text-center">
                 View deposit page →
               </a>
             )}
@@ -597,7 +597,7 @@ export default function BookingDetailPage() {
                 a.href = url; a.download = `booking-${id}.ics`; a.click();
                 URL.revokeObjectURL(url);
               }}
-              className="text-xs text-navy/60 hover:text-navy underline text-center">
+              className="text-xs text-[#3486cf]/60 hover:text-[#3486cf] underline text-center">
               Download .ics (Apple / Outlook)
             </button>
           </div>

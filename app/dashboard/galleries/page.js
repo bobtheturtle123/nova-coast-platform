@@ -27,7 +27,7 @@ export default function GalleriesPage() {
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
         </div>
       ) : galleries.length === 0 ? (
         <div className="card p-12 text-center text-gray-400 text-sm">
@@ -40,7 +40,7 @@ export default function GalleriesPage() {
             <Link key={g.id} href={`/dashboard/galleries/${g.id}`}
               className="card p-5 card-hover block">
               <div className="flex items-start justify-between mb-3">
-                <p className="text-sm font-medium text-navy truncate">{g.bookingAddress || "Gallery"}</p>
+                <p className="text-sm font-medium text-[#0F172A] truncate">{g.bookingAddress || "Gallery"}</p>
                 <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ml-2
                   ${g.unlocked ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>
                   {g.unlocked ? "Unlocked" : "Locked"}

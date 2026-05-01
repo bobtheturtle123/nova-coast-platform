@@ -148,8 +148,12 @@ export async function POST(req) {
           adminAuth.getUser(ctx.uid),
         ]);
         if (tenant) {
+          const resendKey = process.env.RESEND_API_KEY;
+          if (!resendKey) {
+            console.warn("[email] RESEND_API_KEY not set — booking notifications skipped");
+          } else {
           const { Resend } = await import("resend");
-          const resend = new Resend(process.env.RESEND_API_KEY);
+          const resend = new Resend(resendKey);
           const primary   = tenant.branding?.primaryColor || "#0b2a55";
           const bizName   = tenant.branding?.businessName || tenant.businessName || "KyoriaOS";
           const fromEmail = tenant.branding?.fromEmail || "noreply@kyoriaos.com";
@@ -226,25 +230,19 @@ export async function POST(req) {
             tenant,
             photographerPhone,
           }).catch(() => {});
-        }
-      } catch (emailErr) {
-        console.error("Notification email error (non-fatal):", emailErr);
-      }
-    }
+          } // end: resendKey exists
 
-    // Auto-send agent portal link (fire-and-forget)
-    if (sendNotification !== false) {
-      try {
-        const portalTenant = tenant || await getTenantById(ctx.tenantId);
-        if (portalTenant) {
+          // Agent portal link — tenant is in scope here
           sendAgentPortalEmail({
             tenantId: ctx.tenantId,
             booking: bookingData,
-            tenant: portalTenant,
+            tenant,
             reason: "booking",
           }).catch(() => {});
-        }
-      } catch {}
+        } // end: if (tenant)
+      } catch (emailErr) {
+        console.error("Notification email error (non-fatal):", emailErr);
+      }
     }
 
     return Response.json({ bookingId, ok: true });

@@ -70,7 +70,7 @@ export default function AiChatButton() {
         <div className="fixed bottom-20 right-5 z-50 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col"
           style={{ maxHeight: "calc(100vh - 120px)" }}>
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-navy rounded-t-xl">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-[#3486cf] rounded-t-xl">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
@@ -99,8 +99,8 @@ export default function AiChatButton() {
               <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[85%] px-3 py-2 rounded-xl text-sm leading-relaxed whitespace-pre-wrap ${
                   m.role === "user"
-                    ? "bg-navy text-white rounded-br-sm"
-                    : "bg-gray-100 text-charcoal rounded-bl-sm"
+                    ? "bg-[#3486cf] text-white rounded-br-sm"
+                    : "bg-gray-100 text-[#0F172A] rounded-bl-sm"
                 }`}>
                   {m.content}
                 </div>
@@ -124,7 +124,7 @@ export default function AiChatButton() {
                 <p className="text-[10px] text-gray-400 uppercase tracking-wide">Suggested questions</p>
                 {SUGGESTED_QUESTIONS.map((q) => (
                   <button key={q} onClick={() => sendMessage(q)}
-                    className="w-full text-left text-xs px-3 py-2 border border-gray-200 rounded-lg hover:border-navy/30 hover:bg-navy/5 transition-colors text-gray-600">
+                    className="w-full text-left text-xs px-3 py-2 border border-gray-200 rounded-lg hover:border-[#3486cf]/30 hover:bg-[#3486cf]/5 transition-colors text-gray-600">
                     {q}
                   </button>
                 ))}
@@ -144,10 +144,10 @@ export default function AiChatButton() {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask anything…"
                 disabled={loading}
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-navy/40 transition-colors disabled:opacity-50"
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#3486cf]/40 transition-colors disabled:opacity-50"
               />
               <button onClick={() => sendMessage()} disabled={!input.trim() || loading}
-                className="bg-navy text-white rounded-lg px-3 py-2 text-sm font-medium hover:bg-navy/90 transition-colors disabled:opacity-40">
+                className="bg-[#3486cf] text-white rounded-lg px-3 py-2 text-sm font-medium hover:bg-[#3486cf]/90 transition-colors disabled:opacity-40">
                 ↑
               </button>
             </div>
@@ -161,7 +161,7 @@ export default function AiChatButton() {
       {/* Floating button */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-5 right-5 z-50 w-12 h-12 bg-navy text-white rounded-full shadow-lg hover:bg-navy/90 transition-all flex items-center justify-center"
+        className="fixed bottom-5 right-5 z-50 w-12 h-12 bg-[#3486cf] text-white rounded-full shadow-lg hover:bg-[#3486cf]/90 transition-all flex items-center justify-center"
         title="KyoriaOS Assistant"
       >
         {open ? (

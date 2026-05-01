@@ -54,7 +54,7 @@ function TeamGroupModal({ group, allAgents, onClose, onSaved }) {
       <div className="absolute inset-0" onClick={onClose} />
       <div className="modal-card relative w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 sticky top-0 bg-white" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-          <h2 className="font-semibold text-charcoal">{isEdit ? "Edit Team" : "New Team"}</h2>
+          <h2 className="font-semibold text-[#0F172A]">{isEdit ? "Edit Team" : "New Team"}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -81,11 +81,11 @@ function TeamGroupModal({ group, allAgents, onClose, onSaved }) {
                     checked={form.members.includes(a.id)}
                     onChange={() => toggleMember(a.id)}
                     className="rounded" />
-                  <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-charcoal flex-shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-[#0F172A] flex-shrink-0">
                     {a.name?.[0]?.toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm text-charcoal font-medium truncate">{a.name}</p>
+                    <p className="text-sm text-[#0F172A] font-medium truncate">{a.name}</p>
                     <p className="text-xs text-gray-400 truncate">{a.email}</p>
                   </div>
                 </label>
@@ -147,7 +147,7 @@ function CustomerModal({ agent, onClose, onSaved }) {
       <div className="absolute inset-0" onClick={onClose} />
       <div className="modal-card relative w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-          <h2 className="font-semibold text-charcoal">{isEdit ? "Edit Customer" : "New Customer"}</h2>
+          <h2 className="font-semibold text-[#0F172A]">{isEdit ? "Edit Customer" : "New Customer"}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -339,7 +339,7 @@ export default function AgentsPage() {
         ].map((tab) => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === tab.id ? "border-charcoal text-charcoal" : "border-transparent text-gray-500 hover:text-gray-700"
+              activeTab === tab.id ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}>
             {tab.label}
           </button>
@@ -365,12 +365,12 @@ export default function AgentsPage() {
                   <div key={team.id} className="card">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <p className="font-semibold text-charcoal">{team.name}</p>
+                        <p className="font-semibold text-[#0F172A]">{team.name}</p>
                         {team.notes && <p className="text-xs text-gray-400 mt-0.5">{team.notes}</p>}
                       </div>
                       <div className="flex gap-1.5">
                         <button onClick={() => { setEditingTeam(team); setShowTeamModal(true); }}
-                          className="text-gray-400 hover:text-charcoal transition-colors">
+                          className="text-gray-400 hover:text-[#0F172A] transition-colors">
                           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
@@ -388,10 +388,10 @@ export default function AgentsPage() {
                         ? <p className="text-xs text-gray-400">No members yet</p>
                         : memberAgents.map((a) => (
                           <div key={a.id} className="flex items-center gap-2">
-                            <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-charcoal flex-shrink-0">
+                            <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-[#0F172A] flex-shrink-0">
                               {a.name?.[0]?.toUpperCase()}
                             </div>
-                            <p className="text-xs text-charcoal truncate">{a.name}</p>
+                            <p className="text-xs text-[#0F172A] truncate">{a.name}</p>
                           </div>
                         ))
                       }
@@ -438,7 +438,7 @@ export default function AgentsPage() {
 
           {loading ? (
             <div className="flex justify-center py-24">
-              <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
             </div>
           ) : agents.length === 0 ? (
             <div className="card p-16 text-center text-gray-400">
@@ -472,11 +472,11 @@ export default function AgentsPage() {
                   onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}>
                   {/* Name + avatar */}
                   <div className="col-span-4 flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-navy/8 flex items-center justify-center text-navy font-semibold text-sm flex-shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-[#3486cf]/10 flex items-center justify-center text-[#3486cf] font-semibold text-sm flex-shrink-0">
                       {agent.name?.[0]?.toUpperCase() || "?"}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-charcoal truncate">{agent.name}</p>
+                      <p className="text-sm font-medium text-[#0F172A] truncate">{agent.name}</p>
                       <p className="text-xs text-gray-400">
                         {agent.company ? `${agent.company} · ` : ""}
                         {agent.lastOrderAt ? new Date(agent.lastOrderAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "No orders"}
@@ -499,14 +499,14 @@ export default function AgentsPage() {
 
                   {/* Revenue */}
                   <div className="col-span-2 text-right">
-                    <p className="text-sm font-semibold text-charcoal">${(agent.totalSpent || 0).toLocaleString()}</p>
+                    <p className="text-sm font-semibold text-[#0F172A]">${(agent.totalSpent || 0).toLocaleString()}</p>
                   </div>
 
                   {/* Actions */}
                   <div className="col-span-1 flex items-center justify-end gap-2">
                     <button
                       onClick={() => { setEditing(agent); setShowModal(true); }}
-                      className="text-gray-400 hover:text-navy transition-colors"
+                      className="text-gray-400 hover:text-[#3486cf] transition-colors"
                       title="Edit"
                     >
                       <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -515,7 +515,7 @@ export default function AgentsPage() {
                     </button>
                     <Link
                       href={`/dashboard/listings?search=${encodeURIComponent(agent.email)}`}
-                      className="text-gray-400 hover:text-navy transition-colors"
+                      className="text-gray-400 hover:text-[#3486cf] transition-colors"
                       title="View listings"
                     >
                       <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

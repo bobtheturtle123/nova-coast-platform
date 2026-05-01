@@ -408,79 +408,50 @@
   }
 
   /* ── Page layout helpers ─────────────────────────────────────────────── */
-  .page-header { @apply mb-8; }
+  .page-header { @apply mb-6; }
 
   .page-title {
-    @apply text-[22px] font-semibold tracking-tight;
-    color: var(--text-primary);
+    font-size: 26px;
+    font-weight: 700;
+    color: #0F172A;
+    letter-spacing: -0.025em;
     line-height: 1.2;
   }
 
   .page-subtitle {
-    @apply text-sm mt-1;
-    color: var(--text-muted);
+    font-size: 13.5px;
+    color: #6B7280;
+    margin-top: 4px;
   }
 
   /* ── Stat / metric cards ─────────────────────────────────────────────── */
-  .stat-card {
-    @apply bg-white p-5;
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
-  }
-
-  .stat-card-gold {
-    @apply p-5;
-    border-radius: var(--radius-card);
-    border: 1px solid rgb(201 169 110 / 0.22);
-    background: linear-gradient(145deg, #fffdf7 0%, #fef8ea 55%, #fdf3df 100%);
-    box-shadow: 0 1px 4px 0 rgb(201 169 110 / 0.12);
-  }
-
-  .stat-card-navy {
-    @apply p-5;
-    border-radius: var(--radius-card);
-    border: 1px solid rgb(15 23 42 / 0.09);
-    background: linear-gradient(145deg, #f6f8fd 0%, #edf0f9 55%, #e8ecf6 100%);
-    box-shadow: 0 1px 4px 0 rgb(15 23 42 / 0.06);
-  }
-
-  .stat-card-green {
-    @apply p-5;
-    border-radius: var(--radius-card);
-    border: 1px solid rgb(16 185 129 / 0.15);
-    background: linear-gradient(145deg, #f0fdf9 0%, #ecfdf7 55%, #ddfaef 100%);
-    box-shadow: 0 1px 4px 0 rgb(16 185 129 / 0.09);
-  }
-
-  .stat-card-blue {
-    @apply p-5;
-    border-radius: var(--radius-card);
-    border: 1px solid rgb(99 102 241 / 0.14);
-    background: linear-gradient(145deg, #f5f3ff 0%, #ede9fe 55%, #e4dffd 100%);
-    box-shadow: 0 1px 4px 0 rgb(99 102 241 / 0.08);
-  }
-
+  .stat-card,
+  .stat-card-gold,
+  .stat-card-navy,
+  .stat-card-green,
+  .stat-card-blue,
   .stat-card-rose {
-    @apply p-5;
+    @apply bg-white;
+    padding: 24px;
     border-radius: var(--radius-card);
-    border: 1px solid rgb(244 63 94 / 0.13);
-    background: linear-gradient(145deg, #fff1f2 0%, #ffe4e6 55%, #ffd6d9 100%);
-    box-shadow: 0 1px 4px 0 rgb(244 63 94 / 0.08);
+    border: 1px solid #E9ECF0;
+    box-shadow: var(--shadow-card);
   }
 
   /* ── Icon badges ─────────────────────────────────────────────────────── */
   .icon-badge {
     @apply flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0;
+    background: #F0F7FD;
+    color: #6BAED0;
   }
 
-  .icon-badge-navy   { @apply icon-badge; background: rgb(15 23 42 / 0.08);   color: #0F172A; }
-  .icon-badge-gold   { @apply icon-badge; background: rgb(201 169 110 / 0.14); color: #A8843F; }
-  .icon-badge-green  { @apply icon-badge bg-emerald-50  text-emerald-600; }
-  .icon-badge-blue   { @apply icon-badge bg-blue-50    text-blue-600; }
+  .icon-badge-navy   { @apply icon-badge; background: #F0F7FD;   color: #6BAED0; }
+  .icon-badge-gold   { @apply icon-badge; background: #FEF3C7;   color: #D97706; }
+  .icon-badge-green  { @apply icon-badge; background: #ECFDF5;   color: #059669; }
+  .icon-badge-blue   { @apply icon-badge; background: #F0F7FD;   color: #6BAED0; }
   .icon-badge-purple { @apply icon-badge bg-purple-50  text-purple-600; }
-  .icon-badge-red    { @apply icon-badge bg-red-50     text-red-500; }
-  .icon-badge-amber  { @apply icon-badge bg-amber-50   text-amber-600; }
+  .icon-badge-red    { @apply icon-badge; background: #FEF2F2;   color: #DC2626; }
+  .icon-badge-amber  { @apply icon-badge; background: #FEF3C7;   color: #D97706; }
   .icon-badge-teal   { @apply icon-badge bg-teal-50    text-teal-600; }
 
   /* ── Metric trend chips ──────────────────────────────────────────────── */
@@ -490,12 +461,12 @@
 
   /* ── Data table rows ─────────────────────────────────────────────────── */
   .table-row {
-    @apply flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors;
-    border-bottom: 1px solid var(--border-subtle);
+    @apply flex items-center gap-4 px-6 py-4 cursor-pointer transition-colors;
+    border-bottom: 1px solid #F3F4F6;
   }
 
   .table-row:last-child { border-bottom: none; }
-  .table-row:hover { background: rgb(15 23 42 / 0.022); }
+  .table-row:hover { background: #F9FAFB; }
 
   /* ── Modal shells ────────────────────────────────────────────────────── */
   .modal-backdrop {
@@ -516,6 +487,289 @@
     @apply rounded-lg animate-pulse;
     background: linear-gradient(90deg, #f0f2f6 25%, #e8ebf0 50%, #f0f2f6 75%);
     background-size: 200% 100%;
+  }
+
+  /* ── KyoriaOS Page Shell ─────────────────────────────────────────────── */
+  .ky-page {
+    min-height: 100vh;
+    background: #F7F8FA;
+  }
+
+  .ky-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* ── KyoriaOS Page Header ────────────────────────────────────────────── */
+  .ky-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .ky-page-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* ── KyoriaOS Section Cards ──────────────────────────────────────────── */
+  .ky-section {
+    background: #ffffff;
+    border: 1px solid #E9ECF0;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .ky-section-hd {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid #E9ECF0;
+  }
+
+  .ky-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #0F172A;
+  }
+
+  /* ── KyoriaOS Icon Halos ─────────────────────────────────────────────── */
+  .ky-icon-sm {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: #F2F7FB;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .ky-icon-md {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #F0F7FD;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ── KyoriaOS Filter Bar ─────────────────────────────────────────────── */
+  .ky-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-bottom: 1px solid #E9ECF0;
+    background: #FAFAFA;
+  }
+
+  .ky-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #E9ECF0;
+    border-radius: 8px;
+    padding: 7px 12px;
+    flex: 1;
+    max-width: 280px;
+    transition: border-color .15s;
+  }
+
+  .ky-search-wrap:focus-within { border-color: rgba(52,134,207,0.35); }
+
+  .ky-search-wrap input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 13.5px;
+    color: #374151;
+    width: 100%;
+  }
+
+  .ky-search-wrap input::placeholder { color: #9CA3AF; }
+
+  /* ── KyoriaOS Segmented Control ──────────────────────────────────────── */
+  .ky-seg {
+    display: flex;
+    align-items: center;
+    border: 1px solid #E9ECF0;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .ky-seg-btn {
+    padding: 6px 14px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #9CA3AF;
+    background: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background .12s, color .12s;
+    white-space: nowrap;
+  }
+
+  .ky-seg-btn.active,
+  .ky-seg-btn[data-active="true"] {
+    background: #3486cf;
+    color: #fff;
+  }
+
+  /* ── KyoriaOS Table ──────────────────────────────────────────────────── */
+  .ky-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  .ky-table thead tr {
+    background: #FAFAFA;
+    border-bottom: 1px solid #E9ECF0;
+  }
+
+  .ky-table th {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding: 12px 16px;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .ky-table th:first-child { padding-left: 24px; }
+  .ky-table th:last-child  { padding-right: 24px; text-align: right; }
+
+  .ky-table tbody tr {
+    border-bottom: 1px solid #F3F4F6;
+    transition: background .1s ease;
+  }
+
+  .ky-table tbody tr:last-child { border-bottom: none; }
+  .ky-table tbody tr:hover { background: #F9FAFB; }
+
+  .ky-table td {
+    padding: 16px;
+    color: #374151;
+    font-size: 14px;
+    vertical-align: middle;
+  }
+
+  .ky-table td:first-child { padding-left: 24px; }
+  .ky-table td:last-child  { padding-right: 24px; text-align: right; }
+
+  /* ── KyoriaOS Empty State ────────────────────────────────────────────── */
+  .ky-empty {
+    padding: 56px 24px;
+    text-align: center;
+  }
+
+  .ky-empty-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #F3F4F6;
+    border: 1px solid #E9ECF0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 14px;
+  }
+
+  .ky-empty-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #6B7280;
+  }
+
+  .ky-empty-sub {
+    font-size: 12.5px;
+    color: #9CA3AF;
+    margin-top: 4px;
+  }
+
+  /* ── KyoriaOS Badges ─────────────────────────────────────────────────── */
+  .ky-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  .ky-badge-blue   { color: #3486cf; background: #E8F2FD; }
+  .ky-badge-green  { color: #059669; background: #ECFDF5; }
+  .ky-badge-amber  { color: #D97706; background: #FEF3C7; }
+  .ky-badge-orange { color: #B45309; background: #FEF3C7; }
+  .ky-badge-gray   { color: #6B7280; background: #F3F4F6; }
+  .ky-badge-red    { color: #DC2626; background: #FEF2F2; }
+  .ky-badge-purple { color: #7C3AED; background: #F5F3FF; }
+
+  /* ── KyoriaOS Form Section ───────────────────────────────────────────── */
+  .ky-form-section {
+    padding: 24px;
+    border-bottom: 1px solid #E9ECF0;
+  }
+
+  .ky-form-section:last-child { border-bottom: none; }
+
+  .ky-field-label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 6px;
+  }
+
+  .ky-field-hint {
+    font-size: 12px;
+    color: #9CA3AF;
+    margin-top: 4px;
+  }
+
+  /* ── KyoriaOS Avatar ─────────────────────────────────────────────────── */
+  .ky-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .ky-avatar-sm {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
   }
 }
 

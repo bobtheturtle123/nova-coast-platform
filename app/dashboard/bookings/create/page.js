@@ -61,7 +61,7 @@ function AutocompleteInput({ value, onChange, onSelect, suggestions, placeholder
           {filtered.map((s, i) => (
             <li key={i}
               onMouseDown={(e) => { e.preventDefault(); onSelect(s); setOpen(false); }}
-              className="px-3 py-2 text-sm hover:bg-navy/5 cursor-pointer text-charcoal">
+              className="px-3 py-2 text-sm hover:bg-[#3486cf]/5 cursor-pointer text-[#0F172A]">
               {s}
             </li>
           ))}
@@ -428,14 +428,14 @@ export default function CreateBookingPage() {
 
   if (loading) return (
     <div className="p-8 flex justify-center h-64 items-center">
-      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
     </div>
   );
 
   return (
     <div className="p-6 max-w-3xl">
       <div className="flex items-center gap-3 mb-6">
-        <Link href="/dashboard/bookings" className="text-sm text-gray-400 hover:text-navy">← Bookings</Link>
+        <Link href="/dashboard/bookings" className="text-sm text-gray-400 hover:text-[#3486cf]">← Bookings</Link>
         <span className="text-gray-300">/</span>
         <h1 className="page-title">New Booking</h1>
       </div>
@@ -448,7 +448,7 @@ export default function CreateBookingPage() {
 
         {/* ── Client / Agent ────────────────────────────────── */}
         <div className="card">
-          <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-4">Client / Agent Info</h2>
+          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-4">Client / Agent Info</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <AutocompleteInput
@@ -491,7 +491,7 @@ export default function CreateBookingPage() {
 
         {/* ── Property ──────────────────────────────────────── */}
         <div className="card">
-          <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-4">Property</h2>
+          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-4">Property</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <PlacesAutocomplete
@@ -530,7 +530,7 @@ export default function CreateBookingPage() {
               <input type="text" value={form.zip} onChange={set("zip")} className="input-field w-full" maxLength={5} />
             </div>
             <div>
-              <label className="label-field">Square Footage {tier && <span className="text-xs text-navy font-normal ml-1">({tier} tier)</span>}</label>
+              <label className="label-field">Square Footage {tier && <span className="text-xs text-[#3486cf] font-normal ml-1">({tier} tier)</span>}</label>
               <input type="number" value={form.sqft} onChange={set("sqft")} className="input-field w-full" placeholder="2400" />
             </div>
           </div>
@@ -559,7 +559,7 @@ export default function CreateBookingPage() {
         {/* ── Services ──────────────────────────────────────── */}
         {(catalog.packages.length > 0 || catalog.services.length > 0 || catalog.addons.length > 0) && (
           <div className="card">
-            <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-4">Services</h2>
+            <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-4">Services</h2>
 
             {catalog.packages.length > 0 && (
               <div className="mb-4">
@@ -571,10 +571,10 @@ export default function CreateBookingPage() {
                       <button key={p.id} type="button"
                         onClick={() => setForm((f) => ({ ...f, packageId: f.packageId === p.id ? "" : p.id, serviceIds: [] }))}
                         className={`text-left p-3 rounded-lg border text-sm transition-colors ${
-                          form.packageId === p.id ? "border-navy bg-navy/5 text-navy" : "border-gray-200 text-gray-700 hover:border-gray-300"
+                          form.packageId === p.id ? "border-[#3486cf] bg-[#3486cf]/5 text-[#3486cf]" : "border-gray-200 text-gray-700 hover:border-gray-300"
                         }`}>
                         <p className="font-medium">{p.name}</p>
-                        <p className="text-xs text-navy font-semibold mt-0.5">{formatPrice(price)}</p>
+                        <p className="text-xs text-[#3486cf] font-semibold mt-0.5">{formatPrice(price)}</p>
                       </button>
                     );
                   })}
@@ -592,7 +592,7 @@ export default function CreateBookingPage() {
                       <button key={s.id} type="button"
                         onClick={() => { toggleService(s.id); setForm((f) => ({ ...f, packageId: "" })); }}
                         className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
-                          form.serviceIds.includes(s.id) ? "border-navy bg-navy text-white" : "border-gray-200 text-gray-600 hover:border-navy/40"
+                          form.serviceIds.includes(s.id) ? "border-[#3486cf] bg-[#3486cf] text-white" : "border-gray-200 text-gray-600 hover:border-[#3486cf]/40"
                         }`}>
                         {s.name}{price > 0 ? ` · ${formatPrice(price)}` : ""}
                       </button>
@@ -611,7 +611,7 @@ export default function CreateBookingPage() {
                     return (
                       <button key={a.id} type="button" onClick={() => toggleAddon(a.id)}
                         className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
-                          form.addonIds.includes(a.id) ? "border-gold bg-gold/10 text-charcoal" : "border-gray-200 text-gray-600 hover:border-gold/40"
+                          form.addonIds.includes(a.id) ? "border-gold bg-gold/10 text-[#0F172A]" : "border-gray-200 text-gray-600 hover:border-gold/40"
                         }`}>
                         {a.name}{price > 0 ? ` · ${formatPrice(price)}` : ""}
                       </button>
@@ -625,7 +625,7 @@ export default function CreateBookingPage() {
 
         {/* ── Schedule + Team Availability ──────────────────── */}
         <div className="card">
-          <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-4">Schedule</h2>
+          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-4">Schedule</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
             <div>
               <label className="label-field">Shoot Date</label>
@@ -673,7 +673,7 @@ export default function CreateBookingPage() {
           ))}
           <button type="button"
             onClick={() => setForm((f) => ({ ...f, additionalAppointments: [...f.additionalAppointments, { date: "", time: "" }] }))}
-            className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5 transition-colors mb-5">
+            className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded hover:bg-[#3486cf]/5 transition-colors mb-5">
             + Add Another Appointment
           </button>
 
@@ -706,16 +706,16 @@ export default function CreateBookingPage() {
                   return (
                     <div key={m.id}
                       className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
-                        isSelected   ? "border-navy bg-navy/5"
-                        : canSelect  ? "border-gray-200 hover:border-navy/40"
+                        isSelected   ? "border-[#3486cf] bg-[#3486cf]/5"
+                        : canSelect  ? "border-gray-200 hover:border-[#3486cf]/40"
                         : "border-gray-100 bg-gray-50 opacity-60"
                       }`}>
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5"
-                        style={{ background: m.color || "#0b2a55" }}>
+                        style={{ background: m.color || "#3486cf" }}>
                         {m.name?.[0]?.toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0 cursor-pointer" onClick={() => canSelect && assignPhotographer(m)}>
-                        <p className="text-sm font-medium text-charcoal">{m.name}</p>
+                        <p className="text-sm font-medium text-[#0F172A]">{m.name}</p>
                         <p className="text-xs text-gray-400 truncate">
                           {m.skills?.length > 0 ? m.skills.slice(0, 3).join(", ") + (m.skills.length > 3 ? ` +${m.skills.length-3}` : "") : "All services"}
                         </p>
@@ -752,15 +752,15 @@ export default function CreateBookingPage() {
                           </div>
                         )}
                         {isSelected
-                          ? <span className="text-navy text-xs font-semibold">✓ Primary</span>
+                          ? <span className="text-[#3486cf] text-xs font-semibold">✓ Primary</span>
                           : (
                             <button
                               type="button"
                               onClick={() => toggleAdditional(m)}
                               className={`text-[11px] px-2 py-0.5 rounded-full border font-medium transition-colors ${
                                 isAdditional
-                                  ? "bg-navy/10 text-navy border-navy/20"
-                                  : "text-gray-400 border-gray-200 hover:border-navy/30 hover:text-navy"
+                                  ? "bg-[#3486cf]/10 text-[#3486cf] border-[#3486cf]/20"
+                                  : "text-gray-400 border-gray-200 hover:border-[#3486cf]/30 hover:text-[#3486cf]"
                               }`}
                             >
                               {isAdditional ? "✓ Co-photographer" : "+ Add as co-photographer"}
@@ -776,14 +776,14 @@ export default function CreateBookingPage() {
                 <div
                   onClick={assignTbd}
                   className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                    form.photographerTbd ? "border-navy bg-navy/5" : "border-dashed border-gray-300 hover:border-navy/40"
+                    form.photographerTbd ? "border-[#3486cf] bg-[#3486cf]/5" : "border-dashed border-gray-300 hover:border-[#3486cf]/40"
                   }`}>
                   <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs font-bold flex-shrink-0">?</div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-500">Assign Later / TBD</p>
                     <p className="text-xs text-gray-400">Book now, assign photographer later</p>
                   </div>
-                  {form.photographerTbd && <span className="text-navy text-xs font-semibold">✓ Selected</span>}
+                  {form.photographerTbd && <span className="text-[#3486cf] text-xs font-semibold">✓ Selected</span>}
                 </div>
               </div>
 
@@ -807,31 +807,31 @@ export default function CreateBookingPage() {
 
           {form.shootDate && team.length === 0 && (
             <p className="text-xs text-gray-400">
-              No team members yet. <Link href="/dashboard/team" className="text-navy underline">Add team members →</Link>
+              No team members yet. <Link href="/dashboard/team" className="text-[#3486cf] underline">Add team members →</Link>
             </p>
           )}
         </div>
 
         {/* ── Pricing ───────────────────────────────────────── */}
         <div className="card">
-          <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-4">Pricing</h2>
+          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-4">Pricing</h2>
 
           {/* Auto-calculated breakdown */}
           {(form.packageId || form.serviceIds.length > 0 || form.addonIds.length > 0) ? (
             <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-1 text-sm">
               {pricing.base > 0 && (
-                <div className="flex justify-between text-charcoal">
+                <div className="flex justify-between text-[#0F172A]">
                   <span>{form.packageId ? (catalog.packages.find((p) => p.id === form.packageId)?.name || "Package") : "Services"}</span>
                   <span>{formatPrice(pricing.base)}</span>
                 </div>
               )}
               {pricing.addonTotal > 0 && (
-                <div className="flex justify-between text-charcoal">
+                <div className="flex justify-between text-[#0F172A]">
                   <span>Add-ons</span><span>{formatPrice(pricing.addonTotal)}</span>
                 </div>
               )}
               {form.customLineItems.map((item, i) => (
-                <div key={i} className="flex justify-between text-charcoal">
+                <div key={i} className="flex justify-between text-[#0F172A]">
                   <span>{item.label}</span>
                   <div className="flex items-center gap-2">
                     <span>{formatPrice(item.price)}</span>
@@ -840,9 +840,9 @@ export default function CreateBookingPage() {
                   </div>
                 </div>
               ))}
-              <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between font-semibold text-charcoal">
+              <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between font-semibold text-[#0F172A]">
                 <span>Total</span>
-                <span className="text-navy">{formatPrice(pricing.total)}</span>
+                <span className="text-[#3486cf]">{formatPrice(pricing.total)}</span>
               </div>
             </div>
           ) : (
@@ -865,13 +865,13 @@ export default function CreateBookingPage() {
           <div className="flex items-center gap-2 mt-4">
             <input type="checkbox" id="depositPaid" checked={form.depositPaid}
               onChange={(e) => setForm((f) => ({ ...f, depositPaid: e.target.checked }))} />
-            <label htmlFor="depositPaid" className="text-sm text-charcoal cursor-pointer">Deposit already paid</label>
+            <label htmlFor="depositPaid" className="text-sm text-[#0F172A] cursor-pointer">Deposit already paid</label>
           </div>
         </div>
 
         {/* ── Notes ─────────────────────────────────────────── */}
         <div className="card">
-          <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-3">Notes</h2>
+          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-3">Notes</h2>
           <textarea value={form.notes} onChange={set("notes")} rows={3}
             placeholder="Special instructions, access notes, lockbox code, etc."
             className="input-field w-full text-sm" />
@@ -879,11 +879,11 @@ export default function CreateBookingPage() {
 
         {/* ── Notifications ─────────────────────────────────── */}
         <div className="card">
-          <h2 className="font-semibold text-charcoal text-sm uppercase tracking-wide mb-3">Notifications</h2>
+          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-3">Notifications</h2>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="sendNotif" checked={form.sendNotification}
               onChange={(e) => setForm((f) => ({ ...f, sendNotification: e.target.checked }))} />
-            <label htmlFor="sendNotif" className="text-sm text-charcoal cursor-pointer">
+            <label htmlFor="sendNotif" className="text-sm text-[#0F172A] cursor-pointer">
               Send booking confirmation to client
             </label>
           </div>

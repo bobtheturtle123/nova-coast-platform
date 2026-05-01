@@ -180,7 +180,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                   <button key={t} type="button" onClick={() => setType(t)}
                     className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
                       type === t
-                        ? "border-navy bg-navy text-white"
+                        ? "border-[#3486cf] bg-[#3486cf] text-white"
                         : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
                     }`}>
                     {meta.singular}
@@ -199,12 +199,12 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
               }
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-charcoal truncate">{form.name || "Product Name"}</p>
+              <p className="font-semibold text-[#0F172A] truncate">{form.name || "Product Name"}</p>
               {form.tagline && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{form.tagline}</p>}
               {!form.tagline && form.description && (
                 <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{form.description}</p>
               )}
-              <p className="text-sm font-semibold text-charcoal mt-1">
+              <p className="text-sm font-semibold text-[#0F172A] mt-1">
                 {form.tiered
                   ? (() => { const tv = Object.values(form.priceTiers).filter(v => v > 0); return tv.length > 0 ? `From $${Math.min(...tv).toLocaleString()}` : "Set tier prices below"; })()
                   : `$${Number(form.price).toLocaleString()}`}
@@ -234,13 +234,13 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
               <div className="flex gap-2 flex-wrap mb-3">
                 {form.mediaUrls.map((url, idx) => (
                   <div key={url + idx} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 group"
-                    style={{ borderColor: idx === 0 ? "#0b2a55" : "#e5e7eb" }}>
+                    style={{ borderColor: idx === 0 ? "#3486cf" : "#e5e7eb" }}>
                     {url.match(/\.(mp4|mov|webm)$/i)
                       ? <video src={url} className="w-full h-full object-cover" />
                       : <img src={url} alt="" className="w-full h-full object-cover" />
                     }
                     {idx === 0 && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-navy/70 text-white text-[9px] text-center py-0.5 font-semibold tracking-wide">
+                      <div className="absolute bottom-0 left-0 right-0 bg-[#3486cf]/70 text-white text-[9px] text-center py-0.5 font-semibold tracking-wide">
                         COVER
                       </div>
                     )}
@@ -259,7 +259,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                       </div>
                       {idx !== 0 && (
                         <button type="button" onClick={() => setCover(idx)}
-                          className="text-[9px] text-white/90 bg-navy/60 hover:bg-navy px-1.5 py-0.5 rounded font-semibold tracking-wide">
+                          className="text-[9px] text-white/90 bg-[#3486cf]/60 hover:bg-[#3486cf] px-1.5 py-0.5 rounded font-semibold tracking-wide">
                           Set Cover
                         </button>
                       )}
@@ -303,14 +303,14 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                     <label key={svc.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
                       <input type="checkbox" checked={form.includes.includes(svc.id)}
                         onChange={() => toggleService(svc.id)} className="rounded" />
-                      <span className="text-sm text-charcoal">{svc.name}</span>
+                      <span className="text-sm text-[#0F172A]">{svc.name}</span>
                     </label>
                   ))}
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <input type="checkbox" id="featured" checked={form.featured} onChange={field("featured")} className="rounded" />
-                <label htmlFor="featured" className="text-sm font-medium text-charcoal cursor-pointer">
+                <label htmlFor="featured" className="text-sm font-medium text-[#0F172A] cursor-pointer">
                   Mark as featured / Most Popular
                 </label>
               </div>
@@ -331,7 +331,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                         <label key={pkg.id} className="flex items-center gap-2.5 cursor-pointer py-0.5">
                           <input type="checkbox" checked={form.showWith.includes(pkg.id)}
                             onChange={() => toggleShowWith(pkg.id)} className="rounded" />
-                          <span className="text-sm text-charcoal">{pkg.name}</span>
+                          <span className="text-sm text-[#0F172A]">{pkg.name}</span>
                         </label>
                       ))}
                     </div>
@@ -345,7 +345,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                         <label key={svc.id} className="flex items-center gap-2.5 cursor-pointer py-0.5">
                           <input type="checkbox" checked={form.showWith.includes(svc.id)}
                             onChange={() => toggleShowWith(svc.id)} className="rounded" />
-                          <span className="text-sm text-charcoal">{svc.name}</span>
+                          <span className="text-sm text-[#0F172A]">{svc.name}</span>
                         </label>
                       ))}
                     </div>
@@ -363,7 +363,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                 <span className="text-xs text-gray-500">Tier pricing</span>
                 <div
                   onClick={() => setForm((f) => ({ ...f, tiered: !f.tiered }))}
-                  className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${form.tiered ? "bg-navy" : "bg-gray-300"}`}
+                  className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${form.tiered ? "bg-[#3486cf]" : "bg-gray-300"}`}
                 >
                   <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.tiered ? "translate-x-4" : "translate-x-0.5"}`} />
                 </div>
@@ -453,7 +453,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                   <button key={m.id} type="button" onClick={() => togglePhotographer(m.id)}
                     className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors ${
                       form.assignedPhotographers.includes(m.id)
-                        ? "bg-charcoal text-white border-charcoal"
+                        ? "bg-[#3486cf] text-white border-[#3486cf]"
                         : "border-gray-200 text-gray-600 hover:border-gray-300"
                     }`}>
                     <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
@@ -473,7 +473,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
               <input type="checkbox" id="isTwilight" checked={form.isTwilight || false}
                 onChange={(e) => setForm((f) => ({ ...f, isTwilight: e.target.checked }))}
                 className="rounded" />
-              <label htmlFor="isTwilight" className="text-sm text-charcoal cursor-pointer">
+              <label htmlFor="isTwilight" className="text-sm text-[#0F172A] cursor-pointer">
                 Twilight service — triggers sunset-timed second appointment on booking
               </label>
             </div>
@@ -482,7 +482,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
           {/* Active toggle */}
           <div className="flex items-center gap-3 pt-1">
             <input type="checkbox" id="active" checked={form.active} onChange={field("active")} className="rounded" />
-            <label htmlFor="active" className="text-sm text-charcoal cursor-pointer">
+            <label htmlFor="active" className="text-sm text-[#0F172A] cursor-pointer">
               Active — show on booking page
             </label>
           </div>
@@ -531,7 +531,7 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
       {/* Name */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-charcoal truncate">{item.name}</p>
+          <p className="text-sm font-semibold text-[#0F172A] truncate">{item.name}</p>
           {type === "packages" && item.featured && (
             <span className="text-xs px-1.5 py-0.5 bg-gold/20 text-gold-dark rounded-xl font-medium flex-shrink-0">
               Featured
@@ -551,12 +551,12 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
       </div>
 
       {/* Price */}
-      <p className="text-sm font-semibold text-navy flex-shrink-0 w-28 text-right">{fromPrice}</p>
+      <p className="text-sm font-semibold text-[#3486cf] flex-shrink-0 w-28 text-right">{fromPrice}</p>
 
       {/* Active toggle */}
       <div
         onClick={() => onToggleActive(item)}
-        className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0 ${item.active !== false ? "bg-navy" : "bg-gray-300"}`}
+        className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0 ${item.active !== false ? "bg-[#3486cf]" : "bg-gray-300"}`}
       >
         <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${item.active !== false ? "translate-x-4" : "translate-x-0.5"}`} />
       </div>
@@ -569,7 +569,7 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
           Copy
         </button>
         <button onClick={() => onEdit(item)}
-          className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded-xl hover:bg-navy/5">
+          className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded-xl hover:bg-[#3486cf]/5">
           Edit
         </button>
       </div>
@@ -705,7 +705,7 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
           <div className="flex border border-gray-200 rounded-xl overflow-hidden text-xs">
             {[["csv", "CSV File"], ["text", "Paste Text"], ["url", "From URL"]].map(([m, label]) => (
               <button key={m} onClick={() => setMode(m)}
-                className={`px-4 py-2 flex-1 font-medium transition-colors ${mode === m ? "bg-navy text-white" : "text-gray-500 hover:bg-gray-50"}`}>
+                className={`px-4 py-2 flex-1 font-medium transition-colors ${mode === m ? "bg-[#3486cf] text-white" : "text-gray-500 hover:bg-gray-50"}`}>
                 {label}
               </button>
             ))}
@@ -923,7 +923,7 @@ export default function ProductsPage() {
 
   if (loading) return (
     <div className="p-8 flex justify-center h-64 items-center">
-      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
     </div>
   );
 
@@ -984,7 +984,7 @@ export default function ProductsPage() {
         {Object.entries(TYPE_META).map(([type, meta]) => (
           <button key={type} onClick={() => { setActiveType(type); setSearch(""); }}
             className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-              activeType === type ? "border-[#0F172A] text-[#0F172A]" : "border-transparent text-gray-500 hover:text-gray-700"
+              activeType === type ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}>
             {meta.label}
             <span className={`ml-1.5 text-xs ${activeType === type ? "text-gray-500" : "text-gray-400"}`}>({items[type].length})</span>

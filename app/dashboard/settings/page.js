@@ -30,13 +30,13 @@ function NotifToggleRow({ notif, pref, plan, onToggle }) {
   return (
     <div className="flex items-center gap-3 py-3 border-b last:border-0 border-gray-100">
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-charcoal">{notif.label}</p>
+        <p className="text-sm font-medium text-[#0F172A]">{notif.label}</p>
         <p className="text-xs text-gray-400 mt-0.5">{notif.description}</p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         {notif.channels.includes("email") && (
           <button onClick={() => onToggle("email")}
-            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${emailOn ? "bg-navy text-white border-navy" : "text-gray-400 border-gray-200 hover:border-gray-300"}`}>
+            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${emailOn ? "bg-[#3486cf] text-white border-[#3486cf]" : "text-gray-400 border-gray-200 hover:border-gray-300"}`}>
             Email
           </button>
         )}
@@ -110,7 +110,7 @@ function StaffAccessSection() {
 
   return (
     <div id="settings-staff-access" className="card mt-6 scroll-mt-24">
-      <h2 className="font-semibold text-charcoal text-base mb-1">Staff Access</h2>
+      <h2 className="font-semibold text-[#0F172A] text-base mb-1">Staff Access</h2>
       <p className="text-sm text-gray-500 mb-6">
         Invite employees or virtual assistants to manage bookings and galleries. They get dashboard access but cannot change billing or settings.
       </p>
@@ -136,7 +136,7 @@ function StaffAccessSection() {
           { role: "Manager", desc: "View/edit bookings, galleries, and team calendar" },
         ].map((r) => (
           <div key={r.role} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-            <p className="text-xs font-semibold text-charcoal">{r.role}</p>
+            <p className="text-xs font-semibold text-[#0F172A]">{r.role}</p>
             <p className="text-xs text-gray-400 mt-0.5">{r.desc}</p>
           </div>
         ))}
@@ -145,7 +145,7 @@ function StaffAccessSection() {
       {/* Invite list */}
       {loading ? (
         <div className="flex justify-center py-6">
-          <div className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
         </div>
       ) : invites.length === 0 ? (
         <p className="text-sm text-gray-400">No staff invites yet.</p>
@@ -154,7 +154,7 @@ function StaffAccessSection() {
           {invites.map((inv) => (
             <div key={inv.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl">
               <div>
-                <p className="text-sm font-medium text-charcoal">{inv.email}</p>
+                <p className="text-sm font-medium text-[#0F172A]">{inv.email}</p>
                 <p className="text-xs text-gray-400 mt-0.5">
                   {inv.role} ·{" "}
                   {inv.accepted
@@ -205,7 +205,7 @@ function SmsSetting({ label, checked, onChange }) {
     <label className="flex items-center gap-2 cursor-pointer select-none">
       <div
         onClick={onChange}
-        className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0 ${checked ? "bg-navy" : "bg-gray-200"}`}>
+        className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0 ${checked ? "bg-[#3486cf]" : "bg-gray-200"}`}>
         <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`} />
       </div>
       <span className="text-sm text-gray-600">{label}</span>
@@ -277,7 +277,7 @@ function SmsNotificationsSection() {
     <div id="settings-sms" className="card mt-6 scroll-mt-24">
       <div className="flex items-start justify-between mb-1">
         <div>
-          <h2 className="font-semibold text-charcoal text-base">SMS Notifications</h2>
+          <h2 className="font-semibold text-[#0F172A] text-base">SMS Notifications</h2>
           <p className="text-sm text-gray-500 mt-0.5">Toggle automated text messages sent to clients and photographers.</p>
         </div>
         <button onClick={save} disabled={saving}
@@ -298,7 +298,7 @@ function SmsNotificationsSection() {
           <div key={evt.key} className="pb-5 border-b border-gray-100 last:border-0 last:pb-0">
             <div className="flex items-start justify-between mb-2">
               <div>
-                <p className="font-medium text-charcoal text-sm">{evt.label}</p>
+                <p className="font-medium text-[#0F172A] text-sm">{evt.label}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{evt.desc}</p>
               </div>
               {evt.extra === "hoursBeforeShoot" && (
@@ -390,7 +390,7 @@ function CustomDomainSection() {
     <div id="settings-custom-domain" className="card mt-6 scroll-mt-24">
       <div className="flex items-start justify-between mb-1">
         <div>
-          <h2 className="font-semibold text-charcoal text-base">Custom Domain</h2>
+          <h2 className="font-semibold text-[#0F172A] text-base">Custom Domain</h2>
           <p className="text-sm text-gray-500 mt-0.5">Connect your own domain to your property websites.</p>
         </div>
         <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-semibold border border-amber-200 flex-shrink-0 mt-0.5">
@@ -403,7 +403,7 @@ function CustomDomainSection() {
 
       {loading ? (
         <div className="flex justify-center py-4">
-          <div className="w-4 h-4 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
         </div>
       ) : (
         <>
@@ -436,7 +436,7 @@ function CustomDomainSection() {
           {/* DNS Instructions */}
           {current && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mt-2">
-              <p className="text-sm font-semibold text-charcoal mb-3">
+              <p className="text-sm font-semibold text-[#0F172A] mb-3">
                 {current.verified ? "✅ Domain is active" : "⚙️ DNS Setup Required"}
               </p>
               <p className="text-sm text-gray-600 mb-4">
@@ -548,7 +548,7 @@ export default function SettingsPage() {
 
   const [form, setForm] = useState({
     businessName: "", phone: "", fromZip: "",
-    tagline: "", primaryColor: "#0b2a55", accentColor: "#c9a96e",
+    tagline: "", primaryColor: "#3486cf", accentColor: "#c9a96e",
     country: "US", tempUnit: "F",
   });
 
@@ -695,7 +695,7 @@ export default function SettingsPage() {
           phone:         data.tenant.phone || "",
           fromZip:       data.tenant.fromZip || "",
           tagline:       data.tenant.branding?.tagline || "",
-          primaryColor:  data.tenant.branding?.primaryColor || "#0b2a55",
+          primaryColor:  data.tenant.branding?.primaryColor || "#3486cf",
           accentColor:   data.tenant.branding?.accentColor  || "#c9a96e",
           country:       data.tenant.country  || "US",
           tempUnit:      data.tenant.tempUnit || "F",
@@ -1155,7 +1155,7 @@ export default function SettingsPage() {
 
   if (loading) return (
     <div className="p-8 flex justify-center">
-      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
     </div>
   );
 
@@ -1244,11 +1244,11 @@ export default function SettingsPage() {
       <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-4">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Your Booking Page</p>
         <div className="flex items-center gap-2">
-          <code className="text-sm text-navy flex-1 truncate">{bookingUrl}</code>
+          <code className="text-sm text-[#3486cf] flex-1 truncate">{bookingUrl}</code>
           <button onClick={() => { navigator.clipboard.writeText(bookingUrl); showMsg("Copied!"); }}
-            className="text-xs text-navy border border-navy/20 px-2 py-1 rounded hover:bg-navy/5">Copy</button>
+            className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2 py-1 rounded hover:bg-[#3486cf]/5">Copy</button>
           <a href={bookingUrl} target="_blank" rel="noopener noreferrer"
-            className="text-xs text-navy border border-navy/20 px-2 py-1 rounded hover:bg-navy/5">Open</a>
+            className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2 py-1 rounded hover:bg-[#3486cf]/5">Open</a>
         </div>
       </div>
 
@@ -1260,7 +1260,7 @@ export default function SettingsPage() {
           <pre className="text-[11px] bg-white border border-gray-200 rounded p-3 overflow-x-auto text-gray-700 leading-relaxed whitespace-pre-wrap break-all">{`<iframe\n  src="${bookingUrl}?embed=1"\n  width="100%"\n  height="700"\n  style="border:none;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,0.08);"\n  title="Book a Session"\n  allow="payment"\n></iframe>`}</pre>
           <button
             onClick={() => { navigator.clipboard.writeText(`<iframe\n  src="${bookingUrl}?embed=1"\n  width="100%"\n  height="700"\n  style="border:none;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,0.08);"\n  title="Book a Session"\n  allow="payment"\n></iframe>`); showMsg("Embed code copied!"); }}
-            className="absolute top-2 right-2 text-xs text-navy border border-navy/20 px-2 py-1 rounded bg-white hover:bg-navy/5">
+            className="absolute top-2 right-2 text-xs text-[#3486cf] border border-[#3486cf]/20 px-2 py-1 rounded bg-white hover:bg-[#3486cf]/5">
             Copy
           </button>
         </div>
@@ -1270,7 +1270,7 @@ export default function SettingsPage() {
       <form id="settings-branding" onSubmit={saveBranding} className="space-y-6 scroll-mt-24">
         {/* Business info */}
         <div className="card">
-          <h2 className="font-semibold text-charcoal text-base mb-4">Business Info</h2>
+          <h2 className="font-semibold text-[#0F172A] text-base mb-4">Business Info</h2>
           <div className="space-y-4">
             <div>
               <label className="label-field">Business Name</label>
@@ -1308,7 +1308,7 @@ export default function SettingsPage() {
                   {[{ v: "F", label: "°F  Fahrenheit" }, { v: "C", label: "°C  Celsius" }].map(({ v, label }) => (
                     <button key={v} type="button" onClick={() => setForm((f) => ({ ...f, tempUnit: v }))}
                       className={`flex-1 py-2 px-3 text-sm border rounded-xl transition-colors ${
-                        form.tempUnit === v ? "bg-navy text-white border-navy" : "border-gray-200 text-gray-600 hover:border-navy/30"
+                        form.tempUnit === v ? "bg-[#3486cf] text-white border-[#3486cf]" : "border-gray-200 text-gray-600 hover:border-[#3486cf]/30"
                       }`}>
                       {label}
                     </button>
@@ -1321,7 +1321,7 @@ export default function SettingsPage() {
 
         {/* Branding */}
         <div className="card">
-          <h2 className="font-semibold text-charcoal text-base mb-4">Branding</h2>
+          <h2 className="font-semibold text-[#0F172A] text-base mb-4">Branding</h2>
           <div className="space-y-4">
             <div>
               <label className="label-field">Tagline</label>
@@ -1374,8 +1374,8 @@ export default function SettingsPage() {
       {/* ─── Pricing Tiers ─────────────────────────────────────────────────────── */}
       <div id="settings-pricing" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="font-display text-navy text-base">Pricing Tiers</h2>
-          <button onClick={resetTiers} className="text-xs text-gray-400 hover:text-navy">Reset to defaults</button>
+          <h2 className="font-display text-[#3486cf] text-base">Pricing Tiers</h2>
+          <button onClick={resetTiers} className="text-xs text-gray-400 hover:text-[#3486cf]">Reset to defaults</button>
         </div>
         <p className="text-sm text-gray-500 mb-5">
           Customize how pricing tiers work. Each product can have a price per tier.
@@ -1393,9 +1393,9 @@ export default function SettingsPage() {
             ].map((m) => (
               <button key={m.value} type="button" onClick={() => switchPricingMode(m.value)}
                 className={`p-3 border rounded-xl text-left transition-colors ${
-                  pricingMode === m.value ? "border-navy bg-navy/5" : "border-gray-200 hover:border-navy/30"
+                  pricingMode === m.value ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-[#3486cf]/30"
                 }`}>
-                <p className={`text-sm font-semibold ${pricingMode === m.value ? "text-navy" : "text-charcoal"}`}>{m.label}</p>
+                <p className={`text-sm font-semibold ${pricingMode === m.value ? "text-[#3486cf]" : "text-[#0F172A]"}`}>{m.label}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{m.desc}</p>
               </button>
             ))}
@@ -1468,7 +1468,7 @@ export default function SettingsPage() {
 
         <div className="flex items-center gap-3">
           <button type="button" onClick={addTier}
-            className="text-sm text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5">
+            className="text-sm text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded hover:bg-[#3486cf]/5">
             + Add tier
           </button>
           <p className="text-xs text-gray-400">
@@ -1488,13 +1488,13 @@ export default function SettingsPage() {
       {/* ─── Booking Config ──────────────────────────────────────────────────── */}
       <div id="settings-booking" className="card mt-8 space-y-8 scroll-mt-24">
         <div>
-          <h2 className="font-semibold text-charcoal text-base mb-1">Booking Settings</h2>
+          <h2 className="font-semibold text-[#0F172A] text-base mb-1">Booking Settings</h2>
           <p className="text-sm text-gray-500">Configure deposit requirements, time slots, and custom form fields.</p>
         </div>
 
         {/* Deposit config */}
         <div>
-          <h3 className="text-sm font-semibold text-charcoal mb-3">Deposit / Payment</h3>
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Deposit / Payment</h3>
           <div className="grid grid-cols-3 gap-2 mb-3">
             {[
               { value: "percent", label: "% of total",  desc: "e.g. 50% deposit" },
@@ -1503,9 +1503,9 @@ export default function SettingsPage() {
             ].map((m) => (
               <button key={m.value} type="button" onClick={() => setDepositType(m.value)}
                 className={`p-3 border rounded-xl text-left transition-colors ${
-                  depositType === m.value ? "border-navy bg-navy/5" : "border-gray-200 hover:border-navy/30"
+                  depositType === m.value ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-[#3486cf]/30"
                 }`}>
-                <p className={`text-sm font-semibold ${depositType === m.value ? "text-navy" : "text-charcoal"}`}>{m.label}</p>
+                <p className={`text-sm font-semibold ${depositType === m.value ? "text-[#3486cf]" : "text-[#0F172A]"}`}>{m.label}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{m.desc}</p>
               </button>
             ))}
@@ -1539,7 +1539,7 @@ export default function SettingsPage() {
 
         {/* Custom form fields */}
         <div>
-          <h3 className="text-sm font-semibold text-charcoal mb-1">Custom Booking Form Fields</h3>
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Custom Booking Form Fields</h3>
           <p className="text-xs text-gray-400 mb-3">Add extra fields to the property step of your booking form (e.g. Gate Code, Planned Live Date).</p>
 
           {customFields.length > 0 && (
@@ -1547,13 +1547,13 @@ export default function SettingsPage() {
               {customFields.map((f) => (
                 <div key={f.id} className="flex items-center gap-3 border border-gray-200 rounded-xl px-3 py-2.5 bg-gray-50">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-charcoal truncate">{f.label}</p>
+                    <p className="text-sm font-medium text-[#0F172A] truncate">{f.label}</p>
                     <p className="text-xs text-gray-400">{f.type}{f.required ? " · required" : " · optional"}</p>
                   </div>
                   <button
                     onClick={() => toggleFieldRequired(f.id)}
                     className={`text-xs px-2 py-1 rounded border transition-colors ${
-                      f.required ? "bg-navy/10 border-navy/20 text-navy" : "border-gray-200 text-gray-400 hover:border-navy/30"
+                      f.required ? "bg-[#3486cf]/10 border-[#3486cf]/20 text-[#3486cf]" : "border-gray-200 text-gray-400 hover:border-[#3486cf]/30"
                     }`}
                   >
                     {f.required ? "Required" : "Optional"}
@@ -1585,12 +1585,12 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setEnableApn((v) => !v)}
-              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors mt-0.5 ${enableApn ? "bg-navy" : "bg-gray-200"}`}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors mt-0.5 ${enableApn ? "bg-[#3486cf]" : "bg-gray-200"}`}
             >
               <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${enableApn ? "translate-x-4" : "translate-x-0"}`} />
             </button>
             <div>
-              <p className="text-sm font-medium text-charcoal">Enable APN / Land Parcel Field</p>
+              <p className="text-sm font-medium text-[#0F172A]">Enable APN / Land Parcel Field</p>
               <p className="text-xs text-gray-400 mt-0.5">
                 Shows an optional APN (Assessor Parcel Number) field on the booking form.
                 Useful if you offer land or vacant lot photography.
@@ -1605,16 +1605,16 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setRequireServiceArea((v) => !v)}
-              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors mt-0.5 ${requireServiceArea ? "bg-navy" : "bg-gray-200"}`}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors mt-0.5 ${requireServiceArea ? "bg-[#3486cf]" : "bg-gray-200"}`}
             >
               <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${requireServiceArea ? "translate-x-4" : "translate-x-0"}`} />
             </button>
             <div>
-              <p className="text-sm font-medium text-charcoal">Require address to be in a service zone</p>
+              <p className="text-sm font-medium text-[#0F172A]">Require address to be in a service zone</p>
               <p className="text-xs text-gray-400 mt-0.5">
                 If enabled, bookings are blocked for addresses outside your defined service areas.
                 Clients will see your contact info (phone &amp; email) and be asked to reach out.
-                Configure zones in the <a href="/dashboard/service-areas" className="text-navy underline">Service Areas</a> page.
+                Configure zones in the <a href="/dashboard/service-areas" className="text-[#3486cf] underline">Service Areas</a> page.
               </p>
             </div>
           </div>
@@ -1629,7 +1629,7 @@ export default function SettingsPage() {
 
       {/* ─── Availability ────────────────────────────────────────────────────── */}
       <div id="settings-availability" className="card mt-6 scroll-mt-24">
-        <h2 className="font-semibold text-charcoal text-base mb-1">Availability & Scheduling</h2>
+        <h2 className="font-semibold text-[#0F172A] text-base mb-1">Availability & Scheduling</h2>
         <p className="text-sm text-gray-500 mb-6">
           Control how time slots are offered to clients on the booking schedule step.
         </p>
@@ -1645,7 +1645,7 @@ export default function SettingsPage() {
             ].map((m) => (
               <button key={m.value} type="button" onClick={() => setAvailMode(m.value)}
                 className={`px-4 py-2 border rounded text-sm font-medium transition-colors ${
-                  availMode === m.value ? "border-navy bg-navy text-white" : "border-gray-200 text-gray-600 hover:border-navy/40"
+                  availMode === m.value ? "border-[#3486cf] bg-[#3486cf] text-white" : "border-gray-200 text-gray-600 hover:border-[#3486cf]/40"
                 }`}>
                 {m.label}
               </button>
@@ -1669,7 +1669,7 @@ export default function SettingsPage() {
                   <button key={val} type="button"
                     onClick={() => setAvailDays((d) => active ? d.filter((x) => x !== val) : [...d, val])}
                     className={`px-3 py-1.5 rounded text-xs font-semibold border transition-colors ${
-                      active ? "bg-navy text-white border-navy" : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
+                      active ? "bg-[#3486cf] text-white border-[#3486cf]" : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
                     }`}>
                     {label}
                   </button>
@@ -1735,7 +1735,7 @@ export default function SettingsPage() {
               <div key={slot.value} className={`border rounded-xl px-3 py-2.5 flex items-center gap-3 ${slot.enabled ? "border-gray-200 bg-white" : "border-dashed border-gray-200 bg-gray-50 opacity-60"}`}>
                 <div
                   onClick={() => toggleTimeSlot(slot.value)}
-                  className={`relative w-9 h-5 rounded-full flex-shrink-0 cursor-pointer transition-colors ${slot.enabled ? "bg-navy" : "bg-gray-300"}`}>
+                  className={`relative w-9 h-5 rounded-full flex-shrink-0 cursor-pointer transition-colors ${slot.enabled ? "bg-[#3486cf]" : "bg-gray-300"}`}>
                   <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${slot.enabled ? "translate-x-4" : "translate-x-0.5"}`} />
                 </div>
                 <div className="flex-1 grid grid-cols-2 gap-2">
@@ -1753,20 +1753,20 @@ export default function SettingsPage() {
 
         {/* Weather Widget */}
         <div className="pt-4 border-t border-gray-100">
-          <h3 className="text-sm font-semibold text-charcoal mb-1">Weather Report</h3>
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Weather Report</h3>
           <p className="text-xs text-gray-400 mb-3">Show a weather forecast (temp, UV, AQI) on each booking for the shoot date and location. Shown to admin only.</p>
           <label className="flex items-center gap-3 cursor-pointer">
             <button type="button" onClick={() => setShowWeather((v) => !v)}
-              className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${showWeather ? "bg-navy" : "bg-gray-200"}`}>
+              className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${showWeather ? "bg-[#3486cf]" : "bg-gray-200"}`}>
               <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${showWeather ? "left-5" : "left-0.5"}`} />
             </button>
-            <span className="text-sm text-charcoal">{showWeather ? "Weather widget enabled" : "Weather widget disabled"}</span>
+            <span className="text-sm text-[#0F172A]">{showWeather ? "Weather widget enabled" : "Weather widget disabled"}</span>
           </label>
         </div>
 
         {/* Twilight Offset */}
         <div className="pt-4 border-t border-gray-100">
-          <h3 className="text-sm font-semibold text-charcoal mb-1">Twilight Shoot Offset</h3>
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Twilight Shoot Offset</h3>
           <p className="text-xs text-gray-400 mb-3">
             When a twilight service is booked, the suggested twilight start time is this many minutes before the real sunset for the property's location.
           </p>
@@ -1780,7 +1780,7 @@ export default function SettingsPage() {
 
         {/* Booking Limits */}
         <div className="pt-4 border-t border-gray-100">
-          <h3 className="text-sm font-semibold text-charcoal mb-1">Booking Limits</h3>
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Booking Limits</h3>
           <p className="text-xs text-gray-400 mb-3">Control how far in advance clients can book and how many shoots your team can take on.</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1816,7 +1816,7 @@ export default function SettingsPage() {
 
         {/* Cancellation & Reschedule Fees */}
         <div className="pt-4 border-t border-gray-100">
-          <h3 className="text-sm font-semibold text-charcoal mb-1">Cancellation &amp; Reschedule Fees</h3>
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Cancellation &amp; Reschedule Fees</h3>
           <p className="text-xs text-gray-400 mb-3">
             Charge a fee when a client cancels or reschedules within a short window before the shoot.
             These settings are for your records — you apply the charge manually from the booking.
@@ -1825,9 +1825,9 @@ export default function SettingsPage() {
           {/* Cancel fee */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-3">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-charcoal">Late Cancellation Fee</p>
+              <p className="text-sm font-medium text-[#0F172A]">Late Cancellation Fee</p>
               <button type="button" onClick={() => setCancelFeeEnabled((v) => !v)}
-                className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${cancelFeeEnabled ? "bg-navy" : "bg-gray-200"}`}>
+                className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${cancelFeeEnabled ? "bg-[#3486cf]" : "bg-gray-200"}`}>
                 <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${cancelFeeEnabled ? "left-5" : "left-0.5"}`} />
               </button>
             </div>
@@ -1857,9 +1857,9 @@ export default function SettingsPage() {
           {/* Reschedule fee */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium text-charcoal">Late Reschedule Fee</p>
+              <p className="text-sm font-medium text-[#0F172A]">Late Reschedule Fee</p>
               <button type="button" onClick={() => setRescheduleFeeEnabled((v) => !v)}
-                className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${rescheduleFeeEnabled ? "bg-navy" : "bg-gray-200"}`}>
+                className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${rescheduleFeeEnabled ? "bg-[#3486cf]" : "bg-gray-200"}`}>
                 <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${rescheduleFeeEnabled ? "left-5" : "left-0.5"}`} />
               </button>
             </div>
@@ -1889,16 +1889,16 @@ export default function SettingsPage() {
 
         {/* Agent Photographer Selection */}
         <div className="pt-4 border-t border-gray-100">
-          <h3 className="text-sm font-semibold text-charcoal mb-1">Agent Photographer Selection</h3>
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Agent Photographer Selection</h3>
           <p className="text-xs text-gray-400 mb-3">
             Allow agents to choose their preferred photographer or videographer when booking. Off by default — your team assigns photographers.
           </p>
           <label className="flex items-center gap-3 cursor-pointer">
             <button type="button" onClick={() => setAllowAgentPhotographerSel((v) => !v)}
-              className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${allowAgentPhotographerSel ? "bg-navy" : "bg-gray-200"}`}>
+              className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${allowAgentPhotographerSel ? "bg-[#3486cf]" : "bg-gray-200"}`}>
               <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${allowAgentPhotographerSel ? "left-5" : "left-0.5"}`} />
             </button>
-            <span className="text-sm text-charcoal">
+            <span className="text-sm text-[#0F172A]">
               {allowAgentPhotographerSel ? "Agents can select their photographer" : "Team assigns photographer (default)"}
             </span>
           </label>
@@ -1915,7 +1915,7 @@ export default function SettingsPage() {
       <div id="settings-service-areas" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-semibold text-charcoal text-base">Service Areas & Zones</h2>
+            <h2 className="font-semibold text-[#0F172A] text-base">Service Areas & Zones</h2>
             <p className="text-sm text-gray-500 mt-0.5">Draw include/exclude zones on a map, assign photographers to regions.</p>
           </div>
           <a href="/dashboard/service-areas" className="btn-outline text-sm px-4 py-2">
@@ -1927,11 +1927,11 @@ export default function SettingsPage() {
       {/* ─── Travel Fees ─────────────────────────────────────────────────────── */}
       <div id="settings-travel" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="font-semibold text-charcoal text-base">Travel Fees</h2>
+          <h2 className="font-semibold text-[#0F172A] text-base">Travel Fees</h2>
           <button
             type="button"
             onClick={() => setTravelEnabled((v) => !v)}
-            className={`relative w-10 h-6 rounded-full flex-shrink-0 transition-colors ${travelEnabled ? "bg-charcoal" : "bg-gray-200"}`}>
+            className={`relative w-10 h-6 rounded-full flex-shrink-0 transition-colors ${travelEnabled ? "bg-[#3486cf]" : "bg-gray-200"}`}>
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${travelEnabled ? "translate-x-5" : "translate-x-1"}`} />
           </button>
         </div>
@@ -1958,9 +1958,9 @@ export default function SettingsPage() {
                 ].map((m) => (
                   <button key={m.value} type="button" onClick={() => setTravelMode(m.value)}
                     className={`p-2.5 border rounded-xl text-left transition-colors ${
-                      travelMode === m.value ? "border-navy bg-navy/5" : "border-gray-200 hover:border-navy/30"
+                      travelMode === m.value ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-[#3486cf]/30"
                     }`}>
-                    <p className={`text-xs font-semibold ${travelMode === m.value ? "text-navy" : "text-charcoal"}`}>{m.label}</p>
+                    <p className={`text-xs font-semibold ${travelMode === m.value ? "text-[#3486cf]" : "text-[#0F172A]"}`}>{m.label}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{m.desc}</p>
                   </button>
                 ))}
@@ -2016,7 +2016,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 text-sm">
-                  <p className="font-medium text-charcoal mb-2">Example</p>
+                  <p className="font-medium text-[#0F172A] mb-2">Example</p>
                   <div className="space-y-1 text-gray-500 text-xs">
                     <div className="flex justify-between">
                       <span>Within {travelFreeRadius} miles</span>
@@ -2053,18 +2053,18 @@ export default function SettingsPage() {
             <div className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-charcoal">Calculate from photographer's home ZIP</p>
+                  <p className="text-sm font-medium text-[#0F172A]">Calculate from photographer's home ZIP</p>
                   <p className="text-xs text-gray-500 mt-0.5">
                     When on, travel fees use each photographer's individual home ZIP instead of the business ZIP. Requires setting a home ZIP on each team member.
                   </p>
                 </div>
                 <button type="button" onClick={() => setUsePhotographerZip((v) => !v)}
-                  className={`relative w-10 h-6 rounded-full flex-shrink-0 ml-4 transition-colors ${usePhotographerZip ? "bg-navy" : "bg-gray-200"}`}>
+                  className={`relative w-10 h-6 rounded-full flex-shrink-0 ml-4 transition-colors ${usePhotographerZip ? "bg-[#3486cf]" : "bg-gray-200"}`}>
                   <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${usePhotographerZip ? "translate-x-5" : "translate-x-1"}`} />
                 </button>
               </div>
               {usePhotographerZip && (
-                <p className="text-xs text-navy/70 mt-2 bg-navy/5 rounded px-3 py-2">
+                <p className="text-xs text-[#3486cf]/70 mt-2 bg-[#3486cf]/5 rounded px-3 py-2">
                   A photographer in LA shooting in LA, and one in San Diego shooting in San Diego, will each be charged travel from their own home ZIP — not yours. Set home ZIPs under Team → edit member.
                 </p>
               )}
@@ -2083,7 +2083,7 @@ export default function SettingsPage() {
       <div id="settings-promos" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-semibold text-charcoal text-base">Promo Codes</h2>
+            <h2 className="font-semibold text-[#0F172A] text-base">Promo Codes</h2>
             <p className="text-sm text-gray-500 mt-0.5">Create discount codes customers can apply at checkout.</p>
           </div>
           <button onClick={() => { setShowPromoForm((v) => !v); setPromoError(""); }}
@@ -2162,11 +2162,11 @@ export default function SettingsPage() {
             {promoCodes.map((p) => (
               <div key={p.id} className={`flex items-center justify-between px-4 py-3 gap-4 ${p.active ? "bg-white" : "bg-gray-50"}`}>
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className={`font-mono text-sm font-semibold px-2.5 py-1 rounded ${p.active ? "bg-navy/8 text-navy" : "bg-gray-200 text-gray-400 line-through"}`}>
+                  <span className={`font-mono text-sm font-semibold px-2.5 py-1 rounded ${p.active ? "bg-[#3486cf]/8 text-[#3486cf]" : "bg-gray-200 text-gray-400 line-through"}`}>
                     {p.code}
                   </span>
                   <div className="min-w-0">
-                    <p className="text-sm text-charcoal font-medium">
+                    <p className="text-sm text-[#0F172A] font-medium">
                       {p.type === "flat" ? `$${p.value} off` : `${p.value}% off`}
                     </p>
                     {p.description && <p className="text-xs text-gray-400 truncate">{p.description}</p>}
@@ -2175,7 +2175,7 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <span className="text-xs text-gray-400 hidden sm:block">{p.usageCount || 0} uses</span>
                   <button onClick={() => togglePromoCode(p)} title={p.active ? "Disable" : "Enable"}
-                    className={`relative w-8 h-4 rounded-full transition-colors ${p.active ? "bg-charcoal" : "bg-gray-200"}`}>
+                    className={`relative w-8 h-4 rounded-full transition-colors ${p.active ? "bg-[#3486cf]" : "bg-gray-200"}`}>
                     <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${p.active ? "translate-x-4" : "translate-x-0.5"}`} />
                   </button>
                   <button onClick={() => deletePromoCode(p)} className="text-gray-300 hover:text-red-400 transition-colors">
@@ -2200,7 +2200,7 @@ export default function SettingsPage() {
       <div id="settings-agreement" className="card mt-6 scroll-mt-24">
         <div className="flex items-start justify-between mb-1">
           <div>
-            <h2 className="font-semibold text-charcoal text-base">Service Agreement</h2>
+            <h2 className="font-semibold text-[#0F172A] text-base">Service Agreement</h2>
             <p className="text-sm text-gray-500 mt-0.5">
               Require clients to read and electronically sign a service agreement before completing a booking.
             </p>
@@ -2208,7 +2208,7 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={() => setServiceAgreementEnabled((v) => !v)}
-            className={`relative w-10 h-6 rounded-full flex-shrink-0 transition-colors ml-4 ${serviceAgreementEnabled ? "bg-charcoal" : "bg-gray-200"}`}>
+            className={`relative w-10 h-6 rounded-full flex-shrink-0 transition-colors ml-4 ${serviceAgreementEnabled ? "bg-[#3486cf]" : "bg-gray-200"}`}>
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${serviceAgreementEnabled ? "translate-x-5" : "translate-x-1"}`} />
           </button>
         </div>
@@ -2250,7 +2250,7 @@ export default function SettingsPage() {
 
       {/* ─── Terms of Service ─────────────────────────────────────────────────── */}
       <div id="settings-terms" className="card mt-6 scroll-mt-24">
-        <h2 className="font-semibold text-charcoal text-base mb-1">Terms of Service</h2>
+        <h2 className="font-semibold text-[#0F172A] text-base mb-1">Terms of Service</h2>
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-gray-500">
             Clients must agree to these terms before completing a booking. Leave blank to disable the checkbox.
@@ -2264,7 +2264,7 @@ export default function SettingsPage() {
               <span>The default template is a <strong>placeholder only</strong> — not a legal document. Have an attorney review before use. You are responsible for your own terms.</span>
             </div>
             <button type="button" onClick={() => setTermsText(DEFAULT_TERMS)}
-              className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5 transition-colors">
+              className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded hover:bg-[#3486cf]/5 transition-colors">
               Load default template (review before publishing)
             </button>
           </div>
@@ -2288,7 +2288,7 @@ export default function SettingsPage() {
           )}
           {tenant?.slug && (
             <a href={`/${tenant.slug}/terms`} target="_blank" rel="noopener noreferrer"
-              className="text-sm text-navy underline underline-offset-2 hover:opacity-70">
+              className="text-sm text-[#3486cf] underline underline-offset-2 hover:opacity-70">
               Preview public terms page →
             </a>
           )}
@@ -2296,7 +2296,7 @@ export default function SettingsPage() {
       </div>
       {/* ─── Privacy Policy ──────────────────────────────────────────────────── */}
       <div className="card mt-6">
-        <h2 className="font-semibold text-charcoal text-base mb-1">Privacy Policy</h2>
+        <h2 className="font-semibold text-[#0F172A] text-base mb-1">Privacy Policy</h2>
         <p className="text-sm text-gray-500 mb-4">
           Shown at <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">/{tenant?.slug}/privacy</code>.
           Linked from the checkout terms checkbox. Leave blank to disable.
@@ -2304,7 +2304,7 @@ export default function SettingsPage() {
         {!privacyText && (
           <div className="mb-3">
             <button type="button" onClick={() => setPrivacyText(DEFAULT_PRIVACY)}
-              className="text-xs text-navy border border-navy/20 px-3 py-1.5 rounded hover:bg-navy/5 transition-colors">
+              className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded hover:bg-[#3486cf]/5 transition-colors">
               Use default template
             </button>
           </div>
@@ -2328,7 +2328,7 @@ export default function SettingsPage() {
           )}
           {tenant?.slug && (
             <a href={`/${tenant.slug}/privacy`} target="_blank" rel="noopener noreferrer"
-              className="text-sm text-navy underline underline-offset-2 hover:opacity-70">
+              className="text-sm text-[#3486cf] underline underline-offset-2 hover:opacity-70">
               Preview public privacy page →
             </a>
           )}
@@ -2343,7 +2343,7 @@ export default function SettingsPage() {
       </div>
       {/* ─── Job Cost Rates ──────────────────────────────────────────────────── */}
       <div id="settings-cost-rates" className="card mt-6 scroll-mt-24">
-        <h2 className="font-semibold text-charcoal text-base mb-1">Default Job Cost Rates</h2>
+        <h2 className="font-semibold text-[#0F172A] text-base mb-1">Default Job Cost Rates</h2>
         <p className="text-sm text-gray-500 mb-6">
           These default rates auto-fill the Job Costs card on each booking. You can still override them per booking.
         </p>
@@ -2395,9 +2395,9 @@ export default function SettingsPage() {
 
       {/* ─── Email Templates ─────────────────────────────────────────────────── */}
       <div id="settings-email" className="card mt-6 scroll-mt-24">
-        <h2 className="font-semibold text-charcoal text-base mb-1">Email Templates</h2>
+        <h2 className="font-semibold text-[#0F172A] text-base mb-1">Email Templates</h2>
         <p className="text-sm text-gray-500 mb-4">
-          Customize what each email says. Click any <span className="font-medium text-navy">insert field</span> button to add dynamic content like the client name or property address.
+          Customize what each email says. Click any <span className="font-medium text-[#3486cf]">insert field</span> button to add dynamic content like the client name or property address.
         </p>
 
         <div className="bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-5 text-xs text-amber-700">
@@ -2415,7 +2415,7 @@ export default function SettingsPage() {
             <button key={t.id} onClick={() => setEmailTab(t.id)}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
                 emailTab === t.id
-                  ? "border-navy text-navy"
+                  ? "border-[#3486cf] text-[#3486cf]"
                   : "border-transparent text-gray-400 hover:text-gray-600"
               }`}>
               {t.label}
@@ -2468,7 +2468,7 @@ export default function SettingsPage() {
                     className={`text-xs border px-2.5 py-1 rounded-full font-medium transition-colors ${
                       token.startsWith("[[")
                         ? "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
-                        : "bg-white border-navy/20 text-navy hover:bg-navy/5"
+                        : "bg-white border-[#3486cf]/20 text-[#3486cf] hover:bg-[#3486cf]/5"
                     }`}>
                     + {label}
                   </button>
@@ -2564,7 +2564,7 @@ export default function SettingsPage() {
       {/* Notification channel toggles */}
       <div id="settings-notifications" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="font-semibold text-charcoal text-base">Notification Channels</h2>
+          <h2 className="font-semibold text-[#0F172A] text-base">Notification Channels</h2>
           <button onClick={saveNotifPrefs} disabled={savingNotifs} className="btn-primary px-5 py-2 text-sm">
             {savingNotifs ? "Saving…" : "Save"}
           </button>
@@ -2602,7 +2602,7 @@ export default function SettingsPage() {
       </div>
 
       <div id="settings-integrations" className="card mt-6 scroll-mt-24">
-        <h2 className="font-semibold text-charcoal text-base mb-1">Integrations</h2>
+        <h2 className="font-semibold text-[#0F172A] text-base mb-1">Integrations</h2>
         <p className="text-sm text-gray-500">More integrations coming soon.</p>
       </div>
 

@@ -48,7 +48,7 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
       >
         <div className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer
           ${selected ? "bg-gold border-gold" : "bg-white/80 border-white/60 hover:border-gold"}`}>
-          {selected && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#0b2a55" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+          {selected && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#3486cf" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
         </div>
       </div>
 
@@ -87,7 +87,7 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
             value={category || ""}
             onChange={(e) => onAssignCategory(e.target.value || null)}
             onClick={(e) => e.stopPropagation()}
-            className="text-xs bg-white/90 text-charcoal rounded px-1.5 py-0.5 w-full cursor-pointer"
+            className="text-xs bg-white/90 text-[#0F172A] rounded px-1.5 py-0.5 w-full cursor-pointer"
           >
             <option value="">No category</option>
             {categories.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -97,7 +97,7 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
 
       {isFirst && !selected && (
         <div className="absolute top-1.5 left-7">
-          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-xl bg-navy text-white">Cover</span>
+          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-xl bg-[#3486cf] text-white">Cover</span>
         </div>
       )}
       {hidden && (
@@ -131,7 +131,7 @@ function EmailTagInput({ label, value, onChange, placeholder }) {
       <div className="input-field min-h-10 flex flex-wrap gap-1.5 p-2 cursor-text"
         onClick={(e) => e.currentTarget.querySelector("input")?.focus()}>
         {value.map((email, i) => (
-          <span key={i} className="inline-flex items-center gap-1 bg-navy/10 text-navy text-xs px-2 py-0.5 rounded-xl">
+          <span key={i} className="inline-flex items-center gap-1 bg-[#3486cf]/10 text-[#3486cf] text-xs px-2 py-0.5 rounded-xl">
             {email}
             <button onClick={() => onChange(value.filter((_, idx) => idx !== i))} className="hover:text-red-500 leading-none text-base">&times;</button>
           </span>
@@ -186,7 +186,7 @@ function RichTextEditor({ value, onChange, placeholder }) {
   const ToolBtn = ({ cmd, val, title, children, onClick }) => (
     <button type="button" title={title}
       onMouseDown={(e) => { e.preventDefault(); onClick ? onClick() : exec(cmd, val); }}
-      className="p-1.5 rounded hover:bg-gray-200 text-charcoal transition-colors text-sm font-medium w-7 h-7 flex items-center justify-center">
+      className="p-1.5 rounded hover:bg-gray-200 text-[#0F172A] transition-colors text-sm font-medium w-7 h-7 flex items-center justify-center">
       {children}
     </button>
   );
@@ -248,7 +248,7 @@ function RichTextEditor({ value, onChange, placeholder }) {
         suppressContentEditableWarning
         onInput={handleInput}
         data-placeholder={placeholder}
-        className="min-h-[80px] px-3 py-2.5 text-sm text-charcoal outline-none prose prose-sm max-w-none
+        className="min-h-[80px] px-3 py-2.5 text-sm text-[#0F172A] outline-none prose prose-sm max-w-none
           [&:empty]:before:content-[attr(data-placeholder)] [&:empty]:before:text-gray-400 [&:empty]:before:pointer-events-none"
         style={{ lineHeight: "1.6" }}
       />
@@ -751,7 +751,7 @@ export default function GalleryDetailPage() {
 
   if (loading) return (
     <div className="p-8 flex justify-center">
-      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
     </div>
   );
   if (!gallery) return <div className="p-8 text-gray-500">Gallery not found.</div>;
@@ -797,7 +797,7 @@ export default function GalleryDetailPage() {
           <div className="flex items-center gap-2">
             {gallery?.bookingId ? (
               <Link href={`/dashboard/listings/${gallery.bookingId}`}
-                className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-navy transition-colors font-medium">
+                className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#3486cf] transition-colors font-medium">
                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
                 </svg>
@@ -805,7 +805,7 @@ export default function GalleryDetailPage() {
               </Link>
             ) : (
               <Link href="/dashboard/galleries"
-                className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-navy transition-colors font-medium">
+                className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#3486cf] transition-colors font-medium">
                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
                 </svg>
@@ -838,14 +838,14 @@ export default function GalleryDetailPage() {
         {(gallery.authorizedEmails?.length > 0 || true) && (
           <div className="mb-5 card p-4">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-semibold text-charcoal">Gallery Access</p>
+              <p className="text-sm font-semibold text-[#0F172A]">Gallery Access</p>
               <span className="text-xs text-gray-400">No login required to view</span>
             </div>
             <div className="flex flex-wrap gap-1.5 mb-3 min-h-6">
               {(gallery.authorizedEmails || []).length === 0
                 ? <span className="text-xs text-gray-400 italic">No recipients added yet. Deliver to add access.</span>
                 : (gallery.authorizedEmails || []).map((email) => (
-                  <span key={email} className="inline-flex items-center gap-1 bg-navy/8 text-navy text-xs px-2.5 py-1 rounded-full">
+                  <span key={email} className="inline-flex items-center gap-1 bg-[#3486cf]/8 text-[#3486cf] text-xs px-2.5 py-1 rounded-full">
                     {email}
                     <button
                       onClick={async () => {
@@ -858,7 +858,7 @@ export default function GalleryDetailPage() {
                           body: JSON.stringify({ authorizedEmails: updated }),
                         });
                       }}
-                      className="hover:text-red-500 text-navy/50 leading-none ml-0.5 text-sm">&times;</button>
+                      className="hover:text-red-500 text-[#3486cf]/50 leading-none ml-0.5 text-sm">&times;</button>
                   </span>
                 ))
               }
@@ -898,7 +898,7 @@ export default function GalleryDetailPage() {
                       body: JSON.stringify({ agentCanShare: newVal }),
                     });
                   }}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${gallery.agentCanShare !== false ? "bg-navy" : "bg-gray-300"}`}>
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${gallery.agentCanShare !== false ? "bg-[#3486cf]" : "bg-gray-300"}`}>
                   <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${gallery.agentCanShare !== false ? "translate-x-4" : "translate-x-0.5"}`} />
                 </button>
               </div>
@@ -929,7 +929,7 @@ export default function GalleryDetailPage() {
         )}
 
         {/* Upload zone */}
-        <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 mb-6 text-center cursor-pointer hover:border-navy/40 hover:bg-gray-50 transition-colors"
+        <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 mb-6 text-center cursor-pointer hover:border-[#3486cf]/40 hover:bg-gray-50 transition-colors"
           onClick={() => !uploading && fileRef.current?.click()}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
@@ -942,14 +942,14 @@ export default function GalleryDetailPage() {
           {uploading ? (
             <div>
               <div className="w-full bg-gray-200 rounded-full h-2 mb-2 max-w-xs mx-auto">
-                <div className="bg-navy h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
+                <div className="bg-[#3486cf] h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
               </div>
               <p className="text-sm text-gray-500">Uploading… {progress}%</p>
             </div>
           ) : (
             <>
               <p className="text-2xl mb-1">☁️</p>
-              <p className="text-sm text-gray-500">Drop files or <span className="text-navy font-medium">click to upload</span></p>
+              <p className="text-sm text-gray-500">Drop files or <span className="text-[#3486cf] font-medium">click to upload</span></p>
               <p className="text-xs text-gray-400 mt-1">Full-res photos and videos</p>
             </>
           )}
@@ -967,7 +967,7 @@ export default function GalleryDetailPage() {
                 ].map((t) => (
                   <button key={t.id} onClick={() => setActiveTab(t.id)}
                     className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
-                      activeTab === t.id ? "border-navy text-navy" : "border-transparent text-gray-500 hover:text-gray-700"
+                      activeTab === t.id ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-500 hover:text-gray-700"
                     }`}>
                     {t.label}
                   </button>
@@ -984,8 +984,8 @@ export default function GalleryDetailPage() {
                   onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
                   className={`text-xs px-3 py-1 rounded-xl border font-medium transition-colors ${
                     selectMode
-                      ? "border-navy bg-navy text-white"
-                      : "border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy"
+                      ? "border-[#3486cf] bg-[#3486cf] text-white"
+                      : "border-gray-200 text-gray-500 hover:border-[#3486cf]/40 hover:text-[#3486cf]"
                   }`}>
                   {selectMode ? "Done" : "Select"}
                 </button>
@@ -996,8 +996,8 @@ export default function GalleryDetailPage() {
               <>
                 {/* Bulk selection toolbar */}
                 {(selectMode || selectedKeys.size > 0) && (
-                  <div className="flex items-center gap-3 bg-navy/5 border border-navy/20 rounded-xl px-3 py-2 mb-3 flex-wrap">
-                    <span className="text-sm font-semibold text-navy">
+                  <div className="flex items-center gap-3 bg-[#3486cf]/5 border border-[#3486cf]/20 rounded-xl px-3 py-2 mb-3 flex-wrap">
+                    <span className="text-sm font-semibold text-[#3486cf]">
                       {selectedKeys.size > 0 ? `${selectedKeys.size} selected` : "Tap photos to select"}
                     </span>
                     {selectedKeys.size > 0 && catNames.length > 0 && (
@@ -1021,7 +1021,7 @@ export default function GalleryDetailPage() {
                     )}
                     {selectedKeys.size > 0 && (
                       <>
-                        <button onClick={selectAll} className="text-xs text-navy border border-navy/20 px-2 py-1 rounded hover:bg-navy/5">
+                        <button onClick={selectAll} className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2 py-1 rounded hover:bg-[#3486cf]/5">
                           Select all
                         </button>
                         <button
@@ -1081,7 +1081,7 @@ export default function GalleryDetailPage() {
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                           onClick={() => v.key && toggleHideMedia(v.key)}
-                          className="text-xs text-gray-400 hover:text-navy px-2 py-0.5">
+                          className="text-xs text-gray-400 hover:text-[#3486cf] px-2 py-0.5">
                           {v.hidden ? "Show" : "Hide"}
                         </button>
                         <button
@@ -1103,19 +1103,19 @@ export default function GalleryDetailPage() {
       {/* ── Extras: 3D / Floor Plans / Files ─────────────────────────────── */}
       <div className="px-6 pb-8 space-y-5 max-w-3xl">
         <div className="border-t border-gray-100 pt-6">
-          <h2 className="font-display text-navy text-base mb-1">Property Extras</h2>
+          <h2 className="font-display text-[#3486cf] text-base mb-1">Property Extras</h2>
           <p className="text-xs text-gray-400 mb-5">Add 3D tours, floor plans, and documents — all delivered alongside photos in the client gallery.</p>
 
           {/* 3D / Matterport */}
           <div className="card shadow-card mb-4">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-xl bg-navy/8 flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
+              <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-semibold text-charcoal">3D Tour Link</p>
+                <p className="text-sm font-semibold text-[#0F172A]">3D Tour Link</p>
                 <p className="text-xs text-gray-400">Paste your Matterport, iGuide, Zillow 3D, or similar URL — it will be embedded in the client gallery.</p>
               </div>
             </div>
@@ -1142,7 +1142,7 @@ export default function GalleryDetailPage() {
                   className={`text-xs px-2.5 py-1 rounded border transition-colors flex-shrink-0 ${
                     matterportHidden
                       ? "border-gray-300 text-gray-500 bg-gray-50 hover:bg-white"
-                      : "border-gray-200 text-gray-400 hover:border-navy/30 hover:text-navy"
+                      : "border-gray-200 text-gray-400 hover:border-[#3486cf]/30 hover:text-[#3486cf]"
                   }`}>
                   {matterportHidden ? "Hidden from gallery" : "Hide from gallery"}
                 </button>
@@ -1153,13 +1153,13 @@ export default function GalleryDetailPage() {
           {/* Video Tour URL */}
           <div className="card shadow-card mb-4">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-xl bg-navy/8 flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
+              <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-semibold text-charcoal">Video Tour</p>
+                <p className="text-sm font-semibold text-[#0F172A]">Video Tour</p>
                 <p className="text-xs text-gray-400">YouTube or Vimeo URL — embedded in client gallery</p>
               </div>
             </div>
@@ -1186,7 +1186,7 @@ export default function GalleryDetailPage() {
                   className={`text-xs px-2.5 py-1 rounded border transition-colors flex-shrink-0 ${
                     videoUrlHidden
                       ? "border-gray-300 text-gray-500 bg-gray-50 hover:bg-white"
-                      : "border-gray-200 text-gray-400 hover:border-navy/30 hover:text-navy"
+                      : "border-gray-200 text-gray-400 hover:border-[#3486cf]/30 hover:text-[#3486cf]"
                   }`}>
                   {videoUrlHidden ? "Hidden from gallery" : "Hide from gallery"}
                 </button>
@@ -1198,13 +1198,13 @@ export default function GalleryDetailPage() {
           <div className="card shadow-card mb-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-navy/8 flex items-center justify-center flex-shrink-0">
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
+                <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-charcoal">2D Floor Plans</p>
+                  <p className="text-sm font-semibold text-[#0F172A]">2D Floor Plans</p>
                   <p className="text-xs text-gray-400">PNG, JPG, or PDF</p>
                 </div>
               </div>
@@ -1223,7 +1223,7 @@ export default function GalleryDetailPage() {
                   <div key={fp.key || i} className={`relative group rounded-xl overflow-hidden border border-gray-100 bg-gray-50 ${fp.hidden ? "opacity-50" : ""}`}>
                     {fp.fileType?.includes("pdf") ? (
                       <a href={fp.url} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-3 text-xs text-navy font-medium hover:bg-gray-100 transition-colors">
+                        className="flex items-center gap-2 p-3 text-xs text-[#3486cf] font-medium hover:bg-gray-100 transition-colors">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
@@ -1266,13 +1266,13 @@ export default function GalleryDetailPage() {
           <div className="card p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-navy/8 flex items-center justify-center flex-shrink-0">
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
+                <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                   </svg>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-charcoal">Documents & Files</p>
+                  <p className="text-sm font-semibold text-[#0F172A]">Documents & Files</p>
                   <p className="text-xs text-gray-400">PDF, Word, ZIP, or any other file</p>
                 </div>
               </div>
@@ -1293,7 +1293,7 @@ export default function GalleryDetailPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
                     <a href={f.url} target="_blank" rel="noopener noreferrer"
-                      className="text-xs text-navy hover:underline truncate flex-1">{f.fileName}</a>
+                      className="text-xs text-[#3486cf] hover:underline truncate flex-1">{f.fileName}</a>
                     {f.hidden && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-xl bg-gray-200 text-gray-500 flex-shrink-0">Hidden</span>}
                     <span className="text-[10px] text-gray-300 flex-shrink-0">{f.fileType?.split("/")[1]?.toUpperCase() || "FILE"}</span>
                     <button
@@ -1307,7 +1307,7 @@ export default function GalleryDetailPage() {
                           body: JSON.stringify({ attachedFiles: updated }),
                         });
                       }}
-                      className="text-[10px] text-gray-400 hover:text-navy opacity-0 group-hover:opacity-100 transition-opacity px-1">
+                      className="text-[10px] text-gray-400 hover:text-[#3486cf] opacity-0 group-hover:opacity-100 transition-opacity px-1">
                       {f.hidden ? "Show" : "Hide"}
                     </button>
                     <button onClick={() => setAttachedFiles((p) => p.filter((_, idx) => idx !== i))}
@@ -1323,13 +1323,13 @@ export default function GalleryDetailPage() {
           {/* ── Listing Links (Agent Hub) ─────────────────────────────────── */}
           <div className="card shadow-card mt-4">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-xl bg-navy/8 flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-navy">
+              <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-semibold text-charcoal">Listing Links</p>
+                <p className="text-sm font-semibold text-[#0F172A]">Listing Links</p>
                 <p className="text-xs text-gray-400">Shown to agents in the gallery — quick links to the live listing and search portals.</p>
               </div>
             </div>
@@ -1343,7 +1343,7 @@ export default function GalleryDetailPage() {
                   { label: "Search Realtor.com", url: `https://www.realtor.com/realestateandhomes-search/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "-")}` },
                 ].map((l) => (
                   <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-navy border border-navy/20 px-3 py-1.5 rounded-full hover:bg-navy/5 transition-colors font-medium">
+                    className="inline-flex items-center gap-1 text-xs text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded-full hover:bg-[#3486cf]/5 transition-colors font-medium">
                     {l.label} →
                   </a>
                 ))}
@@ -1400,7 +1400,7 @@ export default function GalleryDetailPage() {
                     {pastCatNames.filter((n) => !categories[n]).map((n) => (
                       <button key={n} type="button"
                         onClick={() => { setNewCatName(""); setCategories((prev) => ({ ...prev, [n]: [] })); }}
-                        className="text-xs px-2.5 py-1 border border-gray-200 rounded-full hover:border-navy/40 hover:bg-navy/5 text-gray-600 transition-colors">
+                        className="text-xs px-2.5 py-1 border border-gray-200 rounded-full hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5 text-gray-600 transition-colors">
                         + {n}
                       </button>
                     ))}
@@ -1414,7 +1414,7 @@ export default function GalleryDetailPage() {
                   {catNames.map((cat) => (
                     <div key={cat} className="flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-xl">
                       <div>
-                        <p className="text-sm font-medium text-charcoal">{cat}</p>
+                        <p className="text-sm font-medium text-[#0F172A]">{cat}</p>
                         <p className="text-xs text-gray-400">{(categories[cat] || []).length} photos</p>
                       </div>
                       <button onClick={() => deleteCategory(cat)} className="text-xs text-red-500 hover:text-red-700">Remove</button>
@@ -1464,13 +1464,13 @@ export default function GalleryDetailPage() {
                 <p className="text-xs text-gray-400">Recipients get view access via the link — no account needed. Emails listed here are recorded for your reference.</p>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-charcoal">Agents can reshare this gallery</p>
+                    <p className="text-sm font-medium text-[#0F172A]">Agents can reshare this gallery</p>
                     <p className="text-xs text-gray-400">If on, the gallery page shows a copy-link button to the viewer.</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setAgentCanShare((v) => !v)}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${agentCanShare ? "bg-navy" : "bg-gray-300"}`}>
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${agentCanShare ? "bg-[#3486cf]" : "bg-gray-300"}`}>
                     <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${agentCanShare ? "translate-x-4" : "translate-x-0.5"}`} />
                   </button>
                 </div>
@@ -1484,7 +1484,7 @@ export default function GalleryDetailPage() {
                     <button key={val} type="button" onClick={() => setDeliveryMode(val)}
                       className={`flex-1 py-2 font-medium transition-colors ${
                         deliveryMode === val
-                          ? "bg-navy text-white"
+                          ? "bg-[#3486cf] text-white"
                           : "bg-white text-gray-500 hover:bg-gray-50"
                       }`}>
                       {label}
@@ -1516,11 +1516,11 @@ export default function GalleryDetailPage() {
                   <p>Your media for <strong>{gallery.bookingAddress}</strong> is ready to view and download.</p>
                   {galleryUrl ? (
                     <a href={galleryUrl} target="_blank" rel="noopener noreferrer"
-                      className="inline-block text-navy font-semibold underline hover:text-navy-light">
+                      className="inline-block text-[#3486cf] font-semibold underline hover:text-[#3486cf]-light">
                       [ View Gallery → ]
                     </a>
                   ) : (
-                    <p className="text-navy font-semibold">[ View Gallery ]</p>
+                    <p className="text-[#3486cf] font-semibold">[ View Gallery ]</p>
                   )}
                   <p className="text-gray-400 text-xs mt-3">— {gallery.tenantName || "Your photographer"}</p>
                 </div>

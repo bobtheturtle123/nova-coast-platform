@@ -31,14 +31,14 @@ const SORT_OPTIONS = [
 const STATUS_META = {
   pending_payment: { label: "Awaiting Payment", bg: "#FFF8ED", text: "#D97706", dot: "#FBBF24" },
   requested:       { label: "Pending Review",   bg: "#FFFBEB", text: "#B45309", dot: "#F59E0B" },
-  confirmed:       { label: "Confirmed",         bg: "#EFF6FF", text: "#1D4ED8", dot: "#3B82F6" },
+  confirmed:       { label: "Confirmed",         bg: "#EEF5FC", text: "#1E5A8A", dot: "#3486cf" },
   completed:       { label: "Completed",         bg: "#ECFDF5", text: "#059669", dot: "#10B981" },
   cancelled:       { label: "Cancelled",         bg: "#F9FAFB", text: "#6B7280", dot: "#9CA3AF" },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function avatarColor(str) {
-  const p = ["#0B2A55","#1e6091","#2e7d32","#6a1b9a","#d84315","#00695c","#b5872d","#c0392b"];
+  const p = ["#3486cf","#1e6091","#2e7d32","#6a1b9a","#d84315","#00695c","#b5872d","#c0392b"];
   let h = 0;
   for (let i = 0; i < (str || "").length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
   return p[Math.abs(h) % p.length];
@@ -89,7 +89,7 @@ function DateChip({ d }) {
   const info = formatDateShort(d);
   if (!info) return <span className="text-xs text-gray-300">—</span>;
   if (info.highlight === "navy")
-    return <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg text-white" style={{ background: "#0B2A55" }}>Today</span>;
+    return <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg" style={{ background: "#EEF4FA", color: "#1E5A8A" }}>Today</span>;
   if (info.highlight === "amber")
     return <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700">Tomorrow</span>;
   return (
@@ -286,7 +286,7 @@ export default function ListingsPage() {
               <p className="text-sm text-gray-400 mt-1 flex items-center gap-2 flex-wrap">
                 <span>{listings.length} total</span>
                 {counts.confirmed > 0 && (
-                  <><span className="text-gray-200">·</span><span className="text-[#0B2A55] font-semibold">{counts.confirmed} active</span></>
+                  <><span className="text-gray-200">·</span><span className="text-[#3486cf] font-semibold">{counts.confirmed} active</span></>
                 )}
                 {counts.requested > 0 && (
                   <><span className="text-gray-200">·</span><span className="text-amber-600 font-semibold">{counts.requested} pending</span></>
@@ -299,7 +299,7 @@ export default function ListingsPage() {
           </div>
           <Link href="/dashboard/bookings/create"
             className="flex-shrink-0 inline-flex items-center gap-2 text-xs font-semibold text-white px-4 py-2.5 rounded-xl"
-            style={{ background: "linear-gradient(135deg, #0B2A55 0%, #0d3575 100%)", boxShadow: "0 2px 8px rgba(11,42,85,0.28)" }}>
+            style={{ background: "linear-gradient(135deg, #3486cf 0%, #2a6dab 100%)", boxShadow: "0 2px 8px rgba(52,134,207,0.28)" }}>
             <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
@@ -362,18 +362,18 @@ export default function ListingsPage() {
           <div className="flex rounded-xl overflow-hidden flex-shrink-0"
             style={{ border: "1px solid var(--border)", background: "#fff" }}>
             <button onClick={() => setView("grid")}
-              className={`px-3 py-2 transition-colors flex items-center justify-center ${view === "grid" ? "bg-[#0F172A]" : "hover:bg-gray-50"}`}>
+              className={`px-3 py-2 transition-colors flex items-center justify-center ${view === "grid" ? "bg-[#3486cf]" : "hover:bg-gray-50"}`}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                stroke={view === "grid" ? "#fff" : "#94A3B8"} strokeWidth="2">
+                stroke={view === "grid" ? "#fff" : "#9CA3AF"} strokeWidth="2">
                 <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
                 <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
               </svg>
             </button>
             <button onClick={() => setView("list")}
-              className={`px-3 py-2 transition-colors flex items-center justify-center border-l ${view === "list" ? "bg-[#0F172A]" : "hover:bg-gray-50"}`}
+              className={`px-3 py-2 transition-colors flex items-center justify-center border-l ${view === "list" ? "bg-[#3486cf]" : "hover:bg-gray-50"}`}
               style={{ borderColor: "var(--border)" }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                stroke={view === "list" ? "#fff" : "#94A3B8"} strokeWidth="2">
+                stroke={view === "list" ? "#fff" : "#9CA3AF"} strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
@@ -383,15 +383,15 @@ export default function ListingsPage() {
         {/* ── Content ─────────────────────────────────────────────────────── */}
         {loading ? (
           <div className="flex justify-center py-24">
-            <div className="w-5 h-5 border-2 border-gray-200 border-t-[#0B2A55] rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-gray-200 border-t-[#3486cf] rounded-full animate-spin" />
           </div>
 
         ) : filtered.length === 0 ? (
           <div className="rounded-2xl p-16 text-center"
             style={{ background: "#fff", border: "1px solid var(--border-subtle)", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
             <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, #EEF2F8 0%, #DBEAFE 100%)" }}>
-              <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="#0B2A55" strokeWidth="1.5">
+              style={{ background: "#EEF5FC" }}>
+              <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="#6BAED0" strokeWidth="1.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
             </div>
@@ -457,7 +457,7 @@ export default function ListingsPage() {
 
                   {/* Address + client */}
                   <div className="min-w-0">
-                    <p className="text-[13.5px] font-semibold text-[#0F172A] truncate leading-snug group-hover:text-[#0B2A55] transition-colors">
+                    <p className="text-[13.5px] font-semibold text-[#0F172A] truncate leading-snug group-hover:text-[#374151] transition-colors">
                       {streetAddr}
                     </p>
                     <div className="flex items-center gap-1.5 mt-0.5">
@@ -488,7 +488,7 @@ export default function ListingsPage() {
                   <div className="flex justify-end">
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" strokeWidth="2"
                       stroke="#CBD5E1"
-                      className="group-hover:stroke-[#0B2A55] transition-colors flex-shrink-0">
+                      className="group-hover:stroke-[#9CA3AF] transition-colors flex-shrink-0">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </div>

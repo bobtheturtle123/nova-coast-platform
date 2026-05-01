@@ -26,7 +26,7 @@ function CopyButton({ text }) {
   return (
     <button onClick={copy}
       className={`text-xs px-3 py-1.5 rounded-xl border transition-all font-medium flex-shrink-0 ${
-        copied ? "bg-green-50 border-green-200 text-green-700" : "border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy"
+        copied ? "bg-green-50 border-green-200 text-green-700" : "border-gray-200 text-gray-500 hover:border-[#3486cf]/40 hover:text-[#3486cf]"
       }`}>
       {copied ? "Copied!" : "Copy"}
     </button>
@@ -40,7 +40,7 @@ function ShareButton({ referralUrl }) {
   );
   return (
     <a href={`mailto:?subject=${subject}&body=${body}`}
-      className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium flex-shrink-0">
+      className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:border-[#3486cf]/40 hover:text-[#3486cf] transition-all font-medium flex-shrink-0">
       Share via Email
     </a>
   );
@@ -95,7 +95,7 @@ export default function ReferralsPage() {
 
   if (loading) return (
     <div className="p-8 flex justify-center">
-      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
     </div>
   );
 
@@ -118,24 +118,24 @@ export default function ReferralsPage() {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="stat-card p-5">
           <p className="text-xs text-gray-400 uppercase tracking-[0.06em] mb-1">Credits Earned</p>
-          <p className="text-2xl font-semibold text-navy">${creditsDollars}</p>
+          <p className="text-2xl font-semibold text-[#3486cf]">${creditsDollars}</p>
           <p className="text-xs text-gray-400 mt-0.5">applied to billing</p>
         </div>
         <div className="stat-card p-5">
           <p className="text-xs text-gray-400 uppercase tracking-[0.06em] mb-1">Successful</p>
-          <p className="text-2xl font-semibold text-navy">{data?.totalRewarded ?? 0}</p>
+          <p className="text-2xl font-semibold text-[#3486cf]">{data?.totalRewarded ?? 0}</p>
           <p className="text-xs text-gray-400 mt-0.5">paying referrals</p>
         </div>
         <div className="stat-card p-5">
           <p className="text-xs text-gray-400 uppercase tracking-[0.06em] mb-1">Pending</p>
-          <p className="text-2xl font-semibold text-navy">{data?.totalPending ?? 0}</p>
+          <p className="text-2xl font-semibold text-[#3486cf]">{data?.totalPending ?? 0}</p>
           <p className="text-xs text-gray-400 mt-0.5">awaiting payment</p>
         </div>
       </div>
 
       {/* Referral link */}
       <div className="card p-6 mb-6">
-        <h2 className="font-semibold text-charcoal text-sm mb-1">Your Referral Link</h2>
+        <h2 className="font-semibold text-[#0F172A] text-sm mb-1">Your Referral Link</h2>
         <p className="text-xs text-gray-400 mb-4">
           Share this link. Credit is applied automatically when the person subscribes.
         </p>
@@ -153,19 +153,19 @@ export default function ReferralsPage() {
               <a
                 href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Running my real estate photography business on KyoriaOS. Sign up with my link and we both get $20:\n${referralUrl}`)}`}
                 target="_blank" rel="noopener noreferrer"
-                className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
+                className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:border-[#3486cf]/40 hover:text-[#3486cf] transition-all font-medium">
                 Share on X
               </a>
               <a
                 href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralUrl)}&quote=${encodeURIComponent(`Running my real estate photography business on KyoriaOS - sign up with my link and we both get $20!`)}`}
                 target="_blank" rel="noopener noreferrer"
-                className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
+                className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:border-[#3486cf]/40 hover:text-[#3486cf] transition-all font-medium">
                 Share on Facebook
               </a>
               <a
                 href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(referralUrl)}`}
                 target="_blank" rel="noopener noreferrer"
-                className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:border-navy/40 hover:text-navy transition-all font-medium">
+                className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:border-[#3486cf]/40 hover:text-[#3486cf] transition-all font-medium">
                 Share on LinkedIn
               </a>
             </div>
@@ -180,10 +180,10 @@ export default function ReferralsPage() {
       {/* Tracking codes */}
       <div className="card p-6 mb-6">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="font-semibold text-charcoal text-sm">Tracking Codes</h2>
+          <h2 className="font-semibold text-[#0F172A] text-sm">Tracking Codes</h2>
           {namedCodes.length < 10 && !showAddForm && (
             <button onClick={() => setShowAddForm(true)}
-              className="text-xs text-navy hover:underline font-medium">
+              className="text-xs text-[#3486cf] hover:underline font-medium">
               + Add code
             </button>
           )}
@@ -219,7 +219,7 @@ export default function ReferralsPage() {
             {referralUrl && (
               <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-charcoal mb-0.5">Default link</p>
+                  <p className="text-xs font-semibold text-[#0F172A] mb-0.5">Default link</p>
                   <p className="font-mono text-xs text-gray-500 truncate">{referralUrl}</p>
                 </div>
                 <CopyButton text={referralUrl} />
@@ -230,7 +230,7 @@ export default function ReferralsPage() {
               return (
                 <div key={c.code} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-charcoal mb-0.5">{c.label}</p>
+                    <p className="text-xs font-semibold text-[#0F172A] mb-0.5">{c.label}</p>
                     <p className="font-mono text-xs text-gray-500 truncate">{url}</p>
                   </div>
                   <CopyButton text={url} />
@@ -245,7 +245,7 @@ export default function ReferralsPage() {
 
       {/* How it works */}
       <div className="card p-6 mb-6">
-        <h2 className="font-semibold text-charcoal text-sm mb-4">How it works</h2>
+        <h2 className="font-semibold text-[#0F172A] text-sm mb-4">How it works</h2>
         <div className="space-y-3">
           {[
             { n: "1", title: "Share your link",    desc: "Send it to photographers who might benefit from KyoriaOS." },
@@ -254,11 +254,11 @@ export default function ReferralsPage() {
             { n: "4", title: "Both get $20 credit", desc: "Credit is applied automatically to the next invoice. No action needed." },
           ].map(({ n, title, desc }) => (
             <div key={n} className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-navy text-white flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+              <div className="w-6 h-6 rounded-full bg-[#3486cf] text-white flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                 {n}
               </div>
               <div>
-                <p className="text-sm font-medium text-charcoal">{title}</p>
+                <p className="text-sm font-medium text-[#0F172A]">{title}</p>
                 <p className="text-xs text-gray-400">{desc}</p>
               </div>
             </div>
@@ -274,7 +274,7 @@ export default function ReferralsPage() {
       {referrals.length > 0 && (
         <div className="card-section overflow-hidden">
           <div className="px-6 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-            <h2 className="font-semibold text-charcoal text-sm">Referral History</h2>
+            <h2 className="font-semibold text-[#0F172A] text-sm">Referral History</h2>
           </div>
           <div>
             {referrals.map((r) => {
@@ -291,7 +291,7 @@ export default function ReferralsPage() {
                   onMouseEnter={(e) => e.currentTarget.style.background = "rgb(15 23 42 / 0.022)"}
                   onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-charcoal font-medium truncate">
+                    <p className="text-sm text-[#0F172A] font-medium truncate">
                       {r.refereeEmail || "Unknown"}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
@@ -320,7 +320,7 @@ export default function ReferralsPage() {
       {referrals.length === 0 && (
         <div className="bg-gray-50 border border-gray-100 rounded-xl p-8 text-center">
           <p className="text-3xl mb-3">🔗</p>
-          <p className="text-sm font-medium text-charcoal mb-1">No referrals yet</p>
+          <p className="text-sm font-medium text-[#0F172A] mb-1">No referrals yet</p>
           <p className="text-xs text-gray-400">Share your link above to start earning credit.</p>
         </div>
       )}

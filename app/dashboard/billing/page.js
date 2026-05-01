@@ -153,7 +153,7 @@ export default function BillingPage() {
 
   if (loading) return (
     <div className="p-8 flex justify-center">
-      <div className="w-5 h-5 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
     </div>
   );
 
@@ -297,7 +297,7 @@ export default function BillingPage() {
                   className={`flex flex-col items-center p-4 rounded-xl border transition-all text-center
                     ${wouldExceed
                       ? "border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed"
-                      : "border-gray-200 bg-white hover:border-navy hover:shadow-card-hover disabled:opacity-50"
+                      : "border-gray-200 bg-white hover:border-[#3486cf] hover:shadow-card-hover disabled:opacity-50"
                     }`}>
                   <span className="font-semibold text-[#0F172A] text-sm">{t.label}</span>
                   <span className="text-xs text-gray-500 mt-0.5">{t.price} one-time</span>
