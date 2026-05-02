@@ -1,9 +1,9 @@
 import { getTenantBySlug } from "@/lib/tenants";
+import AgentNav from "@/components/AgentNav";
 
 export default async function AgentPortalLayout({ children, params }) {
   const tenant = await getTenantBySlug(params.slug);
   const primary = tenant?.branding?.primaryColor || "#3486cf";
-  const accent  = tenant?.branding?.accentColor  || "#c9a96e";
   const name    = tenant?.branding?.businessName || tenant?.businessName || "";
   const logo    = tenant?.branding?.logoUrl || null;
 
@@ -25,6 +25,7 @@ export default async function AgentPortalLayout({ children, params }) {
           </div>
           <span className="text-xs text-gray-400">Powered by KyoriaOS</span>
         </div>
+        <AgentNav slug={params.slug} />
       </header>
       {children}
     </div>

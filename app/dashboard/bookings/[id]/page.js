@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
+import WorkflowStepper from "@/components/booking/WorkflowStepper";
+import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
+import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 
 function WeatherWidget({ booking, tempUnit = "F" }) {
   const [wx,      setWx]      = useState(null);
@@ -151,6 +154,10 @@ export default function BookingDetailPage() {
   const [showWeather, setShowWeather] = useState(true);
   const [tempUnit,    setTempUnit]    = useState("F");
 
+  const [workflowStatus,  setWorkflowStatus]  = useState("booked");
+  const [statusHistory,   setStatusHistory]   = useState([]);
+  const [updatingWorkflow, setUpdatingWorkflow] = useState(false);
+
   // Job costs state
   const [costs, setCosts] = useState({ shooterFee: 0, editorFee: 0, travelCost: 0, otherCosts: 0, shootHours: "", editHoursPerPhoto: "", notes: "" });
   const [costsSaving, setCostsSaving] = useState(false);
@@ -171,6 +178,8 @@ export default function BookingDetailPage() {
       if (bookingData) {
         setBooking(bookingData.booking);
         setShootDate(bookingData.booking.shootDate?.split?.("T")?.[0] || "");
+        setWorkflowStatus(resolveWorkflowStatus(bookingData.booking));
+        setStatusHistory(bookingData.booking.statusHistory || []);
         if (bookingData.booking.costs) {
           setCosts({
             shooterFee:        bookingData.booking.costs.shooterFee        || 0,
@@ -223,6 +232,34 @@ export default function BookingDetailPage() {
       setMsg("Something went wrong.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function updateWorkflowStatus(newStatus) {
+    setUpdatingWorkflow(true);
+    setMsg("");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/bookings/${id}/workflow-status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ workflowStatus: newStatus }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setWorkflowStatus(newStatus);
+        setStatusHistory((prev) => [
+          ...prev,
+          { status: newStatus, changedAt: new Date().toISOString(), changedBy: "admin" },
+        ]);
+        setMsg("Workflow status updated.");
+      } else {
+        setMsg(data.error || "Failed to update status.");
+      }
+    } catch {
+      setMsg("Something went wrong.");
+    } finally {
+      setUpdatingWorkflow(false);
     }
   }
 
@@ -354,13 +391,7 @@ export default function BookingDetailPage() {
             </p>
           )}
         </div>
-        <span className={`text-xs px-3 py-1 rounded-full font-medium
-          ${booking.status === "confirmed" ? "bg-green-50 text-green-700" :
-            booking.status === "requested" ? "bg-amber-50 text-amber-700" :
-            booking.status === "completed" ? "bg-blue-50 text-blue-700"  :
-            "bg-gray-50 text-gray-600"}`}>
-          {booking.status}
-        </span>
+        <WorkflowStatusBadge status={workflowStatus} />
       </div>
 
       {msg && (
@@ -368,6 +399,13 @@ export default function BookingDetailPage() {
           {msg}
         </div>
       )}
+
+      <WorkflowStepper
+        currentStatus={workflowStatus}
+        onStatusChange={updateWorkflowStatus}
+        history={statusHistory}
+        updating={updatingWorkflow}
+      />
 
       <div className="grid md:grid-cols-2 gap-6 mb-6">
         {/* Client info */}

@@ -53,13 +53,52 @@ export default async function AgentBookingPage({ params, searchParams }) {
   const booking = {
     id:              bookingId,
     address:         bookingData.fullAddress || bookingData.address || "Property",
+    addressLine:     bookingData.address     || "",
+    city:            bookingData.city        || "",
+    state:           bookingData.state       || "",
+    zip:             bookingData.zip         || "",
+    lat:             bookingData.lat         || null,
+    lng:             bookingData.lng         || null,
+    squareFootage:   bookingData.squareFootage || "",
+    propertyType:    bookingData.propertyType  || "residential",
     clientName:      bookingData.clientName  || "",
+    clientEmail:     bookingData.clientEmail || "",
+    clientPhone:     bookingData.clientPhone || "",
     status:          bookingData.status      || "confirmed",
+    workflowStatus:  bookingData.workflowStatus || null,
     shootDate:       bookingData.shootDate?.toDate?.()?.toISOString?.() ?? (typeof bookingData.shootDate === "string" ? bookingData.shootDate : null),
     propertyWebsite: bookingData.propertyWebsite ? sanitizePw(bookingData.propertyWebsite) : null,
     totalPrice:      bookingData.totalPrice  || 0,
     remainingBalance: bookingData.remainingBalance || 0,
+    packageId:       bookingData.packageId   || null,
+    serviceIds:      bookingData.serviceIds  || [],
+    addonIds:        bookingData.addonIds    || [],
   };
+
+  // Check if revision requests are enabled
+  const allowRevisions = tenant.bookingConfig?.allowRevisionRequests === true;
+
+  // Fetch existing revision requests for this booking (sort in memory to avoid composite index requirement)
+  const revisionsSnap = await adminDb
+    .collection("tenants").doc(tenant.id)
+    .collection("revisionRequests")
+    .where("bookingId", "==", bookingId)
+    .limit(20)
+    .get();
+
+  const revisions = revisionsSnap.docs
+    .map((d) => {
+      const r = d.data();
+      return {
+        id:          d.id,
+        status:      r.status,
+        message:     r.message,
+        requestedAt: r.requestedAt?.toDate?.()?.toISOString?.() ?? null,
+        adminNotes:  r.adminNotes || "",
+        resolvedAt:  r.resolvedAt?.toDate?.()?.toISOString?.() ?? null,
+      };
+    })
+    .sort((a, b) => (b.requestedAt || "") > (a.requestedAt || "") ? 1 : -1);
 
   // Fetch gallery
   let gallery = null;
@@ -100,6 +139,8 @@ export default async function AgentBookingPage({ params, searchParams }) {
       branding={branding}
       slug={slug}
       token={token}
+      allowRevisions={allowRevisions}
+      revisions={revisions}
     />
   );
 }

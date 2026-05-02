@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
+import { resolveWorkflowStatus, WORKFLOW_STATUSES } from "@/lib/workflowStatus";
 
 const STATUS_LABELS = {
   requested:  { label: "Requested",  color: "bg-amber-100 text-amber-700" },
@@ -121,10 +122,15 @@ export default function PhotographerShootsPage() {
       ) : (
         <div className="space-y-3">
           {filtered.map((b) => {
-            const st = STATUS_LABELS[b.status] || { label: b.status, color: "bg-gray-100 text-gray-600" };
+            const wfStatus = resolveWorkflowStatus(b);
+            const wfDef    = WORKFLOW_STATUSES.find((s) => s.id === wfStatus);
+            const st       = wfDef
+              ? { label: wfDef.label, color: `${wfDef.bg} ${wfDef.text}` }
+              : (STATUS_LABELS[b.status] || { label: b.status, color: "bg-gray-100 text-gray-600" });
             const date = b.shootDate || b.preferredDate;
             return (
-              <div key={b.id} className="bg-white border border-gray-200 rounded-lg px-5 py-4">
+              <Link key={b.id} href={`/photographer/shoots/${b.id}`}
+                className="block bg-white border border-gray-200 rounded-lg px-5 py-4 hover:shadow-sm transition-shadow">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900 truncate">{b.fullAddress || b.address || "Address TBD"}</p>
@@ -157,7 +163,7 @@ export default function PhotographerShootsPage() {
                 {b.notes && (
                   <p className="text-xs text-gray-400 mt-2 italic">{b.notes}</p>
                 )}
-              </div>
+              </Link>
             );
           })}
         </div>

@@ -2,6 +2,10 @@ import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
 import Link from "next/link";
 import AgentShareButtons from "@/components/AgentShareButtons";
+import AgentTokenPersist from "@/components/AgentTokenPersist";
+import AgentSessionCheck from "@/components/AgentSessionCheck";
+import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
+import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 
 export default async function AgentPortalPage({ params, searchParams }) {
   const { slug } = params;
@@ -13,7 +17,7 @@ export default async function AgentPortalPage({ params, searchParams }) {
   }
 
   if (!token) {
-    return <ErrorScreen message="No access token provided. Check the link you received." />;
+    return <AgentSessionCheck slug={slug} />;
   }
 
   // Look up agent by access token
@@ -45,10 +49,11 @@ export default async function AgentPortalPage({ params, searchParams }) {
   }).map((d) => {
     const data = d.data();
     return {
-      id:           d.id,
-      address:      data.fullAddress || data.address || "Property",
-      status:       data.status || "confirmed",
-      shootDate:    data.shootDate   ? data.shootDate.toDate?.()?.toISOString?.() ?? data.shootDate : null,
+      id:             d.id,
+      address:        data.fullAddress || data.address || "Property",
+      status:         data.status || "confirmed",
+      workflowStatus: data.workflowStatus || null,
+      shootDate:      data.shootDate ? data.shootDate.toDate?.()?.toISOString?.() ?? data.shootDate : null,
       galleryId:        data.galleryId   || null,
       propertyWebsite:  data.propertyWebsite || null,
       totalPrice:       data.totalPrice  || 0,
@@ -100,23 +105,16 @@ export default async function AgentPortalPage({ params, searchParams }) {
       ) : (
         <div className="space-y-4">
           {bookings.map((b) => {
-            const gal  = b.galleryId ? galleries[b.galleryId] : null;
-            const pw   = b.propertyWebsite;
-            const statusColor = {
-              confirmed: "bg-blue-50 text-blue-700",
-              completed: "bg-green-50 text-green-700",
-              requested: "bg-amber-50 text-amber-700",
-              cancelled: "bg-red-50 text-red-600",
-            }[b.status] || "bg-gray-50 text-gray-600";
+            const gal        = b.galleryId ? galleries[b.galleryId] : null;
+            const pw         = b.propertyWebsite;
+            const wfStatus   = resolveWorkflowStatus(b);
 
             return (
               <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${statusColor}`}>
-                        {b.status?.replace(/_/g, " ")}
-                      </span>
+                      <WorkflowStatusBadge status={wfStatus} size="xs" />
                       {gal?.delivered && (
                         <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
                           ✓ Media Delivered
@@ -174,6 +172,9 @@ export default async function AgentPortalPage({ params, searchParams }) {
           })}
         </div>
       )}
+
+      {/* Persist token to localStorage so returning agents skip the email link */}
+      <AgentTokenPersist slug={slug} token={token} />
     </main>
   );
 }

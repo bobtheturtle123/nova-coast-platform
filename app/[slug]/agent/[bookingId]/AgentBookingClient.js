@@ -2,12 +2,29 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+import { useBookingStore } from "@/store/bookingStore";
 
-export default function AgentBookingClient({ booking, gallery, branding, slug, token }) {
+const MarketingStudio = dynamic(() => import("@/components/marketing/MarketingStudio"), { ssr: false });
+
+const REVISION_STATUS = {
+  pending:      { label: "Pending",      cls: "bg-amber-100 text-amber-700" },
+  acknowledged: { label: "Acknowledged", cls: "bg-blue-100 text-blue-700" },
+  resolved:     { label: "Resolved",     cls: "bg-emerald-100 text-emerald-700" },
+};
+
+export default function AgentBookingClient({ booking, gallery, branding, slug, token, allowRevisions, revisions: initialRevisions }) {
+  const router         = useRouter();
+  const preloadReorder = useBookingStore((s) => s.preloadReorder);
   const [captions,        setCaptions]        = useState(null);
   const [captionsLoading, setCaptionsLoading] = useState(false);
   const [captionsCopied,  setCaptionsCopied]  = useState(null);
   const [tab,             setTab]             = useState("overview");
+  const [revisions,       setRevisions]       = useState(initialRevisions || []);
+  const [revMsg,          setRevMsg]          = useState("");
+  const [revSending,      setRevSending]      = useState(false);
+  const [revText,         setRevText]         = useState("");
 
   const pw          = booking.propertyWebsite || {};
   const listingUrl  = typeof window !== "undefined"
@@ -16,6 +33,51 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
   const brochureUrl = `/${slug}/property/${booking.id}/brochure`;
   const galleryUrl  = gallery?.accessToken ? `/${slug}/gallery/${gallery.accessToken}` : null;
   const qrUrl       = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(listingUrl)}&size=200x200&color=${branding.primary.replace("#", "")}&bgcolor=FFFFFF`;
+
+  async function submitRevision() {
+    if (!revText.trim()) return;
+    setRevSending(true);
+    try {
+      const res = await fetch(`/api/${slug}/agent/revision-request`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ token, bookingId: booking.id, message: revText }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setRevisions((prev) => [{
+          id: data.revisionId, status: "pending", message: revText,
+          requestedAt: new Date().toISOString(), adminNotes: "", resolvedAt: null,
+        }, ...prev]);
+        setRevText("");
+        setRevMsg("Revision request submitted. The photographer will follow up soon.");
+      } else {
+        setRevMsg(data.error || "Failed to submit.");
+      }
+    } catch { setRevMsg("Something went wrong."); }
+    setRevSending(false);
+    setTimeout(() => setRevMsg(""), 5000);
+  }
+
+  function handleReorder() {
+    preloadReorder({
+      packageId:     booking.packageId     || null,
+      serviceIds:    booking.serviceIds    || [],
+      addonIds:      booking.addonIds      || [],
+      address:       booking.addressLine   || booking.address || "",
+      city:          booking.city          || "",
+      state:         booking.state         || "",
+      zip:           booking.zip           || "",
+      lat:           booking.lat           || null,
+      lng:           booking.lng           || null,
+      squareFootage: booking.squareFootage || "",
+      propertyType:  booking.propertyType  || "residential",
+      clientName:    booking.clientName    || "",
+      clientEmail:   booking.clientEmail   || "",
+      clientPhone:   booking.clientPhone   || "",
+    });
+    router.push(`/${slug}/book`);
+  }
 
   async function generateCaptions() {
     setCaptionsLoading(true);
@@ -33,11 +95,15 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
     setTimeout(() => setCaptionsCopied(null), 2000);
   }
 
+  const pendingRevisions = revisions.filter((r) => r.status === "pending").length;
   const TABS = [
     { id: "overview",  label: "Overview" },
     { id: "marketing", label: "Marketing" },
+    { id: "studio",    label: "Studio" },
     ...(galleryUrl ? [{ id: "gallery", label: `Gallery${gallery?.imageCount > 0 ? ` (${gallery.imageCount})` : ""}` }] : []),
     ...(pw?.published ? [{ id: "website", label: "Property Website" }] : []),
+    ...(booking.totalPrice > 0 ? [{ id: "invoice", label: "Invoice" }] : []),
+    ...(allowRevisions ? [{ id: "revisions", label: pendingRevisions > 0 ? `Revisions (${pendingRevisions})` : "Revisions" }] : []),
   ];
 
   return (
@@ -120,6 +186,19 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
                 <p className="text-xs text-gray-400">PDF / print ready</p>
               </a>
             )}
+          </div>
+
+          {/* Quick Reorder */}
+          <div className="bg-[#EEF5FC] border border-[#3486cf]/20 rounded-xl p-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-[#1E5A8A]">Book this property again?</p>
+              <p className="text-xs text-[#3486cf]/70 mt-0.5">Pre-fills address and services from this listing.</p>
+            </div>
+            <button onClick={handleReorder}
+              className="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-lg text-white transition-colors"
+              style={{ background: branding.primary }}>
+              Quick Reorder →
+            </button>
           </div>
 
           {/* Property details */}
@@ -250,6 +329,52 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
         </div>
       )}
 
+      {/* ── STUDIO TAB ─────────────────────────────────────────────── */}
+      {tab === "studio" && (
+        <div>
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-4">Marketing Studio</p>
+          <MarketingStudio
+            booking={booking}
+            branding={branding}
+            coverUrl={gallery?.coverUrl || null}
+          />
+        </div>
+      )}
+
+      {/* ── INVOICE TAB ────────────────────────────────────────────── */}
+      {tab === "invoice" && (
+        <div className="space-y-4">
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-4">Invoice Summary</p>
+            <div className="space-y-3">
+              {booking.packageId && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Package — {booking.packageId}</span>
+                  <span className="font-medium text-gray-900">${Number(booking.totalPrice).toLocaleString()}</span>
+                </div>
+              )}
+              {(booking.serviceIds || []).map((s) => (
+                <div key={s} className="flex justify-between text-sm">
+                  <span className="text-gray-600">{s}</span>
+                  <span className="text-gray-400">—</span>
+                </div>
+              ))}
+              <div className="pt-3 border-t border-gray-100 flex justify-between font-semibold">
+                <span className="text-gray-800">Total</span>
+                <span className="text-gray-900">${Number(booking.totalPrice).toLocaleString()}</span>
+              </div>
+              {booking.remainingBalance > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-amber-700 font-medium">Balance Due</span>
+                  <span className="text-amber-700 font-medium">${Number(booking.remainingBalance).toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-gray-400">For payment questions, contact your photographer directly.</p>
+        </div>
+      )}
+
       {/* ── PROPERTY WEBSITE TAB ───────────────────────────────────── */}
       {tab === "website" && pw?.published && (
         <div className="space-y-4">
@@ -303,6 +428,71 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
                 {pw.baths && <div><p className="text-xs text-gray-400">Baths</p><p className="font-semibold text-gray-800">{pw.baths}</p></div>}
                 {pw.sqft  && <div><p className="text-xs text-gray-400">Sq Ft</p><p className="font-semibold text-gray-800">{Number(pw.sqft).toLocaleString()}</p></div>}
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── REVISIONS TAB ──────────────────────────────────────────── */}
+      {tab === "revisions" && allowRevisions && (
+        <div className="space-y-5">
+          {/* Submit new request */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Submit a Revision Request</p>
+            <textarea
+              rows={4}
+              value={revText}
+              onChange={(e) => setRevText(e.target.value)}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3486cf]/30 resize-none mb-3"
+              placeholder="Describe what needs to be changed or re-shot…"
+            />
+            {revMsg && (
+              <p className={`text-sm mb-3 ${revMsg.includes("submitted") ? "text-emerald-600" : "text-red-500"}`}>
+                {revMsg}
+              </p>
+            )}
+            <button onClick={submitRevision} disabled={revSending || !revText.trim()}
+              className="text-sm font-semibold px-5 py-2.5 rounded-lg text-white transition-colors disabled:opacity-50"
+              style={{ background: branding.primary }}>
+              {revSending ? "Submitting…" : "Submit Request"}
+            </button>
+          </div>
+
+          {/* Past requests */}
+          {revisions.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Previous Requests</p>
+              <div className="space-y-3">
+                {revisions.map((r) => {
+                  const st = REVISION_STATUS[r.status] || { label: r.status, cls: "bg-gray-100 text-gray-600" };
+                  return (
+                    <div key={r.id} className="bg-white border border-gray-200 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                        {r.requestedAt && (
+                          <span className="text-xs text-gray-400">
+                            {new Date(r.requestedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-700">{r.message}</p>
+                      {r.adminNotes && (
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <p className="text-xs text-gray-400 mb-0.5">Response</p>
+                          <p className="text-sm text-gray-600">{r.adminNotes}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {revisions.length === 0 && (
+            <div className="text-center py-10 text-gray-400">
+              <p className="text-2xl mb-2">📝</p>
+              <p className="text-sm">No revision requests yet.</p>
             </div>
           )}
         </div>

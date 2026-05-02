@@ -37,7 +37,7 @@ export async function PATCH(req, { params }) {
 
   const body = await req.json();
   const allowed = [
-    "status", "shootDate", "shootTime",
+    "status", "workflowStatus", "shootDate", "shootTime",
     "photographerId", "photographerEmail", "photographerName", "photographerPhone",
     "notes", "propertyWebsite",
   ];

@@ -104,6 +104,29 @@ export const useBookingStore = create(
 
       resetBooking: () => set(INITIAL_STATE),
 
+      // Pre-fill from a previous booking for quick reorder
+      preloadReorder: ({ packageId, serviceIds, addonIds, address, city, state, zip, lat, lng, squareFootage, propertyType, clientName, clientEmail, clientPhone }) =>
+        set({
+          ...INITIAL_STATE,
+          packageId:     packageId  || null,
+          serviceIds:    serviceIds || [],
+          addonIds:      addonIds   || [],
+          address:       address    || "",
+          city:          city       || "",
+          state:         state      || "CA",
+          zip:           zip        || "",
+          lat:           lat        || null,
+          lng:           lng        || null,
+          squareFootage: squareFootage || "",
+          propertyType:  propertyType  || "residential",
+          clientName:    clientName    || "",
+          clientEmail:   clientEmail   || "",
+          clientPhone:   clientPhone   || "",
+          // Clear schedule so agent picks a new date
+          preferredDate: "",
+          preferredTime: "morning",
+        }),
+
       // ─── Computed helpers ─────────────────────────────────────
       getFullAddress: () => {
         const { address, city, state, zip } = get();

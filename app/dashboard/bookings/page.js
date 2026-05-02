@@ -5,6 +5,8 @@ import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import { getSqftTier, getItemPrice, calculateTenantPrice, getActiveTiers, formatPrice } from "@/lib/catalogUtils";
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
+import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
+import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 
 const STATUS_LABELS = {
   pending_payment: { label: "Awaiting payment", cls: "bg-gray-50 text-gray-500" },
@@ -581,7 +583,8 @@ export default function BookingsPage() {
       ) : (
         <div className="card-section overflow-hidden">
           {filtered.map((b) => {
-            const s = STATUS_LABELS[b.status] || { label: b.status, cls: "bg-gray-50 text-gray-500" };
+            const s           = STATUS_LABELS[b.status] || { label: b.status, cls: "bg-gray-50 text-gray-500" };
+            const wfStatus    = resolveWorkflowStatus(b);
             const dateStr = b.preferredDate
               ? new Date(b.preferredDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
               : "No date";
@@ -607,7 +610,7 @@ export default function BookingsPage() {
                     <p className="text-sm font-semibold text-[#0F172A]">${(b.totalPrice || 0).toLocaleString()}</p>
                     <p className="text-xs text-gray-400">{b.depositPaid ? "Deposit paid" : "No deposit"}</p>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.cls}`}>{s.label}</span>
+                  <WorkflowStatusBadge status={wfStatus} size="xs" />
                   <Link href={`/dashboard/bookings/${b.id}`} className="text-xs text-[#3486cf] hover:underline whitespace-nowrap">
                     View →
                   </Link>

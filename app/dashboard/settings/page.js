@@ -571,6 +571,7 @@ export default function SettingsPage() {
   const [enableApn,          setEnableApn]          = useState(false);
   const [requireServiceArea, setRequireServiceArea] = useState(false);
   const [autoConvertToListing, setAutoConvertToListing] = useState(false);
+  const [allowRevisionRequests, setAllowRevisionRequests] = useState(false);
   const [savingBooking, setSavingBooking] = useState(false);
 
   // Global job cost rates
@@ -720,6 +721,7 @@ export default function SettingsPage() {
           if (bc.enableApn !== undefined) setEnableApn(bc.enableApn);
           if (bc.requireServiceArea !== undefined) setRequireServiceArea(bc.requireServiceArea);
           if (bc.autoConvertToListing !== undefined) setAutoConvertToListing(bc.autoConvertToListing);
+          if (bc.allowRevisionRequests !== undefined) setAllowRevisionRequests(bc.allowRevisionRequests);
           if (bc.serviceAgreement) {
             setServiceAgreementEnabled(bc.serviceAgreement.enabled || false);
             setServiceAgreementText(bc.serviceAgreement.text || "");
@@ -917,6 +919,7 @@ export default function SettingsPage() {
       enableApn,
       requireServiceArea,
       autoConvertToListing,
+      allowRevisionRequests,
       serviceAgreement: { enabled: serviceAgreementEnabled, text: serviceAgreementText },
       terms:        termsText,
       privacy:      privacyText,
@@ -1638,6 +1641,25 @@ export default function SettingsPage() {
               <p className="text-xs text-gray-400 mt-0.5">
                 When ON, every new booking automatically becomes a listing workspace (gallery, property site, deliverables).
                 When OFF, bookings are plain orders — you manually promote them via "Create Listing Workspace" on the booking page.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Revision Requests toggle */}
+        <div className="pt-4 border-t border-gray-100">
+          <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={() => setAllowRevisionRequests((v) => !v)}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors mt-0.5 ${allowRevisionRequests ? "bg-[#3486cf]" : "bg-gray-200"}`}
+            >
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${allowRevisionRequests ? "translate-x-4" : "translate-x-0"}`} />
+            </button>
+            <div>
+              <p className="text-sm font-medium text-[#0F172A]">Allow agent revision requests</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                When ON, agents can submit revision requests from their portal. Requests appear in your Revisions inbox.
               </p>
             </div>
           </div>
