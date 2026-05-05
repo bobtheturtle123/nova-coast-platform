@@ -3,8 +3,6 @@ import { getTenantBySlug } from "@/lib/tenants";
 import Link from "next/link";
 import AgentTokenPersist from "@/components/AgentTokenPersist";
 import AgentSessionCheck from "@/components/AgentSessionCheck";
-import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
-import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 
 function formatDate(dateStr) {
   if (!dateStr) return null;
@@ -107,7 +105,6 @@ export default async function AgentListingsPage({ params, searchParams }) {
             <thead>
               <tr className="border-b border-gray-100 text-left">
                 <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Address</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
                 <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Shoot Date</th>
                 <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Gallery</th>
                 <th className="px-4 py-3" />
@@ -115,15 +112,17 @@ export default async function AgentListingsPage({ params, searchParams }) {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {bookings.map((b) => {
-                const gal     = b.galleryId ? galleries[b.galleryId] : null;
-                const wfStatus = resolveWorkflowStatus(b);
+                const gal = b.galleryId ? galleries[b.galleryId] : null;
                 return (
                   <tr key={b.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3.5">
                       <p className="font-medium text-gray-900 truncate max-w-xs">{b.address}</p>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <WorkflowStatusBadge status={wfStatus} size="xs" />
+                      {gal?.delivered && (
+                        <span className="text-xs text-emerald-600 font-medium flex items-center gap-1 mt-0.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                          Media ready
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 text-gray-500 hidden sm:table-cell">
                       {formatDate(b.shootDate) || <span className="text-gray-300">TBD</span>}

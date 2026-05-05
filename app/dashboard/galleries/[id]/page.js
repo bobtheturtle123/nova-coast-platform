@@ -5,8 +5,9 @@ import { useParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
+import { getAppUrl } from "@/lib/appUrl";
 
-const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
+const APP_URL = getAppUrl();
 
 // ─── Image thumbnail with loading/error ───────────────────────────────────────
 function MediaThumb({ src, alt, isFirst, isDragging, category, categories,

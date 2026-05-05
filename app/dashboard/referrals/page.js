@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
+import { getAppUrl } from "@/lib/appUrl";
 
 const STATUS_META = {
   rewarded: { label: "Rewarded",      cls: "bg-green-50 text-green-700 border-green-200" },
@@ -99,7 +100,7 @@ export default function ReferralsPage() {
     </div>
   );
 
-  const appUrl         = typeof window !== "undefined" ? window.location.origin : "https://app.kyoriaos.com";
+  const appUrl = getAppUrl();
   const referralUrl    = data?.referralCode ? `${appUrl}/ref/${data.referralCode}` : null;
   const creditsDollars = Math.floor((data?.creditsCents || 0) / 100);
   const referrals      = data?.referrals || [];

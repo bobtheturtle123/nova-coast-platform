@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/components/Toast";
+import { getAppUrl } from "@/lib/appUrl";
 
 const SKILL_LABELS = {
   classicDaytime:         "Classic Daytime",
@@ -283,7 +284,7 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
 
 // ─── Calendar sync modal ─────────────────────────────────────────────────────
 function CalendarSyncModal({ member, onClose, onRegenerate }) {
-  const APP_URL    = typeof window !== "undefined" ? window.location.origin : "";
+  const APP_URL = getAppUrl();
   const isGCalConnected = !!member.googleCalendar?.refreshToken;
 
   const [gcalError, setGcalError] = useState("");

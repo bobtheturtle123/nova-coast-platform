@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/components/Toast";
+import { getAppUrl } from "@/lib/appUrl";
 
 export default function PhotographerProfilePage() {
   const toast = useToast();
@@ -12,7 +13,7 @@ export default function PhotographerProfilePage() {
   const [saving,  setSaving]  = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
+  const APP_URL = getAppUrl();
 
   useEffect(() => {
     async function load() {

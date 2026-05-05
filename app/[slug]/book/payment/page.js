@@ -7,6 +7,7 @@ import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-
 import { useBookingStore } from "@/store/bookingStore";
 import StepProgress from "@/components/booking/StepProgress";
 import { depositLabel } from "@/lib/catalogUtils";
+import { getAppUrl } from "@/lib/appUrl";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
@@ -25,7 +26,7 @@ function PaymentForm({ chargeAmount, payLabel, onSuccess }) {
 
     const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
       elements,
-      confirmParams: { return_url: window.location.origin },
+      confirmParams: { return_url: `${getAppUrl()}` },
       redirect: "if_required",
     });
 

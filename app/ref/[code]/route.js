@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getTenantByReferralCode } from "@/lib/referral";
+import { getAppUrl } from "@/lib/appUrl";
 
 export async function GET(req, { params }) {
   const { code } = params;
-  const registerUrl = new URL("/auth/register", req.url);
+  const registerUrl = new URL(`${getAppUrl()}/auth/register`);
 
   // Validate code exists before setting cookie (prevents junk cookies)
   const referrer = await getTenantByReferralCode(code).catch(() => null);

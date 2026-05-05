@@ -5,6 +5,7 @@ import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
+import { getAppUrl } from "@/lib/appUrl";
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 const MOCK_LISTINGS = [
@@ -384,7 +385,7 @@ export default function DashboardHome() {
   const dateLabel = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   const bookingUrl = tenant
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/${tenant.slug}/book`
+    ? `${getAppUrl()}/${tenant.slug}/book`
     : "";
 
   function copyLink() {
@@ -450,7 +451,7 @@ export default function DashboardHome() {
                 Booking Page ↗
               </a>
             )}
-            <Link href="/dashboard/listings/new"
+            <Link href="/dashboard/bookings/create"
               className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white px-4 py-2 rounded-lg transition-colors"
               style={{ background: "#3486cf" }}
               onMouseEnter={(e) => e.currentTarget.style.background = "#2a6dab"}

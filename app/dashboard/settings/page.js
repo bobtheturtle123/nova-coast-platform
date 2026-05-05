@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/components/Toast";
+import { getAppUrl } from "@/lib/appUrl";
 
 // ─── Notification definitions (shared with notifications page) ───────────────
 
@@ -1187,7 +1188,7 @@ export default function SettingsPage() {
     </div>
   );
 
-  const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
+  const APP_URL = getAppUrl();
   const bookingUrl = `${APP_URL}/${tenant?.slug}/book`;
 
   const modeLabels = {

@@ -5,8 +5,6 @@ import Link from "next/link";
 import AgentShareButtons from "@/components/AgentShareButtons";
 import AgentTokenPersist from "@/components/AgentTokenPersist";
 import AgentSessionCheck from "@/components/AgentSessionCheck";
-import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
-import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 
 export default async function AgentPortalPage({ params, searchParams }) {
   const { slug } = params;
@@ -118,22 +116,18 @@ export default async function AgentPortalPage({ params, searchParams }) {
       ) : (
         <div className="space-y-4">
           {bookings.map((b) => {
-            const gal        = b.galleryId ? galleries[b.galleryId] : null;
-            const pw         = b.propertyWebsite;
-            const wfStatus   = resolveWorkflowStatus(b);
+            const gal = b.galleryId ? galleries[b.galleryId] : null;
+            const pw  = b.propertyWebsite;
 
             return (
               <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <WorkflowStatusBadge status={wfStatus} size="xs" />
-                      {gal?.delivered && (
-                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
-                          ✓ Media Delivered
-                        </span>
-                      )}
-                    </div>
+                    {gal?.delivered && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 mb-1">
+                        ✓ Media Delivered
+                      </span>
+                    )}
                     <h2 className="font-semibold text-gray-900 text-base truncate">{b.address}</h2>
                     {b.shootDate && (
                       <p className="text-xs text-gray-400 mt-0.5">

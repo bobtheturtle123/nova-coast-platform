@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
+import { getAppUrl } from "@/lib/appUrl";
 
 export default function SuperadminTenantsPage() {
   const [tenants, setTenants] = useState([]);
@@ -21,7 +22,7 @@ export default function SuperadminTenantsPage() {
     });
   }, []);
 
-  const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
+  const APP_URL = getAppUrl();
 
   return (
     <div className="p-8">

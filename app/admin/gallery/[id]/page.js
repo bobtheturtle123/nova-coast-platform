@@ -6,8 +6,9 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { v4 as uuidv4 } from "uuid";
 import Link from "next/link";
+import { getAppUrl } from "@/lib/appUrl";
 
-const APP_URL = typeof window !== "undefined" ? window.location.origin : "";
+const APP_URL = getAppUrl();
 
 export default function AdminGalleryPage() {
   const { id: bookingId } = useParams();

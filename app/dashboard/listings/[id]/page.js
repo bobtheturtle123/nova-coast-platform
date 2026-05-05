@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useToast } from "@/components/Toast";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
+import { getAppUrl } from "@/lib/appUrl";
 
 // ─── Agent Image Field (upload file OR paste URL) ────────────────────────────
 function AgentImageField({ label, value, onChange, folder, placeholder, hint, preview }) {
@@ -288,7 +289,7 @@ export default function ListingDetailPage() {
       const { tenant } = await tRes.json();
       if (tenant?.slug) {
         setTenantSlug(tenant.slug);
-        setListingUrl(`${window.location.origin}/${tenant.slug}/property/${id}`);
+        setListingUrl(`${getAppUrl()}/${tenant.slug}/property/${id}`);
         const catRes = await fetch(`/api/tenant-public/${tenant.slug}/catalog`);
         if (catRes.ok) setCatalog(await catRes.json());
       }

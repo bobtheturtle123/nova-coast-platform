@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import AgentProGate from "@/components/AgentProGate";
+import { getAppUrl } from "@/lib/appUrl";
 
 function AgentSettingsInner() {
   const params       = useParams();
@@ -101,31 +102,32 @@ function AgentSettingsInner() {
         </div>
       </div>
 
-      {/* Agent Pro: Saved Branding */}
-      <AgentProGate feature="saved_branding">
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Personal Branding</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs text-gray-400 uppercase tracking-wide block mb-1.5">Headshot URL</label>
-              <input type="url" disabled className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50" placeholder="https://..." />
-            </div>
-            <div>
-              <label className="text-xs text-gray-400 uppercase tracking-wide block mb-1.5">Bio</label>
-              <textarea disabled rows={3} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 resize-none" placeholder="Write a short bio…" />
+      {/* Agent Pro gated features — single consolidated lock interstitial */}
+      <AgentProGate>
+        <div className="space-y-6">
+          {/* Personal Branding */}
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <h2 className="text-sm font-semibold text-gray-700 mb-4">Personal Branding</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs text-gray-400 uppercase tracking-wide block mb-1.5">Headshot URL</label>
+                <input type="url" disabled className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50" placeholder="https://..." />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 uppercase tracking-wide block mb-1.5">Bio</label>
+                <textarea disabled rows={3} className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 resize-none" placeholder="Write a short bio…" />
+              </div>
             </div>
           </div>
-        </div>
-      </AgentProGate>
 
-      {/* Agent Pro: Team Invites */}
-      <AgentProGate feature="team_invites">
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <h2 className="text-sm font-semibold text-gray-700 mb-1">Team Access</h2>
-          <p className="text-xs text-gray-400 mb-4">Share your portal with assistants, TCs, and marketing coordinators.</p>
-          <button disabled className="text-sm font-medium px-4 py-2 border border-gray-200 rounded-lg text-gray-400 cursor-default">
-            + Invite Team Member
-          </button>
+          {/* Team Access */}
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <h2 className="text-sm font-semibold text-gray-700 mb-1">Team Access</h2>
+            <p className="text-xs text-gray-400 mb-4">Share your portal with assistants, TCs, and marketing coordinators.</p>
+            <button disabled className="text-sm font-medium px-4 py-2 border border-gray-200 rounded-lg text-gray-400 cursor-default">
+              + Invite Team Member
+            </button>
+          </div>
         </div>
       </AgentProGate>
 
@@ -134,7 +136,7 @@ function AgentSettingsInner() {
         <h2 className="text-sm font-semibold text-gray-700 mb-2">Portal Access</h2>
         <p className="text-xs text-gray-500 mb-3">Your portal link is tied to a unique access token. If you need a new link, contact your photographer.</p>
         <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-400 font-mono break-all">
-          {typeof window !== "undefined" ? window.location.origin : ""}/{slug}/agent?token=•••
+          {getAppUrl()}/{slug}/agent?token=•••
         </div>
       </div>
     </div>

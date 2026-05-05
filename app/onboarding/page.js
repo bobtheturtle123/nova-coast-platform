@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
+import { getAppUrl } from "@/lib/appUrl";
 
 const STEPS = [
   { id: "basics",   label: "Basics",    desc: "Your contact info" },
@@ -156,7 +157,7 @@ export default function OnboardingPage() {
   }
 
   function copyUrl() {
-    navigator.clipboard.writeText(`${window.location.origin}/${slug}/book`);
+    navigator.clipboard.writeText(`${getAppUrl()}/${slug}/book`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -455,7 +456,7 @@ export default function OnboardingPage() {
                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-2 font-medium">Your booking page</p>
                 <div className="flex items-center gap-3">
                   <code className="text-sm text-[#3486cf] font-mono flex-1 truncate">
-                    {typeof window !== "undefined" ? window.location.origin : ""}/{slug}/book
+                    {getAppUrl()}/{slug}/book
                   </code>
                   <button onClick={copyUrl}
                     className={`text-xs font-medium border px-3 py-1.5 rounded-lg transition-colors flex-shrink-0 ${

@@ -51,8 +51,7 @@ export async function GET(req) {
     const weatherUrl = [
       `https://api.open-meteo.com/v1/forecast`,
       `?latitude=${lat}&longitude=${lon}`,
-      `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,uv_index_max,windspeed_10m_max,weathercode`,
-      `&hourly=uv_index`,
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,uv_index_max,wind_speed_10m_max,weather_code`,
       `&current_weather=true`,
       `&temperature_unit=${unit}`,
       `&wind_speed_unit=${unit === "celsius" ? "kmh" : "mph"}`,
@@ -78,22 +77,23 @@ export async function GET(req) {
     const weatherJson = await weatherRes.json();
     const aqiJson     = aqiRes ? await aqiRes.json().catch(() => null) : null;
 
-    // Find the index for the requested date
+    // Find the index for the requested date (match on first 10 chars to handle timezone suffix variants)
     const dates = weatherJson.daily?.time || [];
-    const idx   = dates.indexOf(date);
+    const idx   = dates.findIndex((d) => String(d).slice(0, 10) === date);
 
     if (idx === -1) {
       return Response.json({ available: false, reason: "date_not_in_forecast" });
     }
 
     const d         = weatherJson.daily;
-    const tempHigh  = Math.round(d.temperature_2m_max[idx]);
-    const tempLow   = Math.round(d.temperature_2m_min[idx]);
+    if (!d) return Response.json({ available: false, reason: "no_daily_data" });
+    const tempHigh  = Math.round(d.temperature_2m_max?.[idx] ?? 0);
+    const tempLow   = Math.round(d.temperature_2m_min?.[idx] ?? 0);
     const temp      = Math.round((tempHigh + tempLow) / 2);
-    const uvIndex   = Math.round(d.uv_index_max[idx] ?? 0);
-    const windSpeed = Math.round(d.windspeed_10m_max[idx] ?? 0);
-    const precip    = d.precipitation_sum[idx] ?? 0;
-    const wmoCode   = d.weathercode[idx] ?? 0;
+    const uvIndex   = Math.round(d.uv_index_max?.[idx] ?? 0);
+    const windSpeed = Math.round(d.wind_speed_10m_max?.[idx] ?? 0);
+    const precip    = d.precipitation_sum?.[idx] ?? 0;
+    const wmoCode   = d.weather_code?.[idx] ?? 0;
 
     // AQI for the day
     const aqiIdx  = aqiJson?.daily?.time?.indexOf(date) ?? -1;

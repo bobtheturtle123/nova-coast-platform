@@ -190,6 +190,12 @@ export default function BookingDetailPage() {
   const [noteText,         setNoteText]         = useState("");
   const [postingNote,      setPostingNote]      = useState(false);
 
+  // Email actions
+  const [sendingInvoice,   setSendingInvoice]   = useState(false);
+  const [invoiceSent,      setInvoiceSent]      = useState(false);
+  const [sendingPortal,    setSendingPortal]    = useState(false);
+  const [portalSent,       setPortalSent]       = useState(false);
+
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
       const [bookingRes, tenantRes, revisionsRes, teamRes, activityRes] = await Promise.all([
@@ -414,6 +420,53 @@ export default function BookingDetailPage() {
       }
     } catch { /* ignore */ }
     setPostingNote(false);
+  }
+
+  async function sendInvoiceToClient() {
+    setSendingInvoice(true);
+    setMsg("");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/bookings/${id}/send-invoice`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setInvoiceSent(true);
+        setMsg(`Invoice emailed to ${booking.clientEmail}.`);
+      } else {
+        setMsg(data.error || "Failed to send invoice.");
+      }
+    } catch {
+      setMsg("Something went wrong.");
+    } finally {
+      setSendingInvoice(false);
+    }
+  }
+
+  async function sendPortalLink() {
+    setSendingPortal(true);
+    setMsg("");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/listings/${id}/send-agent-access`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ sendEmail: true }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPortalSent(true);
+        setMsg(`Portal link sent to ${booking.clientEmail}.`);
+      } else {
+        setMsg(data.error || "Failed to send portal link.");
+      }
+    } catch {
+      setMsg("Something went wrong.");
+    } finally {
+      setSendingPortal(false);
+    }
   }
 
   async function createGallery() {
@@ -968,6 +1021,18 @@ export default function BookingDetailPage() {
           className="btn-outline px-4 py-2 text-sm">
           🧾 View Invoice
         </Link>
+        {booking.clientEmail && (
+          <button onClick={sendInvoiceToClient} disabled={sendingInvoice || invoiceSent}
+            className="btn-outline px-4 py-2 text-sm disabled:opacity-50">
+            {sendingInvoice ? "Sending…" : invoiceSent ? "✓ Invoice Sent" : "📧 Email Invoice"}
+          </button>
+        )}
+        {booking.clientEmail && (
+          <button onClick={sendPortalLink} disabled={sendingPortal || portalSent}
+            className="btn-outline px-4 py-2 text-sm disabled:opacity-50">
+            {sendingPortal ? "Sending…" : portalSent ? "✓ Portal Sent" : "🔗 Send Agent Portal"}
+          </button>
+        )}
         {(booking.shootDate || booking.preferredDate) && (
           <div className="flex flex-col gap-1.5">
             <a

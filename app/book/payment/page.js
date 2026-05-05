@@ -12,6 +12,7 @@ import {
 import { useBookingStore } from "@/store/bookingStore";
 import { formatPrice } from "@/lib/pricing";
 import StepProgress from "@/components/booking/StepProgress";
+import { getAppUrl } from "@/lib/appUrl";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
@@ -32,7 +33,7 @@ function PaymentForm({ clientSecret, deposit, onSuccess }) {
     const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/book/confirmation`,
+        return_url: `${getAppUrl()}/book/confirmation`,
       },
       redirect: "if_required",
     });

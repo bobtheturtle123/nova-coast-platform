@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { stripe } from "@/lib/stripe";
+import { getAppUrl } from "@/lib/appUrl";
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
@@ -30,5 +31,5 @@ export async function GET(req) {
     }
   }
 
-  return Response.redirect(new URL("/dashboard/billing?connect=complete", req.url));
+  return Response.redirect(`${getAppUrl()}/dashboard/billing?connect=complete`);
 }
