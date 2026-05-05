@@ -30,7 +30,7 @@ export default async function AgentPortalPage({ params, searchParams }) {
     .get();
 
   if (agentsSnap.empty) {
-    return <ErrorScreen message="This access link is invalid or has expired. Ask the photographer to resend your portal link." />;
+    return <ErrorScreen message="This access link is invalid or has expired. Contact your media provider to resend your portal link." />;
   }
 
   const agentDoc  = agentsSnap.docs[0];

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
-import { calculateTenantPrice, getSqftTier } from "@/lib/catalogUtils";
+import { calculateTenantPrice, getSqftTier, depositLabel } from "@/lib/catalogUtils";
 import StepProgress from "@/components/booking/StepProgress";
 
 export default function TenantReviewPage() {
@@ -55,7 +55,7 @@ export default function TenantReviewPage() {
         // Fetch catalog + optional travel fee in parallel
         const [catalogRes, travelRes] = await Promise.all([
           fetch(`/api/tenant-public/${params.slug}/catalog`).then((r) => r.json()),
-          address && zip && store.tenantId
+          address && zip
             ? fetch(`/api/${params.slug}/travel-fee`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -111,14 +111,22 @@ export default function TenantReviewPage() {
               <p className="font-medium text-[#0F172A]">{fullAddress}</p>
               <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
                 <span className="capitalize">{propertyType || "Residential"}</span>
-                {squareFootage && (
-                  <>
-                    <span className="text-gray-300">·</span>
-                    <span>{Number(squareFootage).toLocaleString()} sq ft</span>
-                    <span className="text-gray-300">·</span>
-                    <span className="text-[#3486cf] font-medium">{tier} tier</span>
-                  </>
-                )}
+                {squareFootage && (() => {
+                  const pMode = catalog?.pricingConfig?.mode || "sqft";
+                  const valLabel = pMode === "photos" ? "photos" : pMode === "custom" ? (catalog?.pricingConfig?.customGateLabel || "value").toLowerCase() : "sq ft";
+                  return (
+                    <>
+                      <span className="text-gray-300">·</span>
+                      <span>{Number(squareFootage).toLocaleString()} {valLabel}</span>
+                      {tier && pMode !== "photos" && pMode !== "custom" && (
+                        <>
+                          <span className="text-gray-300">·</span>
+                          <span className="text-[#3486cf] font-medium">{tier} tier</span>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
               {notes && (
                 <p className="text-sm text-gray-400 mt-2 italic border-t border-gray-100 pt-2">
@@ -208,14 +216,23 @@ export default function TenantReviewPage() {
                     <span>Total</span>
                     <span className="text-[#3486cf]">${(pricing.finalTotal ?? pricing.subtotal)?.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-gold-dark font-semibold">
-                    <span>Deposit (50%)</span>
-                    <span>${(pricing.deposit ?? 0)?.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-400">
-                    <span>Due at delivery</span>
-                    <span>${(pricing.balance ?? 0)?.toLocaleString()}</span>
-                  </div>
+                  {pricing.deposit > 0 ? (
+                    <>
+                      <div className="flex justify-between text-gold-dark font-semibold">
+                        <span className="capitalize">{depositLabel(catalog?.bookingConfig?.deposit)}</span>
+                        <span>${pricing.deposit.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-400">
+                        <span>Balance due at delivery</span>
+                        <span>${(pricing.balance ?? 0).toLocaleString()}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between text-green-600 font-semibold">
+                      <span>Pay in full at checkout</span>
+                      <span>${(pricing.finalTotal ?? pricing.subtotal)?.toLocaleString()}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Promo code */}
@@ -242,7 +259,7 @@ export default function TenantReviewPage() {
                   )}
                 </div>
 
-                {squareFootage && (
+                {squareFootage && tier && (catalog?.pricingConfig?.mode || "sqft") === "sqft" && (
                   <div className="mt-4 bg-[#3486cf]/4 rounded-xl p-3 text-xs text-gray-500">
                     Pricing based on <span className="font-medium text-[#3486cf]">{tier} tier</span>
                     {" "}({Number(squareFootage).toLocaleString()} sq ft)

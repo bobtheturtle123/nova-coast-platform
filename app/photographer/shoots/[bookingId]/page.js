@@ -22,12 +22,13 @@ export default function ShootDetailPage() {
   const { bookingId } = useParams();
   const router = useRouter();
 
-  const [booking,  setBooking]  = useState(null);
-  const [notes,    setNotes]    = useState("");
-  const [loading,  setLoading]  = useState(true);
-  const [saving,   setSaving]   = useState(false);
-  const [notesSaved, setNotesSaved] = useState(false);
-  const [statusMsg,  setStatusMsg]  = useState("");
+  const [booking,     setBooking]     = useState(null);
+  const [notes,       setNotes]       = useState("");
+  const [loading,     setLoading]     = useState(true);
+  const [saving,      setSaving]      = useState(false);
+  const [notesSaved,  setNotesSaved]  = useState(false);
+  const [statusMsg,   setStatusMsg]   = useState("");
+  const [confirmingStatus, setConfirmingStatus] = useState(null);
 
   async function getToken() {
     const user = auth.currentUser;
@@ -70,7 +71,11 @@ export default function ShootDetailPage() {
   }
 
   async function updateStatus(workflowStatus) {
-    if (!window.confirm(`Set status to "${workflowStatus.replace(/_/g, " ")}"?`)) return;
+    if (confirmingStatus !== workflowStatus) {
+      setConfirmingStatus(workflowStatus);
+      return;
+    }
+    setConfirmingStatus(null);
     const token = await getToken();
     const res = await fetch(`/api/photographer/bookings/${bookingId}/status`, {
       method:  "PATCH",
@@ -210,14 +215,28 @@ export default function ShootDetailPage() {
         <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Update Status</p>
         {statusMsg && <p className="text-sm text-emerald-600 mb-3 font-medium">{statusMsg}</p>}
         <div className="flex flex-col gap-2">
-          {PHOTOGRAPHER_ACTIONS.map((action) => (
-            <button key={action.id}
-              onClick={() => updateStatus(action.id)}
-              disabled={booking.workflowStatus === action.id}
-              className={`text-sm font-semibold py-3 rounded-xl text-white transition-colors disabled:opacity-40 disabled:cursor-default ${action.color}`}>
-              {booking.workflowStatus === action.id ? "✓ " : ""}{action.label}
-            </button>
-          ))}
+          {PHOTOGRAPHER_ACTIONS.map((action) => {
+            const isCurrent   = booking.workflowStatus === action.id;
+            const isConfirming = confirmingStatus === action.id;
+            return (
+            <div key={action.id}>
+              <button
+                onClick={() => { if (!isCurrent) updateStatus(action.id); }}
+                disabled={isCurrent}
+                className={`w-full text-sm font-semibold py-3 rounded-xl text-white transition-colors disabled:opacity-40 disabled:cursor-default ${
+                  isConfirming ? "opacity-70" : ""
+                } ${action.color}`}>
+                {isCurrent ? "✓ " : ""}{action.label}
+              </button>
+              {isConfirming && (
+                <div className="mt-1.5 flex items-center gap-2 px-1">
+                  <p className="text-xs text-gray-500 flex-1">Tap again to confirm</p>
+                  <button onClick={() => setConfirmingStatus(null)}
+                    className="text-xs text-gray-400 hover:text-gray-600 underline">Cancel</button>
+                </div>
+              )}
+            </div>
+          );})}
         </div>
       </div>
     </div>

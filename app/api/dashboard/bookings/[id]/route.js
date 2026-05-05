@@ -37,14 +37,27 @@ export async function PATCH(req, { params }) {
 
   const body = await req.json();
   const allowed = [
+    // Scheduling & status
     "status", "workflowStatus", "shootDate", "shootTime",
+    // Photographer assignment
     "photographerId", "photographerEmail", "photographerName", "photographerPhone",
+    // Notes & website
     "notes", "propertyWebsite",
+    // Client info
+    "clientName", "clientEmail", "clientPhone",
+    // Property / address
+    "address", "addressLine", "city", "state", "zip", "fullAddress", "squareFootage", "propertyType",
+    // Services
+    "packageId", "serviceIds", "addonIds", "totalPrice",
+    // Payment overrides
+    "depositPaid", "depositAmount", "balancePaid", "remainingBalance",
+    "offlinePaymentAmount", "offlinePaymentMethod", "offlinePaymentNote",
   ];
   const update = {};
   for (const k of allowed) {
     if (body[k] !== undefined) update[k] = body[k];
   }
+  update.updatedAt = new Date();
 
   await adminDb
     .collection("tenants").doc(ctx.tenantId)

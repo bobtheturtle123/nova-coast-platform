@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
 import StepProgress from "@/components/booking/StepProgress";
-import { getSqftTier, getItemPrice, SQFT_TIERS } from "@/lib/catalogUtils";
+import { getSqftTier, getItemPrice, SQFT_TIERS, getPricingLabel } from "@/lib/catalogUtils";
 import clsx from "clsx";
 
 // ─── Product Lightbox ──────────────────────────────────────────────────────────
@@ -129,11 +129,18 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
   const pricingConfig = catalog.pricingConfig || {};
   const pricingMode   = pricingConfig.mode || "sqft";
   const usesGate      = pricingMode !== "flat";
-  const gateLabel     = pricingMode === "photos" ? "Number of Photos" : "Interior Square Footage";
-  const gateQuestion  = pricingMode === "photos" ? "How many photos do you need?" : "What's the square footage?";
+  const gateLabel     = getPricingLabel(pricingConfig) || "Value";
+  const customLabel   = (pricingConfig.customGateLabel || "value").toLowerCase();
+  const gateQuestion  = pricingMode === "photos"
+    ? "How many photos do you need?"
+    : pricingMode === "custom"
+      ? `What's your ${customLabel}?`
+      : "What's the square footage?";
   const gateSubtext   = pricingMode === "photos"
     ? "Tell us how many photos you need so we can show you exact pricing."
-    : "Enter the interior square footage of the home so we can show you exact pricing.";
+    : pricingMode === "custom"
+      ? `Enter your ${customLabel} so we can show you exact pricing.`
+      : "Enter the interior square footage of the home so we can show you exact pricing.";
 
   const [sqftInput,    setSqftInput]    = useState(squareFootage || "");
   const [confirmed,    setConfirmed]    = useState(!usesGate || !!squareFootage);
@@ -189,10 +196,10 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                 className="w-full bg-transparent border-0 border-b border-gray-200 focus:border-[#3486cf] focus:ring-0 outline-none font-display text-5xl text-[#3486cf] text-center pb-3 mb-2 transition-colors"
               />
               <p className="text-xs text-gray-400 mb-7 tracking-widest uppercase">
-                {tier && pricingMode !== "photos"
+                {tier && pricingMode !== "photos" && pricingMode !== "custom"
                   ? <span className="text-gold font-semibold">{TIER_LABELS[tier]}</span>
                   : sqftInput
-                    ? `${Number(sqftInput).toLocaleString()} ${pricingMode === "photos" ? "photos" : "sq ft"}`
+                    ? `${Number(sqftInput).toLocaleString()} ${pricingMode === "photos" ? "photos" : pricingMode === "custom" ? customLabel : "sq ft"}`
                     : gateLabel
                 }
               </p>
@@ -222,7 +229,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
               onClick={() => setConfirmed(false)}
               className="text-xs text-gray-400 hover:text-[#3486cf] underline underline-offset-2 whitespace-nowrap pb-1"
             >
-              {sqftInput} {pricingMode === "photos" ? "photos" : "sqft"}{tier && pricingMode !== "photos" ? ` · ${TIER_LABELS[tier]}` : ""} ✎
+              {sqftInput} {pricingMode === "photos" ? "photos" : pricingMode === "custom" ? customLabel : "sqft"}{tier && pricingMode !== "photos" && pricingMode !== "custom" ? ` · ${TIER_LABELS[tier]}` : ""} ✎
             </button>
           )}
         </div>

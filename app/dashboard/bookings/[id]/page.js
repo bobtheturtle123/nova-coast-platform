@@ -6,7 +6,9 @@ import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import WorkflowStepper from "@/components/booking/WorkflowStepper";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
-import { resolveWorkflowStatus } from "@/lib/workflowStatus";
+import { resolveWorkflowStatus, WORKFLOW_STATUSES } from "@/lib/workflowStatus";
+
+const WORKFLOW_STATUS_MAP = Object.fromEntries(WORKFLOW_STATUSES.map((s) => [s.id, s]));
 
 function WeatherWidget({ booking, tempUnit = "F" }) {
   const [wx,      setWx]      = useState(null);
@@ -159,45 +161,88 @@ export default function BookingDetailPage() {
   const [updatingWorkflow, setUpdatingWorkflow] = useState(false);
   const [pendingRevCount,  setPendingRevCount] = useState(0);
 
+  // Edit mode state
+  const [editingClient,  setEditingClient]  = useState(false);
+  const [editClient,     setEditClient]     = useState({ clientName: "", clientEmail: "", clientPhone: "" });
+  const [editingAddress, setEditingAddress] = useState(false);
+  const [editAddress,    setEditAddress]    = useState({ address: "", city: "", state: "", zip: "" });
+  const [editingPayment, setEditingPayment] = useState(false);
+  const [editPayment,    setEditPayment]    = useState({
+    depositPaid: false, depositAmount: 0,
+    balancePaid: false, remainingBalance: 0,
+    offlinePaymentAmount: "", offlinePaymentMethod: "", offlinePaymentNote: "",
+  });
+
   // Job costs state
   const [costs, setCosts] = useState({ shooterFee: 0, editorFee: 0, travelCost: 0, otherCosts: 0, shootHours: "", editHoursPerPhoto: "", notes: "" });
   const [costsSaving, setCostsSaving] = useState(false);
   const [costsMsg,    setCostsMsg]    = useState("");
   const [globalCostRates, setGlobalCostRates] = useState(null);
 
+  // Photographer assignment
+  const [teamMembers,      setTeamMembers]      = useState([]);
+  const [editingPhotog,    setEditingPhotog]    = useState(false);
+  const [editPhotog,       setEditPhotog]       = useState({ photographerId: "", photographerName: "", photographerEmail: "", photographerPhone: "" });
+
+  // Activity log
+  const [activity,         setActivity]         = useState([]);
+  const [activityLoaded,   setActivityLoaded]   = useState(false);
+  const [noteText,         setNoteText]         = useState("");
+  const [postingNote,      setPostingNote]      = useState(false);
+
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
-      const [bookingRes, tenantRes, revisionsRes] = await Promise.all([
+      const [bookingRes, tenantRes, revisionsRes, teamRes, activityRes] = await Promise.all([
         fetch(`/api/dashboard/bookings/${id}`,                                    { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/tenant",                                             { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`/api/dashboard/revisions?bookingId=${id}&status=pending`,           { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/team",                                               { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`/api/dashboard/bookings/${id}/activity`,                            { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      const [bookingData, tenantData, revisionsData] = await Promise.all([
+      const [bookingData, tenantData, revisionsData, teamData, activityData] = await Promise.all([
         bookingRes.ok    ? bookingRes.json()    : null,
         tenantRes.ok     ? tenantRes.json()     : null,
         revisionsRes.ok  ? revisionsRes.json()  : null,
+        teamRes.ok       ? teamRes.json()       : null,
+        activityRes.ok   ? activityRes.json()   : null,
       ]);
       if (revisionsData?.revisions) setPendingRevCount(revisionsData.revisions.length);
 
       if (bookingData) {
-        setBooking(bookingData.booking);
-        setShootDate(bookingData.booking.shootDate?.split?.("T")?.[0] || "");
-        setWorkflowStatus(resolveWorkflowStatus(bookingData.booking));
-        setStatusHistory(bookingData.booking.statusHistory || []);
-        if (bookingData.booking.costs) {
+        const bk = bookingData.booking;
+        setBooking(bk);
+        setShootDate(bk.shootDate?.split?.("T")?.[0] || "");
+        setWorkflowStatus(resolveWorkflowStatus(bk));
+        setStatusHistory(bk.statusHistory || []);
+        setEditClient({ clientName: bk.clientName || "", clientEmail: bk.clientEmail || "", clientPhone: bk.clientPhone || "" });
+        setEditAddress({ address: bk.addressLine || bk.address || "", city: bk.city || "", state: bk.state || "", zip: bk.zip || "" });
+        setEditPayment({
+          depositPaid: !!bk.depositPaid, depositAmount: bk.depositAmount || 0,
+          balancePaid: !!bk.balancePaid, remainingBalance: bk.remainingBalance || 0,
+          offlinePaymentAmount: bk.offlinePaymentAmount || "",
+          offlinePaymentMethod: bk.offlinePaymentMethod || "",
+          offlinePaymentNote:   bk.offlinePaymentNote   || "",
+        });
+        setEditPhotog({
+          photographerId:    bk.photographerId    || "",
+          photographerName:  bk.photographerName  || "",
+          photographerEmail: bk.photographerEmail || "",
+          photographerPhone: bk.photographerPhone || "",
+        });
+        if (bk.costs) {
           setCosts({
-            shooterFee:        bookingData.booking.costs.shooterFee        || 0,
-            editorFee:         bookingData.booking.costs.editorFee         || 0,
-            travelCost:        bookingData.booking.costs.travelCost        || 0,
-            otherCosts:        bookingData.booking.costs.otherCosts        || 0,
-            shootHours:        bookingData.booking.costs.shootHours        ?? "",
-            editHoursPerPhoto: bookingData.booking.costs.editHoursPerPhoto ?? "",
-            notes:             bookingData.booking.costs.notes             || "",
+            shooterFee:        bk.costs.shooterFee        || 0,
+            editorFee:         bk.costs.editorFee         || 0,
+            travelCost:        bk.costs.travelCost        || 0,
+            otherCosts:        bk.costs.otherCosts        || 0,
+            shootHours:        bk.costs.shootHours        ?? "",
+            editHoursPerPhoto: bk.costs.editHoursPerPhoto ?? "",
+            notes:             bk.costs.notes             || "",
           });
         } else if (tenantData?.tenant?.costRates) {
           // No costs saved yet — seed from global rates + product pay rate
           const cr = tenantData.tenant.costRates;
-          const suggestedPay = bookingData.booking.suggestedShooterPay;
+          const suggestedPay = bk.suggestedShooterPay;
           setCosts((prev) => ({
             ...prev,
             shooterFee: suggestedPay != null ? suggestedPay : prev.shooterFee,
@@ -210,6 +255,13 @@ export default function BookingDetailPage() {
         if (av?.showWeather !== undefined) setShowWeather(av.showWeather);
         if (tenantData.tenant?.costRates) setGlobalCostRates(tenantData.tenant.costRates);
         if (tenantData.tenant?.tempUnit)  setTempUnit(tenantData.tenant.tempUnit);
+      }
+      if (teamData?.members) {
+        setTeamMembers(teamData.members.filter((m) => m.active !== false));
+      }
+      if (activityData?.activity) {
+        setActivity(activityData.activity);
+        setActivityLoaded(true);
       }
       setLoading(false);
     });
@@ -345,6 +397,25 @@ export default function BookingDetailPage() {
     }
   }
 
+  async function postNote() {
+    if (!noteText.trim()) return;
+    setPostingNote(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/bookings/${id}/activity`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ text: noteText }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActivity((prev) => [{ type: "note", note: data.note.text, changedAt: data.note.createdAt }, ...prev]);
+        setNoteText("");
+      }
+    } catch { /* ignore */ }
+    setPostingNote(false);
+  }
+
   async function createGallery() {
     setSaving(true);
     setMsg("");
@@ -427,29 +498,241 @@ export default function BookingDetailPage() {
       <div className="grid md:grid-cols-2 gap-6 mb-6">
         {/* Client info */}
         <div className="card">
-          <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-3">Client</h3>
-          <p className="text-sm font-medium">{booking.clientName}</p>
-          <p className="text-sm text-gray-500">{booking.clientEmail}</p>
-          <p className="text-sm text-gray-500">{booking.clientPhone}</p>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs uppercase tracking-wide text-gray-400">Client</h3>
+            <button onClick={() => setEditingClient((v) => !v)} className="text-xs text-[#3486cf] hover:underline">
+              {editingClient ? "Cancel" : "Edit"}
+            </button>
+          </div>
+          {editingClient ? (
+            <div className="space-y-2">
+              <input value={editClient.clientName} onChange={(e) => setEditClient((c) => ({ ...c, clientName: e.target.value }))}
+                className="input-field text-sm w-full" placeholder="Name" />
+              <input value={editClient.clientEmail} onChange={(e) => setEditClient((c) => ({ ...c, clientEmail: e.target.value }))}
+                className="input-field text-sm w-full" placeholder="Email" />
+              <input value={editClient.clientPhone} onChange={(e) => setEditClient((c) => ({ ...c, clientPhone: e.target.value }))}
+                className="input-field text-sm w-full" placeholder="Phone" />
+              <button onClick={async () => { await update(editClient); setEditingClient(false); }} disabled={saving}
+                className="btn-primary text-xs px-3 py-1.5">
+                {saving ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm font-medium">{booking.clientName}</p>
+              <p className="text-sm text-gray-500">{booking.clientEmail}</p>
+              <p className="text-sm text-gray-500">{booking.clientPhone}</p>
+            </>
+          )}
         </div>
 
-        {/* Pricing */}
+        {/* Address */}
         <div className="card">
-          <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-3">Pricing</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs uppercase tracking-wide text-gray-400">Property</h3>
+            <button onClick={() => setEditingAddress((v) => !v)} className="text-xs text-[#3486cf] hover:underline">
+              {editingAddress ? "Cancel" : "Edit"}
+            </button>
+          </div>
+          {editingAddress ? (
+            <div className="space-y-2">
+              <input value={editAddress.address} onChange={(e) => setEditAddress((a) => ({ ...a, address: e.target.value }))}
+                className="input-field text-sm w-full" placeholder="Street address" />
+              <div className="grid grid-cols-3 gap-2">
+                <input value={editAddress.city} onChange={(e) => setEditAddress((a) => ({ ...a, city: e.target.value }))}
+                  className="input-field text-sm col-span-1" placeholder="City" />
+                <input value={editAddress.state} onChange={(e) => setEditAddress((a) => ({ ...a, state: e.target.value }))}
+                  className="input-field text-sm col-span-1" placeholder="State" />
+                <input value={editAddress.zip} onChange={(e) => setEditAddress((a) => ({ ...a, zip: e.target.value }))}
+                  className="input-field text-sm col-span-1" placeholder="ZIP" />
+              </div>
+              <button onClick={async () => {
+                const fullAddress = [editAddress.address, editAddress.city, editAddress.state, editAddress.zip].filter(Boolean).join(", ");
+                await update({ ...editAddress, addressLine: editAddress.address, fullAddress });
+                setEditingAddress(false);
+              }} disabled={saving} className="btn-primary text-xs px-3 py-1.5">
+                {saving ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-700">{booking.fullAddress || booking.address}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Photographer assignment */}
+      <div className="card mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs uppercase tracking-wide text-gray-400">Photographer</h3>
+          <button onClick={() => setEditingPhotog((v) => !v)} className="text-xs text-[#3486cf] hover:underline">
+            {editingPhotog ? "Cancel" : "Assign"}
+          </button>
+        </div>
+        {editingPhotog ? (
+          <div className="space-y-3">
+            {teamMembers.length > 0 && (
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Select from team</label>
+                <select
+                  value={editPhotog.photographerId}
+                  onChange={(e) => {
+                    const m = teamMembers.find((t) => t.id === e.target.value);
+                    if (m) setEditPhotog({ photographerId: m.id, photographerName: m.name, photographerEmail: m.email || "", photographerPhone: m.phone || "" });
+                    else   setEditPhotog((p) => ({ ...p, photographerId: "" }));
+                  }}
+                  className="input-field text-sm w-full"
+                >
+                  <option value="">— Pick a team member —</option>
+                  {teamMembers.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}{m.phone ? ` · ${m.phone}` : ""}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              <input value={editPhotog.photographerName}
+                onChange={(e) => setEditPhotog((p) => ({ ...p, photographerName: e.target.value }))}
+                className="input-field text-sm" placeholder="Name" />
+              <input value={editPhotog.photographerPhone}
+                onChange={(e) => setEditPhotog((p) => ({ ...p, photographerPhone: e.target.value }))}
+                className="input-field text-sm" placeholder="Phone" />
+            </div>
+            <input value={editPhotog.photographerEmail}
+              onChange={(e) => setEditPhotog((p) => ({ ...p, photographerEmail: e.target.value }))}
+              className="input-field text-sm w-full" placeholder="Email" />
+            <button onClick={async () => {
+              await update({ ...editPhotog, workflowStatus: editPhotog.photographerId ? "photographer_assigned" : workflowStatus });
+              if (editPhotog.photographerId) {
+                setWorkflowStatus("photographer_assigned");
+                setStatusHistory((prev) => [...prev, { status: "photographer_assigned", changedAt: new Date().toISOString(), changedBy: "admin" }]);
+              }
+              setEditingPhotog(false);
+            }} disabled={saving} className="btn-primary text-xs px-3 py-1.5">
+              {saving ? "Saving…" : "Save Assignment"}
+            </button>
+          </div>
+        ) : (
+          booking.photographerName ? (
+            <div>
+              <p className="text-sm font-medium text-gray-900">{booking.photographerName}</p>
+              {booking.photographerPhone && <p className="text-sm text-gray-500">{booking.photographerPhone}</p>}
+              {booking.photographerEmail && <p className="text-sm text-gray-500">{booking.photographerEmail}</p>}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">No photographer assigned yet.</p>
+          )
+        )}
+      </div>
+
+      {/* Pricing & Payment override */}
+      <div className="card mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs uppercase tracking-wide text-gray-400">Payment</h3>
+          <button onClick={() => setEditingPayment((v) => !v)} className="text-xs text-[#3486cf] hover:underline">
+            {editingPayment ? "Cancel" : "Edit / Override"}
+          </button>
+        </div>
+        {editingPayment ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Total Price ($)</label>
+                <input type="number" min="0" step="0.01"
+                  value={booking.totalPrice || 0}
+                  onChange={(e) => setBooking((b) => ({ ...b, totalPrice: Number(e.target.value) }))}
+                  className="input-field text-sm w-full" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Deposit Amount ($)</label>
+                <input type="number" min="0" step="0.01"
+                  value={editPayment.depositAmount}
+                  onChange={(e) => setEditPayment((p) => ({ ...p, depositAmount: Number(e.target.value) }))}
+                  className="input-field text-sm w-full" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={editPayment.depositPaid}
+                  onChange={(e) => setEditPayment((p) => ({ ...p, depositPaid: e.target.checked }))}
+                  className="rounded" />
+                <span className="text-sm text-gray-700">Deposit paid</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={editPayment.balancePaid}
+                  onChange={(e) => setEditPayment((p) => ({ ...p, balancePaid: e.target.checked }))}
+                  className="rounded" />
+                <span className="text-sm text-gray-700">Balance paid</span>
+              </label>
+            </div>
+            <div className="pt-3 border-t border-gray-100">
+              <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Offline / Manual Payment</p>
+              <div className="grid grid-cols-2 gap-4 mb-2">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Amount Received ($)</label>
+                  <input type="number" min="0" step="0.01"
+                    value={editPayment.offlinePaymentAmount}
+                    onChange={(e) => setEditPayment((p) => ({ ...p, offlinePaymentAmount: e.target.value }))}
+                    className="input-field text-sm w-full" placeholder="0.00" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Method</label>
+                  <select value={editPayment.offlinePaymentMethod}
+                    onChange={(e) => setEditPayment((p) => ({ ...p, offlinePaymentMethod: e.target.value }))}
+                    className="input-field text-sm w-full">
+                    <option value="">Select method</option>
+                    <option value="cash">Cash</option>
+                    <option value="check">Check</option>
+                    <option value="venmo">Venmo</option>
+                    <option value="zelle">Zelle</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <input value={editPayment.offlinePaymentNote}
+                onChange={(e) => setEditPayment((p) => ({ ...p, offlinePaymentNote: e.target.value }))}
+                className="input-field text-sm w-full" placeholder="Payment note (optional)" />
+            </div>
+            <button onClick={async () => {
+              await update({
+                depositPaid:          editPayment.depositPaid,
+                depositAmount:        editPayment.depositAmount,
+                balancePaid:          editPayment.balancePaid,
+                remainingBalance:     editPayment.balancePaid ? 0 : (booking.totalPrice || 0) - editPayment.depositAmount,
+                offlinePaymentAmount: editPayment.offlinePaymentAmount ? Number(editPayment.offlinePaymentAmount) : null,
+                offlinePaymentMethod: editPayment.offlinePaymentMethod || null,
+                offlinePaymentNote:   editPayment.offlinePaymentNote   || null,
+                totalPrice:           booking.totalPrice,
+              });
+              setEditingPayment(false);
+            }} disabled={saving} className="btn-primary text-xs px-3 py-1.5">
+              {saving ? "Saving…" : "Save Payment"}
+            </button>
+          </div>
+        ) : (
           <div className="space-y-1 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Total</span><span className="font-semibold">${booking.totalPrice}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Deposit</span>
               <span className={booking.depositPaid ? "text-green-600" : "text-gray-400"}>
-                ${booking.depositAmount} {booking.depositPaid ? "✓" : "(unpaid)"}
+                ${booking.depositAmount} {booking.depositPaid ? "✓ paid" : "(unpaid)"}
               </span>
             </div>
             <div className="flex justify-between"><span className="text-gray-500">Balance</span>
               <span className={booking.balancePaid ? "text-green-600" : "text-gray-400"}>
-                ${booking.remainingBalance} {booking.balancePaid ? "✓" : "(pending)"}
+                ${booking.remainingBalance} {booking.balancePaid ? "✓ paid" : "(pending)"}
               </span>
             </div>
+            {booking.offlinePaymentMethod && (
+              <div className="flex justify-between pt-1 border-t border-gray-100 mt-1">
+                <span className="text-gray-500">Manual payment</span>
+                <span className="text-gray-700">
+                  ${booking.offlinePaymentAmount} via {booking.offlinePaymentMethod}
+                  {booking.offlinePaymentNote && <span className="text-gray-400"> · {booking.offlinePaymentNote}</span>}
+                </span>
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
       {/* Weather */}
@@ -673,11 +956,18 @@ export default function BookingDetailPage() {
           </button>
         )}
         {booking.galleryId && (
-          <Link href={`/dashboard/galleries/${booking.galleryId}`}
-            className="btn-outline px-4 py-2 text-sm">
-            View Gallery →
-          </Link>
+          <div className="flex flex-col gap-1.5">
+            <Link href={`/dashboard/galleries/${booking.galleryId}`}
+              className="btn-primary px-4 py-2 text-sm">
+              Manage Gallery / Deliver →
+            </Link>
+          </div>
         )}
+        {/* Invoice */}
+        <Link href={`/dashboard/bookings/${id}/invoice`} target="_blank"
+          className="btn-outline px-4 py-2 text-sm">
+          🧾 View Invoice
+        </Link>
         {(booking.shootDate || booking.preferredDate) && (
           <div className="flex flex-col gap-1.5">
             <a
@@ -706,6 +996,70 @@ export default function BookingDetailPage() {
               className="text-xs text-[#3486cf]/60 hover:text-[#3486cf] underline text-center">
               Download .ics (Apple / Outlook)
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* Activity Log */}
+      <div className="card mt-6">
+        <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-4">Activity Log</h3>
+
+        {/* Add note */}
+        <div className="flex gap-2 mb-5">
+          <input
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); postNote(); } }}
+            className="input-field text-sm flex-1"
+            placeholder="Add a note (press Enter)…"
+          />
+          <button onClick={postNote} disabled={postingNote || !noteText.trim()}
+            className="btn-outline text-sm px-3 py-2 disabled:opacity-40">
+            {postingNote ? "…" : "Add"}
+          </button>
+        </div>
+
+        {!activityLoaded ? (
+          <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
+            <div className="w-3.5 h-3.5 border-2 border-gray-200 border-t-[#3486cf] rounded-full animate-spin" />
+            Loading activity…
+          </div>
+        ) : activity.length === 0 ? (
+          <p className="text-sm text-gray-400 italic">No activity yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {activity.map((e, i) => {
+              const ts = e.changedAt ? new Date(e.changedAt) : null;
+              const timeStr = ts ? ts.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+
+              if (e.type === "note") {
+                return (
+                  <div key={i} className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl text-sm">
+                    <span className="text-base mt-0.5 flex-shrink-0">📝</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-gray-800">{e.note}</p>
+                      {timeStr && <p className="text-xs text-gray-400 mt-0.5">{timeStr}</p>}
+                    </div>
+                  </div>
+                );
+              }
+
+              const s = WORKFLOW_STATUS_MAP[e.status];
+              return (
+                <div key={i} className="flex items-start gap-3 px-4 py-3 bg-gray-50 rounded-xl text-sm">
+                  <span className="text-base mt-0.5 flex-shrink-0">🔄</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s?.bg || "bg-gray-100"} ${s?.text || "text-gray-600"}`}>
+                        {s?.label || e.status?.replace(/_/g, " ")}
+                      </span>
+                      {e.note && <span className="text-gray-500 text-xs italic">"{e.note}"</span>}
+                    </div>
+                    {timeStr && <p className="text-xs text-gray-400 mt-0.5">{timeStr}</p>}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

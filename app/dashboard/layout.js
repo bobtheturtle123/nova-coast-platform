@@ -125,6 +125,7 @@ export default function DashboardLayout({ children }) {
   const router   = useRouter();
   const pathname = usePathname();
   const [user,            setUser]           = useState(undefined);
+  const [userRole,        setUserRole]        = useState("owner");
   const [tenantName,      setTenantName]      = useState("");
   const [sidebarOpen,     setSidebarOpen]     = useState(false);
   const [pendingRevCount, setPendingRevCount] = useState(0);
@@ -153,6 +154,7 @@ export default function DashboardLayout({ children }) {
         if (!repaired) { router.push("/onboarding"); return; }
       }
       setUser(u);
+      setUserRole(tokenResult.claims.role || "owner");
       const tok = await u.getIdToken();
       fetch("/api/dashboard/tenant", {
         headers: { Authorization: `Bearer ${tok}` },
@@ -203,6 +205,7 @@ export default function DashboardLayout({ children }) {
       {/* Nav */}
       <nav className="ky-nav">
         {NAV.map((item) => {
+          if (item.href === "/dashboard/billing" && userRole !== "owner" && userRole !== "admin") return null;
           const active = isActive(item);
           return (
             <Link

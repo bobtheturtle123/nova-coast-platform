@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
+import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
+import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 
 // ─── Agent Image Field (upload file OR paste URL) ────────────────────────────
 function AgentImageField({ label, value, onChange, folder, placeholder, hint, preview }) {
@@ -529,9 +531,7 @@ export default function ListingDetailPage() {
                 {!booking.paidInFull && !booking.balancePaid && booking.depositPaid && (
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-xl bg-blue-500 text-white">Deposit Paid</span>
                 )}
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-xl ${STATUS_COLORS[booking.status] || "bg-gray-100 text-gray-600"}`}>
-                  {STATUS_OPTIONS.find((s) => s.value === booking.status)?.label || booking.status}
-                </span>
+                <WorkflowStatusBadge status={resolveWorkflowStatus(booking)} size="xs" />
               </div>
             </div>
             <div className="flex items-center gap-2">

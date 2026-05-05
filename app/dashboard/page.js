@@ -3,6 +3,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
+import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
+import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 const MOCK_LISTINGS = [
@@ -48,13 +50,6 @@ const MOCK_DATA = {
   ],
 };
 
-const STATUS_META = {
-  pending_payment: { label: "Awaiting Payment", color: "#D97706", bg: "#FFFBEB" },
-  requested:       { label: "Pending Review",   color: "#B45309", bg: "#FEF3C7" },
-  confirmed:       { label: "Confirmed",         color: "#3486cf", bg: "#E8F2FD" },
-  completed:       { label: "Completed",         color: "#059669", bg: "#ECFDF5" },
-  cancelled:       { label: "Cancelled",         color: "#6B7280", bg: "#F9FAFB" },
-};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function avatarColor(str) {
@@ -112,18 +107,6 @@ function buildChartData(listings, period, metric) {
   }
   return Object.values(buckets).sort((a, b) => a.sort - b.sort)
     .map((b) => ({ label: b.label, value: metric === "revenue" ? b.revenue : b.bookings }));
-}
-
-// ── Status badge ──────────────────────────────────────────────────────────────
-function StatusBadge({ status }) {
-  const m = STATUS_META[status] || STATUS_META.requested;
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium px-2 py-0.5 rounded-md"
-      style={{ color: m.color, background: m.bg }}>
-      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: m.color }} />
-      {m.label}
-    </span>
-  );
 }
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
@@ -370,9 +353,10 @@ export default function DashboardHome() {
     }, 0),
   }), [display]);
 
+  const ACTIVE_WF = ["booked","appointment_confirmed","photographer_assigned","shot_completed","editing_complete","qa_review","postponed"];
   const upcoming = display
-    .filter(l => l.status === "confirmed")
-    .sort((a, b) => (a.shootDate || "").localeCompare(b.shootDate || ""))
+    .filter(l => ACTIVE_WF.includes(resolveWorkflowStatus(l)) && (l.shootDate || l.preferredDate))
+    .sort((a, b) => (a.shootDate || a.preferredDate || "").localeCompare(b.shootDate || b.preferredDate || ""))
     .slice(0, 5);
 
   const setupSteps = tenant ? [
@@ -708,7 +692,7 @@ export default function DashboardHome() {
                       <td className="px-4 py-4 text-[13px] whitespace-nowrap" style={{ color: "#6B7280" }}>
                         {l.shootDate ? new Date(l.shootDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                       </td>
-                      <td className="px-4 py-4"><StatusBadge status={l.status} /></td>
+                      <td className="px-4 py-4"><WorkflowStatusBadge status={resolveWorkflowStatus(l)} size="xs" /></td>
                       <td className="px-4 py-4">
                         <span className="text-[12px] font-medium px-1.5 py-0.5 rounded-md"
                           style={{ color: pay.color, background: pay.bg }}>

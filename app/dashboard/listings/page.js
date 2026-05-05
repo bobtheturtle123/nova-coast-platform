@@ -3,14 +3,18 @@
 import { useEffect, useState, useMemo } from "react";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
+import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
+import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
+const ACTIVE_STAGES = ["booked","appointment_confirmed","photographer_assigned","shot_completed","editing_complete","qa_review","postponed"];
+
 const STATUS_FILTERS = [
   { id: "all",       label: "All" },
-  { id: "requested", label: "Pending" },
-  { id: "confirmed", label: "Confirmed" },
-  { id: "completed", label: "Complete" },
+  { id: "active",    label: "Active" },
   { id: "delivered", label: "Delivered" },
+  { id: "paid",      label: "Paid" },
+  { id: "cancelled", label: "Cancelled" },
 ];
 
 const PAY_FILTERS = [
@@ -28,13 +32,6 @@ const SORT_OPTIONS = [
   { id: "alpha",    label: "A → Z" },
 ];
 
-const STATUS_META = {
-  pending_payment: { label: "Awaiting Payment", bg: "#FFF8ED", text: "#D97706", dot: "#FBBF24" },
-  requested:       { label: "Pending Review",   bg: "#FFFBEB", text: "#B45309", dot: "#F59E0B" },
-  confirmed:       { label: "Confirmed",         bg: "#EEF5FC", text: "#1E5A8A", dot: "#3486cf" },
-  completed:       { label: "Completed",         bg: "#ECFDF5", text: "#059669", dot: "#10B981" },
-  cancelled:       { label: "Cancelled",         bg: "#F9FAFB", text: "#6B7280", dot: "#9CA3AF" },
-};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function avatarColor(str) {
@@ -66,17 +63,6 @@ function formatDateShort(d) {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-function StatusBadge({ status }) {
-  const m = STATUS_META[status] || STATUS_META.requested;
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full"
-      style={{ background: m.bg, color: m.text }}>
-      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: m.dot }} />
-      {m.label}
-    </span>
-  );
-}
-
 function PayBadge({ listing }) {
   if (listing.paidInFull || listing.balancePaid)
     return <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">Paid in full</span>;
@@ -106,7 +92,7 @@ function ListingCard({ listing }) {
   const shootDate   = listing.shootDate || listing.preferredDate;
   const fullDate    = formatDate(shootDate);
   const aColor      = avatarColor(listing.clientName || "");
-  const meta        = STATUS_META[listing.status] || STATUS_META.requested;
+  const wfStatus    = resolveWorkflowStatus(listing);
   const streetAddr  = listing.address?.split(",")[0] || listing.fullAddress?.split(",")[0];
   const cityLine    = listing.city ? `${listing.city}${listing.state ? `, ${listing.state}` : ""}` : listing.address?.split(",").slice(1, 2).join("").trim();
 
@@ -137,12 +123,14 @@ function ListingCard({ listing }) {
 
         {/* Status badge top-left */}
         <div className="absolute top-3 left-3">
-          <span className="text-[10px] font-bold px-2.5 py-1 rounded-full"
-            style={coverUrl
-              ? { background: "rgba(0,0,0,0.5)", color: "#fff", backdropFilter: "blur(6px)" }
-              : { background: meta.bg, color: meta.text }}>
-            {meta.label}
-          </span>
+          {coverUrl ? (
+            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full"
+              style={{ background: "rgba(0,0,0,0.5)", color: "#fff", backdropFilter: "blur(6px)" }}>
+              {wfStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+            </span>
+          ) : (
+            <WorkflowStatusBadge status={wfStatus} size="xs" />
+          )}
         </div>
 
         {/* Media count badge */}
@@ -231,10 +219,14 @@ export default function ListingsPage() {
 
   const filtered = useMemo(() => {
     let list = listings;
-    if (filter === "delivered") {
-      list = list.filter((l) => l.gallery?.delivered);
-    } else if (filter !== "all") {
-      list = list.filter((l) => l.status === filter);
+    if (filter === "active") {
+      list = list.filter((l) => ACTIVE_STAGES.includes(resolveWorkflowStatus(l)));
+    } else if (filter === "delivered") {
+      list = list.filter((l) => resolveWorkflowStatus(l) === "delivered");
+    } else if (filter === "paid") {
+      list = list.filter((l) => resolveWorkflowStatus(l) === "paid");
+    } else if (filter === "cancelled") {
+      list = list.filter((l) => resolveWorkflowStatus(l) === "cancelled");
     }
     if (payFilter === "paid")    list = list.filter((l) => l.paidInFull || l.balancePaid);
     else if (payFilter === "deposit") list = list.filter((l) => l.depositPaid && !l.paidInFull && !l.balancePaid);
@@ -257,13 +249,16 @@ export default function ListingsPage() {
     return list;
   }, [listings, filter, payFilter, sortBy, search]);
 
-  const counts = useMemo(() => ({
-    all:       listings.length,
-    requested: listings.filter((l) => l.status === "requested").length,
-    confirmed: listings.filter((l) => l.status === "confirmed").length,
-    completed: listings.filter((l) => l.status === "completed").length,
-    delivered: listings.filter((l) => l.gallery?.delivered).length,
-  }), [listings]);
+  const counts = useMemo(() => {
+    const wf = listings.map((l) => resolveWorkflowStatus(l));
+    return {
+      all:       listings.length,
+      active:    wf.filter((s) => ACTIVE_STAGES.includes(s)).length,
+      delivered: wf.filter((s) => s === "delivered").length,
+      paid:      wf.filter((s) => s === "paid").length,
+      cancelled: wf.filter((s) => s === "cancelled").length,
+    };
+  }, [listings]);
 
   const revenue = useMemo(() =>
     listings.reduce((s, l) => {
@@ -474,7 +469,7 @@ export default function ListingsPage() {
                   <div><DateChip d={shootDate} /></div>
 
                   {/* Status */}
-                  <div><StatusBadge status={listing.status} /></div>
+                  <div><WorkflowStatusBadge status={resolveWorkflowStatus(listing)} size="xs" /></div>
 
                   {/* Payment */}
                   <div><PayBadge listing={listing} /></div>

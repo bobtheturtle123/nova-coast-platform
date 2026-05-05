@@ -51,7 +51,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
           requestedAt: new Date().toISOString(), adminNotes: "", resolvedAt: null,
         }, ...prev]);
         setRevText("");
-        setRevMsg("Revision request submitted. The photographer will follow up soon.");
+        setRevMsg("Revision request submitted. You'll be notified when it's addressed.");
       } else {
         setRevMsg(data.error || "Failed to submit.");
       }
@@ -195,8 +195,8 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
           {/* Quick Reorder */}
           <div className="bg-[#EEF5FC] border border-[#3486cf]/20 rounded-xl p-4 flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-[#1E5A8A]">Book this property again?</p>
-              <p className="text-xs text-[#3486cf]/70 mt-0.5">Pre-fills address and services from this listing.</p>
+              <p className="text-sm font-semibold text-[#1E5A8A]">Reorder services or use as template</p>
+              <p className="text-xs text-[#3486cf]/70 mt-0.5">Pre-fills your address, package, and services from this order.</p>
             </div>
             <button onClick={handleReorder}
               className="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-lg text-white transition-colors"
@@ -375,7 +375,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
               )}
             </div>
           </div>
-          <p className="text-xs text-gray-400">For payment questions, contact your photographer directly.</p>
+          <p className="text-xs text-gray-400">For payment questions, contact your provider directly.</p>
         </div>
       )}
 

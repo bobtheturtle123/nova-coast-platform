@@ -39,6 +39,7 @@ function isStripeNotConfigured(errorMsg) {
 export default function BillingPage() {
   const [tenant,           setTenant]          = useState(null);
   const [listingsThisYear, setListingsThisYear] = useState(0);
+  const [teamMemberCount,  setTeamMemberCount]  = useState(0);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [msg,     setMsg]     = useState({ text: "", type: "error" });
@@ -56,12 +57,14 @@ export default function BillingPage() {
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
-      const [tenantRes, statsRes] = await Promise.all([
+      const [tenantRes, statsRes, teamRes] = await Promise.all([
         fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/stats",  { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/team",   { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       if (tenantRes.ok) { const data = await tenantRes.json(); setTenant(data.tenant); }
       if (statsRes.ok)  { const data = await statsRes.json();  setListingsThisYear(data.stats?.listingsThisYear || 0); }
+      if (teamRes.ok)   { const data = await teamRes.json();   setTeamMemberCount(data.members?.length || 0); }
       setLoading(false);
     });
   }, []);
@@ -175,6 +178,13 @@ export default function BillingPage() {
   const seatCap        = caps.extraSeats; // 0 = not allowed, null = unlimited
   const seatAtCap      = seatCap !== null && addonSeats >= seatCap;
 
+  // Seat usage
+  const BASE_SEATS     = { solo: 1, studio: 5, pro: 12, scale: null, starter: 1 };
+  const baseSeatLimit  = BASE_SEATS[plan] ?? 1;
+  const totalSeats     = baseSeatLimit === null ? null : baseSeatLimit + addonSeats;
+  const seatsUsed      = teamMemberCount + 1; // +1 for owner
+  const seatPct        = totalSeats === null ? 0 : Math.min(100, Math.round((seatsUsed / totalSeats) * 100));
+
   const msgStyles = {
     success: "bg-green-50 border border-green-300 text-green-800",
     error:   "bg-red-50 border border-red-300 text-red-800",
@@ -261,6 +271,39 @@ export default function BillingPage() {
         <p className="text-xs text-gray-400 mt-2">{listingPct}% of your annual credits used</p>
         {listingPct >= 90 && (
           <p className="text-xs text-red-600 mt-1.5 font-medium">Approaching your credit limit. Consider upgrading or adding a credit pack.</p>
+        )}
+      </div>
+
+      {/* Seat usage */}
+      <div className="card mb-5">
+        <h2 className="font-semibold text-[#0F172A] text-sm mb-4">Team Seats</h2>
+        {totalSeats === null ? (
+          <p className="text-sm text-gray-500">
+            <span className="font-semibold text-emerald-600">Unlimited seats</span> on Scale plan.
+            Currently using <span className="font-semibold">{seatsUsed.toLocaleString()}</span> seats.
+          </p>
+        ) : (
+          <>
+            <div className="flex items-end justify-between mb-3">
+              <p className="text-sm text-gray-500">Seats used</p>
+              <p className="text-sm font-semibold text-[#0F172A]">
+                {seatsUsed.toLocaleString()} / {totalSeats.toLocaleString()}
+                {addonSeats > 0 && <span className="text-xs text-gray-400 ml-1.5 font-normal">(+{addonSeats} add-on)</span>}
+              </p>
+            </div>
+            <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${seatPct >= 90 ? "bg-red-500" : seatPct >= 70 ? "bg-amber-400" : "bg-[#0F172A]"}`}
+                style={{ width: `${seatPct}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              {Math.max(0, totalSeats - seatsUsed)} seat{totalSeats - seatsUsed !== 1 ? "s" : ""} remaining
+            </p>
+            {seatPct >= 90 && (
+              <p className="text-xs text-red-600 mt-1.5 font-medium">Approaching your seat limit. Add a seat or upgrade to {nextPlanName || "Scale"}.</p>
+            )}
+          </>
         )}
       </div>
 
