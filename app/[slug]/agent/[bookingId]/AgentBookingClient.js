@@ -97,6 +97,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
   const pendingRevisions = revisions.filter((r) => r.status === "pending").length;
   const TABS = [
     { id: "overview",  label: "Overview" },
+    { id: "timeline",  label: "Timeline" },
     { id: "marketing", label: "Marketing" },
     { id: "studio",    label: "Studio" },
     ...(galleryUrl ? [{ id: "gallery", label: `Gallery${gallery?.imageCount > 0 ? ` (${gallery.imageCount})` : ""}` }] : []),
@@ -217,6 +218,99 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
           )}
         </div>
       )}
+
+      {/* ── TIMELINE TAB ───────────────────────────────────────────── */}
+      {tab === "timeline" && (() => {
+        // Build timeline events from booking data
+        const events = [];
+
+        if (booking.createdAt) {
+          events.push({ at: booking.createdAt, label: "Booking submitted", icon: "📋", color: "#3486cf" });
+        }
+        if (booking.depositPaid) {
+          events.push({ at: null, label: "Deposit paid", icon: "💳", color: "#059669" });
+        }
+        if (booking.shootDate) {
+          const shootD = new Date(booking.shootDate);
+          const isPast = shootD < new Date();
+          events.push({
+            at:    booking.shootDate,
+            label: isPast ? "Shoot completed" : "Shoot scheduled",
+            icon:  isPast ? "📸" : "📅",
+            color: isPast ? "#059669" : "#D97706",
+          });
+        }
+
+        // Status history entries — map to human labels
+        const wfLabels = {
+          booked:                 "Booking confirmed",
+          appointment_confirmed:  "Appointment confirmed",
+          photographer_assigned:  "Media provider assigned",
+          shot_completed:         "Shoot completed",
+          editing_complete:       "Editing complete",
+          qa_review:              "Quality review",
+          delivered:              "Media delivered",
+          revision_requested:     "Revision requested",
+          completed:              "Order completed",
+          paid_in_full:           "Paid in full",
+          cancelled:              "Booking cancelled",
+          postponed:              "Postponed",
+        };
+        for (const h of (booking.statusHistory || [])) {
+          const label = wfLabels[h.status] || h.status;
+          events.push({ at: h.changedAt, label, note: h.note || null, icon: "🔄", color: "#6B7280" });
+        }
+
+        if (gallery?.delivered) {
+          events.push({ at: null, label: "Gallery delivered — media ready", icon: "✅", color: "#059669" });
+        }
+        if (booking.balancePaid || booking.paidInFull) {
+          events.push({ at: null, label: "Paid in full", icon: "💰", color: "#059669" });
+        }
+
+        // Sort by `at` ascending; events without `at` go to the end
+        events.sort((a, b) => {
+          if (!a.at && !b.at) return 0;
+          if (!a.at) return 1;
+          if (!b.at) return -1;
+          return a.at.localeCompare(b.at);
+        });
+
+        if (events.length === 0) {
+          return (
+            <div className="text-center py-12 text-gray-400">
+              <p className="text-3xl mb-2">🕐</p>
+              <p className="text-sm">Timeline not available yet.</p>
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-0 relative">
+            {/* Vertical line */}
+            <div className="absolute left-[19px] top-6 bottom-6 w-0.5 bg-gray-100" />
+            {events.map((ev, i) => (
+              <div key={i} className="relative flex gap-4 pb-5">
+                {/* Circle icon */}
+                <div className="w-10 h-10 flex-shrink-0 rounded-full border-2 border-white bg-white shadow-sm flex items-center justify-center text-base z-10">
+                  {ev.icon}
+                </div>
+                <div className="flex-1 bg-white border border-gray-100 rounded-xl px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold text-gray-800">{ev.label}</p>
+                    {ev.at && (
+                      <p className="text-[11px] text-gray-400 flex-shrink-0 mt-0.5">
+                        {new Date(ev.at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </p>
+                    )}
+                  </div>
+                  {ev.note && <p className="text-xs text-gray-500 mt-1">{ev.note}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* ── MARKETING TAB ──────────────────────────────────────────── */}
       {tab === "marketing" && (

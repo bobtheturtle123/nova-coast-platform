@@ -13,7 +13,7 @@ export async function GET(req, { params }) {
   }
 
   const response = NextResponse.redirect(registerUrl);
-  response.cookies.set("shootflow_ref", code, {
+  response.cookies.set("platform_ref", code, {
     maxAge:   30 * 24 * 60 * 60,
     httpOnly: true,
     sameSite: "lax",

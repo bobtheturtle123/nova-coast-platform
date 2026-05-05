@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAYS   = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
+const TABS = [
+  { id: "calendar",    label: "Calendar"    },
+  { id: "revisions",   label: "Revisions"   },
+  { id: "unscheduled", label: "Unscheduled" },
+];
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
 function avatarColor(str) {
   const p = ["#3486cf","#1e6091","#2e7d32","#6a1b9a","#d84315","#00695c","#b5872d","#c0392b"];
   let h = 0;
@@ -21,26 +29,248 @@ function toDateKey(dateStr) {
   return dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
 }
 
-export default function CalendarPage() {
+function formatDate(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+// ─── Revisions tab ────────────────────────────────────────────────────────────
+const REV_STATUS = {
+  pending:      { label: "Pending",      cls: "bg-amber-100 text-amber-700" },
+  acknowledged: { label: "Acknowledged", cls: "bg-blue-100 text-blue-700"   },
+  resolved:     { label: "Resolved",     cls: "bg-emerald-100 text-emerald-700" },
+};
+
+function RevisionsTab() {
+  const [revisions, setRevisions] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [filter,    setFilter]    = useState("pending");
+  const [expanded,  setExpanded]  = useState(null);
+  const [notes,     setNotes]     = useState({});
+  const [saving,    setSaving]    = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const user = auth.currentUser;
+    if (!user) { setLoading(false); return; }
+    const token = await user.getIdToken();
+    const res   = await fetch(`/api/dashboard/revisions?status=${filter}`, { headers: { Authorization: `Bearer ${token}` } });
+    const data  = await res.json();
+    setRevisions(data.revisions || []);
+    setLoading(false);
+  }, [filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function updateStatus(id, status) {
+    setSaving(id);
+    const token = await auth.currentUser.getIdToken();
+    await fetch(`/api/dashboard/revisions/${id}`, {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body:    JSON.stringify({ status, adminNotes: notes[id] || "" }),
+    });
+    setSaving(null);
+    load();
+  }
+
+  const pending = revisions.filter((r) => r.status === "pending").length;
+
+  return (
+    <div className="p-6 max-w-4xl">
+      <div className="flex items-center justify-between mb-6">
+        <p className="text-sm text-gray-400">Agent requests for media edits or re-shoots.</p>
+        {pending > 0 && (
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
+            {pending} pending
+          </span>
+        )}
+      </div>
+
+      <div className="flex gap-1 border-b border-gray-200 mb-6">
+        {[["pending","Pending"],["acknowledged","Acknowledged"],["resolved","Resolved"],["all","All"]].map(([val, label]) => (
+          <button key={val} onClick={() => setFilter(val)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              filter === val ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-400 hover:text-gray-600"
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center h-48">
+          <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
+        </div>
+      ) : revisions.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+          <p className="text-sm font-medium text-gray-500 mt-2">No {filter !== "all" ? filter : ""} revision requests</p>
+          <p className="text-xs text-gray-400 mt-1">When agents submit revision requests, they'll appear here.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {revisions.map((r) => {
+            const st = REV_STATUS[r.status] || { label: r.status, cls: "bg-gray-100 text-gray-600" };
+            const isOpen = expanded === r.id;
+            return (
+              <div key={r.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setExpanded(isOpen ? null : r.id)}
+                  className="w-full flex items-start gap-3 p-5 text-left hover:bg-gray-50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                      <span className="text-xs text-gray-400">{formatDate(r.requestedAt)}</span>
+                    </div>
+                    <p className="font-semibold text-gray-900 truncate">{r.agentName || r.agentEmail}</p>
+                    <p className="text-sm text-gray-500 mt-0.5 truncate">{r.agentEmail}</p>
+                    <p className="text-sm text-gray-700 mt-1 line-clamp-2">{r.message}</p>
+                  </div>
+                  <svg className={`w-4 h-4 text-gray-400 flex-shrink-0 mt-1 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {isOpen && (
+                  <div className="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4">
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Message</p>
+                      <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{r.message}</p>
+                    </div>
+                    {r.bookingId && (
+                      <div>
+                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Booking</p>
+                        <Link href={`/dashboard/bookings/${r.bookingId}`}
+                          className="text-sm text-[#3486cf] hover:underline font-medium">
+                          View booking →
+                        </Link>
+                      </div>
+                    )}
+                    {r.mediaItems?.length > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Flagged Media ({r.mediaItems.length})</p>
+                        <div className="flex flex-wrap gap-2">
+                          {r.mediaItems.map((m, i) => (
+                            <a key={i} href={m.url || m} target="_blank" rel="noopener noreferrer"
+                              className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-[#3486cf] hover:bg-gray-50 transition-colors">
+                              Media {i + 1}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Admin Notes</p>
+                      <textarea rows={2}
+                        value={notes[r.id] ?? r.adminNotes}
+                        onChange={(e) => setNotes((n) => ({ ...n, [r.id]: e.target.value }))}
+                        className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#3486cf]/30 resize-none"
+                        placeholder="Internal notes (not visible to agent)…" />
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      {r.status === "pending" && (
+                        <button onClick={() => updateStatus(r.id, "acknowledged")} disabled={saving === r.id}
+                          className="text-sm font-medium px-4 py-2 rounded-lg border border-[#3486cf] text-[#3486cf] hover:bg-[#EEF5FC] transition-colors disabled:opacity-50">
+                          {saving === r.id ? "Saving…" : "Acknowledge"}
+                        </button>
+                      )}
+                      {r.status !== "resolved" && (
+                        <button onClick={() => updateStatus(r.id, "resolved")} disabled={saving === r.id}
+                          className="text-sm font-medium px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50">
+                          {saving === r.id ? "Saving…" : "Mark Resolved"}
+                        </button>
+                      )}
+                      {r.status === "resolved" && r.resolvedAt && (
+                        <p className="text-xs text-gray-400 self-center">Resolved {formatDate(r.resolvedAt)}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Unscheduled tab ─────────────────────────────────────────────────────────
+function UnscheduledTab({ listings }) {
+  const unscheduled = listings.filter((l) => !l.shootDate && !l.preferredDate);
+  const noDate      = listings.filter((l) => l.preferredDate && !l.shootDate);
+
+  if (listings.length === 0) {
+    return (
+      <div className="p-6 flex items-center justify-center h-48">
+        <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  function BookingRow({ l, label }) {
+    const wfStatus = resolveWorkflowStatus(l);
+    return (
+      <Link href={`/dashboard/listings/${l.id}`}
+        className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:border-[#3486cf]/40 hover:shadow-sm transition-all">
+        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: avatarColor(l.clientName || "") }} />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900 truncate">{l.clientName || "Unnamed"}</p>
+          <p className="text-xs text-gray-400 truncate">{l.address?.split(",")[0] || "—"}</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-xs text-amber-600 font-medium">{label}</span>
+          <WorkflowStatusBadge status={wfStatus} size="xs" />
+        </div>
+      </Link>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-4xl">
+      {unscheduled.length === 0 && noDate.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+          <p className="text-sm font-medium text-gray-500">All active bookings have a scheduled date.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {unscheduled.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                No Date Set ({unscheduled.length})
+              </h3>
+              <div className="space-y-2">
+                {unscheduled.map((l) => <BookingRow key={l.id} l={l} label="No date" />)}
+              </div>
+            </div>
+          )}
+          {noDate.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                Requested Date Only ({noDate.length})
+              </h3>
+              <div className="space-y-2">
+                {noDate.map((l) => (
+                  <BookingRow key={l.id} l={l}
+                    label={`Requested: ${new Date(l.preferredDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Calendar tab ─────────────────────────────────────────────────────────────
+function CalendarTab({ listings, loading }) {
   const today = new Date();
   const [year,     setYear]     = useState(today.getFullYear());
-  const [month,    setMonth]    = useState(today.getMonth());  // 0-indexed
-  const [listings, setListings] = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [selected, setSelected] = useState(null); // "YYYY-MM-DD" key of clicked day
+  const [month,    setMonth]    = useState(today.getMonth());
+  const [selected, setSelected] = useState(null);
 
-  useEffect(() => {
-    auth.currentUser?.getIdToken(true).then(async (token) => {
-      const res = await fetch("/api/dashboard/listings", { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const d = await res.json();
-        setListings(d.listings || []);
-      }
-      setLoading(false);
-    });
-  }, []);
-
-  // Index listings by shoot date
   const byDate = useMemo(() => {
     const map = {};
     listings.forEach((l) => {
@@ -52,18 +282,14 @@ export default function CalendarPage() {
     return map;
   }, [listings]);
 
-  // Build calendar grid for current month
-  const { cells, firstDay, daysInMonth } = useMemo(() => {
+  const { cells } = useMemo(() => {
     const firstDay    = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const cells = [];
-    // Leading empty cells
     for (let i = 0; i < firstDay; i++) cells.push(null);
-    // Day cells
     for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-    // Trailing empty cells to fill last row
     while (cells.length % 7 !== 0) cells.push(null);
-    return { cells, firstDay, daysInMonth };
+    return { cells };
   }, [year, month]);
 
   function prevMonth() {
@@ -76,23 +302,16 @@ export default function CalendarPage() {
     else              { setMonth(m => m + 1); }
     setSelected(null);
   }
-  function goToday() {
-    setYear(today.getFullYear());
-    setMonth(today.getMonth());
-    setSelected(null);
-  }
+  function goToday() { setYear(today.getFullYear()); setMonth(today.getMonth()); setSelected(null); }
 
   function dayKey(d) {
     return `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   }
 
-  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-
+  const todayKey     = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const monthPrefix  = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const monthCount   = Object.entries(byDate).filter(([k]) => k.startsWith(monthPrefix)).reduce((s, [, v]) => s + v.length, 0);
   const selectedListings = selected ? (byDate[selected] || []) : [];
-
-  // Count shoots this month for header
-  const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
-  const monthCount  = Object.entries(byDate).filter(([k]) => k.startsWith(monthPrefix)).reduce((s, [, v]) => s + v.length, 0);
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -102,14 +321,11 @@ export default function CalendarPage() {
 
   return (
     <div className="p-6 max-w-6xl">
-      {/* Header */}
+      {/* Month nav */}
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="page-title">Calendar</h1>
-          <p className="page-subtitle">
-            {monthCount} shoot{monthCount !== 1 ? "s" : ""} in {MONTHS[month]} {year}
-          </p>
-        </div>
+        <p className="text-sm text-gray-400">
+          {monthCount} shoot{monthCount !== 1 ? "s" : ""} in {MONTHS[month]} {year}
+        </p>
         <div className="flex items-center gap-2">
           <button onClick={goToday}
             className="text-sm font-medium px-3.5 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
@@ -132,13 +348,6 @@ export default function CalendarPage() {
               </svg>
             </button>
           </div>
-          <Link href="/dashboard/bookings/create"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[#3486cf] text-white hover:bg-[#2a6dab] transition-colors">
-            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            New Booking
-          </Link>
         </div>
       </div>
 
@@ -146,69 +355,47 @@ export default function CalendarPage() {
         {/* Calendar grid */}
         <div className="flex-1 min-w-0">
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            {/* Day headers */}
             <div className="grid grid-cols-7 border-b border-gray-100">
               {DAYS.map((d) => (
-                <div key={d} className="py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  {d}
-                </div>
+                <div key={d} className="py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">{d}</div>
               ))}
             </div>
-
-            {/* Week rows */}
             <div className="grid grid-cols-7">
               {cells.map((day, idx) => {
-                if (!day) {
-                  return (
-                    <div key={`empty-${idx}`}
-                      className="min-h-[96px] p-1.5 border-b border-r border-gray-50 bg-gray-50/40"
-                      style={{ borderRight: (idx + 1) % 7 === 0 ? "none" : undefined }}
-                    />
-                  );
-                }
-
-                const key      = dayKey(day);
-                const shoots   = byDate[key] || [];
-                const isToday  = key === todayKey;
-                const isSel    = key === selected;
-                const isLast   = (idx + 1) % 7 === 0;
+                if (!day) return (
+                  <div key={`empty-${idx}`}
+                    className="min-h-[96px] p-1.5 border-b border-r border-gray-50 bg-gray-50/40"
+                    style={{ borderRight: (idx + 1) % 7 === 0 ? "none" : undefined }}
+                  />
+                );
+                const key     = dayKey(day);
+                const shoots  = byDate[key] || [];
+                const isToday = key === todayKey;
+                const isSel   = key === selected;
+                const isLast  = (idx + 1) % 7 === 0;
                 const isLastRow = idx >= cells.length - 7;
-
                 return (
-                  <div
-                    key={key}
+                  <div key={key}
                     onClick={() => setSelected(isSel ? null : key)}
                     className={`min-h-[96px] p-1.5 cursor-pointer transition-colors
                       ${isSel ? "bg-[#EEF5FC]" : "hover:bg-gray-50"}
                       ${isLastRow ? "" : "border-b border-gray-100"}
                       ${isLast ? "" : "border-r border-gray-100"}
-                    `}
-                  >
-                    {/* Day number */}
+                    `}>
                     <div className="flex items-center justify-between mb-1">
-                      <span
-                        className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold
-                          ${isToday ? "bg-[#3486cf] text-white" : "text-gray-700"}
-                        `}
-                      >
+                      <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold
+                        ${isToday ? "bg-[#3486cf] text-white" : "text-gray-700"}`}>
                         {day}
                       </span>
-                      {shoots.length > 2 && (
-                        <span className="text-[10px] text-gray-400 font-medium">{shoots.length}</span>
-                      )}
+                      {shoots.length > 2 && <span className="text-[10px] text-gray-400 font-medium">{shoots.length}</span>}
                     </div>
-
-                    {/* Shoot chips — show up to 2, then "+N more" */}
                     <div className="space-y-0.5">
                       {shoots.slice(0, 2).map((l) => (
-                        <Link
-                          key={l.id}
-                          href={`/dashboard/listings/${l.id}`}
+                        <Link key={l.id} href={`/dashboard/listings/${l.id}`}
                           onClick={(e) => e.stopPropagation()}
                           className="block text-[10px] leading-tight px-1.5 py-0.5 rounded font-medium truncate text-white transition-opacity hover:opacity-80"
                           style={{ background: avatarColor(l.clientName || "") }}
-                          title={`${l.clientName} · ${l.address?.split(",")[0]}`}
-                        >
+                          title={`${l.clientName} · ${l.address?.split(",")[0]}`}>
                           {l.clientName?.split(" ")[0] || "Booking"}
                         </Link>
                       ))}
@@ -223,7 +410,7 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {/* Day detail panel */}
+        {/* Day detail / month overview panel */}
         <div className="w-72 flex-shrink-0">
           {selected ? (
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden sticky top-6">
@@ -237,7 +424,6 @@ export default function CalendarPage() {
                   </svg>
                 </button>
               </div>
-
               {selectedListings.length === 0 ? (
                 <div className="px-4 py-8 text-center">
                   <p className="text-sm text-gray-400">No shoots on this day.</p>
@@ -275,12 +461,8 @@ export default function CalendarPage() {
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <p className="text-sm font-semibold text-gray-900 mb-1">
-                {MONTHS[month]} at a glance
-              </p>
+              <p className="text-sm font-semibold text-gray-900 mb-1">{MONTHS[month]} at a glance</p>
               <p className="text-xs text-gray-400 mb-4">Click any day to see its shoots.</p>
-
-              {/* Month summary stats */}
               {(() => {
                 const monthListings = listings.filter((l) => {
                   const k = toDateKey(l.shootDate || l.preferredDate);
@@ -292,7 +474,6 @@ export default function CalendarPage() {
                   if (l.depositPaid)                  return s + (l.depositAmount || 0);
                   return s;
                 }, 0);
-
                 return (
                   <div className="space-y-3">
                     <div className="flex justify-between items-center py-2 border-b border-gray-50">
@@ -310,8 +491,6 @@ export default function CalendarPage() {
                   </div>
                 );
               })()}
-
-              {/* Busiest days */}
               {(() => {
                 const monthDays = Object.entries(byDate)
                   .filter(([k]) => k.startsWith(monthPrefix))
@@ -339,6 +518,68 @@ export default function CalendarPage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Main page ─────────────────────────────────────────────────────────────────
+export default function SchedulePage() {
+  const searchParams = useSearchParams();
+  const router       = useRouter();
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "calendar");
+  const [listings,  setListings]  = useState([]);
+  const [loading,   setLoading]   = useState(true);
+
+  useEffect(() => {
+    auth.currentUser?.getIdToken(true).then(async (token) => {
+      const res = await fetch("/api/dashboard/listings", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const d = await res.json();
+        setListings(d.listings || []);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  function switchTab(id) {
+    setActiveTab(id);
+    router.replace(`/dashboard/calendar?tab=${id}`, { scroll: false });
+  }
+
+  return (
+    <div className="max-w-6xl">
+      {/* Page header */}
+      <div className="flex items-center justify-between px-6 pt-6 pb-0">
+        <div>
+          <h1 className="page-title">Schedule</h1>
+        </div>
+        <Link href="/dashboard/bookings/create"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[#3486cf] text-white hover:bg-[#2a6dab] transition-colors">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          New Booking
+        </Link>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex gap-0 px-6 pt-4 border-b border-gray-200">
+        {TABS.map((tab) => (
+          <button key={tab.id} onClick={() => switchTab(tab.id)}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === tab.id
+                ? "border-[#3486cf] text-[#3486cf]"
+                : "border-transparent text-gray-400 hover:text-gray-700"
+            }`}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === "calendar"    && <CalendarTab listings={listings} loading={loading} />}
+      {activeTab === "revisions"   && <RevisionsTab />}
+      {activeTab === "unscheduled" && <UnscheduledTab listings={listings} />}
     </div>
   );
 }

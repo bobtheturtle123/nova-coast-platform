@@ -641,7 +641,7 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
     const blob = new Blob([csv], { type: "text/csv" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
-    a.href = url; a.download = "shootflow_products_template.csv"; a.click();
+    a.href = url; a.download = "products_template.csv"; a.click();
     URL.revokeObjectURL(url);
   }
 

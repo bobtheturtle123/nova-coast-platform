@@ -6,6 +6,7 @@ import Link from "next/link";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 import { getAppUrl } from "@/lib/appUrl";
+import TimeRangePicker from "@/components/TimeRangePicker";
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 const MOCK_LISTINGS = [
@@ -20,6 +21,15 @@ const MOCK_LISTINGS = [
 ];
 
 const MOCK_DATA = {
+  "7d": [
+    { label: "Apr 29", revenue: 549,  bookings: 1 },
+    { label: "Apr 30", revenue: 0,    bookings: 0 },
+    { label: "May 1",  revenue: 875,  bookings: 1 },
+    { label: "May 2",  revenue: 1199, bookings: 1 },
+    { label: "May 3",  revenue: 0,    bookings: 0 },
+    { label: "May 4",  revenue: 0,    bookings: 0 },
+    { label: "May 5",  revenue: 299,  bookings: 1 },
+  ],
   "30d": [
     { label: "Apr 1",  revenue: 980,  bookings: 2 },
     { label: "Apr 8",  revenue: 1420, bookings: 3 },
@@ -27,27 +37,51 @@ const MOCK_DATA = {
     { label: "Apr 22", revenue: 1650, bookings: 4 },
     { label: "Apr 28", revenue: 1020, bookings: 2 },
   ],
+  "3m": [
+    { label: "Mar", revenue: 7880, bookings: 13 },
+    { label: "Apr", revenue: 5960, bookings: 9  },
+    { label: "May", revenue: 2920, bookings: 4  },
+  ],
   "6m": [
-    { label: "Nov", revenue: 3850, bookings: 6 },
-    { label: "Dec", revenue: 5120, bookings: 9 },
-    { label: "Jan", revenue: 4290, bookings: 7 },
+    { label: "Dec", revenue: 5120, bookings: 9  },
+    { label: "Jan", revenue: 4290, bookings: 7  },
     { label: "Feb", revenue: 6740, bookings: 11 },
     { label: "Mar", revenue: 7880, bookings: 13 },
-    { label: "Apr", revenue: 5960, bookings: 9 },
+    { label: "Apr", revenue: 5960, bookings: 9  },
+    { label: "May", revenue: 2920, bookings: 4  },
   ],
   "12m": [
-    { label: "May", revenue: 2100, bookings: 4 },
-    { label: "Jun", revenue: 3400, bookings: 6 },
-    { label: "Jul", revenue: 4800, bookings: 8 },
-    { label: "Aug", revenue: 5600, bookings: 9 },
-    { label: "Sep", revenue: 3900, bookings: 6 },
-    { label: "Oct", revenue: 4200, bookings: 7 },
-    { label: "Nov", revenue: 3850, bookings: 6 },
-    { label: "Dec", revenue: 5120, bookings: 9 },
-    { label: "Jan", revenue: 4290, bookings: 7 },
-    { label: "Feb", revenue: 6740, bookings: 11 },
-    { label: "Mar", revenue: 7880, bookings: 13 },
-    { label: "Apr", revenue: 5960, bookings: 9 },
+    { label: "Jun '25", revenue: 3400, bookings: 6  },
+    { label: "Jul",     revenue: 4800, bookings: 8  },
+    { label: "Aug",     revenue: 5600, bookings: 9  },
+    { label: "Sep",     revenue: 3900, bookings: 6  },
+    { label: "Oct",     revenue: 4200, bookings: 7  },
+    { label: "Nov",     revenue: 3850, bookings: 6  },
+    { label: "Dec",     revenue: 5120, bookings: 9  },
+    { label: "Jan '26", revenue: 4290, bookings: 7  },
+    { label: "Feb",     revenue: 6740, bookings: 11 },
+    { label: "Mar",     revenue: 7880, bookings: 13 },
+    { label: "Apr",     revenue: 5960, bookings: 9  },
+    { label: "May",     revenue: 2920, bookings: 4  },
+  ],
+  "all": [
+    { label: "Jan '25", revenue: 1200, bookings: 2  },
+    { label: "Feb",     revenue: 2100, bookings: 3  },
+    { label: "Mar",     revenue: 3200, bookings: 5  },
+    { label: "Apr",     revenue: 2800, bookings: 4  },
+    { label: "May",     revenue: 3100, bookings: 5  },
+    { label: "Jun",     revenue: 3400, bookings: 6  },
+    { label: "Jul",     revenue: 4800, bookings: 8  },
+    { label: "Aug",     revenue: 5600, bookings: 9  },
+    { label: "Sep",     revenue: 3900, bookings: 6  },
+    { label: "Oct",     revenue: 4200, bookings: 7  },
+    { label: "Nov",     revenue: 3850, bookings: 6  },
+    { label: "Dec",     revenue: 5120, bookings: 9  },
+    { label: "Jan '26", revenue: 4290, bookings: 7  },
+    { label: "Feb",     revenue: 6740, bookings: 11 },
+    { label: "Mar",     revenue: 7880, bookings: 13 },
+    { label: "Apr",     revenue: 5960, bookings: 9  },
+    { label: "May",     revenue: 2920, bookings: 4  },
   ],
 };
 
@@ -73,25 +107,46 @@ function payLabel(l) {
 function buildChartData(listings, period, metric) {
   const now = new Date();
   const buckets = {};
-  if (period === "30d") {
-    for (let w = 4; w >= 0; w--) {
+
+  if (period === "7d" || period === "30d") {
+    const days   = period === "7d" ? 7 : 30;
+    const weeks  = period === "7d" ? 1 : 4;
+    const step   = period === "7d" ? 1 : 7;
+    const count  = period === "7d" ? 7 : 5;
+    for (let i = count - 1; i >= 0; i--) {
       const anchor = new Date(now);
-      anchor.setDate(anchor.getDate() - w * 7);
-      const key = `W${4 - w}`;
-      buckets[key] = { label: anchor.toLocaleDateString("en-US", { month: "short", day: "numeric" }), revenue: 0, bookings: 0, sort: 4 - w };
+      anchor.setDate(anchor.getDate() - i * step);
+      const key = `B${count - 1 - i}`;
+      buckets[key] = {
+        label: anchor.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        revenue: 0, bookings: 0, sort: count - 1 - i,
+      };
     }
     listings.forEach((l) => {
       if (!l.shootDate) return;
       const d = new Date(l.shootDate + "T12:00:00");
       const daysAgo = Math.floor((now - d) / 86400000);
-      if (daysAgo < 0 || daysAgo > 30) return;
-      const key = `W${4 - Math.min(4, Math.floor(daysAgo / 7))}`;
+      if (daysAgo < 0 || daysAgo >= days) return;
+      const bucket = Math.min(count - 1, Math.floor(daysAgo / step));
+      const key = `B${count - 1 - bucket}`;
       if (!buckets[key]) return;
       buckets[key].bookings += 1;
       buckets[key].revenue += (l.paidInFull || l.balancePaid) ? (l.totalPrice || 0) : l.depositPaid ? (l.depositAmount || 0) : 0;
     });
+  } else if (period === "all") {
+    listings.forEach((l) => {
+      if (!l.shootDate) return;
+      const d = new Date(l.shootDate + "T12:00:00");
+      if (isNaN(d)) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
+      if (!buckets[key]) {
+        buckets[key] = { label: d.toLocaleDateString("en-US", { month: "short", year: "2-digit" }), revenue: 0, bookings: 0, sort: d.getTime() };
+      }
+      buckets[key].bookings += 1;
+      buckets[key].revenue += (l.paidInFull || l.balancePaid) ? (l.totalPrice || 0) : l.depositPaid ? (l.depositAmount || 0) : 0;
+    });
   } else {
-    const months = period === "12m" ? 12 : 6;
+    const months = period === "12m" ? 12 : period === "3m" ? 3 : 6;
     for (let i = months - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
@@ -106,14 +161,15 @@ function buildChartData(listings, period, metric) {
       buckets[key].revenue += (l.paidInFull || l.balancePaid) ? (l.totalPrice || 0) : l.depositPaid ? (l.depositAmount || 0) : 0;
     });
   }
+
   return Object.values(buckets).sort((a, b) => a.sort - b.sort)
     .map((b) => ({ label: b.label, value: metric === "revenue" ? b.revenue : b.bookings }));
 }
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, badge, icon, iconBg }) {
-  return (
-    <div className="bg-white rounded-xl p-6" style={{ border: "1px solid #E9ECF0" }}>
+function StatCard({ label, value, sub, badge, icon, iconBg, href }) {
+  const Inner = () => (
+    <>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2.5">
           {icon && (
@@ -132,6 +188,19 @@ function StatCard({ label, value, sub, badge, icon, iconBg }) {
       </div>
       <p className="text-[32px] font-bold leading-none tracking-tight" style={{ color: "#0F172A" }}>{value}</p>
       {sub && <p className="text-[12.5px] mt-2 leading-snug" style={{ color: "#6B7280" }}>{sub}</p>}
+    </>
+  );
+  if (href) {
+    return (
+      <Link href={href} className="block bg-white rounded-xl p-6 transition-shadow hover:shadow-md"
+        style={{ border: "1px solid #E9ECF0" }}>
+        <Inner />
+      </Link>
+    );
+  }
+  return (
+    <div className="bg-white rounded-xl p-6" style={{ border: "1px solid #E9ECF0" }}>
+      <Inner />
     </div>
   );
 }
@@ -257,7 +326,7 @@ function RevenueSection({ listings, isMock }) {
     : (v) => String(v);
 
   const displayTotal = metric === "revenue" ? `$${total.toLocaleString()}` : total.toLocaleString();
-  const periodLabel  = { "30d": "30 days", "6m": "6 months", "12m": "12 months" }[period];
+  const periodLabel  = { "7d": "7 days", "30d": "30 days", "3m": "3 months", "6m": "6 months", "12m": "12 months", "all": "All time" }[period] || period;
 
   return (
     <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
@@ -281,17 +350,7 @@ function RevenueSection({ listings, isMock }) {
         </div>
 
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          <div className="flex items-center rounded-lg overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
-            {[{ id: "30d", label: "30D" }, { id: "6m", label: "6M" }, { id: "12m", label: "12M" }].map(p => (
-              <button key={p.id} onClick={() => setPeriod(p.id)}
-                className="px-3 py-1.5 text-[12.5px] font-semibold transition-colors"
-                style={period === p.id
-                  ? { background: "#3486cf", color: "#fff" }
-                  : { color: "#6B7280", background: "#fff" }}>
-                {p.label}
-              </button>
-            ))}
-          </div>
+          <TimeRangePicker value={period} onChange={setPeriod} />
           <div className="flex items-center rounded-lg overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
             {[{ id: "revenue", label: "Revenue" }, { id: "bookings", label: "Bookings" }].map(m => (
               <button key={m.id} onClick={() => setMetric(m.id)}
@@ -359,6 +418,16 @@ export default function DashboardHome() {
     .filter(l => ACTIVE_WF.includes(resolveWorkflowStatus(l)) && (l.shootDate || l.preferredDate))
     .sort((a, b) => (a.shootDate || a.preferredDate || "").localeCompare(b.shootDate || b.preferredDate || ""))
     .slice(0, 5);
+
+  // Action required items
+  const actionItems = isMock ? [] : [
+    ...display.filter(l => l.status === "requested" && !l.depositPaid)
+      .map(l => ({ type: "booking_request", id: l.id, label: l.clientName, detail: l.address?.split(",")[0], href: `/dashboard/listings/${l.id}`, urgency: "high" })),
+    ...display.filter(l => (l.paidInFull || l.balancePaid ? false : l.depositPaid) && !l.balancePaid && resolveWorkflowStatus(l) === "delivered")
+      .map(l => ({ type: "balance_due",     id: l.id, label: l.clientName, detail: `Balance $${((l.totalPrice || 0) - (l.depositAmount || 0)).toLocaleString()}`, href: `/dashboard/listings/${l.id}`, urgency: "medium" })),
+    ...display.filter(l => ACTIVE_WF.includes(resolveWorkflowStatus(l)) && !l.shootDate && !l.preferredDate)
+      .map(l => ({ type: "no_date",         id: l.id, label: l.clientName, detail: l.address?.split(",")[0], href: `/dashboard/listings/${l.id}`, urgency: "medium" })),
+  ].slice(0, 6);
 
   const setupSteps = tenant ? [
     { done: !!tenant.phone,                                                                label: "Complete your profile",   href: "/onboarding" },
@@ -516,22 +585,66 @@ export default function DashboardHome() {
         {/* ── Stats row ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard label="Total Listings" value={stats.total} sub="all time"
+            href="/dashboard/listings"
             iconBg="#F0F7FD"
             icon={<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#6BAED0" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>}
           />
           <StatCard label="Pending Review" value={stats.pending} sub={stats.pending > 0 ? "need your action" : "all clear"} badge={stats.pending}
+            href="/dashboard/listings"
             iconBg="#FEF3C7"
             icon={<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
           />
           <StatCard label="Active Shoots" value={stats.confirmed} sub="confirmed"
+            href="/dashboard/listings"
             iconBg="#F0F7FD"
             icon={<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#6BAED0" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}
           />
           <StatCard label="Revenue Collected" value={`$${stats.revenue.toLocaleString()}`} sub="deposits + paid"
+            href="/dashboard/reports"
             iconBg="#ECFDF5"
             icon={<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#059669" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
           />
         </div>
+
+        {/* ── Action Required ───────────────────────────────────────────── */}
+        {actionItems.length > 0 && (
+          <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #FEE2E2" }}>
+            <div className="px-6 py-3.5 flex items-center gap-3" style={{ borderBottom: "1px solid #FEF2F2", background: "#FFF5F5" }}>
+              <div className="w-6 h-6 rounded-md bg-red-100 flex items-center justify-center flex-shrink-0">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#DC2626" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              </div>
+              <h2 className="text-[14px] font-semibold text-red-700">Action Required</h2>
+              <span className="text-[11px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">{actionItems.length}</span>
+            </div>
+            <div>
+              {actionItems.map((item, idx) => {
+                const typeLabel = item.type === "booking_request" ? "New booking request"
+                  : item.type === "balance_due"     ? "Balance due"
+                  : "No shoot date scheduled";
+                const dotColor = item.urgency === "high" ? "#DC2626" : "#D97706";
+                return (
+                  <Link key={`${item.type}-${item.id}`}
+                    href={item.href}
+                    className="flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50 transition-colors group"
+                    style={{ borderBottom: idx < actionItems.length - 1 ? "1px solid #F3F4F6" : "none" }}>
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dotColor }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13.5px] font-medium text-gray-800 truncate">{item.label}</p>
+                      <p className="text-[12px] text-gray-400 truncate">{item.detail}</p>
+                    </div>
+                    <span className="text-[11.5px] font-medium text-gray-400 flex-shrink-0">{typeLabel}</span>
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#D1D5DB" strokeWidth="2"
+                      className="flex-shrink-0 group-hover:stroke-[#9CA3AF] transition-colors">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ── Revenue chart ─────────────────────────────────────────────── */}
         <RevenueSection listings={display} isMock={isMock} />

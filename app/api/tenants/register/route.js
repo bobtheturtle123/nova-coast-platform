@@ -49,7 +49,7 @@ export async function POST(req) {
     }
 
     // Referral attribution — read cookie set by /ref/[code]
-    const refCode    = req.cookies.get("shootflow_ref")?.value || null;
+    const refCode    = req.cookies.get("platform_ref")?.value || null;
     const referrer   = refCode ? await getTenantByReferralCode(refCode).catch(() => null) : null;
     const referredBy = referrer?.id || null;
 

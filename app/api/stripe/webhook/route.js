@@ -208,9 +208,12 @@ export async function POST(req) {
         }
 
         await adminDb.collection("tenants").doc(tenantId).update({
-          stripeSubscriptionId: sub.id,
-          subscriptionStatus:   sub.status,
-          subscriptionPlan:     sub.metadata?.plan || "solo",
+          stripeSubscriptionId:  sub.id,
+          subscriptionStatus:    sub.status,
+          subscriptionPlan:      sub.metadata?.plan || "solo",
+          subscriptionRenewalAt: sub.current_period_end
+            ? new Date(sub.current_period_end * 1000)
+            : null,
           addonSeats,
         });
         break;

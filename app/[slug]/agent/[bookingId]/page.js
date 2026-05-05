@@ -50,6 +50,13 @@ export default async function AgentBookingPage({ params, searchParams }) {
     return out;
   }
 
+  function toIso(v) {
+    if (!v) return null;
+    if (v?.toDate) return v.toDate().toISOString();
+    if (typeof v === "string") return v;
+    return null;
+  }
+
   const booking = {
     id:              bookingId,
     address:         bookingData.fullAddress || bookingData.address || "Property",
@@ -66,7 +73,16 @@ export default async function AgentBookingPage({ params, searchParams }) {
     clientPhone:     bookingData.clientPhone || "",
     status:          bookingData.status      || "confirmed",
     workflowStatus:  bookingData.workflowStatus || null,
-    shootDate:       bookingData.shootDate?.toDate?.()?.toISOString?.() ?? (typeof bookingData.shootDate === "string" ? bookingData.shootDate : null),
+    shootDate:       toIso(bookingData.shootDate),
+    createdAt:       toIso(bookingData.createdAt),
+    depositPaid:     bookingData.depositPaid  || false,
+    balancePaid:     bookingData.balancePaid  || false,
+    paidInFull:      bookingData.paidInFull   || false,
+    statusHistory:   (bookingData.statusHistory || []).map((h) => ({
+      status:    h.status,
+      changedAt: typeof h.changedAt === "string" ? h.changedAt : h.changedAt?.toDate?.()?.toISOString?.() ?? null,
+      note:      h.note || null,
+    })),
     propertyWebsite: bookingData.propertyWebsite ? sanitizePw(bookingData.propertyWebsite) : null,
     totalPrice:      bookingData.totalPrice  || 0,
     remainingBalance: bookingData.remainingBalance || 0,

@@ -40,9 +40,10 @@ export default function BillingPage() {
   const [tenant,           setTenant]          = useState(null);
   const [listingsThisYear, setListingsThisYear] = useState(0);
   const [teamMemberCount,  setTeamMemberCount]  = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [working, setWorking] = useState(false);
-  const [msg,     setMsg]     = useState({ text: "", type: "error" });
+  const [loading,       setLoading]      = useState(true);
+  const [working,       setWorking]      = useState(false);
+  const [msg,           setMsg]          = useState({ text: "", type: "error" });
+  const [cancelModal,   setCancelModal]  = useState(false);
 
   const searchParams = useSearchParams();
 
@@ -164,6 +165,13 @@ export default function BillingPage() {
   const status     = tenant?.subscriptionStatus || "trialing";
   const subscribed = !!tenant?.stripeSubscriptionId;
 
+  function formatRenewalDate(raw) {
+    if (!raw) return null;
+    const d = raw?.seconds ? new Date(raw.seconds * 1000) : new Date(raw);
+    return isNaN(d) ? null : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+  const renewalDateStr = formatRenewalDate(tenant?.subscriptionRenewalAt);
+
   const addonListings  = tenant?.addonListings || 0;
   const addonSeats     = tenant?.addonSeats || 0;
   const listingLimit   = (PLAN_LIMITS[plan] || 120) + addonListings;
@@ -234,15 +242,25 @@ export default function BillingPage() {
             })()}
           </p>
         )}
+        {status === "active" && renewalDateStr && (
+          <p className="text-xs text-gray-400 mt-3">
+            Renews <span className="font-medium text-gray-600">{renewalDateStr}</span>
+          </p>
+        )}
+        {status === "past_due" && (
+          <p className="text-xs text-red-600 mt-3 font-medium">
+            Payment past due — update your payment method to avoid service interruption.
+          </p>
+        )}
 
         {subscribed ? (
           <div className="flex flex-wrap gap-2 mt-4 pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
             <button onClick={openPortal} disabled={working} className="btn-outline">
               {working ? "Loading…" : "Manage subscription →"}
             </button>
-            <button onClick={openPortal} disabled={working}
+            <button onClick={() => setCancelModal(true)} disabled={working}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 text-red-600 text-[13px] font-medium hover:bg-red-50 transition-colors disabled:opacity-50">
-              {working ? "Loading…" : "Cancel subscription"}
+              Cancel subscription
             </button>
           </div>
         ) : (
@@ -486,6 +504,57 @@ export default function BillingPage() {
           </div>
         )}
       </div>
+
+      {/* Cancel confirmation modal */}
+      {cancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.45)" }}
+          onClick={() => setCancelModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-red-500">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-[#0F172A] text-[15px]">Cancel subscription?</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{PLAN_NAMES[plan] || plan} · ${PLAN_PRICES[plan] || 0}/month</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 mb-5 text-sm text-gray-600">
+              <p>You'll keep access until the end of your current billing period{renewalDateStr ? ` (${renewalDateStr})` : ""}, then your account will be downgraded.</p>
+              <ul className="mt-3 space-y-1.5 text-xs text-gray-500">
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                  Listing credit balance will not be refunded
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                  Team members will lose dashboard access
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                  Agent Pro features will be disabled
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setCancelModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                Keep subscription
+              </button>
+              <button onClick={() => { setCancelModal(false); openPortal(); }} disabled={working}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50">
+                {working ? "Loading…" : "Yes, cancel →"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
