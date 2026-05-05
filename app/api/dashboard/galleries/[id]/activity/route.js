@@ -28,12 +28,17 @@ export async function GET(req, { params }) {
     const data = d.data();
     const ts   = data.timestamp?.toDate?.() || null;
     return {
-      id:        d.id,
-      event:     data.event,
-      email:     data.email     || null,
-      note:      data.note      || null,
-      fileName:  data.fileName  || null,
-      timestamp: ts ? ts.toISOString() : null,
+      id:          d.id,
+      event:       data.event,
+      viewerName:  data.viewerName  || data.email || null,
+      viewerEmail: data.viewerEmail || null,
+      note:        data.note        || null,
+      fileName:    data.fileName    || null,
+      format:      data.format      || null,
+      fileCount:   data.fileCount   || null,
+      ip:          data.ip          || null,
+      userAgent:   data.userAgent   || null,
+      timestamp:   ts ? ts.toISOString() : null,
     };
   });
 

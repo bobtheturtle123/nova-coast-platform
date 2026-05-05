@@ -263,6 +263,7 @@ export default function GalleryDetailPage() {
   const [gallery,      setGallery]      = useState(null);
   const [loading,      setLoading]      = useState(true);
   const [uploading,    setUploading]    = useState(false);
+  const [activity,     setActivity]     = useState([]);
   const [progress,     setProgress]     = useState(0);
   const [showDeliver,  setShowDeliver]  = useState(false);
   const [delivering,   setDelivering]   = useState(false);
@@ -316,9 +317,10 @@ export default function GalleryDetailPage() {
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
-      const [galleryRes, tenantRes] = await Promise.all([
-        fetch(`/api/dashboard/galleries/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/tenant",           { headers: { Authorization: `Bearer ${token}` } }),
+      const [galleryRes, tenantRes, activityRes] = await Promise.all([
+        fetch(`/api/dashboard/galleries/${id}`,          { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/tenant",                    { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`/api/dashboard/galleries/${id}/activity`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       if (galleryRes.ok) {
         const data = await galleryRes.json();
@@ -354,6 +356,10 @@ export default function GalleryDetailPage() {
         if (data.gallery.floorPlans)       setFloorPlans(data.gallery.floorPlans);
         if (data.gallery.attachedFiles)    setAttachedFiles(data.gallery.attachedFiles);
         if (data.gallery.mlsUrl)           setMlsUrl(data.gallery.mlsUrl);
+      }
+      if (activityRes.ok) {
+        const aData = await activityRes.json();
+        setActivity(aData.events || []);
       }
       setLoading(false);
     });
@@ -1319,8 +1325,65 @@ export default function GalleryDetailPage() {
               </div>
             )}
           </div>
+        </div>
 
+        {/* ── Activity Log ──────────────────────────────────────────────── */}
+        <div className="border-t border-gray-100 pt-6 pb-8 max-w-3xl">
+          <h2 className="font-display text-[#3486cf] text-base mb-1">Activity Log</h2>
+          <p className="text-xs text-gray-400 mb-4">Every time someone views this gallery or downloads files — recorded automatically.</p>
 
+          {activity.length === 0 ? (
+            <p className="text-sm text-gray-400 italic">No activity yet. Views and downloads will appear here once the gallery is opened.</p>
+          ) : (
+            <div className="space-y-2">
+              {activity.map((e) => {
+                const ts = e.timestamp ? new Date(e.timestamp) : null;
+                const dateStr = ts ? ts.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+                const timeStr = ts ? ts.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
+
+                let icon = "👁";
+                let label = "Viewed gallery";
+                let detail = "";
+
+                if (e.event === "download_zip") {
+                  icon = "📦";
+                  label = `Downloaded all photos (${e.format === "print" ? "print quality" : "web/MLS quality"})`;
+                  if (e.fileCount) detail = `${e.fileCount} files`;
+                } else if (e.event === "download_video") {
+                  icon = "🎬";
+                  label = "Downloaded video";
+                  if (e.fileName) detail = e.fileName;
+                } else if (e.event === "note") {
+                  icon = "📝";
+                  label = e.note || "Admin note";
+                }
+
+                return (
+                  <div key={e.id} className="flex items-start gap-3 px-4 py-3 bg-gray-50 rounded-xl text-sm">
+                    <span className="text-base mt-0.5 flex-shrink-0">{icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-[#0F172A]">{label}</span>
+                        {detail && <span className="text-gray-400 text-xs">· {detail}</span>}
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                        {(e.viewerName || e.viewerEmail) && (
+                          <span className="text-xs text-[#3486cf]">
+                            {e.viewerName || e.viewerEmail}
+                            {e.viewerName && e.viewerEmail && ` (${e.viewerEmail})`}
+                          </span>
+                        )}
+                        {e.ip && <span className="text-xs text-gray-400">IP: {e.ip}</span>}
+                        {ts && (
+                          <span className="text-xs text-gray-400">{dateStr} at {timeStr}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

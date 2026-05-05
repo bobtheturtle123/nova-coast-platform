@@ -6,9 +6,9 @@ import { sendShootReminderSms, mergeSmsPrefs } from "@/lib/sms";
 export const dynamic = "force-dynamic";
 
 export async function GET(req) {
-  // Verify cron secret — fail closed: if the env var is not set, block all access
   const authHeader = req.headers.get("authorization");
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return new Response("Unauthorized", { status: 401 });
   }
 

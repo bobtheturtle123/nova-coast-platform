@@ -33,10 +33,10 @@ export async function GET(req) {
   if (!tokenDoc.exists) return new Response("Gallery not found", { status: 404 });
 
   const { tenantId, galleryId } = tokenDoc.data();
-  const galleryDoc = await adminDb
-    .collection("tenants").doc(tenantId)
-    .collection("galleries").doc(galleryId)
-    .get();
+  const [galleryDoc, tenantDoc] = await Promise.all([
+    adminDb.collection("tenants").doc(tenantId).collection("galleries").doc(galleryId).get(),
+    adminDb.collection("tenants").doc(tenantId).get(),
+  ]);
 
   if (!galleryDoc.exists) return new Response("Gallery not found", { status: 404 });
 
@@ -60,6 +60,22 @@ export async function GET(req) {
       Key:                        key,
       ResponseContentDisposition: `attachment; filename="${encodeURIComponent(name)}"`,
     });
+
+    // Log download activity — respects tenant's viewer tracking preference
+    if (tenantDoc.data()?.gallerySettings?.viewerTracking !== false) {
+      const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null;
+      adminDb
+        .collection("tenants").doc(tenantId)
+        .collection("galleries").doc(galleryId)
+        .collection("activityLog")
+        .add({
+          event:     "download_video",
+          fileName:  name,
+          timestamp: new Date(),
+          ip,
+        })
+        .catch(() => {});
+    }
 
     // 15-minute window — enough for slow connections
     const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 900 });

@@ -644,6 +644,10 @@ export default function SettingsPage() {
   const [savingTemplate,  setSavingTemplate]  = useState(false);
   const [emailTab,        setEmailTab]        = useState("gallery");
 
+  // Gallery settings
+  const [viewerTracking,     setViewerTracking]     = useState(true);
+  const [savingGalleryPrefs, setSavingGalleryPrefs] = useState(false);
+
   // Notification prefs (merged from Notifications page)
   const [notifPrefs,    setNotifPrefs]    = useState({});
   const [savingNotifs,  setSavingNotifs]  = useState(false);
@@ -757,6 +761,9 @@ export default function SettingsPage() {
           }
         }
         if (data.tenant.notificationPrefs) setNotifPrefs(data.tenant.notificationPrefs);
+        if (data.tenant.gallerySettings?.viewerTracking !== undefined) {
+          setViewerTracking(data.tenant.gallerySettings.viewerTracking);
+        }
 
         if (data.tenant.emailTemplate) {
           if (data.tenant.emailTemplate.subject) setEmailTplSubject(data.tenant.emailTemplate.subject);
@@ -1062,6 +1069,21 @@ export default function SettingsPage() {
       else showMsg("Failed to save.", "error");
     } catch { showMsg("Something went wrong.", "error"); }
     setSavingTravel(false);
+  }
+
+  async function saveGalleryPrefs() {
+    setSavingGalleryPrefs(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/tenants/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ gallerySettings: { viewerTracking } }),
+      });
+      if (res.ok) showMsg("Gallery settings saved.");
+      else showMsg("Failed to save.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    setSavingGalleryPrefs(false);
   }
 
   async function saveNotifPrefs() {
@@ -2637,6 +2659,34 @@ export default function SettingsPage() {
             plan={tenant?.subscriptionPlan || "solo"}
             onToggle={(ch) => toggleNotifChannel(notif.id, ch)} />
         ))}
+      </div>
+
+      {/* ─── Gallery Settings ────────────────────────────────────────────────── */}
+      <div className="card mt-6 scroll-mt-24">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="font-semibold text-[#0F172A] text-base">Gallery Settings</h2>
+          <button onClick={saveGalleryPrefs} disabled={savingGalleryPrefs} className="btn-primary px-5 py-2 text-sm">
+            {savingGalleryPrefs ? "Saving…" : "Save"}
+          </button>
+        </div>
+        <p className="text-sm text-gray-500 mb-5">Control how client gallery views and downloads are tracked.</p>
+
+        <div className="flex items-start justify-between gap-4 py-3 border-b border-gray-100 last:border-0">
+          <div>
+            <p className="text-sm font-medium text-[#0F172A]">Enable Viewer Tracking</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              When on, every gallery view logs the viewer&apos;s name, email, IP address, and device. Downloads are also recorded.
+              Disable if your clients require stricter privacy.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setViewerTracking((v) => !v)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 mt-0.5 ${viewerTracking ? "bg-[#3486cf]" : "bg-gray-300"}`}
+          >
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${viewerTracking ? "translate-x-4" : "translate-x-0.5"}`} />
+          </button>
+        </div>
       </div>
 
       {/* ─── Integrations ────────────────────────────────────────────────────── */}

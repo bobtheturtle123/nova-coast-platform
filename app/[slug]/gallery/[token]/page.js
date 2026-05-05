@@ -1,10 +1,12 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import GalleryClient from "./GalleryClient";
 
 export default async function TenantGalleryPage({ params }) {
   const { slug, token } = params;
+  const reqHeaders = headers();
 
   const tenant = await getTenantBySlug(slug);
   if (!tenant) notFound();
@@ -23,15 +25,7 @@ export default async function TenantGalleryPage({ params }) {
   const galleryDoc = snap.docs[0];
   const gallery = { id: galleryDoc.id, ...galleryDoc.data() };
 
-  // Log gallery view (fire-and-forget — never block page render)
-  adminDb
-    .collection("tenants").doc(tenant.id)
-    .collection("galleries").doc(galleryDoc.id)
-    .collection("activityLog")
-    .add({ event: "view", timestamp: new Date() })
-    .catch(() => {});
-
-  // Fetch booking for balance info
+  // Fetch booking for balance info + viewer identity
   let booking = null;
   if (gallery.bookingId) {
     const bookingDoc = await adminDb
@@ -43,6 +37,29 @@ export default async function TenantGalleryPage({ params }) {
     if (bookingDoc.exists) {
       booking = { id: bookingDoc.id, ...bookingDoc.data() };
     }
+  }
+
+  // Log gallery view — respects tenant's viewer tracking preference (default: on)
+  if (tenant.gallerySettings?.viewerTracking !== false) {
+    const ip =
+      reqHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      reqHeaders.get("x-real-ip") ||
+      null;
+    const ua = reqHeaders.get("user-agent") || null;
+
+    adminDb
+      .collection("tenants").doc(tenant.id)
+      .collection("galleries").doc(galleryDoc.id)
+      .collection("activityLog")
+      .add({
+        event:       "view",
+        timestamp:   new Date(),
+        viewerName:  booking?.clientName  || null,
+        viewerEmail: booking?.clientEmail || null,
+        ip,
+        userAgent:   ua,
+      })
+      .catch(() => {});
   }
 
   return (
