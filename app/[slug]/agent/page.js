@@ -1,5 +1,6 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
+import { getAppUrl } from "@/lib/appUrl";
 import Link from "next/link";
 import AgentShareButtons from "@/components/AgentShareButtons";
 import AgentTokenPersist from "@/components/AgentTokenPersist";
@@ -85,15 +86,27 @@ export default async function AgentPortalPage({ params, searchParams }) {
 
   const primary  = tenant.branding?.primaryColor || "#3486cf";
   const accent   = tenant.branding?.accentColor  || "#c9a96e";
-  const appUrl   = process.env.NEXT_PUBLIC_APP_URL || "";
+  const appUrl   = getAppUrl();
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="font-display text-2xl text-gray-900">Welcome, {agent.name?.split(" ")[0] || "there"}</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          {bookings.length} listing{bookings.length !== 1 ? "s" : ""} · {agent.email}
-        </p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl text-gray-900">Welcome, {agent.name?.split(" ")[0] || "there"}</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {bookings.length} listing{bookings.length !== 1 ? "s" : ""} · {agent.email}
+          </p>
+        </div>
+        <Link
+          href={`/${slug}/book`}
+          className="flex-shrink-0 inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl text-white transition-opacity hover:opacity-90"
+          style={{ background: primary }}
+        >
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Book New Shoot
+        </Link>
       </div>
 
       {bookings.length === 0 ? (

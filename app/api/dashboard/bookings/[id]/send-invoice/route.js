@@ -2,6 +2,7 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
 import { sendInvoiceEmail } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
+import { getAppUrl } from "@/lib/appUrl";
 
 const EMAIL_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours between invoice sends
 
@@ -39,7 +40,7 @@ export async function POST(req, { params }) {
   const tenant  = await getTenantById(ctx.tenantId);
   if (!tenant) return Response.json({ error: "Tenant not found" }, { status: 404 });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getAppUrl();
   const address = booking.fullAddress || booking.address || "Property";
 
   // Determine amount due and build a Stripe Checkout link if applicable

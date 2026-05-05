@@ -8,6 +8,7 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { Resend } from "resend";
 import { v4 as uuidv4 } from "uuid";
+import { getAppUrl } from "@/lib/appUrl";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -63,7 +64,7 @@ export async function POST(req) {
 
   const token     = uuidv4();
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  const APP_URL   = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const APP_URL   = getAppUrl();
   const inviteUrl = `${APP_URL}/staff-invite/${token}`;
 
   await adminDb

@@ -1,6 +1,7 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { Resend } from "resend";
 import { v4 as uuidv4 } from "uuid";
+import { getAppUrl } from "@/lib/appUrl";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -44,7 +45,7 @@ export async function POST(req) {
   // This avoids collectionGroup queries and prevents cross-tenant enumeration
   await adminDb.collection("photographerInvites").doc(token).set(inviteData);
 
-  const appUrl    = process.env.NEXT_PUBLIC_APP_URL || "https://app.kyoriaos.com";
+  const appUrl    = getAppUrl();
   const inviteUrl = `${appUrl}/join/${token}`;
 
   try {

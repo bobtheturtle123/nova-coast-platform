@@ -15,15 +15,18 @@ export async function GET(req) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const statusFilter = searchParams.get("status"); // pending | acknowledged | resolved | all
+  const statusFilter    = searchParams.get("status");    // pending | acknowledged | resolved | all
+  const bookingIdFilter = searchParams.get("bookingId"); // optional
 
   let query = adminDb
     .collection("tenants").doc(ctx.tenantId)
-    .collection("revisionRequests")
-    .orderBy("requestedAt", "desc");
+    .collection("revisionRequests");
 
   if (statusFilter && statusFilter !== "all") {
     query = query.where("status", "==", statusFilter);
+  }
+  if (bookingIdFilter) {
+    query = query.where("bookingId", "==", bookingIdFilter);
   }
 
   const snap = await query.limit(100).get();
@@ -43,7 +46,7 @@ export async function GET(req) {
       adminNotes:  d.adminNotes || "",
       resolvedAt:  d.resolvedAt?.toDate?.()?.toISOString?.() ?? d.resolvedAt,
     };
-  });
+  }).sort((a, b) => (b.requestedAt || "") < (a.requestedAt || "") ? -1 : 1);
 
   return Response.json({ revisions });
 }

@@ -1,4 +1,5 @@
 import { adminDb } from "@/lib/firebase-admin";
+import { getAppUrl } from "@/lib/appUrl";
 
 export async function GET(req) {
   const url   = new URL(req.url);
@@ -6,7 +7,7 @@ export async function GET(req) {
   const state = url.searchParams.get("state");
   const error = url.searchParams.get("error");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const appUrl = getAppUrl();
 
   if (error || !code || !state) {
     return Response.redirect(`${appUrl}/dashboard/team?calError=denied`);

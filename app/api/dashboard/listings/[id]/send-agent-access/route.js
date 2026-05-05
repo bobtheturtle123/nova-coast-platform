@@ -3,8 +3,7 @@ import { getTenantById } from "@/lib/tenants";
 import { rateLimitTenant } from "@/lib/rateLimit";
 import { Resend } from "resend";
 import { v4 as uuidv4 } from "uuid";
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "";
+import { getAppUrl } from "@/lib/appUrl";
 function getResend() {
   const key = process.env.RESEND_API_KEY;
   if (!key) return null;
@@ -77,7 +76,7 @@ export async function POST(req, { params }) {
     }
   }
 
-  const portalUrl = `${APP_URL}/${tenant.slug}/agent?token=${accessToken}`;
+  const portalUrl = `${getAppUrl()}/${tenant.slug}/agent?token=${accessToken}`;
 
   // Send email if requested and Resend is configured
   if (sendEmail && process.env.RESEND_API_KEY) {

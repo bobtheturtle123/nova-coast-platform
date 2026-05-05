@@ -78,9 +78,21 @@ export default async function AgentListingsPage({ params, searchParams }) {
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="font-display text-2xl text-gray-900">My Listings</h1>
-        <p className="text-sm text-gray-400 mt-1">{bookings.length} listing{bookings.length !== 1 ? "s" : ""} · {agent.email}</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl text-gray-900">My Listings</h1>
+          <p className="text-sm text-gray-400 mt-1">{bookings.length} listing{bookings.length !== 1 ? "s" : ""} · {agent.email}</p>
+        </div>
+        <Link
+          href={`/${slug}/book`}
+          className="flex-shrink-0 inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl text-white transition-opacity hover:opacity-90"
+          style={{ background: primary }}
+        >
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Book New Shoot
+        </Link>
       </div>
 
       {bookings.length === 0 ? (

@@ -41,16 +41,15 @@ export default function ShootDetailPage() {
       if (!token) { router.push("/auth/login"); return; }
 
       const [bookRes, notesRes] = await Promise.all([
-        fetch(`/api/photographer/bookings`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`/api/photographer/bookings/${bookingId}`,       { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`/api/photographer/bookings/${bookingId}/notes`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       const bData = await bookRes.json();
       const nData = await notesRes.json();
 
-      const b = (bData.bookings || []).find((x) => x.id === bookingId);
-      if (!b) { setLoading(false); return; }
-      setBooking(b);
+      if (!bData.booking) { setLoading(false); return; }
+      setBooking(bData.booking);
       setNotes(nData.photographerNotes || "");
       setLoading(false);
     }

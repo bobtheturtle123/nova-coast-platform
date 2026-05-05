@@ -3,6 +3,7 @@ import { getTenantById } from "@/lib/tenants";
 import { sendGalleryDelivery } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendMediaDeliveredSms } from "@/lib/sms";
+import { getAppUrl } from "@/lib/appUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -76,7 +77,7 @@ export async function GET(req) {
           ]);
 
           // Fire-and-forget side effects
-          const appUrl     = process.env.NEXT_PUBLIC_APP_URL || "";
+          const appUrl     = getAppUrl();
           const galleryUrl = gallery.accessToken
             ? `${appUrl}/${tenant?.slug}/gallery/${gallery.accessToken}`
             : null;

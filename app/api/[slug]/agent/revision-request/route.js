@@ -1,5 +1,6 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
+import { getAppUrl } from "@/lib/appUrl";
 
 export async function POST(req, { params }) {
   try {
@@ -73,7 +74,7 @@ export async function POST(req, { params }) {
             <h2 style="color:${primary};font-family:Georgia,serif;margin:0 0 8px">New Revision Request</h2>
             <p style="color:#555;margin:0 0 20px">From <strong>${agent.name} (${agent.email})</strong> for <strong>${bookingData.fullAddress || bookingData.address}</strong></p>
             <blockquote style="border-left:3px solid ${primary};padding-left:16px;color:#444;margin:0 0 20px;font-style:italic">${message.trim()}</blockquote>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || ""}/dashboard/revisions" style="background:${primary};color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">
+            <a href="${getAppUrl()}/dashboard/revisions" style="background:${primary};color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">
               View in Dashboard →
             </a>
           </div>`,

@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { randomBytes } from "crypto";
+import { getAppUrl } from "@/lib/appUrl";
 
 export async function GET(req) {
   try {
@@ -25,7 +26,7 @@ export async function GET(req) {
     if (!memberDoc.exists) return Response.json({ error: "Team member not found" }, { status: 404 });
 
     const clientId    = process.env.GOOGLE_CLIENT_ID;
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/calendar/oauth/callback`;
+    const redirectUri = `${getAppUrl()}/api/calendar/oauth/callback`;
 
     if (!clientId) {
       return Response.json({ error: "GOOGLE_CLIENT_ID not configured" }, { status: 500 });

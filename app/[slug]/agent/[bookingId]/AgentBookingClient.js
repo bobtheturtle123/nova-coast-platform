@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useBookingStore } from "@/store/bookingStore";
+import { PIPELINE_ORDER, OVERRIDE_STATUSES, getStatus, resolveWorkflowStatus } from "@/lib/workflowStatus";
 
 const MarketingStudio = dynamic(() => import("@/components/marketing/MarketingStudio"), { ssr: false });
 
@@ -157,6 +158,9 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
               </div>
             </div>
           )}
+
+          {/* Workflow stepper */}
+          <WorkflowStepper workflowStatus={booking.workflowStatus} bookingStatus={booking.status} primary={branding.primary} />
 
           {/* Quick links grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -433,7 +437,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
         </div>
       )}
 
-      {/* ── REVISIONS TAB ──────────────────────────────────────────── */}
+      {/* ── REVISIONS TAB ────────────────────────────────────────────── */}
       {tab === "revisions" && allowRevisions && (
         <div className="space-y-5">
           {/* Submit new request */}
@@ -495,6 +499,82 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
               <p className="text-sm">No revision requests yet.</p>
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WorkflowStepper({ workflowStatus, bookingStatus, primary }) {
+  const current = resolveWorkflowStatus({ workflowStatus, status: bookingStatus });
+  const isOverride = OVERRIDE_STATUSES.includes(current);
+  const currentIdx = PIPELINE_ORDER.indexOf(current);
+  const overrideStatus = isOverride ? getStatus(current) : null;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-5">
+      <p className="text-xs text-gray-400 uppercase tracking-wide mb-4">Shoot Progress</p>
+
+      {isOverride ? (
+        <div className="flex items-center gap-2">
+          <span
+            className="text-xs font-semibold px-2.5 py-1 rounded-full"
+            style={{ background: overrideStatus.color + "20", color: overrideStatus.color }}
+          >
+            {overrideStatus.label}
+          </span>
+          <span className="text-xs text-gray-400">{overrideStatus.desc}</span>
+        </div>
+      ) : (
+        <div className="relative">
+          {/* Track */}
+          <div className="absolute top-3 left-3 right-3 h-0.5 bg-gray-100" style={{ zIndex: 0 }} />
+          <div
+            className="absolute top-3 left-3 h-0.5 transition-all"
+            style={{
+              zIndex: 0,
+              background: primary,
+              width: currentIdx <= 0 ? 0 : `${(currentIdx / (PIPELINE_ORDER.length - 1)) * 100}%`,
+            }}
+          />
+          <div className="relative flex justify-between" style={{ zIndex: 1 }}>
+            {PIPELINE_ORDER.map((id, idx) => {
+              const done    = idx < currentIdx;
+              const active  = idx === currentIdx;
+              const pending = idx > currentIdx;
+              const st      = getStatus(id);
+              return (
+                <div key={id} className="flex flex-col items-center gap-1.5" style={{ flex: "1 1 0", maxWidth: 64 }}>
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-all"
+                    style={{
+                      background: done || active ? primary : "#fff",
+                      borderColor: done || active ? primary : "#E2E8F0",
+                      color: done || active ? "#fff" : "#94A3B8",
+                    }}
+                  >
+                    {done ? (
+                      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    ) : (
+                      <span>{idx + 1}</span>
+                    )}
+                  </div>
+                  <span
+                    className="text-[9px] font-medium text-center leading-tight hidden sm:block"
+                    style={{ color: active ? primary : done ? "#64748B" : "#CBD5E1" }}
+                  >
+                    {st?.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {/* Current label on mobile */}
+          <p className="sm:hidden text-xs font-medium mt-3 text-center" style={{ color: primary }}>
+            {getStatus(current)?.label}
+          </p>
         </div>
       )}
     </div>

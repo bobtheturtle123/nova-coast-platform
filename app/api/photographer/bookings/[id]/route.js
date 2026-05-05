@@ -22,40 +22,33 @@ function sanitize(val) {
   return val;
 }
 
-export async function GET(req) {
+export async function GET(req, { params }) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Verify the memberId actually belongs to this tenant (defence against spoofed claims)
   const memberDoc = await adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(ctx.memberId).get();
   if (!memberDoc.exists) return Response.json({ error: "Unauthorized" }, { status: 403 });
   const memberEmail = memberDoc.data().email || "";
 
-  // Query bookings assigned to this photographer
-  const snap = await adminDb
+  const bookingDoc = await adminDb
     .collection("tenants").doc(ctx.tenantId)
-    .collection("bookings")
-    .where("photographerId", "==", ctx.memberId)
+    .collection("bookings").doc(params.id)
     .get();
 
-  // Also grab by email match for legacy bookings assigned by email
-  const emailSnap = memberEmail
-    ? await adminDb
-        .collection("tenants").doc(ctx.tenantId)
-        .collection("bookings")
-        .where("photographerEmail", "==", memberEmail)
-        .get()
-    : { docs: [] };
+  if (!bookingDoc.exists) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const seen = new Set();
-  const bookings = [];
-  for (const doc of [...snap.docs, ...emailSnap.docs]) {
-    if (seen.has(doc.id)) continue;
-    seen.add(doc.id);
-    const raw = sanitize(doc.data());
-    // Expose only what a photographer needs — never client-facing pricing
-    bookings.push({
-      id:             doc.id,
+  const raw = sanitize(bookingDoc.data());
+
+  // Verify this photographer is assigned to this booking
+  const isAssigned =
+    raw.photographerId === ctx.memberId ||
+    (memberEmail && raw.photographerEmail?.toLowerCase() === memberEmail.toLowerCase());
+
+  if (!isAssigned) return Response.json({ error: "Forbidden" }, { status: 403 });
+
+  return Response.json({
+    booking: {
+      id:             bookingDoc.id,
       status:         raw.status,
       workflowStatus: raw.workflowStatus || null,
       shootDate:      raw.shootDate,
@@ -72,16 +65,6 @@ export async function GET(req) {
       addonIds:       raw.addonIds,
       notes:          raw.notes,
       payRate:        raw.photographerPayRate ?? null,
-      createdAt:      raw.createdAt,
-    });
-  }
-
-  // Sort by shootDate asc — soonest upcoming first
-  bookings.sort((a, b) => {
-    const da = a.shootDate || a.preferredDate || "";
-    const db_ = b.shootDate || b.preferredDate || "";
-    return da.localeCompare(db_);
+    },
   });
-
-  return Response.json({ bookings });
 }

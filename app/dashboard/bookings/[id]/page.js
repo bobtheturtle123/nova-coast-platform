@@ -154,9 +154,10 @@ export default function BookingDetailPage() {
   const [showWeather, setShowWeather] = useState(true);
   const [tempUnit,    setTempUnit]    = useState("F");
 
-  const [workflowStatus,  setWorkflowStatus]  = useState("booked");
-  const [statusHistory,   setStatusHistory]   = useState([]);
+  const [workflowStatus,   setWorkflowStatus]  = useState("booked");
+  const [statusHistory,    setStatusHistory]   = useState([]);
   const [updatingWorkflow, setUpdatingWorkflow] = useState(false);
+  const [pendingRevCount,  setPendingRevCount] = useState(0);
 
   // Job costs state
   const [costs, setCosts] = useState({ shooterFee: 0, editorFee: 0, travelCost: 0, otherCosts: 0, shootHours: "", editHoursPerPhoto: "", notes: "" });
@@ -166,14 +167,17 @@ export default function BookingDetailPage() {
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
-      const [bookingRes, tenantRes] = await Promise.all([
-        fetch(`/api/dashboard/bookings/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/tenant",          { headers: { Authorization: `Bearer ${token}` } }),
+      const [bookingRes, tenantRes, revisionsRes] = await Promise.all([
+        fetch(`/api/dashboard/bookings/${id}`,                                    { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/tenant",                                             { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`/api/dashboard/revisions?bookingId=${id}&status=pending`,           { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      const [bookingData, tenantData] = await Promise.all([
-        bookingRes.ok  ? bookingRes.json()  : null,
-        tenantRes.ok   ? tenantRes.json()   : null,
+      const [bookingData, tenantData, revisionsData] = await Promise.all([
+        bookingRes.ok    ? bookingRes.json()    : null,
+        tenantRes.ok     ? tenantRes.json()     : null,
+        revisionsRes.ok  ? revisionsRes.json()  : null,
       ]);
+      if (revisionsData?.revisions) setPendingRevCount(revisionsData.revisions.length);
 
       if (bookingData) {
         setBooking(bookingData.booking);
@@ -398,6 +402,19 @@ export default function BookingDetailPage() {
         <div className="bg-blue-50 border border-blue-200 text-blue-700 text-sm px-4 py-2 rounded-xl mb-4">
           {msg}
         </div>
+      )}
+
+      {pendingRevCount > 0 && (
+        <Link href="/dashboard/revisions"
+          className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 hover:bg-amber-100 transition-colors">
+          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-400 text-white text-xs font-bold flex items-center justify-center">
+            {pendingRevCount}
+          </span>
+          <span className="text-sm text-amber-800 font-medium">
+            {pendingRevCount === 1 ? "1 pending revision request" : `${pendingRevCount} pending revision requests`} — review in Revisions inbox
+          </span>
+          <span className="ml-auto text-amber-500 text-sm">→</span>
+        </Link>
       )}
 
       <WorkflowStepper

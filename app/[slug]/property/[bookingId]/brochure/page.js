@@ -1,5 +1,6 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
+import { getAppUrl } from "@/lib/appUrl";
 import BrochureClient from "./BrochureClient";
 
 export async function generateMetadata({ params }) {
@@ -76,11 +77,7 @@ export default async function BrochurePage({ params }) {
       website: tenant.branding?.website       || "",
     };
 
-    // Build listing URL — fall back to relative if env var not set
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "";
-    const listingUrl = appUrl
-      ? `${appUrl}/${params.slug}/property/${params.bookingId}`
-      : `/${params.slug}/property/${params.bookingId}`;
+    const listingUrl = `${getAppUrl()}/${params.slug}/property/${params.bookingId}`;
 
     return (
       <BrochureClient

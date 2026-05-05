@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { stripe, PLAN_PRICE_IDS } from "@/lib/stripe";
+import { getAppUrl } from "@/lib/appUrl";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -38,8 +39,8 @@ export async function POST(req) {
       mode:       "subscription",
       customer:   customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?subscribed=true`,
-      cancel_url:  `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing`,
+      success_url: `${getAppUrl()}/dashboard/billing?subscribed=true`,
+      cancel_url:  `${getAppUrl()}/dashboard/billing`,
       subscription_data: {
         metadata: { tenantId: ctx.tenantId, plan },
       },

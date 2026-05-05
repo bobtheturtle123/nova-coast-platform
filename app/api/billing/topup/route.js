@@ -1,6 +1,7 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { stripe, TOPUP_PRICE_IDS } from "@/lib/stripe";
 import { getAddonCaps, NEXT_PLAN, PLANS } from "@/lib/plans";
+import { getAppUrl } from "@/lib/appUrl";
 
 const TOPUP_CREDITS = { pack25: 25, pack50: 50, pack100: 100 };
 
@@ -67,8 +68,8 @@ export async function POST(req) {
       mode:       "payment",
       customer:   customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?topup=success`,
-      cancel_url:  `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing`,
+      success_url: `${getAppUrl()}/dashboard/billing?topup=success`,
+      cancel_url:  `${getAppUrl()}/dashboard/billing`,
       metadata: { tenantId: ctx.tenantId, type: "topup", pack },
     });
 

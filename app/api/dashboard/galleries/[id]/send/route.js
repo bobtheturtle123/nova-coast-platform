@@ -3,6 +3,7 @@ import { getTenantById } from "@/lib/tenants";
 import { sendGalleryDelivery } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendMediaDeliveredSms } from "@/lib/sms";
+import { getAppUrl } from "@/lib/appUrl";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -76,7 +77,7 @@ export async function POST(req, { params }) {
 
   // Auto-include website and 3D tour links from booking if not overridden
   const resolvedWebsiteUrl = websiteUrl || (booking.propertyWebsite?.published
-    ? `${process.env.NEXT_PUBLIC_APP_URL || ""}/${tenant.slug}/property/${gallery.bookingId}`
+    ? `${getAppUrl()}/${tenant.slug}/property/${gallery.bookingId}`
     : null);
   const resolvedTourUrl = tourUrl || booking.propertyWebsite?.matterportUrl || null;
 
@@ -112,7 +113,7 @@ export async function POST(req, { params }) {
   // SMS notifications — Studio and Pro plans only
   const SMS_PLANS = ["studio", "pro", "scale"];
   if (SMS_PLANS.includes(tenant?.subscriptionPlan)) {
-    const appUrl     = process.env.NEXT_PUBLIC_APP_URL || "";
+    const appUrl     = getAppUrl();
     const galleryUrl = gallery.accessToken ? `${appUrl}/${tenant?.slug}/gallery/${gallery.accessToken}` : null;
     sendMediaDeliveredSms({ booking, tenant, galleryUrl }).catch(() => {});
   }

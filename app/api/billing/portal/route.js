@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { stripe } from "@/lib/stripe";
+import { getAppUrl } from "@/lib/appUrl";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -23,7 +24,7 @@ export async function POST(req) {
 
     const session = await stripe.billingPortal.sessions.create({
       customer:   tenant.stripeCustomerId,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing`,
+      return_url: `${getAppUrl()}/dashboard/billing`,
     });
 
     return Response.json({ url: session.url });

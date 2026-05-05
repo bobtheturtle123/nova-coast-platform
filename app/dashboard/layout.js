@@ -124,9 +124,10 @@ const NAV = [
 export default function DashboardLayout({ children }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const [user,        setUser]       = useState(undefined);
-  const [tenantName,  setTenantName] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user,            setUser]           = useState(undefined);
+  const [tenantName,      setTenantName]      = useState("");
+  const [sidebarOpen,     setSidebarOpen]     = useState(false);
+  const [pendingRevCount, setPendingRevCount] = useState(0);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -152,10 +153,16 @@ export default function DashboardLayout({ children }) {
         if (!repaired) { router.push("/onboarding"); return; }
       }
       setUser(u);
+      const tok = await u.getIdToken();
       fetch("/api/dashboard/tenant", {
-        headers: { Authorization: `Bearer ${await u.getIdToken()}` },
+        headers: { Authorization: `Bearer ${tok}` },
       }).then((r) => r.json()).then((d) => {
         if (d.tenant?.businessName) setTenantName(d.tenant.businessName);
+      }).catch(() => {});
+      fetch("/api/dashboard/revisions?status=pending", {
+        headers: { Authorization: `Bearer ${tok}` },
+      }).then((r) => r.json()).then((d) => {
+        setPendingRevCount(d.revisions?.length ?? 0);
       }).catch(() => {});
     });
     return unsub;
@@ -205,7 +212,12 @@ export default function DashboardLayout({ children }) {
               className={`ky-nav-item${active ? " active" : ""}`}
             >
               <span className="flex-shrink-0">{item.icon}</span>
-              <span className="leading-none">{item.label}</span>
+              <span className="leading-none flex-1">{item.label}</span>
+              {item.label === "Revisions" && pendingRevCount > 0 && (
+                <span style={{ background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 9999, padding: "1px 6px", lineHeight: "16px" }}>
+                  {pendingRevCount}
+                </span>
+              )}
             </Link>
           );
         })}

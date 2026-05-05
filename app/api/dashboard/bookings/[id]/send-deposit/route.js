@@ -1,6 +1,7 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
 import { stripe } from "@/lib/stripe";
+import { getAppUrl } from "@/lib/appUrl";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -47,7 +48,7 @@ export async function POST(req, { params }) {
     return Response.json({ error: "No deposit amount set on this booking" }, { status: 400 });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getAppUrl();
   const address = booking.fullAddress || booking.address || "Property";
 
   // Build Checkout Session — use tenant's Connect account if available

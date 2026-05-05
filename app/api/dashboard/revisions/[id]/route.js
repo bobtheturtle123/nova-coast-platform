@@ -1,4 +1,5 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { getAppUrl } from "@/lib/appUrl";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -37,5 +38,41 @@ export async function PATCH(req, { params }) {
   if (status === "resolved") update.resolvedAt = new Date();
 
   await ref.update(update);
+
+  // Email agent when resolved
+  if (status === "resolved") {
+    try {
+      const revData  = snap.data();
+      const agentEmail = revData.agentEmail;
+      const resendKey  = process.env.RESEND_API_KEY;
+      if (resendKey && agentEmail) {
+        // Fetch tenant branding for the email
+        const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
+        const tenant    = tenantDoc.data() || {};
+        const primary   = tenant.branding?.primaryColor || "#3486cf";
+        const bizName   = tenant.branding?.businessName || tenant.businessName || "Your Photographer";
+        const from      = `${bizName} <noreply@kyoriaos.com>`;
+        const portalUrl = revData.bookingId
+          ? `${getAppUrl()}/${tenant.slug}/agent/${revData.bookingId}?token=`
+          : `${getAppUrl()}/${tenant.slug}/agent`;
+
+        const { Resend } = await import("resend");
+        const resend = new Resend(resendKey);
+        await resend.emails.send({
+          from,
+          to: [agentEmail],
+          subject: `Your revision request has been resolved`,
+          html: `<div style="font-family:sans-serif;max-width:540px;margin:0 auto;padding:40px 20px">
+            <h2 style="color:${primary};font-family:Georgia,serif;margin:0 0 12px">Revision Resolved</h2>
+            <p style="color:#555;margin:0 0 16px">Hi ${revData.agentName || "there"},</p>
+            <p style="color:#555;margin:0 0 16px">Your revision request has been reviewed and resolved.</p>
+            ${update.adminNotes ? `<div style="border-left:3px solid ${primary};padding-left:16px;color:#444;margin:0 0 20px;font-style:italic">${update.adminNotes}</div>` : ""}
+            <a href="${portalUrl}" style="display:inline-block;background:${primary};color:#fff;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none">View in Portal →</a>
+          </div>`,
+        }).catch(() => {});
+      }
+    } catch { /* non-fatal */ }
+  }
+
   return Response.json({ ok: true });
 }
