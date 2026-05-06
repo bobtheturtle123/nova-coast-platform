@@ -176,7 +176,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-        <span className="font-display text-[#3486cf] text-lg tracking-wide">KyoriaOS</span>
+        <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-7 w-auto object-contain" />
         <button
           onClick={async () => {
             await patch({ onboardingCompleted: true, onboardingStep: STEPS.length }).catch(() => {});

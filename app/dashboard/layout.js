@@ -193,11 +193,12 @@ export default function DashboardLayout({ children }) {
 
       {/* Brand */}
       <div className="ky-logo-wrap">
-        <div className="ky-logo-icon">K</div>
-        <div className="min-w-0">
-          <p className="ky-logo-title">KyoriaOS</p>
-          {tenantName && <p className="ky-logo-sub">{tenantName}</p>}
-        </div>
+        <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-8 w-auto object-contain flex-shrink-0" />
+        {tenantName && (
+          <div className="min-w-0">
+            <p className="ky-logo-sub">{tenantName}</p>
+          </div>
+        )}
       </div>
 
       {/* Nav */}
@@ -293,7 +294,7 @@ export default function DashboardLayout({ children }) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <span className="font-semibold text-gray-900 text-[13px] tracking-tight">KyoriaOS</span>
+            <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-6 w-auto object-contain" />
           </div>
 
           <main className="flex-1 overflow-auto">{children}</main>

@@ -7,6 +7,7 @@ import Link from "next/link";
 import WorkflowStepper from "@/components/booking/WorkflowStepper";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus, WORKFLOW_STATUSES } from "@/lib/workflowStatus";
+import { getItemPrice, formatPrice } from "@/lib/catalogUtils";
 
 const WORKFLOW_STATUS_MAP = Object.fromEntries(WORKFLOW_STATUSES.map((s) => [s.id, s]));
 
@@ -209,6 +210,11 @@ export default function BookingDetailPage() {
   const [editingPhotog, setEditingPhotog] = useState(false);
   const [editPhotog,    setEditPhotog]    = useState({ photographerId: "", photographerName: "", photographerEmail: "", photographerPhone: "" });
 
+  // Services / catalog editing
+  const [catalog,         setCatalog]         = useState({ packages: [], services: [], addons: [] });
+  const [editingServices, setEditingServices] = useState(false);
+  const [editServices,    setEditServices]    = useState({ packageId: "", serviceIds: [], addonIds: [] });
+
   // Activity log
   const [activity,       setActivity]       = useState([]);
   const [activityLoaded, setActivityLoaded] = useState(false);
@@ -230,20 +236,31 @@ export default function BookingDetailPage() {
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
-      const [bookingRes, tenantRes, revisionsRes, teamRes, activityRes] = await Promise.all([
+      const [bookingRes, tenantRes, revisionsRes, teamRes, activityRes, svcRes, pkgRes, adnRes] = await Promise.all([
         fetch(`/api/dashboard/bookings/${id}`,                          { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/tenant",                                   { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`/api/dashboard/revisions?bookingId=${id}&status=pending`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/team",                                     { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`/api/dashboard/bookings/${id}/activity`,                  { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/products?type=services",                   { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/products?type=packages",                   { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/products?type=addons",                     { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      const [bookingData, tenantData, revisionsData, teamData, activityData] = await Promise.all([
+      const [bookingData, tenantData, revisionsData, teamData, activityData, svcData, pkgData, adnData] = await Promise.all([
         bookingRes.ok   ? bookingRes.json()   : null,
         tenantRes.ok    ? tenantRes.json()    : null,
         revisionsRes.ok ? revisionsRes.json() : null,
         teamRes.ok      ? teamRes.json()      : null,
         activityRes.ok  ? activityRes.json()  : null,
+        svcRes.ok       ? svcRes.json()       : null,
+        pkgRes.ok       ? pkgRes.json()       : null,
+        adnRes.ok       ? adnRes.json()       : null,
       ]);
+      setCatalog({
+        services: svcData?.items || [],
+        packages: pkgData?.items || [],
+        addons:   adnData?.items || [],
+      });
       if (revisionsData?.revisions) setPendingRevCount(revisionsData.revisions.length);
       if (bookingData) {
         const bk = bookingData.booking;
@@ -1118,6 +1135,109 @@ export default function BookingDetailPage() {
               )
             )}
           </div>
+
+          {/* Services */}
+          {(catalog.packages.length > 0 || catalog.services.length > 0 || catalog.addons.length > 0) && (
+            <div className="card">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs uppercase tracking-wide text-gray-400">Services</h3>
+                {editingServices ? (
+                  <div className="flex gap-2">
+                    <button onClick={() => setEditingServices(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                    <button onClick={async () => {
+                      await update({ packageId: editServices.packageId || null, serviceIds: editServices.serviceIds, addonIds: editServices.addonIds });
+                      setBooking((b) => ({ ...b, packageId: editServices.packageId || null, serviceIds: editServices.serviceIds, addonIds: editServices.addonIds }));
+                      setEditingServices(false);
+                    }} disabled={saving} className="text-xs text-[#3486cf] font-semibold hover:underline">
+                      {saving ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => {
+                    setEditServices({ packageId: booking.packageId || "", serviceIds: booking.serviceIds || [], addonIds: booking.addonIds || [] });
+                    setEditingServices(true);
+                  }} className="text-xs text-[#3486cf] hover:underline">Edit</button>
+                )}
+              </div>
+
+              {!editingServices ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {booking.packageId && (() => {
+                    const pkg = catalog.packages.find((p) => p.id === booking.packageId);
+                    return <span key="pkg" className="text-xs px-2.5 py-1 rounded-full bg-[#3486cf]/10 text-[#3486cf] font-medium">{pkg?.name || booking.packageId}</span>;
+                  })()}
+                  {(booking.serviceIds || []).map((sid) => {
+                    const svc = catalog.services.find((s) => s.id === sid);
+                    return <span key={sid} className="text-xs px-2.5 py-1 rounded-full bg-[#3486cf]/10 text-[#3486cf] font-medium">{svc?.name || sid}</span>;
+                  })}
+                  {(booking.addonIds || []).map((aid) => {
+                    const adn = catalog.addons.find((a) => a.id === aid);
+                    return <span key={aid} className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium">{adn?.name || aid}</span>;
+                  })}
+                  {!booking.packageId && !booking.serviceIds?.length && !booking.addonIds?.length && (
+                    <p className="text-sm text-gray-400 italic">No services selected</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {catalog.packages.length > 0 && (
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1.5">Package</p>
+                      <div className="space-y-1">
+                        {catalog.packages.filter((p) => p.active !== false).map((p) => (
+                          <button key={p.id} type="button"
+                            onClick={() => setEditServices((s) => ({ ...s, packageId: s.packageId === p.id ? "" : p.id, serviceIds: [] }))}
+                            className={`w-full text-left px-2.5 py-1.5 rounded-lg border text-xs transition-colors ${
+                              editServices.packageId === p.id ? "border-[#3486cf] bg-[#3486cf]/5 text-[#3486cf]" : "border-gray-200 text-gray-700 hover:border-gray-300"
+                            }`}>
+                            <span className="font-medium">{p.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {catalog.services.length > 0 && (
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1.5">Services</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {catalog.services.filter((s) => s.active !== false).map((s) => (
+                          <button key={s.id} type="button"
+                            onClick={() => setEditServices((es) => ({
+                              ...es, packageId: "",
+                              serviceIds: es.serviceIds.includes(s.id) ? es.serviceIds.filter((x) => x !== s.id) : [...es.serviceIds, s.id],
+                            }))}
+                            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                              editServices.serviceIds.includes(s.id) ? "border-[#3486cf] bg-[#3486cf] text-white" : "border-gray-200 text-gray-600 hover:border-[#3486cf]/40"
+                            }`}>
+                            {s.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {catalog.addons.length > 0 && (
+                    <div>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1.5">Add-ons</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {catalog.addons.filter((a) => a.active !== false).map((a) => (
+                          <button key={a.id} type="button"
+                            onClick={() => setEditServices((es) => ({
+                              ...es,
+                              addonIds: es.addonIds.includes(a.id) ? es.addonIds.filter((x) => x !== a.id) : [...es.addonIds, a.id],
+                            }))}
+                            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                              editServices.addonIds.includes(a.id) ? "border-amber-400 bg-amber-50 text-amber-700" : "border-gray-200 text-gray-600 hover:border-amber-300"
+                            }`}>
+                            {a.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Signed Agreement */}
           {booking.contractSigned && <SignedAgreementPanel booking={booking} />}

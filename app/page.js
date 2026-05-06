@@ -13,7 +13,7 @@ export default function MarketingPage() {
       {/* NAV */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="font-display text-navy text-xl tracking-wide">KyoriaOS</span>
+          <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-8 w-auto object-contain" />
           <nav className="hidden md:flex items-center gap-8 text-sm text-gray-600">
             <a href="#features" className="hover:text-navy transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-navy transition-colors">How it works</a>
@@ -368,7 +368,7 @@ export default function MarketingPage() {
                 <tr className="border-b border-gray-100">
                   <th className="text-left px-6 py-4 text-gray-400 font-medium text-xs uppercase tracking-wide">Feature</th>
                   <th className="px-6 py-4 text-center">
-                    <span className="font-display text-navy text-base tracking-wide">KyoriaOS</span>
+                    <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-6 w-auto object-contain mx-auto" />
                   </th>
                   <th className="px-6 py-4 text-center text-gray-400 font-medium text-sm">Other platforms</th>
                 </tr>

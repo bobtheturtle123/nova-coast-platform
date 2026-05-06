@@ -114,66 +114,78 @@ export default async function AgentPortalPage({ params, searchParams }) {
           <p className="text-sm mt-1">Your listings will appear here once the photographer has created them.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {bookings.map((b) => {
             const gal = b.galleryId ? galleries[b.galleryId] : null;
             const pw  = b.propertyWebsite;
 
             return (
-              <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    {gal?.delivered && (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 mb-1">
+              <div key={b.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+                {/* Status bar */}
+                <div className="px-4 pt-4 pb-3">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    {gal?.delivered ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                         ✓ Media Delivered
                       </span>
-                    )}
-                    <h2 className="font-semibold text-gray-900 text-base truncate">{b.address}</h2>
-                    {b.shootDate && (
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Shoot: {new Date(b.shootDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
-                      </p>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                        In Progress
+                      </span>
                     )}
                   </div>
-
-                  <Link
-                    href={`/${slug}/agent/${b.id}?token=${token}`}
-                    className="flex-shrink-0 text-sm font-medium px-4 py-2 rounded-lg text-white transition-colors"
-                    style={{ background: primary }}>
-                    View →
-                  </Link>
+                  <h2 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2">{b.address}</h2>
+                  {b.shootDate ? (
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(b.shootDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-300 mt-1">Date TBD</p>
+                  )}
                 </div>
 
                 {/* Quick links */}
-                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-50">
-                  {gal?.accessToken && (
-                    <a href={`/${slug}/gallery/${gal.accessToken}`} target="_blank" rel="noopener noreferrer"
-                      className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
-                      🖼️ Gallery {gal.mediaCount > 0 ? `(${gal.mediaCount})` : ""}
-                    </a>
-                  )}
-                  {pw?.published && (
-                    <a href={`/${slug}/property/${b.id}`} target="_blank" rel="noopener noreferrer"
-                      className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
-                      🏡 Property Site
-                    </a>
-                  )}
-                  {pw && (
-                    <a href={`/${slug}/property/${b.id}/brochure`} target="_blank" rel="noopener noreferrer"
-                      className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
-                      📋 Brochure
-                    </a>
-                  )}
-                </div>
+                {(gal?.accessToken || pw?.published || pw) && (
+                  <div className="flex flex-wrap gap-1.5 px-4 pb-3">
+                    {gal?.accessToken && (
+                      <a href={`/${slug}/gallery/${gal.accessToken}`} target="_blank" rel="noopener noreferrer"
+                        className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1">
+                        🖼️ Gallery {gal.mediaCount > 0 ? `(${gal.mediaCount})` : ""}
+                      </a>
+                    )}
+                    {pw?.published && (
+                      <a href={`/${slug}/property/${b.id}`} target="_blank" rel="noopener noreferrer"
+                        className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1">
+                        🏡 Property
+                      </a>
+                    )}
+                    {pw && (
+                      <a href={`/${slug}/property/${b.id}/brochure`} target="_blank" rel="noopener noreferrer"
+                        className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1">
+                        📋 Brochure
+                      </a>
+                    )}
+                  </div>
+                )}
 
-                {/* Social share — only when gallery is delivered */}
+                {/* Social share */}
                 {gal?.delivered && gal?.accessToken && (() => {
                   const galleryUrl  = `${appUrl}/${slug}/gallery/${gal.accessToken}`;
                   const photographer = b.photographerName && b.photographerName !== "TBD"
                     ? ` Photos by ${b.photographerName}.` : "";
                   const shareText   = `Just listed! Check out the media for ${b.address}.${photographer} #JustListed`;
-                  return <AgentShareButtons galleryUrl={galleryUrl} shareText={shareText} />;
+                  return <div className="px-4 pb-3"><AgentShareButtons galleryUrl={galleryUrl} shareText={shareText} /></div>;
                 })()}
+
+                {/* View button */}
+                <div className="px-4 pb-4 mt-auto">
+                  <Link
+                    href={`/${slug}/agent/${b.id}?token=${token}`}
+                    className="block w-full text-center text-sm font-semibold py-2 rounded-lg text-white transition-opacity hover:opacity-90"
+                    style={{ background: primary }}>
+                    View Listing →
+                  </Link>
+                </div>
               </div>
             );
           })}

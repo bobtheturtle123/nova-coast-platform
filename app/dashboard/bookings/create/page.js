@@ -427,7 +427,7 @@ export default function CreateBookingPage() {
       )}
 
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
           {/* ── LEFT: Client, Property, Services ────────────── */}
           <div className="space-y-4">
@@ -607,7 +607,7 @@ export default function CreateBookingPage() {
           </div>
 
           {/* ── RIGHT: Schedule, Pricing, Notes, Submit ──────── */}
-          <div className="space-y-4">
+          <div className="space-y-4 lg:sticky lg:top-6">
 
             {/* Schedule + Team Availability */}
             <div className="card">
@@ -663,21 +663,49 @@ export default function CreateBookingPage() {
                 + Add Another Appointment
               </button>
 
-              {/* Team availability — locked on solo plan */}
+              {/* Solo plan: self-assign only */}
               {getPlan(tenantPlan).teamSeats === 1 && (
-                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 flex items-start gap-3 mb-4">
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" strokeWidth="2" className="flex-shrink-0 mt-0.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-600">Photographer assignment not available on Solo plan</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      Upgrade to Studio or higher to assign team members to bookings.
-                    </p>
-                    <a href="/dashboard/billing" className="inline-block mt-2 text-xs font-semibold text-[#3486cf] hover:underline">
-                      View upgrade options →
-                    </a>
+                <div className="space-y-2 mb-4">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Assign Photographer</p>
+                  <div
+                    onClick={() => {
+                      const isSelf = form.photographerId === "owner";
+                      setForm((f) => ({
+                        ...f,
+                        photographerId:    isSelf ? "" : "owner",
+                        photographerEmail: isSelf ? "" : (auth.currentUser?.email || ""),
+                        photographerName:  isSelf ? "" : (auth.currentUser?.displayName || auth.currentUser?.email?.split("@")[0] || "Me"),
+                        photographerPhone: "",
+                        photographerTbd:   false,
+                      }));
+                    }}
+                    className={`flex items-center gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${
+                      form.photographerId === "owner" ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-[#3486cf]/40"
+                    }`}>
+                    <div className="w-7 h-7 rounded-full bg-[#3486cf] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                      {(auth.currentUser?.displayName?.[0] || auth.currentUser?.email?.[0] || "Y")?.toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#0F172A]">Assign Myself</p>
+                      <p className="text-xs text-gray-400 truncate">{auth.currentUser?.email || "You"}</p>
+                    </div>
+                    {form.photographerId === "owner" && <span className="text-[#3486cf] text-[11px] font-semibold flex-shrink-0">✓ Primary</span>}
                   </div>
+                  <div
+                    onClick={assignTbd}
+                    className={`flex items-center gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${
+                      form.photographerTbd ? "border-[#3486cf] bg-[#3486cf]/5" : "border-dashed border-gray-300 hover:border-[#3486cf]/40"
+                    }`}>
+                    <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs font-bold flex-shrink-0">?</div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-500">Assign Later / TBD</p>
+                    </div>
+                    {form.photographerTbd && <span className="text-[#3486cf] text-[11px] font-semibold">✓ Selected</span>}
+                  </div>
+                  <p className="text-xs text-gray-400 pt-1">
+                    Need additional photographers?{" "}
+                    <a href="/dashboard/billing" className="text-[#3486cf] hover:underline">Upgrade to Studio →</a>
+                  </p>
                 </div>
               )}
               {getPlan(tenantPlan).teamSeats !== 1 && form.shootDate && team.length > 0 && (

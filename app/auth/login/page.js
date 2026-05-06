@@ -79,11 +79,7 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center mx-auto mb-4 font-bold text-white text-base"
-            style={{ background: "linear-gradient(135deg, #3486cf, #2a6dab)" }}>
-            K
-          </div>
-          <Link href="/" className="font-semibold text-[#0F172A] text-xl tracking-tight">KyoriaOS</Link>
+          <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-14 w-auto object-contain mx-auto mb-2" />
           <p className="text-gray-500 text-sm mt-1.5">
             {mode === "login" ? "Sign in to your account" : "Reset your password"}
           </p>

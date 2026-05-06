@@ -1301,7 +1301,7 @@ export default function TeamPage() {
         {/* ── 2-WEEK AVAILABILITY GRID ───────────────────────────────────── */}
         {calView === "2wk" && (
           <div className="overflow-x-auto">
-            {members.length === 0 ? (
+            {members.length === 0 && timeBlocks.filter((b) => !b.memberId).length === 0 ? (
               <div className="p-10 text-center text-gray-400">
                 <p className="text-3xl mb-2">📅</p>
                 <p className="font-medium text-gray-500">No team members yet</p>
@@ -1347,6 +1347,36 @@ export default function TeamPage() {
                   </tr>
                 </thead>
                 <tbody>
+                  {/* All-Team blocks row — always visible when any null-memberId block exists */}
+                  {(() => {
+                    const allTeamBlocks = timeBlocks.filter((b) => !b.memberId);
+                    if (allTeamBlocks.length === 0) return null;
+                    return (
+                      <tr className="border-b border-red-100 bg-red-50/20">
+                        <td className="px-3 py-2 border-r border-gray-200 bg-red-50/60 sticky left-0 z-10">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-red-400 flex-shrink-0" />
+                            <span className="font-semibold text-red-700 text-[11px] uppercase tracking-wide">All Team</span>
+                          </div>
+                        </td>
+                        {twoWeekDates.map((d, i) => {
+                          const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+                          const hasBlock = allTeamBlocks.some((b) => {
+                            const s = (b.startDate || "").slice(0, 10);
+                            const e = (b.endDate || b.startDate || "").slice(0, 10);
+                            return ds >= s && ds <= e;
+                          });
+                          return (
+                            <td key={d.toISOString()} className={`text-center py-2 px-1 border-r last:border-r-0 border-gray-100 min-w-14 ${i >= 7 ? "bg-red-50/10" : ""}`}>
+                              {hasBlock && (
+                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-500 mx-auto font-bold" style={{ fontSize: 14 }}>—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })()}
                   {visibleMembers.map((member) => {
                     const memberEvents = calendarEvents.filter(
                       (e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email)
@@ -1454,6 +1484,51 @@ export default function TeamPage() {
             </div>
           ) : (
             <div>
+              {/* All-Team blocks row */}
+              {(() => {
+                const allTeamBlocks = timeBlocks.filter((b) => !b.memberId);
+                if (allTeamBlocks.length === 0) return null;
+                return (
+                  <div className="border-b border-red-100 bg-red-50/20">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-red-50/60">
+                      <div className="w-5 h-5 rounded-full bg-red-400 flex-shrink-0" />
+                      <p className="text-xs font-semibold text-red-700">All Team — Blocked</p>
+                    </div>
+                    <div className="grid grid-cols-7 min-h-14">
+                      {weekDates.map((d) => {
+                        const dayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+                        const dayBlocks = allTeamBlocks.filter((b) => {
+                          const s = (b.startDate || "").slice(0, 10);
+                          const e = (b.endDate || b.startDate || "").slice(0, 10);
+                          return dayStr >= s && dayStr <= e;
+                        });
+                        const isToday = isSameDay(d, today);
+                        return (
+                          <div key={d.toISOString()} className={`p-1.5 border-r last:border-r-0 border-gray-100 min-h-14 relative ${isToday ? "bg-red-50/30" : ""}`}>
+                            {dayBlocks.length > 0 && (
+                              <div className="absolute inset-0 pointer-events-none"
+                                style={{ background: "repeating-linear-gradient(-45deg, #fee2e2, #fee2e2 3px, transparent 3px, transparent 10px)", opacity: 0.6 }} />
+                            )}
+                            <div className="relative z-10">
+                              {dayBlocks.map((bl) => (
+                                <div key={bl.id} className="text-xs border-l-2 border-red-400 px-1.5 py-0.5 rounded mb-1 bg-red-50">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="font-medium text-red-600 truncate">{bl.reason || "Blocked"}</span>
+                                    <button onClick={() => deleteBlock(bl.id)} className="opacity-60 hover:opacity-100 text-red-500 text-[10px] flex-shrink-0">×</button>
+                                  </div>
+                                  {(bl.startTime || bl.endTime) && (
+                                    <p className="text-[10px] text-red-400">{fmt12(bl.startTime)}{bl.endTime ? ` – ${fmt12(bl.endTime)}` : ""}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
               {visibleMembers.map((member) => {
                 const memberEvents = calendarEvents.filter((e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email));
                 return (
@@ -1653,6 +1728,37 @@ export default function TeamPage() {
         {/* ── DAY VIEW ───────────────────────────────────────────────────── */}
         {calView === "day" && (
           <div className="p-4">
+            {/* All-Team blocks for this day */}
+            {(() => {
+              const dayStr = `${anchor.getFullYear()}-${String(anchor.getMonth()+1).padStart(2,"0")}-${String(anchor.getDate()).padStart(2,"0")}`;
+              const allTeamDayBlocks = timeBlocks.filter((b) => {
+                if (b.memberId) return false;
+                const s = (b.startDate || "").slice(0, 10);
+                const e = (b.endDate || b.startDate || "").slice(0, 10);
+                return dayStr >= s && dayStr <= e;
+              });
+              if (allTeamDayBlocks.length === 0) return null;
+              return (
+                <div className="border border-red-200 rounded-xl overflow-hidden mb-4">
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border-b border-red-100">
+                    <div className="w-4 h-4 rounded-full bg-red-400" />
+                    <p className="text-sm font-semibold text-red-700">All Team — Blocked</p>
+                  </div>
+                  {allTeamDayBlocks.map((bl) => (
+                    <div key={bl.id} className="px-4 py-2.5 border-b last:border-b-0 border-red-50 flex items-center justify-between bg-red-50/30">
+                      <div>
+                        <p className="text-xs font-semibold text-red-600">{bl.reason || "Blocked"}</p>
+                        {(bl.startTime || bl.endTime) && (
+                          <p className="text-xs text-red-400 mt-0.5">{fmt12(bl.startTime)}{bl.endTime ? ` – ${fmt12(bl.endTime)}` : ""}</p>
+                        )}
+                        {bl.note && <p className="text-xs text-red-400 mt-0.5">{bl.note}</p>}
+                      </div>
+                      <button onClick={() => deleteBlock(bl.id)} className="text-xs text-red-400 hover:text-red-600 font-medium ml-4">Remove</button>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
             {visibleMembers.length === 0 ? (
               <p className="text-gray-400 text-sm text-center py-8">No team members to display.</p>
             ) : (
