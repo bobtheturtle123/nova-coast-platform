@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
@@ -12,7 +12,6 @@ const MONTHS = ["January","February","March","April","May","June","July","August
 
 const TABS = [
   { id: "calendar",    label: "Calendar"    },
-  { id: "revisions",   label: "Revisions"   },
   { id: "unscheduled", label: "Unscheduled" },
 ];
 
@@ -32,167 +31,6 @@ function toDateKey(dateStr) {
 function formatDate(iso) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
-}
-
-// ─── Revisions tab ────────────────────────────────────────────────────────────
-const REV_STATUS = {
-  pending:      { label: "Pending",      cls: "bg-amber-100 text-amber-700" },
-  acknowledged: { label: "Acknowledged", cls: "bg-blue-100 text-blue-700"   },
-  resolved:     { label: "Resolved",     cls: "bg-emerald-100 text-emerald-700" },
-};
-
-function RevisionsTab() {
-  const [revisions, setRevisions] = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [filter,    setFilter]    = useState("pending");
-  const [expanded,  setExpanded]  = useState(null);
-  const [notes,     setNotes]     = useState({});
-  const [saving,    setSaving]    = useState(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    const user = auth.currentUser;
-    if (!user) { setLoading(false); return; }
-    const token = await user.getIdToken();
-    const res   = await fetch(`/api/dashboard/revisions?status=${filter}`, { headers: { Authorization: `Bearer ${token}` } });
-    const data  = await res.json();
-    setRevisions(data.revisions || []);
-    setLoading(false);
-  }, [filter]);
-
-  useEffect(() => { load(); }, [load]);
-
-  async function updateStatus(id, status) {
-    setSaving(id);
-    const token = await auth.currentUser.getIdToken();
-    await fetch(`/api/dashboard/revisions/${id}`, {
-      method:  "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body:    JSON.stringify({ status, adminNotes: notes[id] || "" }),
-    });
-    setSaving(null);
-    load();
-  }
-
-  const pending = revisions.filter((r) => r.status === "pending").length;
-
-  return (
-    <div className="p-6 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
-        <p className="text-sm text-gray-400">Agent requests for media edits or re-shoots.</p>
-        {pending > 0 && (
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
-            {pending} pending
-          </span>
-        )}
-      </div>
-
-      <div className="flex gap-1 border-b border-gray-200 mb-6">
-        {[["pending","Pending"],["acknowledged","Acknowledged"],["resolved","Resolved"],["all","All"]].map(([val, label]) => (
-          <button key={val} onClick={() => setFilter(val)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              filter === val ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-400 hover:text-gray-600"
-            }`}>
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center h-48">
-          <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
-        </div>
-      ) : revisions.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
-          <p className="text-sm font-medium text-gray-500 mt-2">No {filter !== "all" ? filter : ""} revision requests</p>
-          <p className="text-xs text-gray-400 mt-1">When agents submit revision requests, they'll appear here.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {revisions.map((r) => {
-            const st = REV_STATUS[r.status] || { label: r.status, cls: "bg-gray-100 text-gray-600" };
-            const isOpen = expanded === r.id;
-            return (
-              <div key={r.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                <button
-                  onClick={() => setExpanded(isOpen ? null : r.id)}
-                  className="w-full flex items-start gap-3 p-5 text-left hover:bg-gray-50 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
-                      <span className="text-xs text-gray-400">{formatDate(r.requestedAt)}</span>
-                    </div>
-                    <p className="font-semibold text-gray-900 truncate">{r.agentName || r.agentEmail}</p>
-                    <p className="text-sm text-gray-500 mt-0.5 truncate">{r.agentEmail}</p>
-                    <p className="text-sm text-gray-700 mt-1 line-clamp-2">{r.message}</p>
-                  </div>
-                  <svg className={`w-4 h-4 text-gray-400 flex-shrink-0 mt-1 transition-transform ${isOpen ? "rotate-180" : ""}`}
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {isOpen && (
-                  <div className="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4">
-                    <div>
-                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Message</p>
-                      <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{r.message}</p>
-                    </div>
-                    {r.bookingId && (
-                      <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Booking</p>
-                        <Link href={`/dashboard/bookings/${r.bookingId}`}
-                          className="text-sm text-[#3486cf] hover:underline font-medium">
-                          View booking →
-                        </Link>
-                      </div>
-                    )}
-                    {r.mediaItems?.length > 0 && (
-                      <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Flagged Media ({r.mediaItems.length})</p>
-                        <div className="flex flex-wrap gap-2">
-                          {r.mediaItems.map((m, i) => (
-                            <a key={i} href={m.url || m} target="_blank" rel="noopener noreferrer"
-                              className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-[#3486cf] hover:bg-gray-50 transition-colors">
-                              Media {i + 1}
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Admin Notes</p>
-                      <textarea rows={2}
-                        value={notes[r.id] ?? r.adminNotes}
-                        onChange={(e) => setNotes((n) => ({ ...n, [r.id]: e.target.value }))}
-                        className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#3486cf]/30 resize-none"
-                        placeholder="Internal notes (not visible to agent)…" />
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      {r.status === "pending" && (
-                        <button onClick={() => updateStatus(r.id, "acknowledged")} disabled={saving === r.id}
-                          className="text-sm font-medium px-4 py-2 rounded-lg border border-[#3486cf] text-[#3486cf] hover:bg-[#EEF5FC] transition-colors disabled:opacity-50">
-                          {saving === r.id ? "Saving…" : "Acknowledge"}
-                        </button>
-                      )}
-                      {r.status !== "resolved" && (
-                        <button onClick={() => updateStatus(r.id, "resolved")} disabled={saving === r.id}
-                          className="text-sm font-medium px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50">
-                          {saving === r.id ? "Saving…" : "Mark Resolved"}
-                        </button>
-                      )}
-                      {r.status === "resolved" && r.resolvedAt && (
-                        <p className="text-xs text-gray-400 self-center">Resolved {formatDate(r.resolvedAt)}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ─── Unscheduled tab ─────────────────────────────────────────────────────────
@@ -578,7 +416,6 @@ export default function SchedulePage() {
 
       {/* Tab content */}
       {activeTab === "calendar"    && <CalendarTab listings={listings} loading={loading} />}
-      {activeTab === "revisions"   && <RevisionsTab />}
       {activeTab === "unscheduled" && <UnscheduledTab listings={listings} />}
     </div>
   );

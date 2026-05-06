@@ -504,54 +504,6 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Agent Pro */}
-      <div className="card mb-5">
-        <div className="flex items-start justify-between mb-1">
-          <div>
-            <h2 className="font-semibold text-[#0F172A] text-sm">Agent Pro Add-on</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Give your agents team collaboration, personal branding, and long-term listing history.</p>
-          </div>
-          <span className="text-xs font-bold text-[#3486cf] mt-0.5 flex-shrink-0 ml-4">$15.99/mo</span>
-        </div>
-
-        {agentProActive ? (
-          <div className="mt-4 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" className="text-emerald-600">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-emerald-700">Agent Pro active</p>
-                <p className="text-xs text-gray-400">All your agents have access to Pro features.</p>
-              </div>
-            </div>
-            <button onClick={openPortal} disabled={working} className="btn-outline text-xs">
-              {working ? "…" : "Manage"}
-            </button>
-          </div>
-        ) : (
-          <div className="mt-4">
-            <ul className="space-y-1.5 mb-4">
-              {["Team collaboration invites","Personal agent branding (headshot, bio)","Full listing timeline history","Priority portal features"].map((f) => (
-                <li key={f} className="flex items-center gap-2 text-xs text-gray-600">
-                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <button onClick={subscribeAgentPro} disabled={agentProWorking || working}
-              className="btn-primary text-sm">
-              {agentProWorking ? "Loading…" : "Enable Agent Pro for all agents →"}
-            </button>
-            <p className="text-xs text-gray-400 mt-2">Billed monthly. Cancel any time from this page.</p>
-          </div>
-        )}
-      </div>
-
       {/* Stripe Connect */}
       <div className="card">
         <h2 className="font-semibold text-[#0F172A] text-sm mb-4">Stripe Connect — Accept Payments</h2>
@@ -608,10 +560,6 @@ export default function BillingPage() {
                 <li className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
                   Team members will lose dashboard access
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
-                  Agent Pro features will be disabled
                 </li>
               </ul>
             </div>

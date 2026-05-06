@@ -253,6 +253,14 @@ const [listingUrl,       setListingUrl]        = useState("");
   const [activityLog,     setActivityLog]     = useState([]);
   const [activityLoading, setActivityLoading] = useState(false);
 
+  // Revisions
+  const [revisions,        setRevisions]        = useState(null); // null = not yet loaded
+  const [revisionsLoading, setRevisionsLoading] = useState(false);
+  const [revFilter,        setRevFilter]        = useState("all");
+  const [revExpanded,      setRevExpanded]      = useState(null);
+  const [revNotes,         setRevNotes]         = useState({});
+  const [revSaving,        setRevSaving]        = useState(null);
+
   useEffect(() => {
     load();
   }, [id]);
@@ -268,6 +276,31 @@ const [listingUrl,       setListingUrl]        = useState("");
       if (res.ok) { const d = await res.json(); setActivityLog(d.events || []); }
     } catch { /* ignore */ }
     setActivityLoading(false);
+  }
+
+  async function loadRevisions() {
+    setRevisionsLoading(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res   = await fetch(`/api/dashboard/revisions?bookingId=${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data  = await res.json();
+      setRevisions(data.revisions || []);
+    } catch { setRevisions([]); }
+    setRevisionsLoading(false);
+  }
+
+  async function updateRevisionStatus(revId, status) {
+    setRevSaving(revId);
+    const token = await auth.currentUser?.getIdToken();
+    await fetch(`/api/dashboard/revisions/${revId}`, {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body:    JSON.stringify({ status, adminNotes: revNotes[revId] || "" }),
+    });
+    setRevSaving(null);
+    loadRevisions();
   }
 
   async function load() {
@@ -546,23 +579,30 @@ if (loading) return (
       <div className="bg-white border-b border-gray-200 px-6">
         <div className="flex gap-0">
           {[
-            { id: "overview",  label: "Overview" },
-            { id: "orders",    label: "Booking Details" },
-            { id: "property",  label: "Property Site" },
-            { id: "marketing", label: "Marketing" },
-            { id: "activity",  label: "Activity" },
+            { id: "overview",   label: "Overview" },
+            { id: "orders",     label: "Booking Details" },
+            { id: "property",   label: "Property Site" },
+            { id: "marketing",  label: "Marketing" },
+            { id: "revisions",  label: "Revisions", badge: revisions ? revisions.filter((r) => r.status === "pending").length : 0 },
+            { id: "activity",   label: "Activity" },
           ].map((t) => (
             <button key={t.id} onClick={() => {
               setTab(t.id);
               if (t.id === "marketing" && !analytics) loadAnalytics();
               if (t.id === "activity" && activityLog.length === 0) loadActivity(gallery?.id);
+              if (t.id === "revisions" && revisions === null) loadRevisions();
             }}
-              className={`px-4 py-3.5 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-4 py-3.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
                 tab === t.id
                   ? "border-[#3486cf] text-[#0F172A]"
                   : "border-transparent text-gray-400 hover:text-gray-600"
               }`}>
               {t.label}
+              {t.badge > 0 && (
+                <span style={{ background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 9999, padding: "1px 5px", lineHeight: "16px" }}>
+                  {t.badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -1739,6 +1779,126 @@ if (loading) return (
           </div>
         )}
       </div>
+
+        {/* ── REVISIONS TAB ────────────────────────────────────────────────── */}
+        {tab === "revisions" && (
+          <div className="max-w-3xl">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <p className="text-xs text-gray-400">Agent revision requests for this listing.</p>
+              </div>
+              <div className="flex gap-1">
+                {[["all","All"],["pending","Pending"],["acknowledged","In Progress"],["resolved","Resolved"]].map(([val, label]) => (
+                  <button key={val} onClick={() => { setRevFilter(val); setRevisions(null); loadRevisions(); }}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      revFilter === val ? "bg-[#3486cf] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    }`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {revisionsLoading || revisions === null ? (
+              <div className="flex items-center justify-center h-48">
+                <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
+              </div>
+            ) : (() => {
+              const filtered = revisions.filter((r) => revFilter === "all" || r.status === revFilter);
+              return filtered.length === 0 ? (
+                <div className="card p-10 text-center">
+                  <p className="text-sm font-medium text-gray-500">No revision requests</p>
+                  <p className="text-xs text-gray-400 mt-1">Agent revision requests for this listing will appear here.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filtered.map((r) => {
+                    const STATUS_CLS = {
+                      pending:      "bg-amber-100 text-amber-700",
+                      acknowledged: "bg-blue-100 text-blue-700",
+                      resolved:     "bg-emerald-100 text-emerald-700",
+                    };
+                    const statusCls = STATUS_CLS[r.status] || "bg-gray-100 text-gray-600";
+                    const isOpen = revExpanded === r.id;
+                    return (
+                      <div key={r.id} className="card overflow-hidden">
+                        <button
+                          onClick={() => setRevExpanded(isOpen ? null : r.id)}
+                          className="w-full flex items-start gap-3 p-5 text-left hover:bg-gray-50 transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusCls}`}>
+                                {r.status === "acknowledged" ? "In Progress" : r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                {r.requestedAt ? new Date(r.requestedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}
+                              </span>
+                            </div>
+                            <p className="font-semibold text-gray-900 text-sm">{r.agentName || r.agentEmail}</p>
+                            <p className="text-xs text-gray-400">{r.agentEmail}</p>
+                            <p className="text-sm text-gray-700 mt-1.5 line-clamp-2">{r.message}</p>
+                          </div>
+                          <svg className={`w-4 h-4 text-gray-400 flex-shrink-0 mt-1 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {isOpen && (
+                          <div className="border-t border-gray-100 px-5 pb-5 pt-4 space-y-4">
+                            <div>
+                              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Request</p>
+                              <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{r.message}</p>
+                            </div>
+                            {r.mediaItems?.length > 0 && (
+                              <div>
+                                <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Flagged Media ({r.mediaItems.length})</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {r.mediaItems.map((m, i) => (
+                                    <a key={i} href={m.url || m} target="_blank" rel="noopener noreferrer"
+                                      className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-[#3486cf] hover:bg-gray-50 transition-colors">
+                                      Media {i + 1}
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Notes (internal)</p>
+                              <textarea rows={2}
+                                value={revNotes[r.id] ?? r.adminNotes ?? ""}
+                                onChange={(e) => setRevNotes((n) => ({ ...n, [r.id]: e.target.value }))}
+                                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#3486cf]/30 resize-none"
+                                placeholder="Internal notes (not visible to agent)…" />
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                              {r.status === "pending" && (
+                                <button onClick={() => updateRevisionStatus(r.id, "acknowledged")} disabled={revSaving === r.id}
+                                  className="text-sm font-medium px-4 py-2 rounded-lg border border-[#3486cf] text-[#3486cf] hover:bg-[#EEF5FC] transition-colors disabled:opacity-50">
+                                  {revSaving === r.id ? "Saving…" : "Acknowledge"}
+                                </button>
+                              )}
+                              {r.status !== "resolved" && (
+                                <button onClick={() => updateRevisionStatus(r.id, "resolved")} disabled={revSaving === r.id}
+                                  className="text-sm font-medium px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50">
+                                  {revSaving === r.id ? "Saving…" : "Mark Resolved"}
+                                </button>
+                              )}
+                              {r.status === "resolved" && r.resolvedAt && (
+                                <p className="text-xs text-gray-400 self-center">
+                                  Resolved {new Date(r.resolvedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
       {/* Deliver modal */}
       {showDeliver && (

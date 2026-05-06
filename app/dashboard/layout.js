@@ -57,7 +57,7 @@ const NAV = [
   },
   {
     href: "/dashboard/team",
-    label: "Team",
+    label: "Team Schedule",
     icon: (
       <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -223,7 +223,7 @@ export default function DashboardLayout({ children }) {
             >
               <span className="flex-shrink-0">{item.icon}</span>
               <span className="leading-none flex-1">{item.label}</span>
-              {item.label === "Schedule" && pendingRevCount > 0 && (
+              {item.label === "Listings" && pendingRevCount > 0 && (
                 <span style={{ background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 9999, padding: "1px 6px", lineHeight: "16px" }}>
                   {pendingRevCount}
                 </span>
