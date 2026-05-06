@@ -545,7 +545,15 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
 
-  const [activeSection, setActiveSection] = useState("settings-branding");
+  const [openSections, setOpenSections] = useState({
+    identity: false,
+    pricing:  false,
+    booking:  false,
+    legal:    false,
+    team:     false,
+    comms:    false,
+    integrations: false,
+  });
 
   const [form, setForm] = useState({
     businessName: "", phone: "", fromZip: "",
@@ -668,26 +676,9 @@ export default function SettingsPage() {
     });
   }, []);
 
-  // Scroll-spy: highlight active nav item based on which section is in view
-  useEffect(() => {
-    const ids = [
-      "settings-branding",
-      "settings-pricing","settings-booking","settings-deposits","settings-availability",
-      "settings-service-areas","settings-travel","settings-promos",
-      "settings-agreement","settings-terms",
-      "settings-cost-rates","settings-staff-access",
-      "settings-email","settings-notifications",
-      "settings-integrations",
-    ];
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => { if (e.isIntersecting) setActiveSection(e.target.id); });
-      },
-      { rootMargin: "-10% 0px -65% 0px", threshold: 0 }
-    );
-    ids.forEach((id) => { const el = document.getElementById(id); if (el) observer.observe(el); });
-    return () => observer.disconnect();
-  }, [loading]);
+  function toggleSection(key) {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
@@ -1197,35 +1188,6 @@ export default function SettingsPage() {
     custom: { unit: "Value",   gate: "Custom value" },
   };
 
-  const SECTION_GROUPS = [
-    { group: "Identity", items: [
-      { id: "settings-branding",      label: "Business Identity" },
-    ]},
-    { group: "Booking", items: [
-      { id: "settings-pricing",       label: "Pricing Tiers" },
-      { id: "settings-booking",       label: "Booking Logic" },
-      { id: "settings-deposits",      label: "Deposits & Payments" },
-      { id: "settings-availability",  label: "Availability" },
-      { id: "settings-service-areas", label: "Service Areas" },
-      { id: "settings-travel",        label: "Travel Fees" },
-      { id: "settings-promos",        label: "Promo Codes" },
-    ]},
-    { group: "Legal", items: [
-      { id: "settings-agreement", label: "Service Agreement" },
-      { id: "settings-terms",     label: "Terms & Privacy" },
-    ]},
-    { group: "Team", items: [
-      { id: "settings-cost-rates",   label: "Team Rules" },
-      { id: "settings-staff-access", label: "Staff Access" },
-    ]},
-    { group: "Comms", items: [
-      { id: "settings-email",          label: "Email Templates" },
-      { id: "settings-notifications",  label: "Notifications" },
-    ]},
-    { group: "Integrations", items: [
-      { id: "settings-integrations", label: "Integrations" },
-    ]},
-  ];
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
@@ -1235,41 +1197,19 @@ export default function SettingsPage() {
         <p className="page-subtitle">Configure your business, booking flow, and communications.</p>
       </div>
 
-      {/* Sticky section nav */}
-      <div className="sticky top-0 z-10 -mx-6 px-6 mb-8"
-        style={{
-          background: "rgba(242,244,248,0.92)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(0,0,0,0.06)",
-        }}>
-        <div className="flex gap-0.5 py-2 overflow-x-auto">
-          {SECTION_GROUPS.map((grp) => {
-            const isActive = grp.items.some((item) => item.id === activeSection);
-            return (
-              <button key={grp.group}
-                onClick={() => document.getElementById(grp.items[0]?.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                className="flex-shrink-0 text-[12.5px] font-medium px-3.5 py-1.5 rounded-full transition-all"
-                style={{
-                  color: isActive ? "#0d3282" : "rgba(0,0,0,0.45)",
-                  background: isActive ? "rgba(13,50,130,0.08)" : "transparent",
-                  border: isActive ? "1px solid rgba(13,50,130,0.14)" : "1px solid transparent",
-                }}>
-                {grp.group}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <div className="space-y-3">
 
-      <div>
-
-      {/* ─── BUSINESS IDENTITY ─────────────────────────────────────────────── */}
-      <div className="mb-4 flex items-center gap-3">
-        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Business Identity</span>
-        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
-      </div>
+      {/* ─── BUSINESS INFO & BRANDING ─────────────────────────────────────── */}
+      <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
+        <button type="button" className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors" onClick={() => toggleSection("identity")}>
+          <div>
+            <h2 className="font-semibold text-[#0F172A] text-sm">Business Info & Branding</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Business name, colors, tagline, booking URL</p>
+          </div>
+          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${openSections.identity ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+        </button>
+        {openSections.identity && (
+        <div className="pt-2 pb-4">
       {/* Booking URL */}
       <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-4">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Your Booking Page</p>
@@ -1394,13 +1334,21 @@ export default function SettingsPage() {
           {saving ? "Saving…" : "Save Settings"}
         </button>
       </form>
-
-      {/* ─── BOOKING LOGIC ─────────────────────────────────────────────────────── */}
-      <div className="mt-10 mb-4 flex items-center gap-3">
-        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Booking Logic</span>
-        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
+        </div>
+        )}
       </div>
+
+      {/* ─── PRICING ─────────────────────────────────────────────────────────── */}
+      <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
+        <button type="button" className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors" onClick={() => toggleSection("pricing")}>
+          <div>
+            <h2 className="font-semibold text-[#0F172A] text-sm">Pricing</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Pricing mode and tier configuration</p>
+          </div>
+          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${openSections.pricing ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+        </button>
+        {openSections.pricing && (
+        <div className="pt-2 pb-4">
       {/* ─── Pricing Tiers ─────────────────────────────────────────────────────── */}
       <div id="settings-pricing" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between mb-1">
@@ -1514,7 +1462,21 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+        </div>
+        )}
+      </div>
 
+      {/* ─── BOOKING SETTINGS ────────────────────────────────────────────────── */}
+      <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
+        <button type="button" className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors" onClick={() => toggleSection("booking")}>
+          <div>
+            <h2 className="font-semibold text-[#0F172A] text-sm">Booking Settings</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Booking logic, deposits, availability, service areas, travel fees, legal</p>
+          </div>
+          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${openSections.booking ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+        </button>
+        {openSections.booking && (
+        <div className="pt-2 pb-4">
       {/* ─── Booking Config ──────────────────────────────────────────────────── */}
       <div id="settings-booking" className="card mt-8 space-y-8 scroll-mt-24">
         <div>
@@ -2259,12 +2221,7 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* ─── LEGAL ────────────────────────────────────────────────────────────── */}
-      <div className="mt-10 mb-4 flex items-center gap-3">
-        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Legal</span>
-        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
-      </div>
+      {/* ─── Legal (within Booking Settings) ─────────────────────────────── */}
       {/* ─── Service Agreement ───────────────────────────────────────────────── */}
       <div id="settings-agreement" className="card mt-6 scroll-mt-24">
         <div className="flex items-start justify-between mb-1">
@@ -2404,12 +2361,21 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* ─── TEAM RULES ───────────────────────────────────────────────────────── */}
-      <div className="mt-10 mb-4 flex items-center gap-3">
-        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Team Rules</span>
-        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
+        </div>
+        )}
       </div>
+
+      {/* ─── TEAM ────────────────────────────────────────────────────────────── */}
+      <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
+        <button type="button" className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors" onClick={() => toggleSection("team")}>
+          <div>
+            <h2 className="font-semibold text-[#0F172A] text-sm">Team</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Job cost rates and staff access</p>
+          </div>
+          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${openSections.team ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+        </button>
+        {openSections.team && (
+        <div className="pt-2 pb-4">
       {/* ─── Job Cost Rates ──────────────────────────────────────────────────── */}
       <div id="settings-cost-rates" className="card mt-6 scroll-mt-24">
         <h2 className="font-semibold text-[#0F172A] text-base mb-1">Default Job Cost Rates</h2>
@@ -2455,12 +2421,21 @@ export default function SettingsPage() {
       {/* ─── Staff Access ────────────────────────────────────────────────────── */}
       <StaffAccessSection />
 
-      {/* ─── Communications ──────────────────────────────────────────────────── */}
-      <div className="mt-10 mb-4 flex items-center gap-3">
-        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Communications</span>
-        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
+        </div>
+        )}
       </div>
+
+      {/* ─── NOTIFICATIONS ───────────────────────────────────────────────────── */}
+      <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
+        <button type="button" className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors" onClick={() => toggleSection("comms")}>
+          <div>
+            <h2 className="font-semibold text-[#0F172A] text-sm">Notifications</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Email templates, notification channels, gallery settings</p>
+          </div>
+          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${openSections.comms ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+        </button>
+        {openSections.comms && (
+        <div className="pt-2 pb-4">
 
       {/* ─── Email Templates ─────────────────────────────────────────────────── */}
       <div id="settings-email" className="card mt-6 scroll-mt-24">
@@ -2691,13 +2666,21 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* ─── Integrations ────────────────────────────────────────────────────── */}
-      <div className="mt-10 mb-4 flex items-center gap-3">
-        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Integrations</span>
-        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
+        </div>
+        )}
       </div>
 
+      {/* ─── INTEGRATIONS ────────────────────────────────────────────────────── */}
+      <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
+        <button type="button" className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors" onClick={() => toggleSection("integrations")}>
+          <div>
+            <h2 className="font-semibold text-[#0F172A] text-sm">Integrations</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Custom domain and third-party connections</p>
+          </div>
+          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${openSections.integrations ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+        </button>
+        {openSections.integrations && (
+        <div className="pt-2 pb-4">
       <div id="settings-integrations" className="card mt-6 scroll-mt-24">
         <h2 className="font-semibold text-[#0F172A] text-base mb-1">Integrations</h2>
         <p className="text-sm text-gray-500">More integrations coming soon.</p>
@@ -2705,6 +2688,10 @@ export default function SettingsPage() {
 
       {/* Custom Domain */}
       <CustomDomainSection />
+
+        </div>
+        )}
+      </div>
 
       </div>
     </div>

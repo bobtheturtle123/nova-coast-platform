@@ -374,23 +374,26 @@ function RevenueSection({ listings, isMock }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function DashboardHome() {
-  const [listings,    setListings]    = useState([]);
-  const [tenant,      setTenant]      = useState(null);
-  const [hasProducts, setHasProducts] = useState(false);
-  const [loading,     setLoading]     = useState(true);
-  const [linkCopied,  setLinkCopied]  = useState(false);
+  const [listings,         setListings]         = useState([]);
+  const [tenant,           setTenant]           = useState(null);
+  const [hasProducts,      setHasProducts]      = useState(false);
+  const [pendingRevisions, setPendingRevisions] = useState([]);
+  const [loading,          setLoading]          = useState(true);
+  const [linkCopied,       setLinkCopied]       = useState(false);
 
   useEffect(() => {
     auth.currentUser?.getIdToken(true).then(async (token) => {
       const h = { Authorization: `Bearer ${token}` };
-      const [listRes, tenantRes, svcRes, pkgRes] = await Promise.all([
+      const [listRes, tenantRes, svcRes, pkgRes, revRes] = await Promise.all([
         fetch("/api/dashboard/listings",               { headers: h }),
         fetch("/api/dashboard/tenant",                 { headers: h }),
         fetch("/api/dashboard/products?type=services", { headers: h }),
         fetch("/api/dashboard/products?type=packages", { headers: h }),
+        fetch("/api/dashboard/revisions?status=pending", { headers: h }),
       ]);
       if (listRes.ok)   { const d = await listRes.json();   setListings(d.listings || []); }
       if (tenantRes.ok) { const d = await tenantRes.json(); setTenant(d.tenant); }
+      if (revRes.ok)    { const d = await revRes.json();    setPendingRevisions(d.revisions || []); }
       const svcData = svcRes.ok ? await svcRes.json() : {};
       const pkgData = pkgRes.ok ? await pkgRes.json() : {};
       setHasProducts((svcData.items?.length || 0) > 0 || (pkgData.items?.length || 0) > 0);
@@ -421,13 +424,20 @@ export default function DashboardHome() {
 
   // Action required items
   const actionItems = isMock ? [] : [
+    ...pendingRevisions.map(r => ({
+      type: "revision_request", id: r.id,
+      label: r.agentName || r.agentEmail || "Client",
+      detail: r.message ? (r.message.length > 55 ? r.message.slice(0, 55) + "…" : r.message) : "Revision requested",
+      href: r.bookingId ? `/dashboard/listings/${r.bookingId}` : `/dashboard/revisions`,
+      urgency: "high",
+    })),
     ...display.filter(l => l.status === "requested" && !l.depositPaid)
       .map(l => ({ type: "booking_request", id: l.id, label: l.clientName, detail: l.address?.split(",")[0], href: `/dashboard/listings/${l.id}`, urgency: "high" })),
     ...display.filter(l => (l.paidInFull || l.balancePaid ? false : l.depositPaid) && !l.balancePaid && resolveWorkflowStatus(l) === "delivered")
       .map(l => ({ type: "balance_due",     id: l.id, label: l.clientName, detail: `Balance $${((l.totalPrice || 0) - (l.depositAmount || 0)).toLocaleString()}`, href: `/dashboard/listings/${l.id}`, urgency: "medium" })),
     ...display.filter(l => ACTIVE_WF.includes(resolveWorkflowStatus(l)) && !l.shootDate && !l.preferredDate)
       .map(l => ({ type: "no_date",         id: l.id, label: l.clientName, detail: l.address?.split(",")[0], href: `/dashboard/listings/${l.id}`, urgency: "medium" })),
-  ].slice(0, 6);
+  ].slice(0, 8);
 
   const setupSteps = tenant ? [
     { done: !!tenant.phone,                                                                label: "Complete your profile",   href: "/onboarding" },
@@ -620,7 +630,8 @@ export default function DashboardHome() {
             </div>
             <div>
               {actionItems.map((item, idx) => {
-                const typeLabel = item.type === "booking_request" ? "New booking request"
+                const typeLabel = item.type === "revision_request" ? "Revision request"
+                  : item.type === "booking_request" ? "New booking request"
                   : item.type === "balance_due"     ? "Balance due"
                   : "No shoot date scheduled";
                 const dotColor = item.urgency === "high" ? "#DC2626" : "#D97706";

@@ -18,14 +18,12 @@ const REVISION_STATUS = {
 export default function AgentBookingClient({ booking, gallery, branding, slug, token, allowRevisions, revisions: initialRevisions }) {
   const router         = useRouter();
   const preloadReorder = useBookingStore((s) => s.preloadReorder);
-  const [captions,        setCaptions]        = useState(null);
-  const [captionsLoading, setCaptionsLoading] = useState(false);
-  const [captionsCopied,  setCaptionsCopied]  = useState(null);
-  const [tab,             setTab]             = useState("overview");
-  const [revisions,       setRevisions]       = useState(initialRevisions || []);
-  const [revMsg,          setRevMsg]          = useState("");
-  const [revSending,      setRevSending]      = useState(false);
-  const [revText,         setRevText]         = useState("");
+  const [tab,      setTab]      = useState("overview");
+  const [copied,   setCopied]   = useState(null);
+  const [revisions,    setRevisions]    = useState(initialRevisions || []);
+  const [revMsg,       setRevMsg]       = useState("");
+  const [revSending,   setRevSending]   = useState(false);
+  const [revText,      setRevText]      = useState("");
 
   const pw          = booking.propertyWebsite || {};
   const listingUrl  = `${getAppUrl()}/${slug}/property/${booking.id}`;
@@ -78,28 +76,16 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
     router.push(`/${slug}/book`);
   }
 
-  async function generateCaptions() {
-    setCaptionsLoading(true);
-    try {
-      const res = await fetch(`/api/${slug}/agent/captions?bookingId=${booking.id}&token=${token}`);
-      const data = await res.json();
-      if (data.captions) setCaptions(data.captions);
-    } catch { /* silent */ }
-    finally { setCaptionsLoading(false); }
-  }
-
   function copy(text, key) {
     navigator.clipboard.writeText(text);
-    setCaptionsCopied(key);
-    setTimeout(() => setCaptionsCopied(null), 2000);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
   }
 
   const pendingRevisions = revisions.filter((r) => r.status === "pending").length;
   const TABS = [
     { id: "overview",  label: "Overview" },
-    { id: "timeline",  label: "Timeline" },
     { id: "marketing", label: "Marketing" },
-    { id: "studio",    label: "Studio" },
     ...(galleryUrl ? [{ id: "gallery", label: `Gallery${gallery?.imageCount > 0 ? ` (${gallery.imageCount})` : ""}` }] : []),
     ...(pw?.published ? [{ id: "website", label: "Property Website" }] : []),
     ...(booking.totalPrice > 0 ? [{ id: "invoice", label: "Invoice" }] : []),
@@ -219,99 +205,6 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
         </div>
       )}
 
-      {/* ── TIMELINE TAB ───────────────────────────────────────────── */}
-      {tab === "timeline" && (() => {
-        // Build timeline events from booking data
-        const events = [];
-
-        if (booking.createdAt) {
-          events.push({ at: booking.createdAt, label: "Booking submitted", icon: "📋", color: "#3486cf" });
-        }
-        if (booking.depositPaid) {
-          events.push({ at: null, label: "Deposit paid", icon: "💳", color: "#059669" });
-        }
-        if (booking.shootDate) {
-          const shootD = new Date(booking.shootDate);
-          const isPast = shootD < new Date();
-          events.push({
-            at:    booking.shootDate,
-            label: isPast ? "Shoot completed" : "Shoot scheduled",
-            icon:  isPast ? "📸" : "📅",
-            color: isPast ? "#059669" : "#D97706",
-          });
-        }
-
-        // Status history entries — map to human labels
-        const wfLabels = {
-          booked:                 "Booking confirmed",
-          appointment_confirmed:  "Appointment confirmed",
-          photographer_assigned:  "Media provider assigned",
-          shot_completed:         "Shoot completed",
-          editing_complete:       "Editing complete",
-          qa_review:              "Quality review",
-          delivered:              "Media delivered",
-          revision_requested:     "Revision requested",
-          completed:              "Order completed",
-          paid_in_full:           "Paid in full",
-          cancelled:              "Booking cancelled",
-          postponed:              "Postponed",
-        };
-        for (const h of (booking.statusHistory || [])) {
-          const label = wfLabels[h.status] || h.status;
-          events.push({ at: h.changedAt, label, note: h.note || null, icon: "🔄", color: "#6B7280" });
-        }
-
-        if (gallery?.delivered) {
-          events.push({ at: null, label: "Gallery delivered — media ready", icon: "✅", color: "#059669" });
-        }
-        if (booking.balancePaid || booking.paidInFull) {
-          events.push({ at: null, label: "Paid in full", icon: "💰", color: "#059669" });
-        }
-
-        // Sort by `at` ascending; events without `at` go to the end
-        events.sort((a, b) => {
-          if (!a.at && !b.at) return 0;
-          if (!a.at) return 1;
-          if (!b.at) return -1;
-          return a.at.localeCompare(b.at);
-        });
-
-        if (events.length === 0) {
-          return (
-            <div className="text-center py-12 text-gray-400">
-              <p className="text-3xl mb-2">🕐</p>
-              <p className="text-sm">Timeline not available yet.</p>
-            </div>
-          );
-        }
-
-        return (
-          <div className="space-y-0 relative">
-            {/* Vertical line */}
-            <div className="absolute left-[19px] top-6 bottom-6 w-0.5 bg-gray-100" />
-            {events.map((ev, i) => (
-              <div key={i} className="relative flex gap-4 pb-5">
-                {/* Circle icon */}
-                <div className="w-10 h-10 flex-shrink-0 rounded-full border-2 border-white bg-white shadow-sm flex items-center justify-center text-base z-10">
-                  {ev.icon}
-                </div>
-                <div className="flex-1 bg-white border border-gray-100 rounded-xl px-4 py-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-gray-800">{ev.label}</p>
-                    {ev.at && (
-                      <p className="text-[11px] text-gray-400 flex-shrink-0 mt-0.5">
-                        {new Date(ev.at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      </p>
-                    )}
-                  </div>
-                  {ev.note && <p className="text-xs text-gray-500 mt-1">{ev.note}</p>}
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-      })()}
-
       {/* ── MARKETING TAB ──────────────────────────────────────────── */}
       {tab === "marketing" && (
         <div className="space-y-5">
@@ -324,8 +217,8 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
                   {listingUrl}
                 </code>
                 <button onClick={() => copy(listingUrl, "url")}
-                  className="text-xs px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  {captionsCopied === "url" ? "✓ Copied" : "Copy"}
+                  className="text-xs px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0">
+                  {copied === "url" ? "✓ Copied" : "Copy"}
                 </button>
               </div>
             </div>
@@ -361,39 +254,14 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
             </div>
           )}
 
-          {/* AI Social Captions */}
+          {/* Marketing Studio — social graphics */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-400 uppercase tracking-wide">Social Media Captions</p>
-              <button onClick={generateCaptions} disabled={captionsLoading}
-                className="text-xs font-medium px-3 py-1.5 rounded-lg text-white transition-colors disabled:opacity-50"
-                style={{ background: branding.primary }}>
-                {captionsLoading ? "Generating…" : captions ? "Regenerate" : "✨ Generate"}
-              </button>
-            </div>
-
-            {captions ? (
-              <div className="space-y-3">
-                {[
-                  { key: "instagram", label: "Instagram", icon: "📸" },
-                  { key: "facebook",  label: "Facebook",  icon: "📘" },
-                  { key: "emailSubject", label: "Email Subject", icon: "✉️" },
-                ].map(({ key, label, icon }) => captions[key] && (
-                  <div key={key} className="bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-medium text-gray-500">{icon} {label}</span>
-                      <button onClick={() => copy(captions[key], key)}
-                        className="text-xs text-[#3486cf] hover:opacity-70">
-                        {captionsCopied === key ? "✓ Copied!" : "Copy"}
-                      </button>
-                    </div>
-                    <p className="text-sm text-gray-700 leading-relaxed">{captions[key]}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400">Generate ready-to-post Instagram, Facebook, and email subject lines with one click.</p>
-            )}
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-4">Social Media Graphics</p>
+            <MarketingStudio
+              booking={booking}
+              branding={branding}
+              coverUrl={gallery?.coverUrl || null}
+            />
           </div>
         </div>
       )}
@@ -419,18 +287,6 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
               <img src={gallery.coverUrl} alt="Gallery preview" className="w-full h-48 object-cover" />
             </div>
           )}
-        </div>
-      )}
-
-      {/* ── STUDIO TAB ─────────────────────────────────────────────── */}
-      {tab === "studio" && (
-        <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-4">Marketing Studio</p>
-          <MarketingStudio
-            booking={booking}
-            branding={branding}
-            coverUrl={gallery?.coverUrl || null}
-          />
         </div>
       )}
 
@@ -471,7 +327,6 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
       {/* ── PROPERTY WEBSITE TAB ───────────────────────────────────── */}
       {tab === "website" && pw?.published && (
         <div className="space-y-4">
-          {/* Live URL */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Your Property Website</p>
             <div className="flex items-center gap-2 mb-4">
@@ -480,7 +335,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
               </code>
               <button onClick={() => copy(listingUrl, "url")}
                 className="text-xs px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0">
-                {captionsCopied === "url" ? "✓ Copied" : "Copy Link"}
+                {copied === "url" ? "✓ Copied" : "Copy Link"}
               </button>
             </div>
             <div className="flex gap-3 flex-wrap">
@@ -496,7 +351,6 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
             </div>
           </div>
 
-          {/* QR Code */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">QR Code</p>
             <div className="flex items-center gap-5">
@@ -511,7 +365,6 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
             </div>
           </div>
 
-          {/* Property details preview */}
           {(pw.beds || pw.baths || pw.sqft || pw.price) && (
             <div className="bg-white border border-gray-200 rounded-xl p-5">
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Property Details</p>
@@ -529,7 +382,6 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
       {/* ── REVISIONS TAB ────────────────────────────────────────────── */}
       {tab === "revisions" && allowRevisions && (
         <div className="space-y-5">
-          {/* Submit new request */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Submit a Revision Request</p>
             <textarea
@@ -551,7 +403,6 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
             </button>
           </div>
 
-          {/* Past requests */}
           {revisions.length > 0 && (
             <div>
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Previous Requests</p>

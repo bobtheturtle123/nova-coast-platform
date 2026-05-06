@@ -55,7 +55,7 @@ export default async function AgentListingsPage({ params, searchParams }) {
       };
     });
 
-  // Fetch gallery delivered status in parallel
+  // Fetch gallery status and cover images in parallel
   const galleryIds = bookings.filter((b) => b.galleryId).map((b) => b.galleryId);
   const galleries  = {};
   await Promise.all(
@@ -63,10 +63,12 @@ export default async function AgentListingsPage({ params, searchParams }) {
       const gDoc = await adminDb.collection("tenants").doc(tenant.id).collection("galleries").doc(gid).get();
       if (gDoc.exists) {
         const g = gDoc.data();
+        const photos = (g.media || []).filter((m) => !m.fileType?.startsWith("video/"));
         galleries[gid] = {
           delivered:   g.delivered   || false,
           accessToken: g.accessToken || null,
-          mediaCount:  (g.media || []).filter((m) => !m.fileType?.startsWith("video/")).length,
+          mediaCount:  photos.length,
+          coverUrl:    g.coverUrl || photos[0]?.url || null,
         };
       }
     })
@@ -100,58 +102,63 @@ export default async function AgentListingsPage({ params, searchParams }) {
           <p className="text-sm mt-1">Your listings will appear here once the photographer has created them.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 text-left">
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Address</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden sm:table-cell">Shoot Date</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide hidden md:table-cell">Gallery</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {bookings.map((b) => {
-                const gal = b.galleryId ? galleries[b.galleryId] : null;
-                return (
-                  <tr key={b.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <p className="font-medium text-gray-900 truncate max-w-xs">{b.address}</p>
-                      {gal?.delivered && (
-                        <span className="text-xs text-emerald-600 font-medium flex items-center gap-1 mt-0.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                          Media ready
-                        </span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {bookings.map((b) => {
+            const gal         = b.galleryId ? galleries[b.galleryId] : null;
+            const isDelivered = !!gal?.delivered;
+
+            return (
+              <div key={b.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow group">
+                {/* Hero image */}
+                <div className="relative aspect-video bg-gray-100 overflow-hidden">
+                  {gal?.coverUrl ? (
+                    <img
+                      src={gal.coverUrl}
+                      alt={b.address}
+                      className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                      <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="#D1D5DB" strokeWidth="1.2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                      {b.shootDate && (
+                        <p className="text-xs text-gray-400">{formatDate(b.shootDate)}</p>
                       )}
-                    </td>
-                    <td className="px-4 py-3.5 text-gray-500 hidden sm:table-cell">
-                      {formatDate(b.shootDate) || <span className="text-gray-300">TBD</span>}
-                    </td>
-                    <td className="px-4 py-3.5 hidden md:table-cell">
-                      {gal?.delivered ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-emerald-700 font-medium">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                          {gal.mediaCount > 0 ? `${gal.mediaCount} photos` : "Delivered"}
-                        </span>
-                      ) : gal ? (
-                        <span className="text-xs text-gray-400">In progress</span>
-                      ) : (
-                        <span className="text-xs text-gray-300">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <Link
-                        href={`/${slug}/agent/${b.id}?token=${token}`}
-                        className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-colors"
-                        style={{ background: primary }}>
-                        View →
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                  )}
+                  {/* Status badge */}
+                  <div className="absolute top-2.5 left-2.5">
+                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border backdrop-blur-sm ${
+                      isDelivered
+                        ? "bg-emerald-50/90 text-emerald-700 border-emerald-200"
+                        : "bg-amber-50/90 text-amber-700 border-amber-200"
+                    }`}>
+                      {isDelivered ? "Delivered" : "In Progress"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card content */}
+                <div className="p-4">
+                  <p className="font-semibold text-gray-900 text-sm leading-snug mb-1 line-clamp-2">{b.address}</p>
+                  {b.shootDate && (
+                    <p className="text-xs text-gray-400 mb-3">{formatDate(b.shootDate)}</p>
+                  )}
+                  {!b.shootDate && (
+                    <p className="text-xs text-gray-300 mb-3">Date TBD</p>
+                  )}
+                  <Link
+                    href={`/${slug}/agent/${b.id}?token=${token}`}
+                    className="block w-full text-center text-sm font-semibold py-2 rounded-lg text-white transition-opacity hover:opacity-90"
+                    style={{ background: primary }}
+                  >
+                    View →
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

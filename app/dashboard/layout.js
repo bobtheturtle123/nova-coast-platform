@@ -161,14 +161,21 @@ export default function DashboardLayout({ children }) {
       }).then((r) => r.json()).then((d) => {
         if (d.tenant?.businessName) setTenantName(d.tenant.businessName);
       }).catch(() => {});
+    });
+    return unsub;
+  }, [router]);
+
+  // Re-fetch revision badge whenever the user navigates — clears stale counts after viewing
+  useEffect(() => {
+    if (!user) return;
+    user.getIdToken().then((tok) => {
       fetch("/api/dashboard/revisions?status=pending", {
         headers: { Authorization: `Bearer ${tok}` },
       }).then((r) => r.json()).then((d) => {
         setPendingRevCount(d.revisions?.length ?? 0);
       }).catch(() => {});
     });
-    return unsub;
-  }, [router]);
+  }, [user, pathname]);
 
   if (user === undefined) {
     return (
