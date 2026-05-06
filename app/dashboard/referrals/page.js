@@ -107,7 +107,7 @@ export default function ReferralsPage() {
   const namedCodes     = data?.namedReferralCodes || [];
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-8 max-w-3xl">
       <div className="mb-8">
         <h1 className="page-title">Refer &amp; Earn</h1>
         <p className="page-subtitle">

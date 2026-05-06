@@ -444,12 +444,12 @@ export default function CreateBookingPage() {
         <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl mb-6">{error}</div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
 
         {/* ── Client / Agent ────────────────────────────────── */}
         <div className="card">
-          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-4">Client / Agent Info</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-3">Client / Agent Info</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <AutocompleteInput
                 label="Name"
@@ -491,8 +491,8 @@ export default function CreateBookingPage() {
 
         {/* ── Property ──────────────────────────────────────── */}
         <div className="card">
-          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-4">Property</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-3">Property</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="sm:col-span-2">
               <PlacesAutocomplete
                 label="Street Address"
@@ -559,7 +559,7 @@ export default function CreateBookingPage() {
         {/* ── Services ──────────────────────────────────────── */}
         {(catalog.packages.length > 0 || catalog.services.length > 0 || catalog.addons.length > 0) && (
           <div className="card">
-            <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-4">Services</h2>
+            <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-3">Services</h2>
 
             {catalog.packages.length > 0 && (
               <div className="mb-4">
@@ -625,8 +625,8 @@ export default function CreateBookingPage() {
 
         {/* ── Schedule + Team Availability ──────────────────── */}
         <div className="card">
-          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-4">Schedule</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-3">Schedule</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
             <div>
               <label className="label-field">Shoot Date</label>
               <input type="date" value={form.shootDate} onChange={set("shootDate")} className="input-field w-full" />
@@ -814,7 +814,7 @@ export default function CreateBookingPage() {
 
         {/* ── Pricing ───────────────────────────────────────── */}
         <div className="card">
-          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-4">Pricing</h2>
+          <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-3">Pricing</h2>
 
           {/* Auto-calculated breakdown */}
           {(form.packageId || form.serviceIds.length > 0 || form.addonIds.length > 0) ? (

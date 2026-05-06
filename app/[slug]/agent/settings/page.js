@@ -20,6 +20,8 @@ function AgentSettingsInner() {
   const [inviteName,    setInviteName]    = useState("");
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteMsg,     setInviteMsg]     = useState({ text: "", type: "" });
+  const [upgrading,     setUpgrading]     = useState(false);
+  const [agentProMsg,   setAgentProMsg]   = useState("");
 
   // Editable fields
   const [phone, setPhone] = useState("");
@@ -37,6 +39,12 @@ function AgentSettingsInner() {
       })
       .catch(() => setLoading(false));
   }, [slug, token]);
+
+  useEffect(() => {
+    if (searchParams.get("agentpro") === "success") {
+      setAgentProMsg("Agent Pro activated! Your new features are now unlocked.");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!token || !agent?.isAgentPro) return;
@@ -72,6 +80,27 @@ function AgentSettingsInner() {
     } finally {
       setInviteSending(false);
       setTimeout(() => setInviteMsg({ text: "", type: "" }), 4000);
+    }
+  }
+
+  async function upgradeToAgentPro() {
+    setUpgrading(true);
+    try {
+      const res  = await fetch(`/api/${slug}/agent/billing`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ token }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setAgentProMsg(data.error || "Could not start checkout. Try again.");
+        setUpgrading(false);
+      }
+    } catch {
+      setAgentProMsg("Something went wrong. Please try again.");
+      setUpgrading(false);
     }
   }
 
@@ -156,8 +185,18 @@ function AgentSettingsInner() {
         </div>
       </div>
 
+      {/* Agent Pro status message */}
+      {agentProMsg && (
+        <div className={`px-4 py-3 rounded-xl text-sm font-medium ${
+          agentProMsg.includes("activated") ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+            : "bg-red-50 border border-red-200 text-red-700"
+        }`}>
+          {agentProMsg}
+        </div>
+      )}
+
       {/* Agent Pro gated features — single consolidated lock interstitial */}
-      <AgentProGate>
+      <AgentProGate isAgentPro={agent?.isAgentPro} onUpgrade={upgradeToAgentPro} upgrading={upgrading}>
         <div className="space-y-6">
           {/* Personal Branding */}
           <div className="bg-white border border-gray-200 rounded-xl p-6">

@@ -19,13 +19,15 @@ export async function GET(req, { params }) {
   if (snap.empty) return Response.json({ error: "Unauthorized." }, { status: 401 });
 
   const d = snap.docs[0].data();
+  // isAgentPro is true if set on the agent doc OR if the photographer has platform-wide Agent Pro
+  const isAgentPro = !!(d.isAgentPro || tenant.agentProActive);
   return Response.json({
     agent: {
-      id:          snap.docs[0].id,
-      name:        d.name        || "",
-      email:       d.email       || "",
-      phone:       d.phone       || "",
-      isAgentPro:  d.isAgentPro  || false,
+      id:         snap.docs[0].id,
+      name:       d.name  || "",
+      email:      d.email || "",
+      phone:      d.phone || "",
+      isAgentPro,
     },
   });
 }

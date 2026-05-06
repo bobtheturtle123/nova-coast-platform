@@ -192,8 +192,36 @@ export async function POST(req) {
       // Subscription events
       case "customer.subscription.created":
       case "customer.subscription.updated": {
-        const sub = event.data.object;
-        const tenantId = sub.metadata?.tenantId;
+        const sub    = event.data.object;
+        const meta   = sub.metadata || {};
+        const { type, tenantId, agentId } = meta;
+
+        // Agent Pro — per-agent subscription from the agent portal
+        if (type === "agentPro" && tenantId && agentId) {
+          const isActive = sub.status === "active" || sub.status === "trialing";
+          await adminDb
+            .collection("tenants").doc(tenantId)
+            .collection("agents").doc(agentId)
+            .update({
+              isAgentPro:               isActive,
+              agentProSubscriptionId:   sub.id,
+              agentProSubscriptionStatus: sub.status,
+            });
+          break;
+        }
+
+        // Agent Pro Platform — photographer enables for all agents
+        if (type === "agentProPlatform" && tenantId) {
+          const isActive = sub.status === "active" || sub.status === "trialing";
+          await adminDb.collection("tenants").doc(tenantId).update({
+            agentProActive:               isActive,
+            agentProSubscriptionId:       sub.id,
+            agentProSubscriptionStatus:   sub.status,
+          });
+          break;
+        }
+
+        // Regular platform subscription
         if (!tenantId) break;
 
         const { ADDON_PRICE_IDS } = await import("@/lib/stripe");
@@ -210,7 +238,7 @@ export async function POST(req) {
         await adminDb.collection("tenants").doc(tenantId).update({
           stripeSubscriptionId:  sub.id,
           subscriptionStatus:    sub.status,
-          subscriptionPlan:      sub.metadata?.plan || "solo",
+          subscriptionPlan:      meta.plan || "solo",
           subscriptionRenewalAt: sub.current_period_end
             ? new Date(sub.current_period_end * 1000)
             : null,
@@ -220,8 +248,28 @@ export async function POST(req) {
       }
 
       case "customer.subscription.deleted": {
-        const sub = event.data.object;
-        const tenantId = sub.metadata?.tenantId;
+        const sub    = event.data.object;
+        const meta   = sub.metadata || {};
+        const { type, tenantId, agentId } = meta;
+
+        // Agent Pro per-agent
+        if (type === "agentPro" && tenantId && agentId) {
+          await adminDb
+            .collection("tenants").doc(tenantId)
+            .collection("agents").doc(agentId)
+            .update({ isAgentPro: false, agentProSubscriptionStatus: "canceled" });
+          break;
+        }
+
+        // Agent Pro platform-wide
+        if (type === "agentProPlatform" && tenantId) {
+          await adminDb.collection("tenants").doc(tenantId).update({
+            agentProActive: false,
+            agentProSubscriptionStatus: "canceled",
+          });
+          break;
+        }
+
         if (!tenantId) break;
         await adminDb.collection("tenants").doc(tenantId).update({
           subscriptionStatus: "canceled",

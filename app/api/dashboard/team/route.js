@@ -1,6 +1,9 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { v4 as uuidv4 } from "uuid";
 
+// Base seats included per plan (owner counts as 1)
+const PLAN_BASE_SEATS = { solo: 1, studio: 5, pro: 12, scale: null, starter: 1 };
+
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
   if (!auth) return null;
@@ -34,6 +37,27 @@ export async function GET(req) {
 export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Seat limit enforcement
+  const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
+  const tenant    = tenantDoc.data() || {};
+  const plan      = tenant.subscriptionPlan || "solo";
+  const baseSeats = PLAN_BASE_SEATS[plan] ?? 1;
+
+  if (baseSeats !== null) {
+    const addonSeats   = tenant.addonSeats || 0;
+    const totalSeats   = baseSeats + addonSeats;
+    const existingSnap = await adminDb
+      .collection("tenants").doc(ctx.tenantId)
+      .collection("team").get();
+    const currentCount = existingSnap.size + 1; // +1 for owner
+    if (currentCount >= totalSeats) {
+      return Response.json({
+        error: `Seat limit reached. Your ${plan} plan includes ${totalSeats} seat${totalSeats !== 1 ? "s" : ""}. Upgrade your plan or add extra seats from the billing page.`,
+        seatLimitReached: true,
+      }, { status: 403 });
+    }
+  }
 
   const body  = await req.json();
   const id    = uuidv4().replace(/-/g, "").slice(0, 16);

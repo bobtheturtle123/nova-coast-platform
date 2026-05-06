@@ -672,7 +672,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const ids = [
       "settings-branding",
-      "settings-pricing","settings-booking","settings-availability",
+      "settings-pricing","settings-booking","settings-deposits","settings-availability",
       "settings-service-areas","settings-travel","settings-promos",
       "settings-agreement","settings-terms",
       "settings-cost-rates","settings-staff-access",
@@ -1198,12 +1198,13 @@ export default function SettingsPage() {
   };
 
   const SECTION_GROUPS = [
-    { group: "Business", items: [
-      { id: "settings-branding",      label: "Business & Branding" },
+    { group: "Identity", items: [
+      { id: "settings-branding",      label: "Business Identity" },
     ]},
     { group: "Booking", items: [
       { id: "settings-pricing",       label: "Pricing Tiers" },
-      { id: "settings-booking",       label: "Booking Settings" },
+      { id: "settings-booking",       label: "Booking Logic" },
+      { id: "settings-deposits",      label: "Deposits & Payments" },
       { id: "settings-availability",  label: "Availability" },
       { id: "settings-service-areas", label: "Service Areas" },
       { id: "settings-travel",        label: "Travel Fees" },
@@ -1214,10 +1215,10 @@ export default function SettingsPage() {
       { id: "settings-terms",     label: "Terms & Privacy" },
     ]},
     { group: "Team", items: [
-      { id: "settings-cost-rates",   label: "Cost Rates" },
+      { id: "settings-cost-rates",   label: "Team Rules" },
       { id: "settings-staff-access", label: "Staff Access" },
     ]},
-    { group: "Communications", items: [
+    { group: "Comms", items: [
       { id: "settings-email",          label: "Email Templates" },
       { id: "settings-notifications",  label: "Notifications" },
     ]},
@@ -1263,11 +1264,11 @@ export default function SettingsPage() {
 
       <div>
 
-      {/* ─── BUSINESS ──────────────────────────────────────────────────────── */}
+      {/* ─── BUSINESS IDENTITY ─────────────────────────────────────────────── */}
       <div className="mb-4 flex items-center gap-3">
-        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.35)" }}>Business</span>
-        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Business Identity</span>
+        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
       </div>
       {/* Booking URL */}
       <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-4">
@@ -1394,11 +1395,11 @@ export default function SettingsPage() {
         </button>
       </form>
 
-      {/* ─── BOOKING ──────────────────────────────────────────────────────────── */}
+      {/* ─── BOOKING LOGIC ─────────────────────────────────────────────────────── */}
       <div className="mt-10 mb-4 flex items-center gap-3">
-        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.35)" }}>Booking</span>
-        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Booking Logic</span>
+        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
       </div>
       {/* ─── Pricing Tiers ─────────────────────────────────────────────────────── */}
       <div id="settings-pricing" className="card mt-6 scroll-mt-24">
@@ -1517,13 +1518,13 @@ export default function SettingsPage() {
       {/* ─── Booking Config ──────────────────────────────────────────────────── */}
       <div id="settings-booking" className="card mt-8 space-y-8 scroll-mt-24">
         <div>
-          <h2 className="font-semibold text-[#0F172A] text-base mb-1">Booking Settings</h2>
-          <p className="text-sm text-gray-500">Configure deposit requirements, time slots, and custom form fields.</p>
+          <h2 className="font-semibold text-[#0F172A] text-base mb-1">Booking Logic</h2>
+          <p className="text-sm text-gray-500">Configure time slots, property options, and custom form fields.</p>
         </div>
 
         {/* Deposit config */}
-        <div>
-          <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Deposit / Payment</h3>
+        <div id="settings-deposits" className="scroll-mt-24">
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Deposits & Payments</h3>
           <div className="grid grid-cols-3 gap-2 mb-3">
             {[
               { value: "percent", label: "% of total",  desc: "e.g. 50% deposit" },
@@ -2260,9 +2261,9 @@ export default function SettingsPage() {
 
       {/* ─── LEGAL ────────────────────────────────────────────────────────────── */}
       <div className="mt-10 mb-4 flex items-center gap-3">
-        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.35)" }}>Legal</span>
-        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Legal</span>
+        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
       </div>
       {/* ─── Service Agreement ───────────────────────────────────────────────── */}
       <div id="settings-agreement" className="card mt-6 scroll-mt-24">
@@ -2403,11 +2404,11 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* ─── TEAM ─────────────────────────────────────────────────────────────── */}
+      {/* ─── TEAM RULES ───────────────────────────────────────────────────────── */}
       <div className="mt-10 mb-4 flex items-center gap-3">
-        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.35)" }}>Team</span>
-        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Team Rules</span>
+        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
       </div>
       {/* ─── Job Cost Rates ──────────────────────────────────────────────────── */}
       <div id="settings-cost-rates" className="card mt-6 scroll-mt-24">
@@ -2456,9 +2457,9 @@ export default function SettingsPage() {
 
       {/* ─── Communications ──────────────────────────────────────────────────── */}
       <div className="mt-10 mb-4 flex items-center gap-3">
-        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.35)" }}>Communications</span>
-        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Communications</span>
+        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
       </div>
 
       {/* ─── Email Templates ─────────────────────────────────────────────────── */}
@@ -2692,9 +2693,9 @@ export default function SettingsPage() {
 
       {/* ─── Integrations ────────────────────────────────────────────────────── */}
       <div className="mt-10 mb-4 flex items-center gap-3">
-        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.35)" }}>Integrations</span>
-        <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Integrations</span>
+        <div className="h-px flex-1" style={{ background: "var(--border-subtle)" }} />
       </div>
 
       <div id="settings-integrations" className="card mt-6 scroll-mt-24">

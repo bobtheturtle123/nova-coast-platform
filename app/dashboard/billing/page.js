@@ -5,10 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 
 const PLANS = [
-  { id: "solo",   name: "Solo",     price: 79,  desc: "120 listing credits / year · 1 seat" },
-  { id: "studio", name: "Studio",   price: 159, desc: "300 listing credits / year · 5 seats" },
-  { id: "pro",    name: "Pro Team", price: 279, desc: "600 listing credits / year · 12 seats" },
-  { id: "scale",  name: "Scale",    price: 449, desc: "1,200 listing credits / year · Unlimited seats" },
+  { id: "solo",   name: "Solo",     price: 79,  desc: "120 listing credits / year · 1 seat",              tagline: "Built for solo owner-operators" },
+  { id: "studio", name: "Studio",   price: 159, desc: "300 listing credits / year · 5 seats",             tagline: "Growing teams & higher volume" },
+  { id: "pro",    name: "Pro Team", price: 279, desc: "600 listing credits / year · 12 seats",            tagline: "Multi-photographer operations" },
+  { id: "scale",  name: "Scale",    price: 449, desc: "1,200 listing credits / year · Unlimited seats",   tagline: "Large teams, no limits" },
 ];
 
 const PLAN_NAMES  = { solo: "Solo", studio: "Studio", pro: "Pro Team", scale: "Scale", starter: "Solo" };
@@ -44,6 +44,7 @@ export default function BillingPage() {
   const [working,       setWorking]      = useState(false);
   const [msg,           setMsg]          = useState({ text: "", type: "error" });
   const [cancelModal,   setCancelModal]  = useState(false);
+  const [agentProWorking, setAgentProWorking] = useState(false);
 
   const searchParams = useSearchParams();
 
@@ -53,6 +54,9 @@ export default function BillingPage() {
     }
     if (searchParams.get("topup") === "success") {
       setMsg({ text: "Listing credits added successfully. Your balance has been updated.", type: "success" });
+    }
+    if (searchParams.get("agentpro") === "success") {
+      setMsg({ text: "Agent Pro is now active. All your agents can access Pro features.", type: "success" });
     }
   }, [searchParams]);
 
@@ -137,6 +141,24 @@ export default function BillingPage() {
     }
   }
 
+  async function subscribeAgentPro() {
+    setAgentProWorking(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/billing/agent-pro", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+      else setError(data.error || "Could not start Agent Pro checkout.");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setAgentProWorking(false);
+    }
+  }
+
   async function startConnect() {
     setWorking(true);
     try {
@@ -172,6 +194,9 @@ export default function BillingPage() {
   }
   const renewalDateStr = formatRenewalDate(tenant?.subscriptionRenewalAt);
 
+  const agentProActive       = !!(tenant?.agentProActive);
+  const agentProSubStatus    = tenant?.agentProSubscriptionStatus || null;
+
   const addonListings  = tenant?.addonListings || 0;
   const addonSeats     = tenant?.addonSeats || 0;
   const listingLimit   = (PLAN_LIMITS[plan] || 120) + addonListings;
@@ -200,7 +225,7 @@ export default function BillingPage() {
   };
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-8 max-w-3xl">
       <h1 className="page-title mb-1">Billing</h1>
       <p className="page-subtitle mb-8">Manage your subscription and payment settings.</p>
 
@@ -455,20 +480,21 @@ export default function BillingPage() {
                   )}
                   <div>
                     <p className={`font-semibold text-sm ${isCurrent ? "text-[#0F172A]" : "text-gray-600"}`}>{p.name}</p>
-                    <p className="text-xs text-gray-400">{p.desc}</p>
+                    {p.tagline && <p className="text-[11px] text-[#3486cf] font-medium">{p.tagline}</p>}
+                    <p className="text-xs text-gray-400 mt-0.5">{p.desc}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0 ml-4">
-                  <span className={`text-sm font-bold ${isCurrent ? "text-[#0F172A]" : "text-gray-400"}`}>${p.price}/mo</span>
+                  <span className={`text-sm font-bold ${isCurrent ? "text-[#0F172A]" : "text-gray-400"}`}>${p.price}<span className="text-xs font-normal">/mo</span></span>
                   {isCurrent && subscribed && <span className="tag-green">Active</span>}
                   {isOther && subscribed && (
                     <button onClick={openPortal} disabled={working} className="btn-outline text-xs py-1.5">
-                      {working ? "…" : "Upgrade via portal"}
+                      {working ? "…" : "Change plan"}
                     </button>
                   )}
                   {!subscribed && (
                     <button onClick={() => subscribe(p.id)} disabled={working} className="btn-primary text-xs py-1.5">
-                      {working ? "…" : "Subscribe"}
+                      {working ? "…" : "Get started"}
                     </button>
                   )}
                 </div>
@@ -476,6 +502,54 @@ export default function BillingPage() {
             );
           })}
         </div>
+      </div>
+
+      {/* Agent Pro */}
+      <div className="card mb-5">
+        <div className="flex items-start justify-between mb-1">
+          <div>
+            <h2 className="font-semibold text-[#0F172A] text-sm">Agent Pro Add-on</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Give your agents team collaboration, personal branding, and long-term listing history.</p>
+          </div>
+          <span className="text-xs font-bold text-[#3486cf] mt-0.5 flex-shrink-0 ml-4">$15.99/mo</span>
+        </div>
+
+        {agentProActive ? (
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" className="text-emerald-600">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-emerald-700">Agent Pro active</p>
+                <p className="text-xs text-gray-400">All your agents have access to Pro features.</p>
+              </div>
+            </div>
+            <button onClick={openPortal} disabled={working} className="btn-outline text-xs">
+              {working ? "…" : "Manage"}
+            </button>
+          </div>
+        ) : (
+          <div className="mt-4">
+            <ul className="space-y-1.5 mb-4">
+              {["Team collaboration invites","Personal agent branding (headshot, bio)","Full listing timeline history","Priority portal features"].map((f) => (
+                <li key={f} className="flex items-center gap-2 text-xs text-gray-600">
+                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <button onClick={subscribeAgentPro} disabled={agentProWorking || working}
+              className="btn-primary text-sm">
+              {agentProWorking ? "Loading…" : "Enable Agent Pro for all agents →"}
+            </button>
+            <p className="text-xs text-gray-400 mt-2">Billed monthly. Cancel any time from this page.</p>
+          </div>
+        )}
       </div>
 
       {/* Stripe Connect */}
