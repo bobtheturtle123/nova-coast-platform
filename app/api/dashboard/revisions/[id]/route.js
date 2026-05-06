@@ -51,14 +51,15 @@ export async function PATCH(req, { params }) {
         const tenant    = tenantDoc.data() || {};
         const primary   = tenant.branding?.primaryColor || "#3486cf";
         const bizName   = tenant.branding?.businessName || tenant.businessName || "Your Photographer";
-        const from      = `${bizName} <noreply@kyoriaos.com>`;
+        const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
+        const from      = `${bizName} <${fromEmail}>`;
         const portalUrl = revData.bookingId
           ? `${getAppUrl()}/${tenant.slug}/agent/${revData.bookingId}?token=`
           : `${getAppUrl()}/${tenant.slug}/agent`;
 
         const { Resend } = await import("resend");
         const resend = new Resend(resendKey);
-        await resend.emails.send({
+        const { data: emailData, error: emailError } = await resend.emails.send({
           from,
           to: [agentEmail],
           subject: `Your revision request has been resolved`,
@@ -69,7 +70,12 @@ export async function PATCH(req, { params }) {
             ${update.adminNotes ? `<div style="border-left:3px solid ${primary};padding-left:16px;color:#444;margin:0 0 20px;font-style:italic">${update.adminNotes}</div>` : ""}
             <a href="${portalUrl}" style="display:inline-block;background:${primary};color:#fff;font-weight:600;padding:12px 28px;border-radius:6px;text-decoration:none">View in Portal →</a>
           </div>`,
-        }).catch(() => {});
+        });
+        if (emailError) {
+          console.error("[revision] Resolution email failed — from:", from, "| to:", agentEmail, "| error:", JSON.stringify(emailError));
+        } else {
+          console.log("[revision] Resolution email sent — id:", emailData?.id, "| to:", agentEmail);
+        }
       }
     } catch { /* non-fatal */ }
   }

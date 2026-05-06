@@ -181,6 +181,11 @@ export default function BookingDetailPage() {
   // Secondary actions dropdown
   const [showActionsMenu, setShowActionsMenu] = useState(false);
 
+  // Inline booking detail edits
+  const [shootTime,      setShootTime]      = useState("");
+  const [bookingNotes,   setBookingNotes]   = useState("");
+  const [notesEditing,   setNotesEditing]   = useState(false);
+
   // Edit mode state
   const [editingClient,  setEditingClient]  = useState(false);
   const [editClient,     setEditClient]     = useState({ clientName: "", clientEmail: "", clientPhone: "" });
@@ -244,6 +249,8 @@ export default function BookingDetailPage() {
         const bk = bookingData.booking;
         setBooking(bk);
         setShootDate(bk.shootDate?.split?.("T")?.[0] || "");
+        setShootTime(bk.preferredTime || bk.shootTime || "");
+        setBookingNotes(bk.notes || "");
         setWorkflowStatus(resolveWorkflowStatus(bk));
         setStatusHistory(bk.statusHistory || []);
         setEditClient({ clientName: bk.clientName || "", clientEmail: bk.clientEmail || "", clientPhone: bk.clientPhone || "" });
@@ -532,10 +539,10 @@ export default function BookingDetailPage() {
             updating={updatingWorkflow}
           />
 
-          {/* Manage Booking: status + shoot date */}
+          {/* Manage Booking: status + shoot date + time + notes */}
           <div className="card">
             <h3 className="text-xs uppercase tracking-wide text-gray-400 mb-3">Manage Booking</h3>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Status</label>
                 <select value={booking.status} onChange={(e) => update({ status: e.target.value })} className="input-field w-full">
@@ -553,6 +560,48 @@ export default function BookingDetailPage() {
                   <button onClick={() => update({ shootDate })} disabled={saving} className="btn-outline px-3 py-2 text-xs flex-shrink-0">Save</button>
                 </div>
               </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Shoot Time</label>
+                <div className="flex gap-2">
+                  <input type="time" value={shootTime} onChange={(e) => setShootTime(e.target.value)} className="input-field flex-1" />
+                  <button onClick={() => update({ preferredTime: shootTime })} disabled={saving} className="btn-outline px-3 py-2 text-xs flex-shrink-0">Save</button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Total Price ($)</label>
+                <div className="flex gap-2">
+                  <input type="number" min="0" step="0.01"
+                    value={booking.totalPrice || 0}
+                    onChange={(e) => setBooking((b) => ({ ...b, totalPrice: Number(e.target.value) }))}
+                    className="input-field flex-1" />
+                  <button onClick={() => update({ totalPrice: booking.totalPrice })} disabled={saving} className="btn-outline px-3 py-2 text-xs flex-shrink-0">Save</button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Notes</label>
+                {notesEditing ? (
+                  <div className="flex gap-2">
+                    <button onClick={() => { setBookingNotes(booking.notes || ""); setNotesEditing(false); }}
+                      className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                    <button onClick={async () => { await update({ notes: bookingNotes }); setNotesEditing(false); }} disabled={saving}
+                      className="text-xs text-[#3486cf] font-semibold hover:underline">
+                      {saving ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setNotesEditing(true)} className="text-xs text-[#3486cf] hover:underline">Edit</button>
+                )}
+              </div>
+              {notesEditing ? (
+                <textarea rows={3} value={bookingNotes} onChange={(e) => setBookingNotes(e.target.value)}
+                  className="input-field w-full text-sm" placeholder="Internal notes…" />
+              ) : (
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {booking.notes || <span className="text-gray-300 italic">No notes</span>}
+                </p>
+              )}
             </div>
           </div>
 

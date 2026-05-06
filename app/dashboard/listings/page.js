@@ -87,7 +87,7 @@ function DateChip({ d }) {
 }
 
 // ── Grid card ─────────────────────────────────────────────────────────────────
-function ListingCard({ listing }) {
+function ListingCard({ listing, revCount = 0 }) {
   const coverUrl    = listing.gallery?.coverUrl;
   const shootDate   = listing.shootDate || listing.preferredDate;
   const fullDate    = formatDate(shootDate);
@@ -133,8 +133,16 @@ function ListingCard({ listing }) {
           )}
         </div>
 
-        {/* Media count badge */}
-        {listing.gallery?.mediaCount > 0 && (
+        {/* Top-right: revision badge (priority) or media count */}
+        {revCount > 0 ? (
+          <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full"
+            style={{ background: "#ef4444", color: "#fff", boxShadow: "0 2px 6px rgba(239,68,68,0.5)" }}>
+            <svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            {revCount}
+          </div>
+        ) : listing.gallery?.mediaCount > 0 ? (
           <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
             style={{ background: "rgba(0,0,0,0.42)", color: "#fff", backdropFilter: "blur(4px)" }}>
             <svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -142,7 +150,7 @@ function ListingCard({ listing }) {
             </svg>
             {listing.gallery.mediaCount}
           </div>
-        )}
+        ) : null}
 
         {/* Overlaid address on covered image */}
         {coverUrl && (
@@ -199,20 +207,31 @@ const COLS = "52px 1fr 126px 154px 112px 76px 22px";
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function ListingsPage() {
-  const [listings,  setListings]  = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [filter,    setFilter]    = useState("all");
-  const [payFilter, setPayFilter] = useState("any");
-  const [sortBy,    setSortBy]    = useState("newest");
-  const [search,    setSearch]    = useState("");
-  const [view,      setView]      = useState("grid");
+  const [listings,       setListings]       = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [filter,         setFilter]         = useState("all");
+  const [payFilter,      setPayFilter]      = useState("any");
+  const [sortBy,         setSortBy]         = useState("newest");
+  const [search,         setSearch]         = useState("");
+  const [view,           setView]           = useState("grid");
+  const [pendingRevCounts, setPendingRevCounts] = useState({});
 
   useEffect(() => {
     auth.currentUser?.getIdToken(true).then(async (token) => {
-      const res = await fetch("/api/dashboard/listings", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) { const data = await res.json(); setListings(data.listings); }
+      const headers = { Authorization: `Bearer ${token}` };
+      const [listRes, revRes] = await Promise.all([
+        fetch("/api/dashboard/listings", { headers }),
+        fetch("/api/dashboard/revisions?status=pending", { headers }),
+      ]);
+      if (listRes.ok) { const data = await listRes.json(); setListings(data.listings); }
+      if (revRes.ok) {
+        const revData = await revRes.json();
+        const counts = {};
+        (revData.revisions || []).forEach((r) => {
+          if (r.bookingId) counts[r.bookingId] = (counts[r.bookingId] || 0) + 1;
+        });
+        setPendingRevCounts(counts);
+      }
       setLoading(false);
     });
   }, []);
@@ -398,7 +417,7 @@ export default function ListingsPage() {
           /* ── GRID ────────────────────────────────────────────────────────── */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filtered.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
+              <ListingCard key={listing.id} listing={listing} revCount={pendingRevCounts[listing.id] || 0} />
             ))}
           </div>
 
@@ -452,9 +471,17 @@ export default function ListingsPage() {
 
                   {/* Address + client */}
                   <div className="min-w-0">
-                    <p className="text-[13.5px] font-semibold text-[#0F172A] truncate leading-snug group-hover:text-[#374151] transition-colors">
-                      {streetAddr}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[13.5px] font-semibold text-[#0F172A] truncate leading-snug group-hover:text-[#374151] transition-colors">
+                        {streetAddr}
+                      </p>
+                      {(pendingRevCounts[listing.id] || 0) > 0 && (
+                        <span className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                          style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+                          {pendingRevCounts[listing.id]} rev
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0"
                         style={{ background: aColor }}>

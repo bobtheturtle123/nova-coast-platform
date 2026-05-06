@@ -6,6 +6,7 @@ import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import { calculateTenantPrice, getSqftTier, getItemPrice, formatPrice } from "@/lib/catalogUtils";
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
+import { getPlan } from "@/lib/plans";
 
 const TIME_OPTIONS = [
   "7:00 AM","7:15 AM","7:30 AM","7:45 AM",
@@ -97,6 +98,7 @@ export default function CreateBookingPage() {
   const [loading,       setLoading]       = useState(true);
   const [saving,        setSaving]        = useState(false);
   const [error,         setError]         = useState("");
+  const [tenantPlan,    setTenantPlan]    = useState("solo");
   const [newItem,       setNewItem]       = useState({ label: "", price: "" });
   const [travelInfo,    setTravelInfo]    = useState({});
   const [travelLoading, setTravelLoading] = useState(false);
@@ -127,6 +129,7 @@ export default function CreateBookingPage() {
       ]);
 
       const tenantDoc = tenantData?.tenant || {};
+      setTenantPlan(tenantDoc.subscriptionPlan || "solo");
       setCatalog({
         packages:      pkg.items  || [],
         services:      svc.items  || [],
@@ -660,8 +663,24 @@ export default function CreateBookingPage() {
                 + Add Another Appointment
               </button>
 
-              {/* Team availability */}
-              {form.shootDate && team.length > 0 && (
+              {/* Team availability — locked on solo plan */}
+              {getPlan(tenantPlan).teamSeats === 1 && (
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 flex items-start gap-3 mb-4">
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" strokeWidth="2" className="flex-shrink-0 mt-0.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-600">Photographer assignment not available on Solo plan</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Upgrade to Studio or higher to assign team members to bookings.
+                    </p>
+                    <a href="/dashboard/billing" className="inline-block mt-2 text-xs font-semibold text-[#3486cf] hover:underline">
+                      View upgrade options →
+                    </a>
+                  </div>
+                </div>
+              )}
+              {getPlan(tenantPlan).teamSeats !== 1 && form.shootDate && team.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
