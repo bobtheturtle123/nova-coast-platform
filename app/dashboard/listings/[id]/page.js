@@ -230,9 +230,7 @@ export default function ListingDetailPage() {
   // Marketing tab state
   const [analytics,        setAnalytics]        = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [captions,         setCaptions]         = useState(null);
-  const [captionsLoading,  setCaptionsLoading]  = useState(false);
-  const [listingUrl,       setListingUrl]        = useState("");
+const [listingUrl,       setListingUrl]        = useState("");
 
   // Agent access state
   const [sendingAgentAccess,  setSendingAgentAccess]  = useState(false);
@@ -466,21 +464,7 @@ export default function ListingDetailPage() {
     finally { setAnalyticsLoading(false); }
   }
 
-  async function generateCaptions() {
-    setCaptionsLoading(true);
-    try {
-      const token = await auth.currentUser.getIdToken();
-      const res = await fetch(`/api/dashboard/listings/${id}/social-captions`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) setCaptions(data.captions);
-    } catch {}
-    finally { setCaptionsLoading(false); }
-  }
-
-  if (loading) return (
+if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
     </div>
@@ -1670,57 +1654,7 @@ export default function ListingDetailPage() {
               </div>
             </div>
 
-            {/* Social captions generator */}
-            <div className="card p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-gray-400">AI Marketing Captions</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Instagram, Facebook, and email subject — generated instantly</p>
-                </div>
-                <button onClick={generateCaptions} disabled={captionsLoading}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-[#3486cf] text-white hover:bg-[#3486cf]/90 transition-colors disabled:opacity-50">
-                  {captionsLoading ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      Generating…
-                    </>
-                  ) : (
-                    <>✨ {captions ? "Regenerate" : "Generate Captions"}</>
-                  )}
-                </button>
-              </div>
-
-              {captions ? (
-                <div className="space-y-4">
-                  {[
-                    { label: "Instagram", icon: "📸", key: "instagram", rows: 3 },
-                    { label: "Facebook",  icon: "📘", key: "facebook",  rows: 3 },
-                    { label: "Email Subject", icon: "✉️", key: "emailSubject", rows: 1 },
-                  ].map(({ label, icon, key, rows }) => (
-                    captions[key] && (
-                      <div key={key}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-xs font-semibold text-gray-500">{icon} {label}</p>
-                          <button
-                            onClick={() => navigator.clipboard.writeText(captions[key])}
-                            className="text-xs text-[#3486cf] hover:underline">
-                            Copy
-                          </button>
-                        </div>
-                        <textarea readOnly value={captions[key]} rows={rows}
-                          className="w-full text-sm px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg resize-none text-gray-700 leading-relaxed" />
-                      </div>
-                    )
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-sm text-gray-400">
-                  Click "Generate Captions" to create ready-to-post marketing copy for this listing.
-                </div>
-              )}
-            </div>
-
-            {/* Inquiries */}
+{/* Inquiries */}
             {analytics?.inquiries?.length > 0 && (
               <div className="card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">

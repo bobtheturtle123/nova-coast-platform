@@ -3,10 +3,10 @@ we_1TQjKX8qTZhsQAKqamccl6dp
 
 
 Name
-ShootFlow Production
+KyoriaOS Production
 
 Endpoint URL
-https://nova-coast-platform.vercel.app/api/stripe/webhook
+https://app.kyoriaos.com/api/stripe/webhook
 
 Description
 Handles bookings, subscriptions, and listing top-ups
@@ -20,7 +20,7 @@ Listening to
 
 
 
-ShootFlow Production
+KyoriaOS Production
 Signing secret
 
 whsec_2thNm3FT8HmUN91MkeDFjpaeVA3yoIcI

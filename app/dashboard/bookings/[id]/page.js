@@ -13,22 +13,49 @@ const WORKFLOW_STATUS_MAP = Object.fromEntries(WORKFLOW_STATUSES.map((s) => [s.i
 function WeatherWidget({ booking, tempUnit = "F" }) {
   const [wx,      setWx]      = useState(null);
   const [loading, setLoading] = useState(false);
-  const weatherDate = (booking.shootDate || booking.preferredDate)?.split?.("T")?.[0];
+  const [error,   setError]   = useState(null);
+  const weatherDate = (booking.shootDate || booking.preferredDate)
+    ? String(booking.shootDate || booking.preferredDate).split("T")[0]
+    : null;
 
   useEffect(() => {
     const address = booking.fullAddress || booking.address;
     const date    = weatherDate;
     if (!address || !date) return;
+
+    let cancelled = false;
     setLoading(true);
-    auth.currentUser?.getIdToken().then(async (token) => {
-      const res = await fetch(
-        `/api/dashboard/weather?address=${encodeURIComponent(address)}&date=${date}&unit=${tempUnit}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const data = await res.json();
-      setWx(data);
-      setLoading(false);
-    });
+    setError(null);
+    setWx(null);
+
+    const run = async (user) => {
+      try {
+        const token = await user.getIdToken();
+        const res   = await fetch(
+          `/api/dashboard/weather?address=${encodeURIComponent(address)}&date=${date}&unit=${tempUnit}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const data = await res.json();
+        if (!cancelled) setWx(data);
+      } catch (e) {
+        if (!cancelled) setError("Forecast unavailable");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    // Handle the case where Firebase auth hasn't initialized yet
+    if (auth.currentUser) {
+      run(auth.currentUser);
+    } else {
+      const unsub = auth.onAuthStateChanged((user) => {
+        unsub();
+        if (user && !cancelled) run(user);
+        else if (!cancelled) setLoading(false);
+      });
+    }
+
+    return () => { cancelled = true; };
   }, [booking.fullAddress, booking.address, weatherDate, tempUnit]);
 
   if (!weatherDate) return null;
@@ -38,6 +65,7 @@ function WeatherWidget({ booking, tempUnit = "F" }) {
       Loading forecast…
     </div>
   );
+  if (error) return <p className="text-sm text-gray-400">{error}</p>;
   if (!wx) return null;
 
   if (!wx.available) {

@@ -205,7 +205,7 @@ export default function ListingsPage() {
   const [payFilter, setPayFilter] = useState("any");
   const [sortBy,    setSortBy]    = useState("newest");
   const [search,    setSearch]    = useState("");
-  const [view,      setView]      = useState("list");
+  const [view,      setView]      = useState("grid");
 
   useEffect(() => {
     auth.currentUser?.getIdToken(true).then(async (token) => {

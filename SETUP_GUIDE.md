@@ -15,7 +15,7 @@ When you're done, your booking platform will be live at app.kyoriaos.com.
 5. **Cloudflare R2** — stores your photos and videos (~$0.015/GB/month)
 6. **Resend** — sends emails (free for first 3,000/month)
 
-You already have: a domain (novacoastmedia.com) and a GitHub account (or we'll create one).
+You already have: a domain (kyoriaos.com) and a GitHub account (or we'll create one).
 
 ---
 
@@ -27,17 +27,17 @@ GitHub is where your code lives. Vercel reads from it to deploy your site.
 
 2. Click the **+** button in the top right → **New repository**
 
-3. Name it: `nova-coast-platform`
+3. Name it: `kyoriaos-platform`
 
 4. Set it to **Private**
 
 5. Click **Create repository**
 
 6. Now you need to upload the code files.
-   - On your Windows PC, the folder you downloaded is called `nova-coast-platform`
+   - On your Windows PC, the folder you downloaded is called `kyoriaos-platform`
    - Download **GitHub Desktop** from desktop.github.com (free, no command line needed)
    - Open GitHub Desktop → **Add an Existing Repository from your Hard Drive**
-   - Point it to the `nova-coast-platform` folder
+   - Point it to the `kyoriaos-platform` folder
    - Click **Publish repository** → make sure **Keep this code private** is checked → **Publish**
 
 Your code is now on GitHub. ✓
@@ -50,7 +50,7 @@ Firebase is your database. Every booking, gallery, and photographer profile live
 
 1. Go to **console.firebase.google.com**
 
-2. Click **Add project** → Name it `nova-coast-platform` → Continue
+2. Click **Add project** → Name it `kyoriaos-platform` → Continue
 
 3. Disable Google Analytics (you don't need it) → **Create project**
 
@@ -72,7 +72,7 @@ Firebase is your database. Every booking, gallery, and photographer profile live
 7. Get your Firebase config keys:
    - Click the ⚙️ gear icon → **Project settings**
    - Scroll down to **Your apps** → click the **</>** icon (Web)
-   - App nickname: `nova-coast-web` → **Register app**
+   - App nickname: `kyoriaos-web` → **Register app**
    - You'll see a block of code. Copy these values somewhere safe:
      ```
      apiKey: "..."
@@ -119,7 +119,7 @@ Stripe handles all payments.
 
 5. Set up Webhooks (this is how Stripe tells your app when someone pays):
    - Click **Developers → Webhooks → Add endpoint**
-   - Endpoint URL: `https://app.novacoastmedia.com/api/stripe/webhook`
+   - Endpoint URL: `https://app.kyoriaos.com/api/stripe/webhook`
    - Click **Select events** → search for and select:
      - `payment_intent.succeeded`
      - `payment_intent.payment_failed`
@@ -136,7 +136,7 @@ This powers the travel fee calculation.
 
 1. Go to **console.cloud.google.com**
 
-2. Create a new project → name it `nova-coast`
+2. Create a new project → name it `kyoriaos`
 
 3. In the search bar at the top, search for **Distance Matrix API** → click it → **Enable**
 
@@ -165,7 +165,7 @@ R2 stores all your photos and videos for client galleries.
 2. In the left sidebar → **R2**
 
 3. Click **Create bucket**:
-   - Bucket name: `nova-coast-media`
+   - Bucket name: `kyoriaos-media`
    - Location: **Automatic**
    - Click **Create bucket**
 
@@ -178,7 +178,7 @@ R2 stores all your photos and videos for client galleries.
    - Go back to R2 main page → **Manage R2 API tokens**
    - Click **Create API token**
    - Permissions: **Object Read & Write**
-   - Specify bucket: `nova-coast-media`
+   - Specify bucket: `kyoriaos-media`
    - Click **Create API Token**
    - Copy **Access Key ID** and **Secret Access Key**
 
@@ -196,11 +196,11 @@ Cloudflare R2 is set up. ✓
 1. Go to **resend.com** → Sign up
 
 2. Click **API Keys** in the sidebar → **Create API Key**
-   - Name: `nova-coast`
+   - Name: `kyoriaos`
    - Copy the key (starts with `re_...`)
 
 3. Click **Domains** → **Add Domain**
-   - Enter: `novacoastmedia.com`
+   - Enter: `kyoriaos.com`
    - They'll give you DNS records to add
    - Log into wherever your domain is managed (GoDaddy, Namecheap, etc.)
    - Add the DNS records they give you (copy/paste)
@@ -214,7 +214,7 @@ Resend is set up. ✓
 
 This file holds all your secret keys. It never gets uploaded to GitHub.
 
-1. In your `nova-coast-platform` folder, find the file called `.env.local.example`
+1. In your `kyoriaos-platform` folder, find the file called `.env.local.example`
 
 2. Right-click → **Rename** → remove `.example` so it becomes `.env.local`
 
@@ -241,12 +241,12 @@ GOOGLE_MAPS_API_KEY=                   ← from Step 4
 R2_ENDPOINT=https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com
 R2_ACCESS_KEY=                         ← from Step 5
 R2_SECRET_KEY=                         ← from Step 5
-R2_BUCKET=nova-coast-media
+R2_BUCKET=kyoriaos-media
 NEXT_PUBLIC_R2_PUBLIC_URL=             ← the public bucket URL from Step 5
 
 RESEND_API_KEY=                        ← from Step 6
 
-NEXT_PUBLIC_APP_URL=https://app.novacoastmedia.com
+NEXT_PUBLIC_APP_URL=https://app.kyoriaos.com
 NEXT_PUBLIC_FROM_ZIP=92108
 ```
 
@@ -260,7 +260,7 @@ NEXT_PUBLIC_FROM_ZIP=92108
 
 2. Click **Add New → Project**
 
-3. Find `nova-coast-platform` in the list → click **Import**
+3. Find `kyoriaos-platform` in the list → click **Import**
 
 4. Under **Environment Variables**, add every key from your `.env.local` file:
    - Click **Add** for each one
@@ -272,7 +272,7 @@ NEXT_PUBLIC_FROM_ZIP=92108
 
 6. Wait 2–3 minutes. Vercel builds and deploys automatically.
 
-7. When it finishes, you'll see a URL like `nova-coast-platform.vercel.app`
+7. When it finishes, you'll see a URL like `kyoriaos-platform.vercel.app`
    — your site is live, but on a temporary URL. Next we'll connect your domain.
 
 ---
@@ -281,7 +281,7 @@ NEXT_PUBLIC_FROM_ZIP=92108
 
 1. In Vercel, click your project → **Settings → Domains**
 
-2. Type: `app.novacoastmedia.com` → **Add**
+2. Type: `app.kyoriaos.com` → **Add**
 
 3. Vercel will show you DNS records to add. They'll look like:
    ```
@@ -296,13 +296,13 @@ NEXT_PUBLIC_FROM_ZIP=92108
 
 6. Back in Vercel, click **Verify** — may take up to 10 minutes
 
-7. Your site is now live at `https://app.novacoastmedia.com` ✓
+7. Your site is now live at `https://app.kyoriaos.com` ✓
 
 ---
 
 ## STEP 10 — MAKE YOURSELF AN ADMIN
 
-1. In your `nova-coast-platform` folder, open a terminal:
+1. In your `kyoriaos-platform` folder, open a terminal:
    - On Windows: hold **Shift**, right-click inside the folder → **Open PowerShell window here**
 
 2. First install dependencies (you only do this once):
@@ -318,7 +318,7 @@ NEXT_PUBLIC_FROM_ZIP=92108
 
 4. You should see: `✓ Admin claim set for your@email.com`
 
-5. Go to `https://app.novacoastmedia.com/admin/login`
+5. Go to `https://app.kyoriaos.com/admin/login`
 
 6. Log in with your Firebase email and password
 
@@ -334,7 +334,7 @@ Now that your real URL is live:
 
 2. Click your webhook → **Update details**
 
-3. Change the URL to: `https://app.novacoastmedia.com/api/stripe/webhook`
+3. Change the URL to: `https://app.kyoriaos.com/api/stripe/webhook`
 
 4. Save
 
@@ -342,13 +342,13 @@ Now that your real URL is live:
 
 ## YOU'RE LIVE ✓
 
-Your platform is now running at `https://app.novacoastmedia.com`
+Your platform is now running at `https://app.kyoriaos.com`
 
 | Page | URL |
 |---|---|
-| Booking flow | app.novacoastmedia.com/book |
-| Admin dashboard | app.novacoastmedia.com/admin |
-| Client gallery | app.novacoastmedia.com/gallery/[token] |
+| Booking flow | app.kyoriaos.com/book |
+| Admin dashboard | app.kyoriaos.com/admin |
+| Client gallery | app.kyoriaos.com/gallery/[token] |
 
 ---
 
@@ -359,8 +359,8 @@ Your platform is now running at `https://app.novacoastmedia.com`
 2. **Add yourself as a photographer** in the admin → Photographers page
 
 3. **Link your booking page** from your main website:
-   - Add a "Book a Shoot" button on novacoastmedia.com that links to
-     `https://app.novacoastmedia.com/book`
+   - Add a "Book a Shoot" button on kyoriaos.com that links to
+     `https://app.kyoriaos.com/book`
 
 4. **Switch Stripe to live mode** when you're ready to take real payments
    - Go back to Stripe, flip the toggle from Test → Live

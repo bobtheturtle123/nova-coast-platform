@@ -30,12 +30,6 @@ export async function GET(req) {
 
   const sourceUrl = `${r2PublicUrl}/${key}`;
 
-  // Print quality — redirect directly to R2 public URL
-  if (format === "print") {
-    return Response.redirect(sourceUrl, 302);
-  }
-
-  // Web/MLS quality — fetch full-res, resize with Sharp, stream back
   try {
     const r2Res = await fetch(sourceUrl);
     if (!r2Res.ok) {
@@ -45,6 +39,23 @@ export async function GET(req) {
     const arrayBuffer = await r2Res.arrayBuffer();
     const inputBuffer = Buffer.from(arrayBuffer);
 
+    if (format === "print") {
+      // Stream original bytes with attachment header so browser downloads instead of opening
+      const baseName = name.replace(/\.[^.]+$/, "");
+      const ext = (key.match(/\.([^.]+)$/) || [])[1] || "jpg";
+      const fileName = `${baseName}.${ext}`;
+      return new Response(inputBuffer, {
+        status: 200,
+        headers: {
+          "Content-Type":        r2Res.headers.get("Content-Type") || "image/jpeg",
+          "Content-Disposition": `attachment; filename="${fileName}"`,
+          "Content-Length":      String(inputBuffer.length),
+          "Cache-Control":       "private, max-age=3600",
+        },
+      });
+    }
+
+    // Web/MLS quality — resize with Sharp
     const webBuffer = await sharp(inputBuffer)
       .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
       .jpeg({ quality: WEB_QUALITY, progressive: true })

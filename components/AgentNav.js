@@ -18,9 +18,8 @@ export default function AgentNav({ slug }) {
   const t = token ? `?token=${token}` : "";
 
   const navItems = [
-    { label: "Dashboard",   href: `/${slug}/agent`,          exact: true },
-    { label: "My Listings", href: `/${slug}/agent/listings`               },
-    { label: "Settings",    href: `/${slug}/agent/settings`               },
+    { label: "Dashboard", href: `/${slug}/agent`,         exact: true },
+    { label: "Settings",  href: `/${slug}/agent/settings`              },
   ];
 
   return (
