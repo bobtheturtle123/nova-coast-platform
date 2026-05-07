@@ -78,7 +78,7 @@ export default function CreateBookingPage() {
     clientName: "", clientEmail: "", clientPhone: "",
     address: "", unit: "", city: "", state: "CA", zip: "", lat: null, lng: null,
     sqft: "", notes: "",
-    shootDate: "", shootTime: "",
+    shootDate: "", shootTime: "", shootDuration: "",
     additionalAppointments: [],
     packageId: "", serviceIds: [], addonIds: [],
     customLineItems: [],
@@ -159,6 +159,34 @@ export default function CreateBookingPage() {
     const customTotal = form.customLineItems.reduce((s, i) => s + (Number(i.price) || 0), 0);
     return { ...base, customTotal, total: base.subtotal + customTotal };
   }, [form.packageId, form.serviceIds, form.addonIds, form.sqft, form.customLineItems, catalog]);
+
+  const computedDuration = useMemo(() => {
+    if (form.packageId) {
+      const pkg = catalog.packages.find((p) => p.id === form.packageId);
+      if (!pkg?.includes?.length) return 0;
+      return pkg.includes.reduce((sum, svcId) => {
+        const svc = catalog.services.find((s) => s.id === svcId);
+        return sum + (svc?.duration || 0);
+      }, 0);
+    }
+    return form.serviceIds.reduce((sum, id) => {
+      const svc = catalog.services.find((s) => s.id === id);
+      return sum + (svc?.duration || 0);
+    }, 0);
+  }, [form.packageId, form.serviceIds, catalog]);
+
+  const effectiveDuration = form.shootDuration !== "" ? Number(form.shootDuration) : computedDuration;
+
+  const shootEndTime = useMemo(() => {
+    if (!form.shootTime || !effectiveDuration) return null;
+    const [h, m] = form.shootTime.split(":").map(Number);
+    const totalMin = h * 60 + m + effectiveDuration;
+    const endH = Math.floor(totalMin / 60) % 24;
+    const endM = totalMin % 60;
+    const suffix = endH >= 12 ? "PM" : "AM";
+    const h12 = endH % 12 || 12;
+    return `${h12}:${String(endM).padStart(2, "0")} ${suffix}`;
+  }, [form.shootTime, effectiveDuration]);
 
   const availability = useMemo(() => {
     if (!form.shootDate) return {};
@@ -246,7 +274,7 @@ export default function CreateBookingPage() {
           const el = data.rows?.[i]?.elements?.[0];
           if (!el || el.status !== "OK") return;
 
-          const SHOOT_MIN = 120;
+          const SHOOT_MIN = effectiveDuration || 120;
           let conflict = false;
           if (form.shootTime && c.existingTime) {
             const existingD = new Date(c.existingTime.length === 10 ? c.existingTime + "T12:00:00" : c.existingTime);
@@ -612,14 +640,34 @@ export default function CreateBookingPage() {
             {/* Schedule + Team Availability */}
             <div className="card">
               <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-3">Schedule</h2>
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
                   <label className="label-field">Shoot Date</label>
                   <input type="date" value={form.shootDate} onChange={set("shootDate")} className="input-field w-full" />
                 </div>
                 <div>
-                  <label className="label-field">Shoot Time</label>
+                  <label className="label-field">Start Time</label>
                   <input type="time" value={form.shootTime} onChange={set("shootTime")} className="input-field w-full" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="label-field">Duration (min)</label>
+                  <input type="number" min="0" max="720" step="15"
+                    value={form.shootDuration}
+                    onChange={set("shootDuration")}
+                    className="input-field w-full"
+                    placeholder={computedDuration || "min"} />
+                  {computedDuration > 0 && form.shootDuration === "" && (
+                    <p className="text-[11px] text-gray-400 mt-0.5">Auto: {computedDuration} min from services</p>
+                  )}
+                </div>
+                <div>
+                  <label className="label-field">Est. End Time</label>
+                  <div className={`input-field w-full select-none ${shootEndTime ? "text-gray-700" : "text-gray-300"}`}
+                    style={{ background: "var(--bg-subtle)" }}>
+                    {shootEndTime || "—"}
+                  </div>
                 </div>
               </div>
 

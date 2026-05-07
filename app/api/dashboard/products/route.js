@@ -66,7 +66,9 @@ function sanitizeItem(body, type) {
     thumbnailUrl: typeof body.thumbnailUrl === "string" && body.thumbnailUrl.startsWith("https://")
       ? body.thumbnailUrl.slice(0, 500)
       : "",
+    duration:     body.duration !== undefined ? Math.max(0, Math.round(Number(body.duration) || 0)) : undefined,
   };
+  if (base.duration === undefined) delete base.duration;
 
   // Tier pricing — all numeric, no injection risk
   if (body.priceTiers && typeof body.priceTiers === "object") {

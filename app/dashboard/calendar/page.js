@@ -15,6 +15,8 @@ const TABS = [
   { id: "unscheduled", label: "Unscheduled" },
 ];
 
+const DAYS_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function avatarColor(str) {
   const p = ["#3486cf","#1e6091","#2e7d32","#6a1b9a","#d84315","#00695c","#b5872d","#c0392b"];
@@ -103,11 +105,17 @@ function UnscheduledTab({ listings }) {
 }
 
 // ─── Calendar tab ─────────────────────────────────────────────────────────────
-function CalendarTab({ listings, loading }) {
+function CalendarTab({ listings, blocks, loading }) {
   const today = new Date();
   const [year,     setYear]     = useState(today.getFullYear());
   const [month,    setMonth]    = useState(today.getMonth());
   const [selected, setSelected] = useState(null);
+  const [calView,  setCalView]  = useState("month"); // "month" | "week"
+  const [weekAnchor, setWeekAnchor] = useState(() => {
+    const d = new Date(); d.setHours(0,0,0,0);
+    d.setDate(d.getDate() - d.getDay());
+    return d;
+  });
 
   const byDate = useMemo(() => {
     const map = {};
@@ -151,6 +159,29 @@ function CalendarTab({ listings, loading }) {
   const monthCount   = Object.entries(byDate).filter(([k]) => k.startsWith(monthPrefix)).reduce((s, [, v]) => s + v.length, 0);
   const selectedListings = selected ? (byDate[selected] || []) : [];
 
+  // Week view helpers
+  const weekDates = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(weekAnchor);
+      d.setDate(weekAnchor.getDate() + i);
+      return d;
+    });
+  }, [weekAnchor]);
+
+  function prevWeek() { setWeekAnchor((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; }); }
+  function nextWeek() { setWeekAnchor((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; }); }
+  function goToWeekToday() {
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - d.getDay());
+    setWeekAnchor(d);
+  }
+
+  function isBlockedDay(dateKey) {
+    return blocks.some((b) => dateKey >= b.startDate?.slice(0,10) && dateKey <= b.endDate?.slice(0,10));
+  }
+  function getBlocksForDay(dateKey) {
+    return blocks.filter((b) => dateKey >= b.startDate?.slice(0,10) && dateKey <= b.endDate?.slice(0,10));
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-5 h-5 border-2 border-gray-200 border-t-[#3486cf] rounded-full animate-spin" />
@@ -159,32 +190,44 @@ function CalendarTab({ listings, loading }) {
 
   return (
     <div className="p-6 max-w-6xl">
-      {/* Month nav */}
-      <div className="flex items-center justify-between mb-6">
-        <p className="text-sm text-gray-400">
-          {monthCount} shoot{monthCount !== 1 ? "s" : ""} in {MONTHS[month]} {year}
-        </p>
+      {/* Nav bar */}
+      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <button onClick={goToday}
+          <button onClick={calView === "month" ? goToday : goToWeekToday}
             className="text-sm font-medium px-3.5 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
             Today
           </button>
           <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden">
-            <button onClick={prevMonth}
+            <button onClick={calView === "month" ? prevMonth : prevWeek}
               className="px-3 py-2 hover:bg-gray-50 transition-colors text-gray-500 border-r border-gray-200">
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <span className="px-4 py-2 text-sm font-semibold text-gray-900 min-w-[140px] text-center">
-              {MONTHS[month]} {year}
+            <span className="px-4 py-2 text-sm font-semibold text-gray-900 min-w-[160px] text-center">
+              {calView === "month"
+                ? `${MONTHS[month]} ${year}`
+                : `${MONTHS[weekDates[0].getMonth()]} ${weekDates[0].getDate()} – ${weekDates[6].getDate()}, ${weekDates[0].getFullYear()}`}
             </span>
-            <button onClick={nextMonth}
+            <button onClick={calView === "month" ? nextMonth : nextWeek}
               className="px-3 py-2 hover:bg-gray-50 transition-colors text-gray-500 border-l border-gray-200">
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-gray-400">
+            {calView === "month" ? `${monthCount} shoot${monthCount !== 1 ? "s" : ""} this month` : ""}
+          </p>
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+            {["week","month"].map((v) => (
+              <button key={v} onClick={() => setCalView(v)}
+                className={`px-3 py-2 capitalize font-medium transition-colors ${calView === v ? "bg-[#3486cf] text-white" : "text-gray-500 hover:bg-gray-50"}`}>
+                {v}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -193,58 +236,126 @@ function CalendarTab({ listings, loading }) {
         {/* Calendar grid */}
         <div className="flex-1 min-w-0">
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="grid grid-cols-7 border-b border-gray-100">
-              {DAYS.map((d) => (
-                <div key={d} className="py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">{d}</div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7">
-              {cells.map((day, idx) => {
-                if (!day) return (
-                  <div key={`empty-${idx}`}
-                    className="min-h-[96px] p-1.5 border-b border-r border-gray-50 bg-gray-50/40"
-                    style={{ borderRight: (idx + 1) % 7 === 0 ? "none" : undefined }}
-                  />
-                );
-                const key     = dayKey(day);
-                const shoots  = byDate[key] || [];
-                const isToday = key === todayKey;
-                const isSel   = key === selected;
-                const isLast  = (idx + 1) % 7 === 0;
-                const isLastRow = idx >= cells.length - 7;
-                return (
-                  <div key={key}
-                    onClick={() => setSelected(isSel ? null : key)}
-                    className={`min-h-[96px] p-1.5 cursor-pointer transition-colors
-                      ${isSel ? "bg-[#EEF5FC]" : "hover:bg-gray-50"}
-                      ${isLastRow ? "" : "border-b border-gray-100"}
-                      ${isLast ? "" : "border-r border-gray-100"}
-                    `}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold
-                        ${isToday ? "bg-[#3486cf] text-white" : "text-gray-700"}`}>
-                        {day}
-                      </span>
-                      {shoots.length > 2 && <span className="text-[10px] text-gray-400 font-medium">{shoots.length}</span>}
-                    </div>
-                    <div className="space-y-0.5">
-                      {shoots.slice(0, 2).map((l) => (
-                        <Link key={l.id} href={`/dashboard/listings/${l.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="block text-[10px] leading-tight px-1.5 py-0.5 rounded font-medium truncate text-white transition-opacity hover:opacity-80"
-                          style={{ background: avatarColor(l.clientName || "") }}
-                          title={`${l.clientName} · ${l.address?.split(",")[0]}`}>
-                          {l.clientName?.split(" ")[0] || "Booking"}
-                        </Link>
-                      ))}
-                      {shoots.length > 2 && (
-                        <span className="block text-[10px] text-gray-400 px-1">+{shoots.length - 2} more</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+
+            {/* ── Week view ── */}
+            {calView === "week" && (
+              <>
+                <div className="grid grid-cols-7 border-b border-gray-100">
+                  {weekDates.map((d) => {
+                    const isToday = d.toDateString() === today.toDateString();
+                    const dk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+                    const blocked = isBlockedDay(dk);
+                    return (
+                      <div key={dk} className={`px-2 py-2.5 text-center border-r last:border-r-0 border-gray-100 ${blocked ? "bg-red-50/50" : ""}`}>
+                        <p className="text-xs text-gray-400 uppercase tracking-wide">{DAYS_SHORT[d.getDay()]}</p>
+                        <p className={`text-sm font-bold mt-0.5 ${isToday ? "w-7 h-7 rounded-full bg-[#3486cf] text-white flex items-center justify-center mx-auto" : "text-gray-800"}`}>
+                          {d.getDate()}
+                        </p>
+                        {blocked && <p className="text-[9px] text-red-400 font-semibold mt-0.5 uppercase tracking-wide">Blocked</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="grid grid-cols-7 min-h-[200px]">
+                  {weekDates.map((d) => {
+                    const dk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+                    const shoots = byDate[dk] || [];
+                    const dayBlocks = getBlocksForDay(dk);
+                    const isToday = d.toDateString() === today.toDateString();
+                    return (
+                      <div key={dk} className={`p-1.5 border-r last:border-r-0 border-gray-100 min-h-[200px] relative ${isToday ? "bg-[#3486cf]/2" : ""}`}>
+                        {dayBlocks.length > 0 && (
+                          <div className="absolute inset-0 pointer-events-none rounded"
+                            style={{ background: "repeating-linear-gradient(-45deg,#fee2e2,#fee2e2 3px,transparent 3px,transparent 10px)", opacity: 0.5 }} />
+                        )}
+                        {dayBlocks.map((bl) => (
+                          <div key={bl.id} className="text-[10px] bg-red-100 border-l-2 border-red-400 px-1.5 py-0.5 rounded mb-1 relative z-10">
+                            <span className="text-red-600 font-medium truncate block">{bl.reason}</span>
+                            {bl.memberName && <span className="text-red-400">{bl.memberName}</span>}
+                          </div>
+                        ))}
+                        {shoots.map((l) => (
+                          <Link key={l.id} href={`/dashboard/listings/${l.id}`}
+                            className="block text-[10px] leading-tight px-1.5 py-1 rounded mb-1 font-medium truncate text-white relative z-10 hover:opacity-80"
+                            style={{ background: avatarColor(l.clientName || "") }}
+                            title={`${l.clientName} · ${l.address?.split(",")[0]}`}>
+                            {l.clientName?.split(" ")[0] || "Booking"}
+                            {(l.shootTime || l.preferredTime) && (
+                              <span className="block font-normal opacity-80">{l.shootTime || l.preferredTime}</span>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* ── Month view ── */}
+            {calView === "month" && (
+              <>
+                <div className="grid grid-cols-7 border-b border-gray-100">
+                  {DAYS.map((d) => (
+                    <div key={d} className="py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-gray-400">{d}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7">
+                  {cells.map((day, idx) => {
+                    if (!day) return (
+                      <div key={`empty-${idx}`}
+                        className="min-h-[96px] p-1.5 border-b border-r border-gray-50 bg-gray-50/40"
+                        style={{ borderRight: (idx + 1) % 7 === 0 ? "none" : undefined }}
+                      />
+                    );
+                    const key     = dayKey(day);
+                    const shoots  = byDate[key] || [];
+                    const isToday = key === todayKey;
+                    const isSel   = key === selected;
+                    const isLast  = (idx + 1) % 7 === 0;
+                    const isLastRow = idx >= cells.length - 7;
+                    const hasBlock = isBlockedDay(key);
+                    const dayBlockList = getBlocksForDay(key);
+                    return (
+                      <div key={key}
+                        onClick={() => setSelected(isSel ? null : key)}
+                        className={`min-h-[96px] p-1.5 cursor-pointer transition-colors
+                          ${isSel ? "bg-[#EEF5FC]" : hasBlock ? "bg-red-50/40 hover:bg-red-50/60" : "hover:bg-gray-50"}
+                          ${isLastRow ? "" : "border-b border-gray-100"}
+                          ${isLast ? "" : "border-r border-gray-100"}
+                        `}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-semibold
+                            ${isToday ? "bg-[#3486cf] text-white" : "text-gray-700"}`}>
+                            {day}
+                          </span>
+                          {shoots.length > 2 && <span className="text-[10px] text-gray-400 font-medium">{shoots.length}</span>}
+                        </div>
+                        <div className="space-y-0.5">
+                          {dayBlockList.map((bl) => (
+                            <div key={bl.id} className="text-[9px] font-semibold text-red-500 bg-red-100 px-1 py-0.5 rounded truncate">
+                              🚫 {bl.reason}{bl.memberName ? ` · ${bl.memberName}` : ""}
+                            </div>
+                          ))}
+                          {shoots.slice(0, 2).map((l) => (
+                            <Link key={l.id} href={`/dashboard/listings/${l.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="block text-[10px] leading-tight px-1.5 py-0.5 rounded font-medium truncate text-white transition-opacity hover:opacity-80"
+                              style={{ background: avatarColor(l.clientName || "") }}
+                              title={`${l.clientName} · ${l.address?.split(",")[0]}`}>
+                              {l.clientName?.split(" ")[0] || "Booking"}
+                            </Link>
+                          ))}
+                          {shoots.length > 2 && (
+                            <span className="block text-[10px] text-gray-400 px-1">+{shoots.length - 2} more</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -366,15 +477,18 @@ export default function SchedulePage() {
   const router       = useRouter();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "calendar");
   const [listings,  setListings]  = useState([]);
+  const [blocks,    setBlocks]    = useState([]);
   const [loading,   setLoading]   = useState(true);
 
   useEffect(() => {
     auth.currentUser?.getIdToken(true).then(async (token) => {
-      const res = await fetch("/api/dashboard/listings", { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const d = await res.json();
-        setListings(d.listings || []);
-      }
+      const headers = { Authorization: `Bearer ${token}` };
+      const [listRes, blocksRes] = await Promise.all([
+        fetch("/api/dashboard/listings", { headers }),
+        fetch("/api/dashboard/team/blocks", { headers }),
+      ]);
+      if (listRes.ok)   { const d = await listRes.json();   setListings(d.listings || []); }
+      if (blocksRes.ok) { const d = await blocksRes.json(); setBlocks(d.blocks || []); }
       setLoading(false);
     });
   }, []);
@@ -415,7 +529,7 @@ export default function SchedulePage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "calendar"    && <CalendarTab listings={listings} loading={loading} />}
+      {activeTab === "calendar"    && <CalendarTab listings={listings} blocks={blocks} loading={loading} />}
       {activeTab === "unscheduled" && <UnscheduledTab listings={listings} />}
     </div>
   );

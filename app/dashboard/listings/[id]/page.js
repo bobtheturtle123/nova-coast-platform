@@ -855,30 +855,72 @@ if (loading) return (
             )}
 
             {/* Gallery quick links */}
-            {gallery && (
-              <div className="card p-5">
-                <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Gallery</p>
-                <div className="flex items-center justify-between mb-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    gallery.delivered ? "bg-green-50 text-green-700" :
-                    gallery.unlocked  ? "bg-blue-50 text-blue-700"  :
-                    "bg-amber-50 text-amber-700"
-                  }`}>
-                    {gallery.delivered ? "Delivered" : gallery.unlocked ? "Unlocked" : "Locked"}
-                  </span>
+            <div className="card p-5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs uppercase tracking-wide text-gray-400">Gallery</p>
+                {gallery && (
                   <button onClick={toggleUnlock} className="text-xs text-[#3486cf] hover:underline">
-                    {gallery.unlocked ? "Lock gallery" : "Unlock gallery"}
+                    {gallery.unlocked ? "Lock" : "Unlock"}
+                  </button>
+                )}
+              </div>
+
+              {gallery ? (
+                <>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      gallery.delivered ? "bg-green-50 text-green-700" :
+                      gallery.unlocked  ? "bg-blue-50 text-blue-700"  :
+                      "bg-amber-50 text-amber-700"
+                    }`}>
+                      {gallery.delivered ? "Delivered" : gallery.unlocked ? "Unlocked" : "Locked"}
+                    </span>
+                    <span className="text-xs text-gray-400">{images.length} photos · {videos.length} videos</span>
+                  </div>
+
+                  {/* Cover preview strip */}
+                  {images.length > 0 && (
+                    <div className="flex gap-1.5 mb-3 overflow-hidden rounded-lg">
+                      {images.slice(0, 4).map((img, i) => (
+                        <div key={i} className="relative flex-1 h-14 bg-gray-100 overflow-hidden rounded">
+                          <img src={img.url} alt="" className="w-full h-full object-cover" />
+                          {i === 3 && images.length > 4 && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                              <span className="text-white text-xs font-bold">+{images.length - 4}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 flex-wrap">
+                    <button onClick={openGalleryEditor}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#3486cf] text-white hover:bg-[#2a6dab] transition-colors">
+                      <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Open Gallery
+                    </button>
+                    {gallery.accessToken && (
+                      <a href={`/${booking.tenantSlug || ""}/gallery/${gallery.accessToken}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+                        Agent View ↗
+                      </a>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-xs text-gray-400 mb-2">No gallery yet</p>
+                  <button onClick={openGalleryEditor}
+                    className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded-lg hover:bg-[#3486cf]/5 transition-colors">
+                    Create Gallery
                   </button>
                 </div>
-                <p className="text-sm text-gray-500 mb-3">{images.length} photos · {videos.length} videos</p>
-                <a
-                  href={`/${booking.tenantSlug || ""}/gallery/${gallery.accessToken}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-[#3486cf] hover:underline">
-                  View agent gallery ↗
-                </a>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 

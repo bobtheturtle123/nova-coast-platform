@@ -80,18 +80,17 @@ export async function POST(req, { params }) {
 
   // Send email if requested and Resend is configured
   if (sendEmail && process.env.RESEND_API_KEY) {
-    const primary  = tenant.branding?.primaryColor || "#3486cf";
-    const bizName  = tenant.branding?.businessName || tenant.businessName || "Your Photographer";
-    const from     = tenant.branding?.fromEmail
-      ? `${bizName} <${tenant.branding.fromEmail}>`
-      : `${bizName} <noreply@kyoriaos.com>`;
+    const primary   = tenant.branding?.primaryColor || "#3486cf";
+    const bizName   = tenant.branding?.businessName || tenant.businessName || "Your Photographer";
+    const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
+    const from      = `${bizName} <${fromEmail}>`;
     const address  = booking.fullAddress || booking.address || "your property";
 
     try {
       await getResend()?.emails.send({
         from,
         to:      [booking.clientEmail],
-        subject: `Your media portal is ready - ${address}`,
+        subject: `Your media portal is ready — ${address}`,
         html: `
           <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:40px 20px;background:#fff">
             <h2 style="font-family:Georgia,serif;color:${primary};font-size:24px;margin:0 0 16px">
@@ -121,9 +120,11 @@ export async function POST(req, { params }) {
             <p style="color:#ccc;font-size:11px;text-align:center">Powered by KyoriaOS - ${bizName}</p>
           </div>
         `,
-      });
+      })
+        .then(() => console.log("[email] portal invite sent to", booking.clientEmail))
+        .catch((e) => console.error("[email] portal invite FAILED to", booking.clientEmail, ":", e?.message || e));
     } catch (emailErr) {
-      console.error("[send-agent-access] Email error (non-fatal):", emailErr);
+      console.error("[send-agent-access] Email error (non-fatal):", emailErr?.message || emailErr);
     }
   }
 

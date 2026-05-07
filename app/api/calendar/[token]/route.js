@@ -76,15 +76,25 @@ function buildICal(member, bookings, tenantName) {
   ];
 
   for (const b of bookings) {
-    const uid = `booking-${b.id}@nova-os.app`;
+    const uid = `booking-${b.id}@kyoriaos.com`;
 
     // Build start/end datetimes
     let dtStart, dtEnd;
     if (b.shootDate) {
-      const d = new Date(b.shootDate);
+      // Use actual shoot time if available, otherwise noon
+      const dateStr = typeof b.shootDate === "string" && b.shootDate.length === 10
+        ? b.shootDate
+        : new Date(b.shootDate).toISOString().slice(0, 10);
+      const timeStr = b.shootTime || b.preferredTime || "12:00";
+      const startISO = `${dateStr}T${timeStr}:00`;
+      const d = new Date(startISO);
       dtStart = toICalDate(d);
-      const end = new Date(d.getTime() + 2 * 60 * 60 * 1000); // +2 hours default
-      dtEnd = toICalDate(end);
+      // Use shootDuration if stored, else fallback to 2 hours
+      const durationMin = (b.shootDuration && Number(b.shootDuration) > 0)
+        ? Number(b.shootDuration)
+        : 120;
+      const endD = new Date(d.getTime() + durationMin * 60 * 1000);
+      dtEnd = toICalDate(endD);
     } else if (b.preferredDate) {
       // All-day event if no confirmed time
       const ds = b.preferredDate; // "YYYY-MM-DD"

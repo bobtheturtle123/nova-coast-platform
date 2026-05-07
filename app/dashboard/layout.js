@@ -297,7 +297,7 @@ export default function DashboardLayout({ children }) {
             <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-6 w-auto object-contain" />
           </div>
 
-          <main className="flex-1 overflow-auto">{children}</main>
+          <main className="flex-1 overflow-x-hidden min-w-0">{children}</main>
         </div>
 
         <AiChatButton />

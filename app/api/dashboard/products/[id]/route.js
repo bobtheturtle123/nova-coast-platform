@@ -19,7 +19,9 @@ function sanitizeItem(body, type) {
     price:       Number(body.price) || 0,
     active:      body.active !== false,
     thumbnailUrl: body.thumbnailUrl || "",
+    duration:    body.duration !== undefined ? Math.max(0, Math.round(Number(body.duration) || 0)) : undefined,
   };
+  if (base.duration === undefined) delete base.duration;
 
   if (body.priceTiers && typeof body.priceTiers === "object") {
     base.priceTiers = {

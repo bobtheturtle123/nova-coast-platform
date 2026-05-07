@@ -64,7 +64,11 @@
     color: var(--text-primary);
     font-size: 14px;
     line-height: 1.6;
+    overflow-x: hidden;
   }
+
+  /* Prevent any child from causing horizontal page scroll */
+  * { max-width: 100%; box-sizing: border-box; }
 
   h1 { font-size: 1.5rem;   font-weight: 600; letter-spacing: -0.025em; line-height: 1.25; }
   h2 { font-size: 1.25rem;  font-weight: 600; letter-spacing: -0.02em;  line-height: 1.3; }

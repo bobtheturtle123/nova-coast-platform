@@ -53,6 +53,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
     assignedPhotographers: item?.assignedPhotographers || [],
     payRate:      item?.payRate      ?? "",
     payRateTiers: item?.payRateTiers || {},
+    duration:     item?.duration     ?? "",
   }));
   const [saving,      setSaving]      = useState(false);
   const [deleting,    setDeleting]    = useState(false);
@@ -145,6 +146,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
       ...(type === "packages" ? { tagline: form.tagline, deliverables: form.deliverables, featured: form.featured, includes: form.includes } : {}),
       ...(type === "addons" ? { showWith: form.showWith } : {}),
       ...((type === "services" || type === "packages") ? { isTwilight: form.isTwilight } : {}),
+      ...(type === "services" ? { duration: form.duration !== "" ? Number(form.duration) : null } : {}),
       payRate:      form.payRate !== "" ? Number(form.payRate) : null,
       payRateTiers: form.tiered && Object.keys(form.payRateTiers).length > 0 ? form.payRateTiers : null,
     };
@@ -463,6 +465,25 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                     {m.name}
                   </button>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Duration — for services only */}
+          {type === "services" && (
+            <div>
+              <label className="label-field">Duration (minutes)</label>
+              <p className="text-xs text-gray-400 mb-2">Estimated time for this service. Used to calculate appointment end times and avoid double-booking.</p>
+              <div className="flex items-center gap-2">
+                <input type="number" value={form.duration} min="0" max="480" step="15"
+                  onChange={field("duration")}
+                  className="input-field w-28" placeholder="e.g. 90" />
+                <span className="text-xs text-gray-400">min</span>
+                {form.duration && (
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                    ≈ {Math.floor(Number(form.duration) / 60) > 0 ? `${Math.floor(Number(form.duration) / 60)}h ` : ""}{Number(form.duration) % 60 > 0 ? `${Number(form.duration) % 60}m` : ""}
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -941,7 +962,9 @@ export default function ProductsPage() {
   const getExtraInfo = (item) => {
     if (activeType === "services") {
       const n = serviceUsage[item.id] || 0;
-      return n > 0 ? `${n} package${n !== 1 ? "s" : ""}` : "Not in packages";
+      const pkgStr = n > 0 ? `${n} pkg` : "No packages";
+      const durStr = item.duration ? `${item.duration} min` : null;
+      return durStr ? `${pkgStr} · ${durStr}` : pkgStr;
     }
     if (activeType === "addons") return addonTriggerLabel(item);
     if (activeType === "packages") return packageServicesLabel(item);
