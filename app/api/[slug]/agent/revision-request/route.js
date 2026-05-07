@@ -58,15 +58,18 @@ export async function POST(req, { params }) {
       resolvedAt:  null,
     });
 
-    // Notify admin (fire-and-forget)
+    // Notify admin (fire-and-forget) — respects team_revision_request notification preference
     try {
       const resendKey = process.env.RESEND_API_KEY;
-      if (resendKey && tenant.email) {
+      const notifPref = tenant.notificationPrefs?.team_revision_request;
+      const emailEnabled = notifPref?.channels?.email !== false;
+      if (resendKey && tenant.email && emailEnabled) {
         const { Resend } = await import("resend");
         const resend   = new Resend(resendKey);
         const primary  = tenant.branding?.primaryColor || "#3486cf";
         const bizName  = tenant.branding?.businessName || "KyoriaOS";
-        const from     = `${bizName} <noreply@kyoriaos.com>`;
+        const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
+        const from     = `${bizName} <${fromEmail}>`;
         await resend.emails.send({
           from, to: [tenant.email],
           subject: `Revision Request — ${bookingData.fullAddress || bookingData.address}`,
@@ -78,9 +81,11 @@ export async function POST(req, { params }) {
               View in Dashboard →
             </a>
           </div>`,
-        }).catch(() => {});
+        })
+          .then(() => console.log("[email] revision request notification sent to", tenant.email))
+          .catch((e) => console.error("[email] revision request notification FAILED:", e?.message || e));
       }
-    } catch { /* non-fatal */ }
+    } catch (e) { console.error("[email] revision request notification error (non-fatal):", e?.message); }
 
     return Response.json({ ok: true, revisionId });
   } catch (err) {

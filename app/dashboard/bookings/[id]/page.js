@@ -168,6 +168,7 @@ export default function BookingDetailPage() {
   const [msg,                  setMsg]                  = useState("");
   const [convertingToListing,  setConvertingToListing]  = useState(false);
   const [shootDate,            setShootDate]            = useState("");
+  const [additionalAppts,      setAdditionalAppts]      = useState([]);
   const [showWeather,          setShowWeather]          = useState(true);
   const [tempUnit,             setTempUnit]             = useState("F");
   const [workflowStatus,       setWorkflowStatus]       = useState("booked");
@@ -267,6 +268,7 @@ export default function BookingDetailPage() {
         setBooking(bk);
         setShootDate(bk.shootDate?.split?.("T")?.[0] || "");
         setShootTime(bk.preferredTime || bk.shootTime || "");
+        setAdditionalAppts(bk.additionalAppointments || []);
         setBookingNotes(bk.notes || "");
         setWorkflowStatus(resolveWorkflowStatus(bk));
         setStatusHistory(bk.statusHistory || []);
@@ -581,7 +583,7 @@ export default function BookingDetailPage() {
                 <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Shoot Time</label>
                 <div className="flex gap-2">
                   <input type="time" value={shootTime} onChange={(e) => setShootTime(e.target.value)} className="input-field flex-1" />
-                  <button onClick={() => update({ preferredTime: shootTime })} disabled={saving} className="btn-outline px-3 py-2 text-xs flex-shrink-0">Save</button>
+                  <button onClick={() => update({ shootTime, preferredTime: shootTime })} disabled={saving} className="btn-outline px-3 py-2 text-xs flex-shrink-0">Save</button>
                 </div>
               </div>
               <div>
@@ -595,7 +597,44 @@ export default function BookingDetailPage() {
                 </div>
               </div>
             </div>
-            <div>
+
+            {/* Additional appointments */}
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Additional Appointments</label>
+                <button type="button"
+                  onClick={() => setAdditionalAppts((a) => [...a, { date: "", time: "" }])}
+                  className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2.5 py-1 rounded hover:bg-[#3486cf]/5 transition-colors">
+                  + Add
+                </button>
+              </div>
+              {additionalAppts.length === 0 && (
+                <p className="text-xs text-gray-400 italic">No additional appointments.</p>
+              )}
+              <div className="space-y-2">
+                {additionalAppts.map((appt, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg border border-gray-200">
+                    <input type="date" value={appt.date || ""}
+                      onChange={(e) => setAdditionalAppts((a) => a.map((x, idx) => idx === i ? { ...x, date: e.target.value } : x))}
+                      className="input-field text-sm flex-1 py-1.5" />
+                    <input type="time" value={appt.time || ""}
+                      onChange={(e) => setAdditionalAppts((a) => a.map((x, idx) => idx === i ? { ...x, time: e.target.value } : x))}
+                      className="input-field text-sm w-32 py-1.5" />
+                    <button type="button"
+                      onClick={() => setAdditionalAppts((a) => a.filter((_, idx) => idx !== i))}
+                      className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0 text-sm">✕</button>
+                  </div>
+                ))}
+              </div>
+              {additionalAppts.length > 0 && (
+                <button onClick={() => update({ additionalAppointments: additionalAppts })} disabled={saving}
+                  className="mt-2 text-xs text-[#3486cf] font-semibold hover:underline">
+                  {saving ? "Saving…" : "Save Appointments"}
+                </button>
+              )}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-100">
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Notes</label>
                 {notesEditing ? (

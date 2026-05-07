@@ -137,21 +137,55 @@ export async function POST(req) {
           const resend = new Resend(resendKey);
           const primary   = tenant.branding?.primaryColor || "#3486cf";
           const bizName   = tenant.branding?.businessName || tenant.businessName || "KyoriaOS";
-          const fromEmail = tenant.branding?.fromEmail || "noreply@kyoriaos.com";
+          const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
           const from      = `${bizName} <${fromEmail}>`;
           const shootInfo = shootDate
             ? `${new Date(shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}${shootTime ? ` at ${shootTime}` : ""}`
             : null;
+          const adminEmail = tenant.email || adminRecord?.email || null;
 
           const sends = [];
 
+          const bookingHtml = (heading, intro, extra = "") => `
+            <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:40px 20px">
+              <h2 style="color:${primary};font-family:Georgia,serif;margin:0 0 12px">${heading}</h2>
+              <p style="color:#555;margin:0 0 20px">${intro}</p>
+              <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                <tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px;width:36%">Property</td>
+                    <td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${fullAddress}</td></tr>
+                <tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px">Client</td>
+                    <td style="padding:8px 0;border-bottom:1px solid #eee">${clientName}${clientPhone ? ` · ${clientPhone}` : ""}</td></tr>
+                ${shootInfo ? `<tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px">Scheduled</td>
+                    <td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${shootInfo}</td></tr>` : ""}
+                ${notes ? `<tr><td style="padding:8px 0;color:#888;font-size:13px">Notes</td>
+                    <td style="padding:8px 0;font-style:italic;color:#666">${notes}</td></tr>` : ""}
+              </table>
+              ${extra}
+              <p style="color:#ccc;font-size:11px">${bizName}</p>
+            </div>`;
+
           // Client confirmation
           if (clientEmail) {
-            sends.push(resend.emails.send({
-              from, to: [clientEmail],
-              subject: `Booking confirmed — ${fullAddress}`,
-              html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:40px 20px"><h2 style="color:${primary};font-family:Georgia,serif">Booking Confirmed</h2><p>Hi ${clientName},</p><p>Your booking for <strong>${fullAddress}</strong> has been created.${shootInfo ? `<br/>Scheduled: ${shootInfo}` : ""}</p><p style="color:#888;font-size:12px">Questions? Reply to this email.</p><hr style="border:none;border-top:1px solid #eee;margin:20px 0"/><p style="color:#ccc;font-size:11px">${bizName}</p></div>`,
-            }).catch(() => {}));
+            sends.push(
+              resend.emails.send({
+                from, to: [clientEmail],
+                subject: `Booking confirmed — ${fullAddress}`,
+                html: bookingHtml("Booking Confirmed", `Hi ${clientName}, your booking for <strong>${fullAddress}</strong> has been created.`, `<p style="color:#888;font-size:12px;margin:0">Questions? Reply to this email.</p>`),
+              }).then(() => console.log("[email] client confirmation sent to", clientEmail))
+                .catch((e) => console.error("[email] client confirmation FAILED:", e?.message || e))
+            );
+          }
+
+          // Admin notification
+          if (adminEmail) {
+            sends.push(
+              resend.emails.send({
+                from, to: [adminEmail],
+                subject: `New booking — ${fullAddress}`,
+                html: bookingHtml("New Booking Created", `${clientName} · ${clientEmail}${clientPhone ? ` · ${clientPhone}` : ""}`),
+              }).then(() => console.log("[email] admin notification sent to", adminEmail))
+                .catch((e) => console.error("[email] admin notification FAILED:", e?.message || e))
+            );
           }
 
           // Build .ics attachment for photographer calendar invites
@@ -169,32 +203,20 @@ export async function POST(req) {
             }
           }
 
-          // Helper: send assignment email to one photographer
+          // Photographer assignment
           const sendToPhotographer = (pEmail, pName) => {
             if (!pEmail) return;
-            sends.push(resend.emails.send({
-              from,
-              to: [pEmail],
-              subject: `New shoot assigned to you — ${fullAddress}`,
-              html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:40px 20px">
-                <h2 style="color:${primary};font-family:Georgia,serif;margin:0 0 8px">New Shoot Assigned</h2>
-                <p style="color:#555;margin:0 0 20px">Hi ${pName || "there"},</p>
-                <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
-                  <tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px;width:36%">Property</td>
-                      <td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${fullAddress}</td></tr>
-                  <tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px">Client</td>
-                      <td style="padding:8px 0;border-bottom:1px solid #eee">${clientName}${clientPhone ? ` · ${clientPhone}` : ""}</td></tr>
-                  ${shootInfo ? `<tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px">Scheduled</td>
-                      <td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${shootInfo}</td></tr>` : ""}
-                  ${notes ? `<tr><td style="padding:8px 0;color:#888;font-size:13px">Notes</td>
-                      <td style="padding:8px 0;font-style:italic;color:#666">${notes}</td></tr>` : ""}
-                </table>
-                <p style="color:#888;font-size:12px">A calendar invite is attached. Log in to view full booking details.</p>
-                <p style="color:#ccc;font-size:11px">${bizName}</p>
-              </div>`,
-              ...(icsAttachment.length ? { attachments: icsAttachment } : {}),
-            }).catch(() => {}));
-          }
+            sends.push(
+              resend.emails.send({
+                from,
+                to: [pEmail],
+                subject: `New shoot assigned to you — ${fullAddress}`,
+                html: bookingHtml("New Shoot Assigned", `Hi ${pName || "there"},`, `<p style="color:#888;font-size:12px">A calendar invite is attached.</p>`),
+                ...(icsAttachment.length ? { attachments: icsAttachment } : {}),
+              }).then(() => console.log("[email] photographer assignment sent to", pEmail))
+                .catch((e) => console.error("[email] photographer assignment FAILED to", pEmail, ":", e?.message || e))
+            );
+          };
 
           // Primary photographer
           sendToPhotographer(photographerEmail, photographerName);

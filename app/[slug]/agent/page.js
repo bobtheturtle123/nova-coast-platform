@@ -34,34 +34,36 @@ export default async function AgentPortalPage({ params, searchParams }) {
   const agentDoc  = agentsSnap.docs[0];
   const agent     = agentDoc.data();
 
-  // Fetch all their bookings
+  // Fetch bookings that have an associated gallery (listing created)
   const bookingsSnap = await adminDb
     .collection("tenants").doc(tenant.id)
     .collection("bookings")
     .where("clientEmail", "==", agent.email)
     .get();
 
-  const bookings = bookingsSnap.docs.sort((a, b) => {
-    const aTime = a.data().createdAt?.toMillis?.() ?? 0;
-    const bTime = b.data().createdAt?.toMillis?.() ?? 0;
-    return bTime - aTime;
-  }).map((d) => {
-    const data = d.data();
-    return {
-      id:             d.id,
-      address:        data.fullAddress || data.address || "Property",
-      status:         data.status || "confirmed",
-      workflowStatus: data.workflowStatus || null,
-      shootDate:      data.shootDate ? data.shootDate.toDate?.()?.toISOString?.() ?? data.shootDate : null,
-      galleryId:        data.galleryId   || null,
-      propertyWebsite:  data.propertyWebsite || null,
-      totalPrice:       data.totalPrice  || 0,
-      photographerName: data.photographerName || null,
-      createdAt:        data.createdAt?.toDate?.()?.toISOString?.() ?? null,
-    };
-  });
+  const bookings = bookingsSnap.docs
+    .filter((d) => !!d.data().galleryId)   // only show bookings where a gallery exists
+    .sort((a, b) => {
+      const aTime = a.data().createdAt?.toMillis?.() ?? 0;
+      const bTime = b.data().createdAt?.toMillis?.() ?? 0;
+      return bTime - aTime;
+    }).map((d) => {
+      const data = d.data();
+      return {
+        id:             d.id,
+        address:        data.fullAddress || data.address || "Property",
+        status:         data.status || "confirmed",
+        workflowStatus: data.workflowStatus || null,
+        shootDate:      data.shootDate ? data.shootDate.toDate?.()?.toISOString?.() ?? data.shootDate : null,
+        galleryId:        data.galleryId   || null,
+        propertyWebsite:  data.propertyWebsite || null,
+        totalPrice:       data.totalPrice  || 0,
+        photographerName: data.photographerName || null,
+        createdAt:        data.createdAt?.toDate?.()?.toISOString?.() ?? null,
+      };
+    });
 
-  // Fetch gallery data for each booking that has one
+  // Fetch gallery data (including cover image) for each booking
   const galleryIds = bookings.filter((b) => b.galleryId).map((b) => b.galleryId);
   const galleries  = {};
   if (galleryIds.length > 0) {
@@ -70,12 +72,14 @@ export default async function AgentPortalPage({ params, searchParams }) {
         const gDoc = await adminDb.collection("tenants").doc(tenant.id).collection("galleries").doc(gid).get();
         if (gDoc.exists) {
           const g = gDoc.data();
+          const photos = (g.media || []).filter((m) => !m.fileType?.startsWith("video/"));
           galleries[gid] = {
             delivered:   g.delivered || false,
             unlocked:    g.unlocked  || false,
-            mediaCount:  (g.media || []).filter((m) => !m.fileType?.startsWith("video/")).length,
+            mediaCount:  photos.length,
             videoCount:  (g.media || []).filter((m) =>  m.fileType?.startsWith("video/")).length,
             accessToken: g.accessToken || null,
+            coverUrl:    g.coverUrl || photos[0]?.url || null,
           };
         }
       })
@@ -92,7 +96,7 @@ export default async function AgentPortalPage({ params, searchParams }) {
         <div>
           <h1 className="font-display text-2xl text-gray-900">Welcome, {agent.name?.split(" ")[0] || "there"}</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {bookings.length} listing{bookings.length !== 1 ? "s" : ""} · {agent.email}
+            {bookings.length} active listing{bookings.length !== 1 ? "s" : ""} · {agent.email}
           </p>
         </div>
         <Link
@@ -121,19 +125,31 @@ export default async function AgentPortalPage({ params, searchParams }) {
 
             return (
               <div key={b.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col">
-                {/* Status bar */}
-                <div className="px-4 pt-4 pb-3">
-                  <div className="flex items-center gap-2 mb-2.5">
+                {/* Cover image */}
+                <div className="relative h-36 bg-gray-100 flex-shrink-0">
+                  {gal?.coverUrl ? (
+                    <img src={gal.coverUrl} alt={b.address} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+                      <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="absolute top-2 left-2">
                     {gal?.delivered ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        ✓ Media Delivered
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow-sm">
+                        ✓ Delivered
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500 text-white shadow-sm">
                         In Progress
                       </span>
                     )}
                   </div>
+                </div>
+                {/* Card body */}
+                <div className="px-4 pt-3 pb-3">
                   <h2 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2">{b.address}</h2>
                   {b.shootDate ? (
                     <p className="text-xs text-gray-400 mt-1">

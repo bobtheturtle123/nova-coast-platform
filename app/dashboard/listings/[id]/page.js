@@ -559,11 +559,6 @@ if (loading) return (
                   ✓ Confirm
                 </button>
               )}
-              <button
-                onClick={openGalleryEditor}
-                className="px-4 py-2 text-sm font-semibold rounded-xl bg-white text-[#3486cf] hover:bg-gray-100 transition-colors">
-                Upload Media
-              </button>
               {gallery && (
                 <button onClick={() => { setDeliveryMode("now"); setScheduledAt(""); setShowDeliver(true); }}
                   className="px-4 py-2 text-sm font-semibold rounded-xl bg-gold text-[#0F172A] hover:bg-gold/90 transition-colors">
@@ -575,36 +570,46 @@ if (loading) return (
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs + Upload Media inline */}
       <div className="bg-white border-b border-gray-200 px-6">
-        <div className="flex gap-0">
-          {[
-            { id: "overview",   label: "Overview" },
-            { id: "orders",     label: "Booking Details" },
-            { id: "property",   label: "Property Site" },
-            { id: "marketing",  label: "Marketing" },
-            { id: "revisions",  label: "Revisions", badge: revisions ? revisions.filter((r) => r.status === "pending").length : 0 },
-            { id: "activity",   label: "Activity" },
-          ].map((t) => (
-            <button key={t.id} onClick={() => {
-              setTab(t.id);
-              if (t.id === "marketing" && !analytics) loadAnalytics();
-              if (t.id === "activity" && activityLog.length === 0) loadActivity(gallery?.id);
-              if (t.id === "revisions" && revisions === null) loadRevisions();
-            }}
-              className={`px-4 py-3.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
-                tab === t.id
-                  ? "border-[#3486cf] text-[#0F172A]"
-                  : "border-transparent text-gray-400 hover:text-gray-600"
-              }`}>
-              {t.label}
-              {t.badge > 0 && (
-                <span style={{ background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 9999, padding: "1px 5px", lineHeight: "16px" }}>
-                  {t.badge}
-                </span>
-              )}
-            </button>
-          ))}
+        <div className="flex items-center justify-between">
+          <div className="flex gap-0">
+            {[
+              { id: "overview",   label: "Overview" },
+              { id: "orders",     label: "Booking Details" },
+              { id: "property",   label: "Property Site" },
+              { id: "marketing",  label: "Marketing" },
+              { id: "revisions",  label: "Revisions", badge: revisions ? revisions.filter((r) => r.status === "pending").length : 0 },
+              { id: "activity",   label: "Activity" },
+            ].map((t) => (
+              <button key={t.id} onClick={() => {
+                setTab(t.id);
+                if (t.id === "marketing" && !analytics) loadAnalytics();
+                if (t.id === "activity" && activityLog.length === 0) loadActivity(gallery?.id);
+                if (t.id === "revisions" && revisions === null) loadRevisions();
+              }}
+                className={`px-4 py-3.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                  tab === t.id
+                    ? "border-[#3486cf] text-[#0F172A]"
+                    : "border-transparent text-gray-400 hover:text-gray-600"
+                }`}>
+                {t.label}
+                {t.badge > 0 && (
+                  <span style={{ background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 9999, padding: "1px 5px", lineHeight: "16px" }}>
+                    {t.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={openGalleryEditor}
+            className="flex-shrink-0 inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[#3486cf] text-white hover:bg-[#2a6dab] transition-colors my-2">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Upload Media
+          </button>
         </div>
       </div>
 

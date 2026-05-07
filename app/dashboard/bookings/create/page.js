@@ -619,10 +619,7 @@ export default function CreateBookingPage() {
                 </div>
                 <div>
                   <label className="label-field">Shoot Time</label>
-                  <select value={form.shootTime} onChange={set("shootTime")} className="input-field w-full">
-                    <option value="">— Select time —</option>
-                    {TIME_OPTIONS.map((t) => <option key={t} value={timeToVal(t)}>{t}</option>)}
-                  </select>
+                  <input type="time" value={form.shootTime} onChange={set("shootTime")} className="input-field w-full" />
                 </div>
               </div>
 
@@ -645,15 +642,12 @@ export default function CreateBookingPage() {
                   </div>
                   <div>
                     <label className="label-field">Appt {i + 2} Time</label>
-                    <select value={appt.time}
+                    <input type="time" value={appt.time}
                       onChange={(e) => setForm((f) => {
                         const arr = [...f.additionalAppointments];
                         arr[i] = { ...arr[i], time: e.target.value };
                         return { ...f, additionalAppointments: arr };
-                      })} className="input-field w-full">
-                      <option value="">— Select time —</option>
-                      {TIME_OPTIONS.map((t) => <option key={t} value={timeToVal(t)}>{t}</option>)}
-                    </select>
+                      })} className="input-field w-full" />
                   </div>
                 </div>
               ))}

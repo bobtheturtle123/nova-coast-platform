@@ -20,6 +20,7 @@ const TEAM_NOTIFICATIONS = [
   { id: "team_order_received",        label: "New Order Received",    description: "Sent to you when a new booking is submitted.",                     channels: ["email", "sms"] },
   { id: "team_appointment_assigned",  label: "Appointment Assigned",  description: "Sent to a photographer when assigned to a shoot.",                 channels: ["email", "sms"] },
   { id: "team_appointment_reminder",  label: "Team Shoot Reminder",   description: "Sent to the assigned photographer 24 hours before a shoot.",       channels: ["email", "sms"] },
+  { id: "team_revision_request",      label: "Revision Request",      description: "Sent to you when an agent submits a revision request on a delivered gallery.", channels: ["email", "sms"] },
 ];
 
 const SMS_PLANS_LIST = ["studio", "pro", "scale"];
