@@ -309,6 +309,8 @@ export default function GalleryDetailPage() {
   const [attachedFiles,   setAttachedFiles]   = useState([]); // [{url, key, fileName, fileType}]
   const [mlsUrl,          setMlsUrl]          = useState("");
   const [savingExtras,    setSavingExtras]    = useState(false);
+  const [savingMatterport, setSavingMatterport] = useState(false);
+  const [savingVideo,      setSavingVideo]      = useState(false);
   const [uploadingFloor,  setUploadingFloor]  = useState(false);
   const [uploadingFile,   setUploadingFile]   = useState(false);
   const [newLinkLabel,    setNewLinkLabel]    = useState("");
@@ -693,14 +695,63 @@ export default function GalleryDetailPage() {
 
   async function saveExtras(overrides = {}) {
     setSavingExtras(true);
-    const token = await auth.currentUser.getIdToken();
-    await fetch(`/api/dashboard/galleries/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ matterportUrl, matterportHidden, videoUrl, videoUrlHidden, virtualLinks, floorPlans, attachedFiles, mlsUrl, ...overrides }),
-    });
-    setSavingExtras(false);
-    toast("Saved.");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/galleries/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ matterportUrl, matterportHidden, videoUrl, videoUrlHidden, virtualLinks, floorPlans, attachedFiles, mlsUrl, ...overrides }),
+      });
+      if (res.ok) toast("Saved.");
+      else toast("Failed to save.", "error");
+    } catch (err) {
+      console.error("saveExtras error:", err);
+      toast("Failed to save.", "error");
+    } finally {
+      setSavingExtras(false);
+    }
+  }
+
+  async function saveMatterport() {
+    setSavingMatterport(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/galleries/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ matterportUrl, matterportHidden }),
+      });
+      if (res.ok) {
+        setGallery((g) => ({ ...g, matterportUrl, matterportHidden }));
+        toast("3D tour link saved.");
+      } else toast("Failed to save.", "error");
+    } catch (err) {
+      console.error("saveMatterport error:", err);
+      toast("Failed to save.", "error");
+    } finally {
+      setSavingMatterport(false);
+    }
+  }
+
+  async function saveVideo() {
+    setSavingVideo(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/galleries/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ videoUrl, videoUrlHidden }),
+      });
+      if (res.ok) {
+        setGallery((g) => ({ ...g, videoUrl, videoUrlHidden }));
+        toast("Video tour link saved.");
+      } else toast("Failed to save.", "error");
+    } catch (err) {
+      console.error("saveVideo error:", err);
+      toast("Failed to save.", "error");
+    } finally {
+      setSavingVideo(false);
+    }
   }
 
   async function uploadToR2(file, subfolder) {
@@ -1185,8 +1236,8 @@ export default function GalleryDetailPage() {
                 placeholder="https://my.matterport.com/show/?m=..."
                 className="input-field flex-1 text-sm"
               />
-              <button onClick={saveExtras} disabled={savingExtras} className="btn-primary px-4 py-2 text-xs whitespace-nowrap">
-                {savingExtras ? "Saving…" : "Save"}
+              <button onClick={saveMatterport} disabled={savingMatterport} className="btn-primary px-4 py-2 text-xs whitespace-nowrap">
+                {savingMatterport ? "Saving…" : "Save"}
               </button>
             </div>
             {matterportUrl && (
@@ -1196,7 +1247,7 @@ export default function GalleryDetailPage() {
                   3D tour will appear as an interactive embed in the client gallery.
                 </p>
                 <button
-                  onClick={() => { const v = !matterportHidden; setMatterportHidden(v); saveExtras({ matterportHidden: v }); }}
+                  onClick={() => { const v = !matterportHidden; setMatterportHidden(v); saveMatterport(); }}
                   className={`text-xs px-2.5 py-1 rounded border transition-colors flex-shrink-0 ${
                     matterportHidden
                       ? "border-gray-300 text-gray-500 bg-gray-50 hover:bg-white"
@@ -1229,8 +1280,8 @@ export default function GalleryDetailPage() {
                 placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
                 className="input-field flex-1 text-sm"
               />
-              <button onClick={saveExtras} disabled={savingExtras} className="btn-primary px-4 py-2 text-xs whitespace-nowrap">
-                {savingExtras ? "Saving…" : "Save"}
+              <button onClick={saveVideo} disabled={savingVideo} className="btn-primary px-4 py-2 text-xs whitespace-nowrap">
+                {savingVideo ? "Saving…" : "Save"}
               </button>
             </div>
             {videoUrl && (
@@ -1240,7 +1291,7 @@ export default function GalleryDetailPage() {
                   Video will appear in the client gallery under Property Extras.
                 </p>
                 <button
-                  onClick={() => { const v = !videoUrlHidden; setVideoUrlHidden(v); saveExtras({ videoUrlHidden: v }); }}
+                  onClick={() => { const v = !videoUrlHidden; setVideoUrlHidden(v); saveVideo(); }}
                   className={`text-xs px-2.5 py-1 rounded border transition-colors flex-shrink-0 ${
                     videoUrlHidden
                       ? "border-gray-300 text-gray-500 bg-gray-50 hover:bg-white"
