@@ -578,10 +578,11 @@ export default function SettingsPage() {
     { value: "specific",  label: "Specific Time", desc: "Agent enters exact time", enabled: false },
   ]);
   const [customFields,  setCustomFields]  = useState([]); // [{ id, label, type, required }]
-  const [enableApn,          setEnableApn]          = useState(false);
-  const [requireServiceArea, setRequireServiceArea] = useState(false);
-  const [autoConvertToListing, setAutoConvertToListing] = useState(false);
-  const [allowRevisionRequests, setAllowRevisionRequests] = useState(false);
+  const [enableApn,                setEnableApn]                = useState(false);
+  const [requireServiceArea,      setRequireServiceArea]      = useState(false);
+  const [autoConvertToListing,    setAutoConvertToListing]    = useState(false);
+  const [allowRevisionRequests,   setAllowRevisionRequests]   = useState(false);
+  const [requireScheduleApproval, setRequireScheduleApproval] = useState(false);
   const [savingBooking, setSavingBooking] = useState(false);
 
   // Global job cost rates
@@ -719,6 +720,7 @@ export default function SettingsPage() {
           if (bc.requireServiceArea !== undefined) setRequireServiceArea(bc.requireServiceArea);
           if (bc.autoConvertToListing !== undefined) setAutoConvertToListing(bc.autoConvertToListing);
           if (bc.allowRevisionRequests !== undefined) setAllowRevisionRequests(bc.allowRevisionRequests);
+          if (bc.requireScheduleApproval !== undefined) setRequireScheduleApproval(bc.requireScheduleApproval);
           if (bc.serviceAgreement) {
             setServiceAgreementEnabled(bc.serviceAgreement.enabled || false);
             setServiceAgreementText(bc.serviceAgreement.text || "");
@@ -920,6 +922,7 @@ export default function SettingsPage() {
       requireServiceArea,
       autoConvertToListing,
       allowRevisionRequests,
+      requireScheduleApproval,
       serviceAgreement: { enabled: serviceAgreementEnabled, text: serviceAgreementText },
       terms:        termsText,
       privacy:      privacyText,
@@ -1647,6 +1650,27 @@ export default function SettingsPage() {
               <p className="text-sm font-medium text-[#0F172A]">Allow agent revision requests</p>
               <p className="text-xs text-gray-400 mt-0.5">
                 When ON, agents can submit revision requests from their portal. Requests appear in your Revisions inbox.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Schedule approval toggle */}
+        <div className="pt-4 border-t border-gray-100">
+          <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={() => setRequireScheduleApproval((v) => !v)}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors mt-0.5 ${requireScheduleApproval ? "bg-[#3486cf]" : "bg-gray-200"}`}
+            >
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${requireScheduleApproval ? "translate-x-4" : "translate-x-0"}`} />
+            </button>
+            <div>
+              <p className="text-sm font-medium text-[#0F172A]">Require schedule approval</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                When ON, the time an agent selects during booking is a preference, not a confirmed appointment.
+                You review and confirm (or propose a new time) from the booking detail page.
+                The agent is notified by email once the time is confirmed or changed.
               </p>
             </div>
           </div>

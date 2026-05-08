@@ -52,13 +52,14 @@ export default function TenantSchedulePage() {
     setSchedule,
   } = useBookingStore();
 
-  const [slots,        setSlots]        = useState(null);
-  const [slotsLoading, setSlotsLoading] = useState(false);
-  const [availMode,    setAvailMode]    = useState("slots");
-  const [workingDays,  setWorkingDays]  = useState(["mon","tue","wed","thu","fri"]);
-  const [catalog,      setCatalog]      = useState(null);
-  const [sunsetTime,   setSunsetTime]   = useState(null);
-  const [sunsetLoading,setSunsetLoading]= useState(false);
+  const [slots,                  setSlots]                  = useState(null);
+  const [slotsLoading,           setSlotsLoading]           = useState(false);
+  const [availMode,              setAvailMode]              = useState("slots");
+  const [workingDays,            setWorkingDays]            = useState(["mon","tue","wed","thu","fri"]);
+  const [catalog,                setCatalog]                = useState(null);
+  const [sunsetTime,             setSunsetTime]             = useState(null);
+  const [sunsetLoading,          setSunsetLoading]          = useState(false);
+  const [requireScheduleApproval,setRequireScheduleApproval]= useState(false);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -75,6 +76,7 @@ export default function TenantSchedulePage() {
         const av = data.bookingConfig?.availability;
         if (av?.mode) setAvailMode(av.mode);
         if (av?.businessHours?.days?.length) setWorkingDays(av.businessHours.days);
+        if (data.bookingConfig?.requireScheduleApproval) setRequireScheduleApproval(true);
       })
       .catch(() => {});
   }, [slug]);
@@ -350,6 +352,17 @@ export default function TenantSchedulePage() {
                 ? "Times shown reflect real availability. Your booking will be confirmed within 24 hours."
                 : "Select your preferred time. We'll confirm via email within 24 hours."}
             </p>
+
+            {requireScheduleApproval && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
+                <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-amber-500 flex-shrink-0 mt-0.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  <strong>Time not guaranteed.</strong> Your selected time is a preference. Our team will review availability and confirm your exact shoot time by email within 24 hours.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

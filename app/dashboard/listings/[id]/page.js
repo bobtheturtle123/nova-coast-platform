@@ -6,7 +6,7 @@ import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
-import { resolveWorkflowStatus } from "@/lib/workflowStatus";
+import { resolveWorkflowStatus, WORKFLOW_STATUSES } from "@/lib/workflowStatus";
 import { getAppUrl } from "@/lib/appUrl";
 
 // ─── Agent Image Field (upload file OR paste URL) ────────────────────────────
@@ -184,21 +184,8 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
   );
 }
 
-const STATUS_OPTIONS = [
-  { value: "pending_payment", label: "Awaiting Payment" },
-  { value: "requested",       label: "Pending Review" },
-  { value: "confirmed",       label: "Confirmed" },
-  { value: "completed",       label: "Shoot Complete" },
-  { value: "cancelled",       label: "Cancelled" },
-];
-
-const STATUS_COLORS = {
-  pending_payment: "bg-gray-100 text-gray-600",
-  requested:       "bg-amber-50 text-amber-700",
-  confirmed:       "bg-blue-50 text-blue-700",
-  completed:       "bg-emerald-50 text-emerald-700",
-  cancelled:       "bg-red-50 text-red-600",
-};
+// Full pipeline options built from WORKFLOW_STATUSES (same order as booking pages)
+const STATUS_OPTIONS = WORKFLOW_STATUSES.map((s) => ({ value: s.id, label: s.label }));
 
 export default function ListingDetailPage() {
   const { id }  = useParams();
@@ -219,7 +206,11 @@ export default function ListingDetailPage() {
   const [scheduledAt,  setScheduledAt]  = useState("");
   const [shootDate, setShootDate] = useState("");
   const [shootTime, setShootTime] = useState("");
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDatePicker,        setShowDatePicker]        = useState(false);
+  const [schedApprovalDate,     setSchedApprovalDate]     = useState("");
+  const [schedApprovalTime,     setSchedApprovalTime]     = useState("");
+  const [schedApprovalSaving,   setSchedApprovalSaving]   = useState(false);
+  const [schedApprovalMsg,      setSchedApprovalMsg]      = useState("");
 
   // Property website state
   const [propSite,      setPropSite]      = useState({});
@@ -761,8 +752,8 @@ if (loading) return (
                 <div>
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Workflow Stage</label>
                   <select
-                    value={booking.status}
-                    onChange={(e) => patchBooking({ status: e.target.value })}
+                    value={resolveWorkflowStatus(booking)}
+                    onChange={(e) => patchBooking({ workflowStatus: e.target.value })}
                     className="input-field w-full">
                     {STATUS_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -787,6 +778,110 @@ if (loading) return (
                     </p>
                   </div>
                 )}
+
+                {/* Schedule Approval Panel */}
+                {catalog?.bookingConfig?.requireScheduleApproval && booking.scheduleApprovalStatus !== "confirmed" && booking.preferredDate && (() => {
+                  const reqDate = new Date(booking.preferredDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+                  const reqTime = booking.preferredTime;
+                  async function handleConfirm() {
+                    setSchedApprovalSaving(true);
+                    setSchedApprovalMsg("");
+                    try {
+                      const token = await auth.currentUser.getIdToken();
+                      const res = await fetch(`/api/dashboard/bookings/${id}/confirm-schedule`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ action: "confirm" }),
+                      });
+                      if (res.ok) {
+                        setBooking((b) => ({ ...b, scheduleApprovalStatus: "confirmed", shootDate: b.preferredDate, shootTime: b.preferredTime }));
+                        setSchedApprovalMsg("Time confirmed. Agent notified by email.");
+                      } else {
+                        setSchedApprovalMsg("Failed to confirm. Please try again.");
+                      }
+                    } catch { setSchedApprovalMsg("Something went wrong."); }
+                    setSchedApprovalSaving(false);
+                  }
+                  async function handlePropose() {
+                    if (!schedApprovalDate || !schedApprovalTime) {
+                      setSchedApprovalMsg("Enter a new date and time to propose.");
+                      return;
+                    }
+                    setSchedApprovalSaving(true);
+                    setSchedApprovalMsg("");
+                    try {
+                      const token = await auth.currentUser.getIdToken();
+                      const res = await fetch(`/api/dashboard/bookings/${id}/confirm-schedule`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ action: "propose", shootDate: schedApprovalDate, shootTime: schedApprovalTime }),
+                      });
+                      if (res.ok) {
+                        setBooking((b) => ({ ...b, scheduleApprovalStatus: "confirmed", shootDate: schedApprovalDate, shootTime: schedApprovalTime }));
+                        setSchedApprovalMsg("New time confirmed. Agent notified by email.");
+                      } else {
+                        setSchedApprovalMsg("Failed to save. Please try again.");
+                      }
+                    } catch { setSchedApprovalMsg("Something went wrong."); }
+                    setSchedApprovalSaving(false);
+                  }
+                  return (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+                      <div className="flex items-start gap-2">
+                        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-blue-500 flex-shrink-0 mt-0.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <div>
+                          <p className="text-xs font-semibold text-blue-800">Schedule approval required</p>
+                          <p className="text-xs text-blue-600 mt-0.5">
+                            Agent requested: <strong>{reqDate}{reqTime ? ` at ${reqTime}` : ""}</strong>. Confirm this time or propose a different one.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={handleConfirm}
+                          disabled={schedApprovalSaving}
+                          className="text-xs bg-blue-600 text-white font-semibold px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
+                          {schedApprovalSaving ? "Saving..." : "Confirm this time"}
+                        </button>
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-wide">Or propose a different time</p>
+                        <div className="flex gap-2">
+                          <input
+                            type="date"
+                            value={schedApprovalDate}
+                            onChange={(e) => setSchedApprovalDate(e.target.value)}
+                            className="input-field text-xs flex-1"
+                          />
+                          <input
+                            type="time"
+                            value={schedApprovalTime}
+                            onChange={(e) => setSchedApprovalTime(e.target.value)}
+                            className="input-field text-xs w-32"
+                          />
+                          <button
+                            type="button"
+                            onClick={handlePropose}
+                            disabled={schedApprovalSaving}
+                            className="text-xs bg-[#0F172A] text-white font-semibold px-3 py-1.5 rounded-lg hover:bg-[#0F172A]/80 transition-colors disabled:opacity-50 whitespace-nowrap"
+                          >
+                            {schedApprovalSaving ? "Saving..." : "Send new time"}
+                          </button>
+                        </div>
+                        {schedApprovalMsg && (
+                          <p className={`text-xs font-medium ${schedApprovalMsg.includes("notified") ? "text-emerald-600" : "text-red-500"}`}>
+                            {schedApprovalMsg}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">

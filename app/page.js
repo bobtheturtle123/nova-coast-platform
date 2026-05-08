@@ -47,7 +47,7 @@ export default function MarketingPage() {
                 The operating system<br />for real estate media<br />businesses.
               </h1>
               <p className="text-white/60 text-lg max-w-lg leading-relaxed mb-10">
-                From the first booking to the final download — KyoriaOS handles scheduling, delivery, payments, and agent marketing so you can focus on shooting.
+                From the first booking to the final download, KyoriaOS handles scheduling, delivery, payments, and agent marketing so you can focus on shooting.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
@@ -177,7 +177,7 @@ export default function MarketingPage() {
               Every step of your workflow,<br />handled for you.
             </h2>
             <p className="text-white/45 max-w-xl mx-auto">
-              KyoriaOS is built around the natural lifecycle of every job — from the first inquiry to the final payment collected.
+              KyoriaOS is built around the natural lifecycle of every job, from the first inquiry to the final payment collected.
             </p>
           </div>
           <div className="relative">
@@ -212,7 +212,7 @@ export default function MarketingPage() {
                 From inquiry to confirmed shoot in minutes.
               </h2>
               <p className="text-gray-500 leading-relaxed mb-7">
-                Your branded booking page handles the entire intake: package selection, property details, availability, and deposit — all in one guided flow. No back-and-forth texts.
+                Your branded booking page handles the entire intake: package selection, property details, availability, and deposit. All in one guided flow, no back-and-forth texts.
               </p>
               <ul className="space-y-3 mb-8">
                 {[
@@ -323,14 +323,14 @@ export default function MarketingPage() {
                 A gallery your clients will actually remember.
               </h2>
               <p className="text-gray-500 leading-relaxed mb-7">
-                Upload your work, hit send. The gallery stays locked until the balance clears — no chasing payments. Clients get everything in one beautiful, branded link.
+                Upload your work, hit send. The gallery stays locked until the balance clears. No chasing payments. Clients get everything in one beautiful, branded link.
               </p>
               <ul className="space-y-3">
                 {[
-                  "Photos, video, floor plans, and 3D tours — one link",
+                  "Photos, video, floor plans, and 3D tours in one link",
                   "Balance collected before downloads unlock",
                   "Print + Web/MLS download packages",
-                  "Scheduled delivery — drops at the right time",
+                  "Scheduled delivery that drops at the right time",
                   "Revision request flow built in",
                   "Activity tracking: views, downloads, shares",
                 ].map((item) => (
@@ -357,7 +357,7 @@ export default function MarketingPage() {
                 Run your crew without the group chat chaos.
               </h2>
               <p className="text-gray-500 leading-relaxed mb-7">
-                See every photographer&apos;s availability at a glance. Assign jobs with one click. Track costs per shoot. Everyone stays in sync — without a single text message.
+                See every photographer&apos;s availability at a glance. Assign jobs with one click. Track costs per shoot. Everyone stays in sync, without a single text message.
               </p>
               <ul className="space-y-3">
                 {[
@@ -463,7 +463,7 @@ export default function MarketingPage() {
                 {[
                   "Revenue tracking per listing and photographer",
                   "Automated shoot reminders and follow-ups",
-                  "Scheduled gallery delivery — morning-of drops",
+                  "Scheduled gallery delivery, morning-of drops",
                   "Promo codes and seasonal offers",
                   "Service agreement e-capture",
                   "Full booking and payment history",
@@ -493,16 +493,15 @@ export default function MarketingPage() {
                 Every agent gets a professional listing kit. Automatically.
               </h2>
               <p className="text-white/50 leading-relaxed mb-7">
-                When you deliver a gallery, the agent gets everything they need to market the listing — no extra work on your end. It&apos;s a reason for them to keep booking you.
+                When you deliver a gallery, the agent gets everything they need to market the listing with no extra work on your end. It&apos;s a reason for them to keep booking you.
               </p>
               <ul className="space-y-3 mb-8">
                 {[
                   "Branded property website with full listing details",
                   "Print-ready brochure (PDF) for open houses",
                   "QR code for print and signage",
-                  "AI-generated Instagram, Facebook & email captions",
                   "3D Matterport and video tour embedded",
-                  "Private link — no agent account required",
+                  "Private link, no agent account required",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-sm text-white/70">
                     <span className="w-4 h-4 rounded-full bg-gold/20 border border-gold/30 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -547,10 +546,10 @@ export default function MarketingPage() {
               <div className="bg-white/5 border border-white/10 rounded-xl p-4">
                 <p className="text-[10px] text-gold/60 uppercase tracking-wide mb-2 font-semibold flex items-center gap-1.5">
                   <svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                  AI Social Caption
+                  Social Caption
                 </p>
                 <p className="text-xs text-white/55 italic leading-relaxed">
-                  &quot;Just listed in Coronado! Stunning ocean-view property — 4BR/3BA, professional photography. Tap the link in bio to book a showing.&quot;
+                  &quot;Just listed in Coronado! Stunning 4BR/3BA ocean-view property, professional photography. Tap the link in bio to book a showing.&quot;
                 </p>
                 <div className="mt-3 text-[10px] text-gold font-semibold border border-gold/25 rounded-lg px-2.5 py-1.5 inline-block bg-gold/5 cursor-pointer">
                   Copy caption →
@@ -597,7 +596,7 @@ export default function MarketingPage() {
               <ul className="space-y-3">
                 {[
                   "Deposit collected the moment they book",
-                  "Gallery delivered with one click — locked until paid",
+                  "Gallery delivered with one click, locked until paid",
                   "Balance auto-collected before downloads unlock",
                   "Guided booking flow upsells for you",
                   "Assign photographers from the dashboard",
@@ -656,7 +655,7 @@ export default function MarketingPage() {
             Your business deserves better than a group chat.
           </h2>
           <p className="text-white/50 mb-8 text-lg leading-relaxed max-w-xl mx-auto">
-            Booking, scheduling, delivery, and payments — all automated, all in one place. Live in under an hour.
+            Booking, scheduling, delivery, and payments: all automated, all in one place. Live in under an hour.
           </p>
           <Link
             href="/auth/register"
@@ -718,7 +717,7 @@ const PAIN_POINTS = [
       </svg>
     ),
     title: "Scattered tools",
-    desc: "Calendly, Stripe, Google Docs, Dropbox, iMessage — none of it connected, none of it automated.",
+    desc: "Calendly, Stripe, Google Docs, Dropbox, iMessage. None of it connected, none of it automated.",
   },
 ];
 
