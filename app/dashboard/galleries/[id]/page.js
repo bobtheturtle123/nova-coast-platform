@@ -942,8 +942,11 @@ export default function GalleryDetailPage() {
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
-            const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/") || f.type.startsWith("video/"));
-            if (files.length) uploadFiles(files);
+            const all = Array.from(e.dataTransfer.files);
+            const pdfs   = all.filter((f) => f.type === "application/pdf");
+            const media  = all.filter((f) => f.type.startsWith("image/") || f.type.startsWith("video/"));
+            if (pdfs.length)  uploadFloorPlans(pdfs);
+            if (media.length) uploadFiles(media);
           }}>
           <input ref={fileRef} type="file" multiple accept="image/*,video/*" className="hidden"
             onChange={(e) => e.target.files?.length && uploadFiles(Array.from(e.target.files))} />
@@ -958,7 +961,7 @@ export default function GalleryDetailPage() {
             <>
               <p className="text-2xl mb-1">☁️</p>
               <p className="text-sm text-gray-500">Drop files or <span className="text-[#3486cf] font-medium">click to upload</span></p>
-              <p className="text-xs text-gray-400 mt-1">Full-res photos and videos</p>
+              <p className="text-xs text-gray-400 mt-1">Photos &amp; videos · PDFs auto-go to Floor Plans</p>
             </>
           )}
         </div>
