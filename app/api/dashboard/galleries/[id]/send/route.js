@@ -121,6 +121,40 @@ export async function POST(req, { params }) {
   return Response.json({ ok: true });
 }
 
+// PATCH — retry a failed scheduled delivery (reset error → pending)
+export async function PATCH(req, { params }) {
+  const ctx = await getCtx(req);
+  if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const galleryRef = adminDb
+    .collection("tenants").doc(ctx.tenantId)
+    .collection("galleries").doc(params.id);
+
+  const errorSnap = await adminDb
+    .collection("scheduledDeliveries")
+    .where("tenantId", "==", ctx.tenantId)
+    .where("galleryId", "==", params.id)
+    .where("status", "==", "error")
+    .orderBy("createdAt", "desc")
+    .limit(1)
+    .get();
+
+  if (errorSnap.empty) return Response.json({ error: "No failed delivery found" }, { status: 404 });
+
+  const failedDoc = errorSnap.docs[0];
+  const schedAt = failedDoc.data().scheduledAt?.toDate?.() ?? new Date(failedDoc.data().scheduledAt?._seconds * 1000);
+
+  // Reset the scheduled time to 2 minutes from now if the original time has already passed
+  const retryAt = schedAt > new Date() ? schedAt : new Date(Date.now() + 2 * 60 * 1000);
+
+  await Promise.all([
+    failedDoc.ref.update({ status: "pending", scheduledAt: retryAt, error: null }),
+    galleryRef.update({ scheduledDelivery: { scheduledAt: retryAt, status: "pending" } }),
+  ]);
+
+  return Response.json({ ok: true, retryAt: retryAt.toISOString() });
+}
+
 // DELETE — cancel a pending scheduled delivery
 export async function DELETE(req, { params }) {
   const ctx = await getCtx(req);

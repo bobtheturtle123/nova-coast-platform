@@ -513,55 +513,75 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
               </div>
             )}
 
-            {/* Agent card */}
-            {(pw.agentName || pw.agentPhone || pw.agentEmail) && (
-              <div className="rounded-2xl border border-gray-200 p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-widest text-gray-400 mb-4 font-semibold">Listing Agent</p>
-                <div className="flex items-center gap-3 mb-4">
-                  {pw.agentPhoto ? (
-                    <img src={pw.agentPhoto} alt={pw.agentName}
-                      className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100" />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold ring-2 ring-gray-100"
-                      style={{ background: theme.primary }}>
-                      {pw.agentName?.[0]?.toUpperCase() || "?"}
+            {/* Agent cards — primary + up to 3 co-agents */}
+            {(pw.agentName || pw.agentPhone || pw.agentEmail || pw.coAgents?.length > 0) && (() => {
+              const hasCoAgents = pw.coAgents?.length > 0;
+              const AgentCard = ({ name, brokerage, phone, email, photo, logoUrl, label }) => (
+                <div className="rounded-2xl border border-gray-200 p-5 shadow-sm">
+                  {label && <p className="text-xs uppercase tracking-widest text-gray-400 mb-4 font-semibold">{label}</p>}
+                  <div className="flex items-center gap-3 mb-4">
+                    {photo ? (
+                      <img src={photo} alt={name} className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold ring-2 ring-gray-100"
+                        style={{ background: theme.primary }}>
+                        {name?.[0]?.toUpperCase() || "?"}
+                      </div>
+                    )}
+                    <div>
+                      {name && <p className="font-semibold text-gray-900">{name}</p>}
+                      {brokerage && <p className="text-xs text-gray-500">{brokerage}</p>}
+                    </div>
+                  </div>
+                  {logoUrl && (
+                    <div className="mb-4 pb-4 border-b border-gray-100">
+                      <img src={logoUrl} alt={brokerage || "Brokerage"} className="h-8 max-w-full object-contain" />
                     </div>
                   )}
-                  <div>
-                    {pw.agentName && <p className="font-semibold text-gray-900">{pw.agentName}</p>}
-                    {pw.agentBrokerage && <p className="text-xs text-gray-500">{pw.agentBrokerage}</p>}
+                  <div className="space-y-2">
+                    {phone && (
+                      <a href={`tel:${phone}`} className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-70"
+                        style={{ color: theme.primary }}>
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                        </svg>
+                        {phone}
+                      </a>
+                    )}
+                    {email && (
+                      <a href={`mailto:${email}`} className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-70"
+                        style={{ color: theme.primary }}>
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        {email}
+                      </a>
+                    )}
                   </div>
                 </div>
-                {pw.agentLogoUrl && (
-                  <div className="mb-4 pb-4 border-b border-gray-100">
-                    <img src={pw.agentLogoUrl} alt={pw.agentBrokerage || "Brokerage"}
-                      className="h-8 max-w-full object-contain" />
-                  </div>
-                )}
-                <div className="space-y-2 mb-4">
-                  {pw.agentPhone && (
-                    <a href={`tel:${pw.agentPhone}`}
-                      className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-70"
-                      style={{ color: theme.primary }}>
-                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                      </svg>
-                      {pw.agentPhone}
-                    </a>
+              );
+              return (
+                <div className={hasCoAgents ? "space-y-3" : ""}>
+                  <p className="text-xs uppercase tracking-widest text-gray-400 font-semibold mb-3">
+                    {hasCoAgents ? "Listing Agents" : "Listing Agent"}
+                  </p>
+                  {(pw.agentName || pw.agentPhone || pw.agentEmail) && (
+                    <AgentCard
+                      name={pw.agentName} brokerage={pw.agentBrokerage}
+                      phone={pw.agentPhone} email={pw.agentEmail}
+                      photo={pw.agentPhoto} logoUrl={pw.agentLogoUrl}
+                    />
                   )}
-                  {pw.agentEmail && (
-                    <a href={`mailto:${pw.agentEmail}`}
-                      className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-70"
-                      style={{ color: theme.primary }}>
-                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                      </svg>
-                      {pw.agentEmail}
-                    </a>
-                  )}
+                  {(pw.coAgents || []).map((a, i) => (a.name || a.email || a.phone) && (
+                    <AgentCard key={i}
+                      name={a.name} brokerage={a.brokerage}
+                      phone={a.phone} email={a.email}
+                      photo={a.photo}
+                    />
+                  ))}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Contact form */}
             <div className="rounded-2xl border border-gray-200 p-5 shadow-sm">

@@ -662,6 +662,24 @@ export default function GalleryDetailPage() {
     }
   }
 
+  async function retryScheduledDelivery() {
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(`/api/dashboard/galleries/${id}/send`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      toast("Delivery queued for retry — will send within 15 minutes.");
+      setGallery((g) => ({
+        ...g,
+        scheduledDelivery: { ...g.scheduledDelivery, status: "pending", scheduledAt: new Date(data.retryAt) },
+      }));
+    } else {
+      toast("Failed to retry.", "error");
+    }
+  }
+
   async function toggleUnlock() {
     const token = await auth.currentUser.getIdToken();
     const newVal = !gallery.unlocked;
@@ -912,29 +930,58 @@ export default function GalleryDetailPage() {
           </div>
 
         {/* Scheduled delivery banner */}
-        {gallery.scheduledDelivery?.status === "pending" && (
-          <div className="mx-6 mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-            <div>
-              <p className="text-sm font-medium text-blue-900">
-                Delivery scheduled for{" "}
-                {(() => {
-                  const ts = gallery.scheduledDelivery.scheduledAt;
-                  const d = ts?.toDate?.() ?? (ts?._seconds ? new Date(ts._seconds * 1000) : new Date(ts));
-                  return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-                })()}
-              </p>
-              <p className="text-xs text-blue-600 mt-0.5">Email will send automatically at that time.</p>
+        {gallery.scheduledDelivery && ["pending", "processing", "error"].includes(gallery.scheduledDelivery.status) && (() => {
+          const status = gallery.scheduledDelivery.status;
+          const ts = gallery.scheduledDelivery.scheduledAt;
+          const d = ts?.toDate?.() ?? (ts?._seconds ? new Date(ts._seconds * 1000) : new Date(ts));
+          const timeStr = isNaN(d?.getTime()) ? null : d.toLocaleString("en-US", {
+            month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short",
+          });
+          const isPending    = status === "pending";
+          const isProcessing = status === "processing";
+          const isError      = status === "error";
+          const bg     = isError ? "bg-red-50 border-red-200"   : isProcessing ? "bg-amber-50 border-amber-200" : "bg-blue-50 border-blue-200";
+          const title  = isError ? "text-red-900"               : isProcessing ? "text-amber-900"               : "text-blue-900";
+          const sub    = isError ? "text-red-600"               : isProcessing ? "text-amber-600"               : "text-blue-600";
+          return (
+            <div className={`mx-6 mb-4 flex items-center justify-between border rounded-lg px-4 py-3 ${bg}`}>
+              <div>
+                {isProcessing && (
+                  <p className={`text-sm font-medium ${title}`}>Sending now…</p>
+                )}
+                {isPending && (
+                  <p className={`text-sm font-medium ${title}`}>
+                    Scheduled for {timeStr ?? "—"}
+                  </p>
+                )}
+                {isError && (
+                  <p className={`text-sm font-medium ${title}`}>
+                    Delivery failed{timeStr ? ` — was scheduled for ${timeStr}` : ""}
+                  </p>
+                )}
+                <p className={`text-xs mt-0.5 ${sub}`}>
+                  {isProcessing && "This delivery is being processed — refresh in a moment."}
+                  {isPending    && "Email will send automatically at the scheduled time."}
+                  {isError      && "An error occurred. Retry to attempt delivery again within 15 min."}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {isPending && (
+                  <button onClick={() => { setDeliveryMode("later"); setShowDeliver(true); }}
+                    className="text-xs font-medium text-blue-700 hover:underline">Edit</button>
+                )}
+                {isError && (
+                  <button onClick={retryScheduledDelivery}
+                    className="text-xs font-medium text-amber-700 hover:underline">Retry</button>
+                )}
+                {!isProcessing && (
+                  <button onClick={cancelScheduledDelivery}
+                    className={`text-xs font-medium hover:underline ${isError ? "text-red-600" : "text-red-500"}`}>Cancel</button>
+                )}
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setDeliveryMode("later"); setShowDeliver(true); }}
-                className="text-xs font-medium text-blue-700 hover:underline">Edit</button>
-              <button
-                onClick={cancelScheduledDelivery}
-                className="text-xs font-medium text-red-500 hover:underline">Cancel</button>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Upload zone */}
         <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 mb-6 text-center cursor-pointer hover:border-[#3486cf]/40 hover:bg-gray-50 transition-colors"

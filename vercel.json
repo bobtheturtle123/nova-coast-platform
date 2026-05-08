@@ -23,7 +23,7 @@
     },
     {
       "path": "/api/cron/gallery-deliveries",
-      "schedule": "0 8 * * *"
+      "schedule": "*/15 * * * *"
     }
   ]
 }

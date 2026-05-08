@@ -138,7 +138,6 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const [clientSecret, setClientSecret] = useState(null);
   const [loadingPay,   setLoadingPay]   = useState(false);
   const [payMsg,       setPayMsg]       = useState("");
-  const [activeTab,    setActiveTab]    = useState("images");
   const [lightboxIdx,  setLightboxIdx]  = useState(null);
 
   const primary = tenant.branding?.primaryColor || "#3486cf";
@@ -192,13 +191,10 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
     return url;
   }
 
-  const tabs = [
-    { id: "images", label: `Photos (${images.length})` },
-    ...(hasVideos        ? [{ id: "videos",     label: videos.length > 0 ? `Videos (${videos.length})` : "Video Tour" }] : []),
-    ...(floorPlans.length > 0 ? [{ id: "floorplans", label: `Floor Plans (${floorPlans.length})` }] : []),
-    ...(has3D            ? [{ id: "3d",          label: "3D Tour"                         }] : []),
-    ...(attachedFiles.length > 0 ? [{ id: "files", label: `Files (${attachedFiles.length})` }] : []),
-  ];
+  function fileDownloadUrl(key, name) {
+    if (!key) return null;
+    return `/api/gallery/download?${new URLSearchParams({ key, format: "raw", name: name || "file" })}`;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -317,262 +313,245 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           </div>
         )}
 
-        {/* Tabs */}
-        {tabs.length > 1 && (
-          <div className="flex gap-1 mb-6 border-b border-gray-200">
-            {tabs.map((t) => (
-              <button key={t.id} onClick={() => setActiveTab(t.id)}
-                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === t.id
-                    ? "border-[#3486cf] text-[#3486cf]"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}>
-                {t.label}
-              </button>
-            ))}
+        {/* ── Photos ─────────────────────────────────────────────────────── */}
+        {images.length === 0 ? (
+          <div className="text-center py-16 text-gray-400">
+            <p className="text-4xl mb-3">📷</p>
+            <p>Your gallery is being prepared. Check back soon.</p>
           </div>
+        ) : (
+          <section className="mb-12">
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Photos</h2>
+              <span className="text-xs text-gray-300">{images.length}</span>
+            </div>
+
+            {unlocked && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5 p-4 bg-white rounded-xl border border-gray-200">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-800">Download All Photos</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Print — full resolution · Web / MLS — 2048px optimized
+                  </p>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <a href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=print`}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider text-white"
+                    style={{ background: "#3486cf" }} download>
+                    ↓ Print
+                  </a>
+                  <a href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web`}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider text-white"
+                    style={{ background: "#c4974a" }} download>
+                    ↓ Web / MLS
+                  </a>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {images.map((m, i) => (
+                <div key={i} className="group relative rounded-xl overflow-hidden bg-gray-200 aspect-[4/3]"
+                  onClick={() => setLightboxIdx(i)} style={{ cursor: "pointer" }}>
+                  <img src={m.url} alt={m.fileName || `Photo ${i + 1}`} draggable={false}
+                    onContextMenu={(e) => { if (!unlocked) e.preventDefault(); }}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 select-none"
+                    style={!unlocked ? { pointerEvents: "none" } : {}} />
+
+                  {!unlocked && (
+                    <div className="absolute inset-0 pointer-events-none select-none overflow-hidden"
+                      style={{ userSelect: "none", WebkitUserSelect: "none" }}>
+                      {Array.from({ length: 5 }).map((_, row) =>
+                        Array.from({ length: 3 }).map((_, col) => (
+                          <span key={`${row}-${col}`}
+                            className="absolute text-white/40 font-bold uppercase tracking-widest pointer-events-none select-none"
+                            style={{ fontSize: "10px", top: `${row * 22 + 8}%`, left: `${col * 38 - 8}%`,
+                              transform: "rotate(-30deg)", whiteSpace: "nowrap", letterSpacing: "0.2em",
+                              textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>
+                            PREVIEW ONLY
+                          </span>
+                        ))
+                      )}
+                      <div className="absolute inset-0 bg-black/10" />
+                    </div>
+                  )}
+
+                  {unlocked && m.key && (
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3">
+                      <p className="text-white text-xs font-medium text-center truncate w-full px-2">{m.fileName}</p>
+                      <div className="flex gap-2">
+                        <a href={downloadUrl(m.key, "print", m.fileName)}
+                          className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider text-white"
+                          style={{ background: "#3486cf" }} download>Print</a>
+                        <a href={downloadUrl(m.key, "web", m.fileName)}
+                          className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider text-white"
+                          style={{ background: "#c4974a" }} download>Web / MLS</a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
-        {/* Images tab */}
-        {activeTab === "images" && (
-          <>
-            {images.length === 0 ? (
-              <div className="text-center py-16 text-gray-400">
-                <p className="text-4xl mb-3">📷</p>
-                <p>Your gallery is being prepared. Check back soon.</p>
-              </div>
-            ) : (
-              <>
-                {/* Download all buttons */}
-                {unlocked && (
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5 p-4 bg-white rounded-xl border border-gray-200">
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-800">Download All Photos</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        <span className="mr-3">● Print — full resolution originals</span>
-                        <span>● Web / MLS — 2048px, optimized for MLS upload</span>
-                      </p>
-                    </div>
-                    <div className="flex gap-2 flex-shrink-0">
-                      <a
-                        href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=print`}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider text-white"
-                        style={{ background: "#3486cf" }}
-                        download
-                      >
-                        ↓ Print Quality
-                      </a>
-                      <a
-                        href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web`}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider text-white"
-                        style={{ background: "#c4974a" }}
-                        download
-                      >
-                        ↓ Web / MLS
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {images.map((m, i) => (
-                    <div key={i} className="group relative rounded-xl overflow-hidden bg-gray-200 aspect-[4/3]"
-                      onClick={() => setLightboxIdx(i)} style={{ cursor: "pointer" }}>
-                      <img
-                        src={m.url}
-                        alt={m.fileName || `Photo ${i + 1}`}
-                        draggable={false}
-                        onContextMenu={(e) => { if (!unlocked) e.preventDefault(); }}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 select-none"
-                        style={!unlocked ? { pointerEvents: "none" } : {}}
-                      />
-
-                      {/* Watermark overlay — visible when not paid */}
-                      {!unlocked && (
-                        <div
-                          className="absolute inset-0 pointer-events-none select-none overflow-hidden"
-                          style={{ userSelect: "none", WebkitUserSelect: "none" }}
-                        >
-                          {/* Repeating diagonal watermark text */}
-                          {Array.from({ length: 5 }).map((_, row) =>
-                            Array.from({ length: 3 }).map((_, col) => (
-                              <span
-                                key={`${row}-${col}`}
-                                className="absolute text-white/40 font-bold uppercase tracking-widest pointer-events-none select-none"
-                                style={{
-                                  fontSize: "10px",
-                                  top: `${row * 22 + 8}%`,
-                                  left: `${col * 38 - 8}%`,
-                                  transform: "rotate(-30deg)",
-                                  whiteSpace: "nowrap",
-                                  letterSpacing: "0.2em",
-                                  textShadow: "0 1px 2px rgba(0,0,0,0.5)",
-                                }}
-                              >
-                                PREVIEW ONLY
-                              </span>
-                            ))
-                          )}
-                          {/* Subtle dark tint */}
-                          <div className="absolute inset-0 bg-black/10" />
-                        </div>
-                      )}
-
-                      {unlocked && m.key && (
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3">
-                          <p className="text-white text-xs font-medium text-center truncate w-full px-2">
-                            {m.fileName}
-                          </p>
-                          <div className="flex gap-2">
-                            <a href={downloadUrl(m.key, "print", m.fileName)}
-                              className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider text-white"
-                              style={{ background: "#3486cf" }}
-                              download>
-                              Print
-                            </a>
-                            <a href={downloadUrl(m.key, "web", m.fileName)}
-                              className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider text-white"
-                              style={{ background: "#c4974a" }}
-                              download>
-                              Web / MLS
-                            </a>
-                          </div>
-                        </div>
-                      )}
-
-                      {unlocked && !m.key && (
-                        <a href={m.url} download={m.fileName}
-                          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-medium">
-                          Download
+        {/* ── Videos ─────────────────────────────────────────────────────── */}
+        {hasVideos && (
+          <section className="mb-12">
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Video</h2>
+            </div>
+            <div className="space-y-4">
+              {videoUrl && (
+                <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
+                  <iframe src={toEmbedUrl(videoUrl)} title="Video Tour"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen className="w-full h-full" style={{ minHeight: 300 }} />
+                </div>
+              )}
+              {videos.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {videos.map((v, i) => (
+                    <div key={i} className="rounded-xl overflow-hidden bg-gray-900 aspect-video relative group">
+                      <video src={v.url} className="w-full h-full object-cover" controls />
+                      {unlocked && v.key && (
+                        <a href={`/api/gallery/video-download?token=${gallery.accessToken}&key=${encodeURIComponent(v.key)}&name=${encodeURIComponent(v.fileName || "video.mp4")}`}
+                          className="absolute top-3 right-3 px-3 py-1.5 rounded text-xs font-bold text-white"
+                          style={{ background: "#3486cf" }}>
+                          ↓ Download
                         </a>
                       )}
                     </div>
                   ))}
                 </div>
-              </>
-            )}
-          </>
+              )}
+            </div>
+          </section>
         )}
 
-        {/* Videos tab */}
-        {activeTab === "videos" && (
-          <div className="space-y-4">
-            {/* YouTube / Vimeo embed */}
-            {videoUrl && (
-              <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
-                <iframe
-                  src={toEmbedUrl(videoUrl)}
-                  title="Video Tour"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full"
-                  style={{ minHeight: 300 }}
-                />
-              </div>
-            )}
-            {/* Direct-upload videos */}
-            {videos.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {videos.map((v, i) => (
-                  <div key={i} className="rounded-xl overflow-hidden bg-gray-900 aspect-video relative group">
-                    <video src={v.url} className="w-full h-full object-cover" controls />
-                    {unlocked && v.key && (
-                      <a
-                        href={`/api/gallery/video-download?token=${gallery.accessToken}&key=${encodeURIComponent(v.key)}&name=${encodeURIComponent(v.fileName || "video.mp4")}`}
-                        className="absolute top-3 right-3 px-3 py-1.5 rounded text-xs font-bold text-white"
-                        style={{ background: "#3486cf" }}>
-                        Download
-                      </a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 3D Tour tab */}
-        {activeTab === "3d" && (
-          <div className="space-y-5">
-            {matterportUrl && (
-              <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
-                <iframe
-                  src={matterportUrl}
-                  title="3D Interactive Tour"
-                  allow="xr-spatial-tracking"
-                  allowFullScreen
-                  className="w-full h-full"
-                  style={{ minHeight: 400 }}
-                />
-              </div>
-            )}
-            {virtualLinks.map((l, i) => (
-              <a key={i} href={l.url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all group">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: primary + "15" }}>
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" style={{ color: primary }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                  </svg>
+        {/* ── 3D Tour ─────────────────────────────────────────────────────── */}
+        {has3D && (
+          <section className="mb-12">
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">3D Tour</h2>
+            </div>
+            <div className="space-y-4">
+              {matterportUrl && (
+                <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
+                  <iframe src={matterportUrl} title="3D Interactive Tour"
+                    allow="xr-spatial-tracking" allowFullScreen
+                    className="w-full h-full" style={{ minHeight: 400 }} />
                 </div>
-                <span className="font-medium text-sm" style={{ color: primary }}>{l.label}</span>
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="ml-auto text-gray-300 group-hover:text-gray-500 transition-colors">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
-            ))}
-          </div>
+              )}
+              {virtualLinks.map((l, i) => (
+                <a key={i} href={l.url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all group">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: primary + "15" }}>
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" style={{ color: primary }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                  </div>
+                  <span className="font-medium text-sm" style={{ color: primary }}>{l.label}</span>
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="ml-auto text-gray-300 group-hover:text-gray-500 transition-colors">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              ))}
+            </div>
+          </section>
         )}
 
-        {/* Floor Plans tab */}
-        {activeTab === "floorplans" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {floorPlans.map((fp, i) => (
-              <div key={i} className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-                {fp.fileType?.includes("pdf") ? (
-                  <a href={fp.url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-5 hover:bg-gray-50 transition-colors">
-                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-red-400 flex-shrink-0">
+        {/* ── Floor Plans ─────────────────────────────────────────────────── */}
+        {floorPlans.length > 0 && (
+          <section className="mb-12">
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Floor Plans</h2>
+              <span className="text-xs text-gray-300">{floorPlans.length}</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {floorPlans.map((fp, i) => (
+                <div key={i} className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+                  {fp.fileType?.includes("pdf") ? (
+                    <div className="flex items-center gap-3 p-5">
+                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-red-400 flex-shrink-0">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-sm font-medium text-[#0F172A] flex-1">{fp.fileName}</span>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <a href={fp.url} target="_blank" rel="noopener noreferrer"
+                          className="text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 px-2.5 py-1 rounded-lg transition-colors">
+                          View
+                        </a>
+                        {fp.key && (
+                          <a href={fileDownloadUrl(fp.key, fp.fileName)} download={fp.fileName}
+                            className="text-xs font-semibold text-white px-2.5 py-1 rounded-lg transition-colors"
+                            style={{ background: primary }}>
+                            ↓ Download
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <img src={fp.url} alt={fp.fileName} className="w-full object-contain max-h-96 bg-white" />
+                      <div className="px-4 py-3 flex items-center justify-between border-t border-gray-50">
+                        <span className="text-xs text-gray-500">{fp.fileName}</span>
+                        {fp.key ? (
+                          <a href={fileDownloadUrl(fp.key, fp.fileName)} download={fp.fileName}
+                            className="text-xs font-semibold" style={{ color: primary }}>
+                            ↓ Download
+                          </a>
+                        ) : (
+                          <a href={fp.url} download={fp.fileName}
+                            className="text-xs font-semibold" style={{ color: primary }}>
+                            ↓ Download
+                          </a>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── Files / Documents ───────────────────────────────────────────── */}
+        {attachedFiles.length > 0 && (
+          <section className="mb-12">
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Documents</h2>
+              <span className="text-xs text-gray-300">{attachedFiles.length}</span>
+            </div>
+            <div className="space-y-2 max-w-lg">
+              {attachedFiles.map((f, i) => {
+                const dlUrl = f.key ? fileDownloadUrl(f.key, f.fileName) : f.url;
+                return (
+                  <div key={i} className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-xl">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 flex-shrink-0">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
-                    <span className="text-sm font-medium text-[#0F172A]">{fp.fileName}</span>
-                    <span className="ml-auto text-xs text-gray-400">View PDF →</span>
-                  </a>
-                ) : (
-                  <>
-                    <img src={fp.url} alt={fp.fileName} className="w-full object-contain max-h-96 bg-white" />
-                    <div className="px-4 py-3 flex items-center justify-between border-t border-gray-50">
-                      <span className="text-xs text-gray-500">{fp.fileName}</span>
-                      <a href={fp.url} download={fp.fileName}
-                        className="text-xs font-semibold" style={{ color: primary }}>
-                        Download
+                    <span className="text-sm font-medium text-[#0F172A] flex-1 min-w-0 truncate">{f.fileName}</span>
+                    <span className="text-[10px] text-gray-300 font-mono uppercase flex-shrink-0">{f.fileType?.split("/")[1] || "file"}</span>
+                    <div className="flex gap-2 flex-shrink-0">
+                      {f.fileType?.includes("pdf") && (
+                        <a href={f.url} target="_blank" rel="noopener noreferrer"
+                          className="text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 px-2.5 py-1 rounded-lg transition-colors">
+                          View
+                        </a>
+                      )}
+                      <a href={dlUrl} download={f.fileName}
+                        className="text-xs font-semibold text-white px-2.5 py-1 rounded-lg transition-colors"
+                        style={{ background: primary }}>
+                        ↓ Download
                       </a>
                     </div>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Files tab */}
-        {activeTab === "files" && (
-          <div className="space-y-2 max-w-lg">
-            {attachedFiles.map((f, i) => (
-              <a key={i} href={f.url} target="_blank" rel="noopener noreferrer"
-                download={f.fileName}
-                className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all group">
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 flex-shrink-0">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                <span className="text-sm font-medium text-[#0F172A] flex-1">{f.fileName}</span>
-                <span className="text-[10px] text-gray-300 font-mono uppercase">{f.fileType?.split("/")[1] || "file"}</span>
-                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-              </a>
-            ))}
-          </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         )}
 
       </main>

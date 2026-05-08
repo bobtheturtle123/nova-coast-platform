@@ -447,6 +447,25 @@ const [listingUrl,       setListingUrl]        = useState("");
     }
   }
 
+  async function retryScheduledDelivery() {
+    if (!gallery) return;
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(`/api/dashboard/galleries/${gallery.id}/send`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      toast("Delivery queued for retry — will send within 15 minutes.");
+      setGallery((g) => ({
+        ...g,
+        scheduledDelivery: { ...g.scheduledDelivery, status: "pending", scheduledAt: new Date(data.retryAt) },
+      }));
+    } else {
+      toast("Failed to retry.", "error");
+    }
+  }
+
   async function toggleUnlock() {
     if (!gallery) return;
     const token = await auth.currentUser.getIdToken();
@@ -613,24 +632,58 @@ if (loading) return (
 
       <div className="p-6 max-w-5xl">
         {/* Scheduled delivery banner */}
-        {gallery?.scheduledDelivery?.status === "pending" && (
-          <div className="mb-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-            <div>
-              <p className="text-sm font-medium text-blue-900">
-                Gallery delivery scheduled for{" "}
-                {new Date(gallery.scheduledDelivery.scheduledAt?.toDate?.() || gallery.scheduledDelivery.scheduledAt)
-                  .toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-              </p>
-              <p className="text-xs text-blue-600 mt-0.5">Email will send automatically at that time.</p>
+        {gallery?.scheduledDelivery && ["pending", "processing", "error"].includes(gallery.scheduledDelivery.status) && (() => {
+          const status = gallery.scheduledDelivery.status;
+          const ts = gallery.scheduledDelivery.scheduledAt;
+          const d = ts?.toDate?.() ?? (ts?._seconds ? new Date(ts._seconds * 1000) : new Date(ts));
+          const timeStr = isNaN(d?.getTime()) ? null : d.toLocaleString("en-US", {
+            month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short",
+          });
+          const isPending    = status === "pending";
+          const isProcessing = status === "processing";
+          const isError      = status === "error";
+          const bg    = isError ? "bg-red-50 border-red-200"   : isProcessing ? "bg-amber-50 border-amber-200" : "bg-blue-50 border-blue-200";
+          const title = isError ? "text-red-900"               : isProcessing ? "text-amber-900"               : "text-blue-900";
+          const sub   = isError ? "text-red-600"               : isProcessing ? "text-amber-600"               : "text-blue-600";
+          return (
+            <div className={`mb-4 flex items-center justify-between border rounded-lg px-4 py-3 ${bg}`}>
+              <div>
+                {isProcessing && (
+                  <p className={`text-sm font-medium ${title}`}>Sending now…</p>
+                )}
+                {isPending && (
+                  <p className={`text-sm font-medium ${title}`}>
+                    Gallery delivery scheduled for {timeStr ?? "—"}
+                  </p>
+                )}
+                {isError && (
+                  <p className={`text-sm font-medium ${title}`}>
+                    Delivery failed{timeStr ? ` — was scheduled for ${timeStr}` : ""}
+                  </p>
+                )}
+                <p className={`text-xs mt-0.5 ${sub}`}>
+                  {isProcessing && "This delivery is being processed — refresh in a moment."}
+                  {isPending    && "Email will send automatically at the scheduled time."}
+                  {isError      && "An error occurred. Retry to attempt delivery again within 15 min."}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                {isPending && (
+                  <button onClick={() => { setDeliveryMode("later"); setShowDeliver(true); }}
+                    className="text-xs font-medium text-blue-700 hover:underline">Edit</button>
+                )}
+                {isError && (
+                  <button onClick={retryScheduledDelivery}
+                    className="text-xs font-medium text-amber-700 hover:underline">Retry</button>
+                )}
+                {!isProcessing && (
+                  <button onClick={cancelScheduledDelivery}
+                    className={`text-xs font-medium hover:underline ${isError ? "text-red-600" : "text-red-500"}`}>Cancel</button>
+                )}
+              </div>
             </div>
-            <div className="flex gap-3">
-              <button onClick={() => { setDeliveryMode("later"); setShowDeliver(true); }}
-                className="text-xs font-medium text-blue-700 hover:underline">Edit</button>
-              <button onClick={cancelScheduledDelivery}
-                className="text-xs font-medium text-red-500 hover:underline">Cancel</button>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── OVERVIEW TAB ─────────────────────────────────────────────────── */}
         {tab === "overview" && (
@@ -1510,60 +1563,136 @@ if (loading) return (
               </div>
             </div>
 
-            {/* Agent info */}
+            {/* Agent info — up to 4 listing agents */}
             <div className="card">
-              <h3 className="font-display text-[#3486cf] text-base mb-5">Listing Agent</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label-field">Agent Name</label>
-                    <input type="text" value={propSite.agentName || ""}
-                      onChange={(e) => setPropField("agentName", e.target.value)}
-                      className="input-field w-full" placeholder={booking?.clientName} />
-                  </div>
-                  <div>
-                    <label className="label-field">Brokerage / Company</label>
-                    <input type="text" value={propSite.agentBrokerage || ""}
-                      onChange={(e) => setPropField("agentBrokerage", e.target.value)}
-                      className="input-field w-full" placeholder="RE/MAX" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label-field">Phone</label>
-                    <input type="tel" value={propSite.agentPhone || ""}
-                      onChange={(e) => setPropField("agentPhone", e.target.value)}
-                      className="input-field w-full" placeholder={booking?.clientPhone} />
-                  </div>
-                  <div>
-                    <label className="label-field">Email</label>
-                    <input type="email" value={propSite.agentEmail || ""}
-                      onChange={(e) => setPropField("agentEmail", e.target.value)}
-                      className="input-field w-full" placeholder={booking?.clientEmail} />
-                  </div>
-                </div>
-
-                {/* Agent headshot */}
-                <AgentImageField
-                  label="Agent Headshot"
-                  value={propSite.agentPhoto || ""}
-                  onChange={(url) => setPropField("agentPhoto", url)}
-                  folder="agent-photos"
-                  placeholder="https://..."
-                  preview="circle"
-                />
-
-                {/* Company / brokerage logo */}
-                <AgentImageField
-                  label="Brokerage Logo"
-                  value={propSite.agentLogoUrl || ""}
-                  onChange={(url) => setPropField("agentLogoUrl", url)}
-                  folder="agent-logos"
-                  placeholder="https://... or upload"
-                  hint="Shown on the property website and brochure next to the agent card."
-                  preview="rect"
-                />
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-display text-[#3486cf] text-base">Listing Agents</h3>
+                {(propSite.coAgents?.length || 0) < 3 && (
+                  <button type="button"
+                    onClick={() => setPropField("coAgents", [...(propSite.coAgents || []), { name: "", email: "", phone: "", brokerage: "", photo: "" }])}
+                    className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2.5 py-1 rounded hover:bg-[#3486cf]/5 transition-colors">
+                    + Add Agent
+                  </button>
+                )}
               </div>
+
+              {/* Primary agent (agent 1 — uses existing flat fields) */}
+              <div className="p-4 border border-gray-200 rounded-xl mb-3">
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">Agent 1 (Primary)</p>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label-field">Name</label>
+                      <input type="text" value={propSite.agentName || ""}
+                        onChange={(e) => setPropField("agentName", e.target.value)}
+                        className="input-field w-full" placeholder={booking?.clientName} />
+                    </div>
+                    <div>
+                      <label className="label-field">Brokerage</label>
+                      <input type="text" value={propSite.agentBrokerage || ""}
+                        onChange={(e) => setPropField("agentBrokerage", e.target.value)}
+                        className="input-field w-full" placeholder="RE/MAX" />
+                    </div>
+                    <div>
+                      <label className="label-field">Phone</label>
+                      <input type="tel" value={propSite.agentPhone || ""}
+                        onChange={(e) => setPropField("agentPhone", e.target.value)}
+                        className="input-field w-full" placeholder={booking?.clientPhone} />
+                    </div>
+                    <div>
+                      <label className="label-field">Email</label>
+                      <input type="email" value={propSite.agentEmail || ""}
+                        onChange={(e) => setPropField("agentEmail", e.target.value)}
+                        className="input-field w-full" placeholder={booking?.clientEmail} />
+                    </div>
+                  </div>
+                  <AgentImageField
+                    label="Headshot"
+                    value={propSite.agentPhoto || ""}
+                    onChange={(url) => setPropField("agentPhoto", url)}
+                    folder="agent-photos"
+                    placeholder="https://..."
+                    preview="circle"
+                  />
+                  <AgentImageField
+                    label="Brokerage Logo"
+                    value={propSite.agentLogoUrl || ""}
+                    onChange={(url) => setPropField("agentLogoUrl", url)}
+                    folder="agent-logos"
+                    placeholder="https://... or upload"
+                    hint="Shown on the property website next to the agent card."
+                    preview="rect"
+                  />
+                </div>
+              </div>
+
+              {/* Co-agents (agents 2–4) */}
+              {(propSite.coAgents || []).map((agent, i) => (
+                <div key={i} className="p-4 border border-gray-200 rounded-xl mb-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Agent {i + 2}</p>
+                    <button type="button"
+                      onClick={() => setPropField("coAgents", (propSite.coAgents || []).filter((_, idx) => idx !== i))}
+                      className="text-xs text-red-400 hover:text-red-600">Remove</button>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="label-field">Name</label>
+                        <input type="text" value={agent.name || ""}
+                          onChange={(e) => {
+                            const arr = [...(propSite.coAgents || [])];
+                            arr[i] = { ...arr[i], name: e.target.value };
+                            setPropField("coAgents", arr);
+                          }}
+                          className="input-field w-full" placeholder="Agent name" />
+                      </div>
+                      <div>
+                        <label className="label-field">Brokerage</label>
+                        <input type="text" value={agent.brokerage || ""}
+                          onChange={(e) => {
+                            const arr = [...(propSite.coAgents || [])];
+                            arr[i] = { ...arr[i], brokerage: e.target.value };
+                            setPropField("coAgents", arr);
+                          }}
+                          className="input-field w-full" placeholder="RE/MAX" />
+                      </div>
+                      <div>
+                        <label className="label-field">Phone</label>
+                        <input type="tel" value={agent.phone || ""}
+                          onChange={(e) => {
+                            const arr = [...(propSite.coAgents || [])];
+                            arr[i] = { ...arr[i], phone: e.target.value };
+                            setPropField("coAgents", arr);
+                          }}
+                          className="input-field w-full" />
+                      </div>
+                      <div>
+                        <label className="label-field">Email</label>
+                        <input type="email" value={agent.email || ""}
+                          onChange={(e) => {
+                            const arr = [...(propSite.coAgents || [])];
+                            arr[i] = { ...arr[i], email: e.target.value };
+                            setPropField("coAgents", arr);
+                          }}
+                          className="input-field w-full" />
+                      </div>
+                    </div>
+                    <AgentImageField
+                      label="Headshot"
+                      value={agent.photo || ""}
+                      onChange={(url) => {
+                        const arr = [...(propSite.coAgents || [])];
+                        arr[i] = { ...arr[i], photo: url };
+                        setPropField("coAgents", arr);
+                      }}
+                      folder="agent-photos"
+                      placeholder="https://..."
+                      preview="circle"
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Agent Custom Domain (per-listing) */}

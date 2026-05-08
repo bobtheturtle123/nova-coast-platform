@@ -33,11 +33,25 @@ export async function GET(req) {
   try {
     const r2Res = await fetch(sourceUrl);
     if (!r2Res.ok) {
-      return new Response("Source image not found", { status: 404 });
+      return new Response("Source file not found", { status: 404 });
     }
 
     const arrayBuffer = await r2Res.arrayBuffer();
     const inputBuffer = Buffer.from(arrayBuffer);
+
+    // Raw pass-through for PDFs and non-image files (floor plans, attachments)
+    if (format === "raw") {
+      const contentType = r2Res.headers.get("Content-Type") || "application/octet-stream";
+      return new Response(inputBuffer, {
+        status: 200,
+        headers: {
+          "Content-Type":        contentType,
+          "Content-Disposition": `attachment; filename="${name}"`,
+          "Content-Length":      String(inputBuffer.length),
+          "Cache-Control":       "private, max-age=3600",
+        },
+      });
+    }
 
     if (format === "print") {
       // Stream original bytes with attachment header so browser downloads instead of opening

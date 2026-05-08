@@ -12,6 +12,31 @@ import { getPlan } from "@/lib/plans";
 
 const WORKFLOW_STATUS_MAP = Object.fromEntries(WORKFLOW_STATUSES.map((s) => [s.id, s]));
 
+const TIME_SLOTS = [
+  { label: "7:00 AM",  value: "07:00" }, { label: "7:30 AM",  value: "07:30" },
+  { label: "8:00 AM",  value: "08:00" }, { label: "8:30 AM",  value: "08:30" },
+  { label: "9:00 AM",  value: "09:00" }, { label: "9:30 AM",  value: "09:30" },
+  { label: "10:00 AM", value: "10:00" }, { label: "10:30 AM", value: "10:30" },
+  { label: "11:00 AM", value: "11:00" }, { label: "11:30 AM", value: "11:30" },
+  { label: "12:00 PM", value: "12:00" }, { label: "12:30 PM", value: "12:30" },
+  { label: "1:00 PM",  value: "13:00" }, { label: "1:30 PM",  value: "13:30" },
+  { label: "2:00 PM",  value: "14:00" }, { label: "2:30 PM",  value: "14:30" },
+  { label: "3:00 PM",  value: "15:00" }, { label: "3:30 PM",  value: "15:30" },
+  { label: "4:00 PM",  value: "16:00" }, { label: "4:30 PM",  value: "16:30" },
+  { label: "5:00 PM",  value: "17:00" }, { label: "5:30 PM",  value: "17:30" },
+  { label: "6:00 PM",  value: "18:00" }, { label: "6:30 PM",  value: "18:30" },
+  { label: "7:00 PM",  value: "19:00" }, { label: "7:30 PM",  value: "19:30" },
+];
+const DURATION_PRESETS = [
+  { label: "30 min", value: 30  },
+  { label: "1 hr",   value: 60  },
+  { label: "1.5 hr", value: 90  },
+  { label: "2 hr",   value: 120 },
+  { label: "2.5 hr", value: 150 },
+  { label: "3 hr",   value: 180 },
+  { label: "4 hr",   value: 240 },
+];
+
 function WeatherWidget({ booking, tempUnit = "F" }) {
   const [wx,      setWx]      = useState(null);
   const [loading, setLoading] = useState(false);
@@ -185,8 +210,10 @@ export default function BookingDetailPage() {
   const [showActionsMenu, setShowActionsMenu] = useState(false);
 
   // Inline booking detail edits
-  const [shootTime,      setShootTime]      = useState("");
-  const [bookingNotes,   setBookingNotes]   = useState("");
+  const [shootTime,         setShootTime]         = useState("");
+  const [shootDuration,     setShootDuration]     = useState("");
+  const [showSchedulePopup, setShowSchedulePopup] = useState(false);
+  const [bookingNotes,      setBookingNotes]       = useState("");
   const [notesEditing,   setNotesEditing]   = useState(false);
 
   // Edit mode state
@@ -270,6 +297,7 @@ export default function BookingDetailPage() {
         setBooking(bk);
         setShootDate(bk.shootDate?.split?.("T")?.[0] || "");
         setShootTime(bk.preferredTime || bk.shootTime || "");
+        setShootDuration(bk.shootDuration ? String(bk.shootDuration) : "");
         setAdditionalAppts(bk.additionalAppointments || []);
         setBookingNotes(bk.notes || "");
         setWorkflowStatus(resolveWorkflowStatus(bk));
@@ -475,6 +503,18 @@ export default function BookingDetailPage() {
     </div>
   );
 
+  // Schedule computed display
+  const effectiveDuration = shootDuration !== "" ? Number(shootDuration) : (booking.shootDuration || 0);
+  const shootEndTime = (() => {
+    if (!shootTime || !effectiveDuration) return null;
+    const [hh, mm] = shootTime.split(":").map(Number);
+    const total = hh * 60 + mm + effectiveDuration;
+    const eh = Math.floor(total / 60) % 24;
+    const em = total % 60;
+    const sfx = eh >= 12 ? "PM" : "AM";
+    return `${eh % 12 || 12}:${String(em).padStart(2, "0")} ${sfx}`;
+  })();
+
   // Computed cost values for display
   const totalCost  = (Number(costs.shooterFee) || 0) + (Number(costs.editorFee) || 0) + (Number(costs.travelCost) || 0) + (Number(costs.otherCosts) || 0);
   const totalPrice = booking.totalPrice || 0;
@@ -575,19 +615,31 @@ export default function BookingDetailPage() {
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Shoot Date</label>
-                <div className="flex gap-2">
-                  <input type="date" value={shootDate} onChange={(e) => setShootDate(e.target.value)} className="input-field flex-1" />
-                  <button onClick={() => update({ shootDate })} disabled={saving} className="btn-outline px-3 py-2 text-xs flex-shrink-0">Save</button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Shoot Time</label>
-                <div className="flex gap-2">
-                  <input type="time" value={shootTime} onChange={(e) => setShootTime(e.target.value)} className="input-field flex-1" />
-                  <button onClick={() => update({ shootTime, preferredTime: shootTime })} disabled={saving} className="btn-outline px-3 py-2 text-xs flex-shrink-0">Save</button>
-                </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Schedule</label>
+                <button type="button" onClick={() => setShowSchedulePopup(true)}
+                  className="w-full text-left flex items-center justify-between p-3 rounded-xl border border-gray-200 hover:border-[#3486cf]/50 hover:bg-gray-50 transition-colors">
+                  <div>
+                    {shootDate ? (
+                      <>
+                        <p className="text-sm font-medium text-gray-900">
+                          {new Date(shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                          {shootTime && (() => { const [hh, mm] = shootTime.split(":"); const h = Number(hh); return ` · ${h % 12 || 12}:${mm} ${h >= 12 ? "PM" : "AM"}`; })()}
+                        </p>
+                        {shootEndTime && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Ends {shootEndTime}{effectiveDuration > 0 ? ` · ${effectiveDuration >= 60 ? `${effectiveDuration / 60}h` : `${effectiveDuration}m`}` : ""}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm text-gray-400">No date selected</p>
+                    )}
+                  </div>
+                  <span className="text-xs font-medium text-[#3486cf] flex-shrink-0 ml-3">
+                    {shootDate ? "Edit" : "Pick date →"}
+                  </span>
+                </button>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Total Price ($)</label>
@@ -1287,6 +1339,112 @@ export default function BookingDetailPage() {
         </div>
         {/* END RIGHT SIDEBAR */}
       </div>
+
+      {/* ── Schedule popup ──────────────────────────────────────────────────── */}
+      {showSchedulePopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+              <h3 className="font-semibold text-[#0F172A]">Date &amp; Time</h3>
+              <button type="button" onClick={() => setShowSchedulePopup(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+            </div>
+
+            <div className="px-5 py-4 space-y-5">
+              {/* Date */}
+              <div>
+                <label className="label-field">Shoot Date</label>
+                <input type="date" value={shootDate} onChange={(e) => setShootDate(e.target.value)} className="input-field w-full" />
+              </div>
+
+              {/* Time slots */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="label-field">Start Time</label>
+                  {shootTime && (
+                    <span className="text-xs font-semibold text-[#3486cf]">
+                      {(() => { const [hh, mm] = shootTime.split(":"); const h = Number(hh); return `${h % 12 || 12}:${mm} ${h >= 12 ? "PM" : "AM"}`; })()}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-4 gap-1.5 mb-3">
+                  {TIME_SLOTS.map((slot) => (
+                    <button key={slot.value} type="button"
+                      onClick={() => setShootTime(slot.value)}
+                      className={`py-2 text-[13px] rounded-lg border text-center transition-colors font-medium ${
+                        shootTime === slot.value
+                          ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
+                          : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                      }`}>
+                      {slot.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-gray-400">Custom:</span>
+                  <input type="time" value={shootTime} onChange={(e) => setShootTime(e.target.value)}
+                    className="input-field text-sm py-1" style={{ width: "auto" }} />
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div>
+                <label className="label-field mb-2">Duration</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {DURATION_PRESETS.map((d) => (
+                    <button key={d.value} type="button"
+                      onClick={() => setShootDuration((prev) => prev === String(d.value) ? "" : String(d.value))}
+                      className={`py-1.5 px-3 text-[13px] rounded-lg border transition-colors font-medium ${
+                        shootDuration === String(d.value)
+                          ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
+                          : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                      }`}>
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-gray-400">Custom (min):</span>
+                  <input type="number" min="0" max="720" step="15"
+                    value={shootDuration} onChange={(e) => setShootDuration(e.target.value)}
+                    className="input-field text-sm py-1 w-20" placeholder="—" />
+                </div>
+              </div>
+
+              {/* End time badge */}
+              {shootEndTime && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl">
+                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
+                    <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l4 2"/>
+                  </svg>
+                  <span className="text-xs text-gray-500">Ends at</span>
+                  <span className="text-sm font-semibold text-gray-800">{shootEndTime}</span>
+                  {effectiveDuration > 0 && (
+                    <span className="text-xs text-gray-400 ml-auto">
+                      {effectiveDuration >= 60 ? `${effectiveDuration / 60}h` : `${effectiveDuration}m`}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 pb-5">
+              <button type="button"
+                onClick={async () => {
+                  setShowSchedulePopup(false);
+                  const patch = { shootDate, shootTime, preferredTime: shootTime };
+                  if (shootDuration !== "") patch.shootDuration = Number(shootDuration);
+                  await update(patch);
+                }}
+                disabled={saving}
+                className="btn-primary w-full py-2.5 text-sm">
+                {saving ? "Saving…" : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
