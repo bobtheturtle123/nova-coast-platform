@@ -152,6 +152,17 @@ function InlineCopyRow({ url, primary, label = "Copy Link" }) {
   );
 }
 
+function CopyUrlButton({ url }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })}
+      className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors whitespace-nowrap">
+      {copied ? "Copied!" : "Copy Link"}
+    </button>
+  );
+}
+
 export default function GalleryClient({ gallery, booking, tenant, slug, token }) {
   const [unlocked,     setUnlocked]     = useState(gallery.unlocked);
   const [clientSecret, setClientSecret] = useState(null);
@@ -216,62 +227,46 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero header */}
-      <div className="relative h-56 md:h-72 bg-gray-900 overflow-hidden">
+    <div className="min-h-screen bg-[#f7f8fa]">
+
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <div className="relative h-60 md:h-80 bg-gray-900 overflow-hidden">
         {coverImg && (
           <img src={coverImg} alt={address}
-            className="absolute inset-0 w-full h-full object-cover opacity-70" />
+            className="absolute inset-0 w-full h-full object-cover opacity-60" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        {/* Brand */}
-        <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-          <span className="font-display text-white text-lg tracking-wide drop-shadow">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+        <div className="absolute top-4 left-5 right-5 flex items-center justify-between">
+          <span className="font-display text-white text-base tracking-widest drop-shadow opacity-90">
             {name?.toUpperCase()}
           </span>
-          <div className="flex items-center gap-2">
-            {gallery.agentCanShare !== false && (
-              <CopyLinkButton />
-            )}
-            {unlocked && images.length > 0 && (
-              <a
-                href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-white border border-white/60 hover:bg-white/10 transition-colors"
-                download
-              >
-                ↓ Download Package
-              </a>
-            )}
-          </div>
+          {gallery.agentCanShare !== false && <CopyLinkButton />}
         </div>
-        {/* Address */}
-        <div className="absolute bottom-4 left-4">
-          <h1 className="font-display text-white text-2xl md:text-3xl drop-shadow">{address}</h1>
-          <p className="text-white/70 text-sm mt-0.5">{images.length} photos{videos.length > 0 ? ` · ${videos.length} videos` : ""}</p>
+        <div className="absolute bottom-6 left-5 right-5">
+          <h1 className="font-display text-white text-2xl md:text-4xl drop-shadow mb-2">{address}</h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {images.length > 0 && <span className="text-white/70 text-sm">{images.length} Photos</span>}
+            {hasVideos && <span className="text-white/40 text-sm">·</span>}
+            {hasVideos && <span className="text-white/70 text-sm">Video Tour</span>}
+            {has3D && <span className="text-white/40 text-sm">·</span>}
+            {has3D && <span className="text-white/70 text-sm">3D Tour</span>}
+            {floorPlans.length > 0 && <span className="text-white/40 text-sm">·</span>}
+            {floorPlans.length > 0 && <span className="text-white/70 text-sm">{floorPlans.length} Floor Plans</span>}
+            {attachedFiles.length > 0 && <span className="text-white/40 text-sm">·</span>}
+            {attachedFiles.length > 0 && <span className="text-white/70 text-sm">{attachedFiles.length} Documents</span>}
+          </div>
         </div>
       </div>
 
-      {/* Agent listing hub — MLS syndication links */}
+      {/* ── MLS syndication bar ──────────────────────────────────────────── */}
       {booking?.propertyWebsite?.mlsSyndication && (
         <div className="bg-white border-b border-gray-200">
-          <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center gap-3 overflow-x-auto">
-            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex-shrink-0">View listing on</span>
+          <div className="max-w-5xl mx-auto px-5 py-2.5 flex items-center gap-3 overflow-x-auto">
+            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex-shrink-0">View on</span>
             {[
-              {
-                label: "Zillow",
-                url: booking.propertyWebsite.zillowUrl
-                  || (gallery.bookingAddress ? `https://www.zillow.com/homes/${encodeURIComponent(gallery.bookingAddress)}_rb/` : null),
-              },
-              {
-                label: "Redfin",
-                url: booking.propertyWebsite.redfinUrl
-                  || (gallery.bookingAddress ? `https://www.redfin.com/query/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "+")}` : null),
-              },
-              {
-                label: "Realtor.com",
-                url: booking.propertyWebsite.realtorUrl
-                  || (gallery.bookingAddress ? `https://www.realtor.com/realestateandhomes-search/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "-")}` : null),
-              },
+              { label: "Zillow",       url: booking.propertyWebsite.zillowUrl   || (gallery.bookingAddress ? `https://www.zillow.com/homes/${encodeURIComponent(gallery.bookingAddress)}_rb/` : null) },
+              { label: "Redfin",       url: booking.propertyWebsite.redfinUrl   || (gallery.bookingAddress ? `https://www.redfin.com/query/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "+")}` : null) },
+              { label: "Realtor.com",  url: booking.propertyWebsite.realtorUrl  || (gallery.bookingAddress ? `https://www.realtor.com/realestateandhomes-search/${encodeURIComponent(gallery.bookingAddress).replace(/%20/g, "-")}` : null) },
             ].filter((l) => l.url).map((l) => (
               <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
                 className="flex-shrink-0 text-xs font-medium text-[#3486cf] border border-[#3486cf]/20 px-3 py-1 rounded-full hover:bg-[#3486cf]/5 transition-colors">
@@ -280,7 +275,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             ))}
             {gallery.mlsUrl && (
               <a href={gallery.mlsUrl} target="_blank" rel="noopener noreferrer"
-                className="flex-shrink-0 text-xs font-medium text-white bg-[#3486cf] px-3 py-1 rounded-full hover:bg-[#3486cf]/90 transition-colors">
+                className="flex-shrink-0 text-xs font-semibold text-white bg-[#3486cf] px-3 py-1 rounded-full hover:bg-[#3486cf]/90 transition-colors">
                 MLS Listing ↗
               </a>
             )}
@@ -288,30 +283,30 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         </div>
       )}
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-5xl mx-auto px-4 py-8 space-y-5">
 
-        {/* Preview-only notice */}
+        {/* Preview notice */}
         {!unlocked && balance <= 0 && (
-          <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-center gap-2">
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+          <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-center gap-2">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
-            <span>You're viewing a <strong>preview</strong> of this gallery. Downloads are not available in preview mode.</span>
+            <span>You're viewing a <strong>preview</strong>. Downloads are not available until the balance is paid.</span>
           </div>
         )}
 
         {/* Balance gate */}
         {!unlocked && balance > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-8 max-w-lg">
-            <h2 className="font-display text-xl text-gray-900 mb-2">Unlock full downloads</h2>
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 max-w-lg">
+            <h2 className="font-display text-xl text-gray-900 mb-2">Unlock your media</h2>
             <p className="text-gray-500 text-sm mb-4">
               Pay your remaining balance of <strong>${balance}</strong> to download full-resolution files.
             </p>
             {payMsg && <p className="text-sm mb-4 text-blue-600">{payMsg}</p>}
             {!clientSecret && (
               <button onClick={startBalancePayment} disabled={loadingPay}
-                className="py-2 px-6 rounded-xl font-semibold text-sm text-white"
+                className="py-2.5 px-6 rounded-xl font-semibold text-sm text-white transition-opacity hover:opacity-90"
                 style={{ background: primary }}>
                 {loadingPay ? "Loading…" : `Pay $${balance}`}
               </button>
@@ -327,51 +322,67 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         )}
 
         {payMsg && unlocked && (
-          <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-xl mb-6">
+          <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-xl">
             {payMsg}
           </div>
         )}
 
-        {/* ── Photos ─────────────────────────────────────────────────────── */}
+        {/* ── Package overview (unlocked) ──────────────────────────────── */}
+        {unlocked && (images.length > 0 || hasVideos || has3D || floorPlans.length > 0 || attachedFiles.length > 0) && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
+            <div>
+              <p className="font-semibold text-gray-900 mb-1.5">Your Media Package</p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
+                {images.length > 0 && <span>{images.length} photos</span>}
+                {hasVideos && <><span className="text-gray-300">·</span><span>Video tour</span></>}
+                {has3D && <><span className="text-gray-300">·</span><span>3D tour</span></>}
+                {floorPlans.length > 0 && <><span className="text-gray-300">·</span><span>{floorPlans.length} floor plan{floorPlans.length !== 1 ? "s" : ""}</span></>}
+                {attachedFiles.length > 0 && <><span className="text-gray-300">·</span><span>{attachedFiles.length} document{attachedFiles.length !== 1 ? "s" : ""}</span></>}
+              </div>
+            </div>
+            <a
+              href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`}
+              download
+              className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
+              style={{ background: primary }}>
+              ↓ Download Everything
+            </a>
+          </div>
+        )}
+
+        {/* ── Photos ──────────────────────────────────────────────────────── */}
         {images.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
+          <div className="bg-white border border-gray-200 rounded-2xl text-center py-16 text-gray-400">
             <p className="text-4xl mb-3">📷</p>
-            <p>Your gallery is being prepared. Check back soon.</p>
+            <p className="text-sm">Your gallery is being prepared. Check back soon.</p>
           </div>
         ) : (
-          <section className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Photos</h2>
-              <span className="text-xs text-gray-300">{images.length}</span>
-            </div>
-
-            {unlocked && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5 p-4 bg-white rounded-xl border border-gray-200">
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-gray-800">Download All Photos</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Print — full resolution · Web / MLS — 2048px optimized
-                  </p>
-                </div>
-                <div className="flex gap-2 flex-shrink-0">
+          <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <h2 className="font-semibold text-gray-900">Photos</h2>
+                <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">{images.length}</span>
+              </div>
+              {unlocked && (
+                <div className="flex gap-2">
                   <a href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=print`}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider text-white"
-                    style={{ background: "#3486cf" }} download>
+                    download
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
                     ↓ Print
                   </a>
                   <a href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web`}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider text-white"
-                    style={{ background: "#c4974a" }} download>
+                    download
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90"
+                    style={{ background: primary }}>
                     ↓ Web / MLS
                   </a>
                 </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              )}
+            </div>
+            <div className="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
               {images.map((m, i) => (
-                <div key={i} className="group relative rounded-xl overflow-hidden bg-gray-200 aspect-[4/3]"
-                  onClick={() => setLightboxIdx(i)} style={{ cursor: "pointer" }}>
+                <div key={i} className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer"
+                  onClick={() => setLightboxIdx(i)}>
                   <img src={m.url} alt={m.fileName || `Photo ${i + 1}`} draggable={false}
                     onContextMenu={(e) => { if (!unlocked) e.preventDefault(); }}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 select-none"
@@ -384,9 +395,9 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                         Array.from({ length: 3 }).map((_, col) => (
                           <span key={`${row}-${col}`}
                             className="absolute text-white/40 font-bold uppercase tracking-widest pointer-events-none select-none"
-                            style={{ fontSize: "10px", top: `${row * 22 + 8}%`, left: `${col * 38 - 8}%`,
+                            style={{ fontSize: "9px", top: `${row * 22 + 8}%`, left: `${col * 38 - 8}%`,
                               transform: "rotate(-30deg)", whiteSpace: "nowrap", letterSpacing: "0.2em",
-                              textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>
+                              textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>
                             PREVIEW ONLY
                           </span>
                         ))
@@ -396,15 +407,15 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                   )}
 
                   {unlocked && m.key && (
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3">
-                      <p className="text-white text-xs font-medium text-center truncate w-full px-2">{m.fileName}</p>
-                      <div className="flex gap-2">
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
+                      <p className="text-white text-[11px] font-medium text-center truncate w-full px-2">{m.fileName}</p>
+                      <div className="flex gap-1.5">
                         <a href={downloadUrl(m.key, "print", m.fileName)}
-                          className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider text-white"
-                          style={{ background: "#3486cf" }} download>Print</a>
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide text-white bg-[#3486cf]"
+                          download onClick={(e) => e.stopPropagation()}>Print</a>
                         <a href={downloadUrl(m.key, "web", m.fileName)}
-                          className="px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider text-white"
-                          style={{ background: "#c4974a" }} download>Web / MLS</a>
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide text-white bg-[#c4974a]"
+                          download onClick={(e) => e.stopPropagation()}>Web</a>
                       </div>
                     </div>
                   )}
@@ -414,32 +425,33 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           </section>
         )}
 
-        {/* ── Videos ─────────────────────────────────────────────────────── */}
+        {/* ── Video Tour ──────────────────────────────────────────────────── */}
         {hasVideos && (
-          <section className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Video</h2>
+          <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900">Video Tour</h2>
             </div>
-            <div className="space-y-4">
+            <div className="p-4 space-y-3">
               {videoUrl && (
                 <div>
-                  <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
+                  <div className="rounded-xl overflow-hidden bg-gray-900" style={{ aspectRatio: "16/9" }}>
                     <iframe src={toEmbedUrl(videoUrl)} title="Video Tour"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen className="w-full h-full" style={{ minHeight: 300 }} />
+                      allowFullScreen className="w-full h-full" style={{ minHeight: 280 }} />
                   </div>
                   <InlineCopyRow url={videoUrl} primary={primary} />
                 </div>
               )}
               {videos.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className={`grid gap-3 ${videos.length > 1 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
                   {videos.map((v, i) => (
                     <div key={i} className="rounded-xl overflow-hidden bg-gray-900 aspect-video relative group">
-                      <video src={v.url} className="w-full h-full object-cover" controls />
+                      <video src={v.url} className="w-full h-full" controls />
                       {unlocked && v.key && (
-                        <a href={`/api/gallery/video-download?token=${gallery.accessToken}&key=${encodeURIComponent(v.key)}&name=${encodeURIComponent(v.fileName || "video.mp4")}`}
-                          className="absolute top-3 right-3 px-3 py-1.5 rounded text-xs font-bold text-white"
-                          style={{ background: "#3486cf" }}>
+                        <a
+                          href={`/api/gallery/video-download?token=${gallery.accessToken}&key=${encodeURIComponent(v.key)}&name=${encodeURIComponent(v.fileName || "video.mp4")}`}
+                          className="absolute top-3 right-3 px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-lg"
+                          style={{ background: primary }}>
                           ↓ Download
                         </a>
                       )}
@@ -453,35 +465,39 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
 
         {/* ── 3D Tour ─────────────────────────────────────────────────────── */}
         {has3D && (
-          <section className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">3D Tour</h2>
+          <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900">3D Tour</h2>
             </div>
-            <div className="space-y-4">
+            <div className="p-4 space-y-3">
               {matterportUrl && (
                 <div>
-                  <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
+                  <div className="rounded-xl overflow-hidden bg-gray-900" style={{ aspectRatio: "16/9" }}>
                     <iframe src={matterportUrl} title="3D Interactive Tour"
                       allow="xr-spatial-tracking" allowFullScreen
-                      className="w-full h-full" style={{ minHeight: 400 }} />
+                      className="w-full h-full" style={{ minHeight: 360 }} />
                   </div>
-                  <InlineCopyRow url={matterportUrl} primary={primary} label="Tour Link" />
+                  <InlineCopyRow url={matterportUrl} primary={primary} label="Copy Tour Link" />
                 </div>
               )}
               {virtualLinks.map((l, i) => (
-                <a key={i} href={l.url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all group">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: primary + "15" }}>
-                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" style={{ color: primary }}>
+                <div key={i} className="flex items-center gap-3 p-4 border border-gray-100 rounded-xl bg-gray-50">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: primary + "18" }}>
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ color: primary }}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                     </svg>
                   </div>
-                  <span className="font-medium text-sm" style={{ color: primary }}>{l.label}</span>
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="ml-auto text-gray-300 group-hover:text-gray-500 transition-colors">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </a>
+                  <span className="font-medium text-sm text-gray-900 flex-1">{l.label}</span>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <CopyUrlButton url={l.url} />
+                    <a href={l.url} target="_blank" rel="noopener noreferrer"
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+                      style={{ color: primary }}>
+                      Open ↗
+                    </a>
+                  </div>
+                </div>
               ))}
             </div>
           </section>
@@ -489,88 +505,106 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
 
         {/* ── Floor Plans ─────────────────────────────────────────────────── */}
         {floorPlans.length > 0 && (
-          <section className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Floor Plans</h2>
-              <span className="text-xs text-gray-300">{floorPlans.length}</span>
+          <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
+              <h2 className="font-semibold text-gray-900">Floor Plans</h2>
+              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">{floorPlans.length}</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {floorPlans.map((fp, i) => (
-                <div key={i} className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-                  {fp.fileType?.includes("pdf") ? (
-                    <div className="flex items-center gap-3 p-5">
-                      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-red-400 flex-shrink-0">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                      <span className="text-sm font-medium text-[#0F172A] flex-1">{fp.fileName}</span>
-                      <div className="flex gap-2 flex-shrink-0">
-                        <a href={fp.url} target="_blank" rel="noopener noreferrer"
-                          className="text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 px-2.5 py-1 rounded-lg transition-colors">
-                          View
-                        </a>
-                        {fp.key && (
-                          <a href={fileDownloadUrl(fp.key, fp.fileName)} download={fp.fileName}
-                            className="text-xs font-semibold text-white px-2.5 py-1 rounded-lg transition-colors"
-                            style={{ background: primary }}>
-                            ↓ Download
-                          </a>
-                        )}
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {floorPlans.map((fp, i) => {
+                const viewUrl = fp.publicUrl || fp.url;
+                const dlUrl   = fp.key ? fileDownloadUrl(fp.key, fp.fileName) : viewUrl;
+                return (
+                  <div key={i} className="border border-gray-100 rounded-xl overflow-hidden bg-gray-50/50">
+                    {fp.fileType?.includes("pdf") ? (
+                      <div className="flex items-center gap-3 p-4">
+                        <div className="w-10 h-12 bg-red-50 border border-red-100 rounded-lg flex flex-col items-center justify-center flex-shrink-0 gap-0.5">
+                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-red-400">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                          <span className="text-[8px] font-bold text-red-400 uppercase">PDF</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{fp.fileName}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">Floor Plan</p>
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          {viewUrl && (
+                            <a href={viewUrl} target="_blank" rel="noopener noreferrer"
+                              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-white transition-colors">
+                              View
+                            </a>
+                          )}
+                          {dlUrl && (
+                            <a href={dlUrl} download={fp.fileName}
+                              className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90"
+                              style={{ background: primary }}>
+                              ↓ Download
+                            </a>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <>
-                      <img src={fp.publicUrl || fp.url} alt={fp.fileName} className="w-full object-contain max-h-96 bg-white" />
-                      <div className="px-4 py-3 flex items-center justify-between border-t border-gray-50">
-                        <span className="text-xs text-gray-500">{fp.fileName}</span>
-                        {fp.key ? (
-                          <a href={fileDownloadUrl(fp.key, fp.fileName)} download={fp.fileName}
-                            className="text-xs font-semibold" style={{ color: primary }}>
-                            ↓ Download
-                          </a>
-                        ) : (
-                          <a href={fp.url} download={fp.fileName}
-                            className="text-xs font-semibold" style={{ color: primary }}>
-                            ↓ Download
-                          </a>
+                    ) : (
+                      <>
+                        {viewUrl && (
+                          <img src={viewUrl} alt={fp.fileName}
+                            className="w-full object-contain max-h-80 bg-white" />
                         )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
+                        <div className="px-4 py-3 flex items-center justify-between border-t border-gray-100 bg-white">
+                          <span className="text-xs text-gray-500 truncate flex-1 mr-3">{fp.fileName}</span>
+                          {dlUrl && (
+                            <a href={dlUrl} download={fp.fileName}
+                              className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white flex-shrink-0 transition-opacity hover:opacity-90"
+                              style={{ background: primary }}>
+                              ↓ Download
+                            </a>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
 
-        {/* ── Files / Documents ───────────────────────────────────────────── */}
+        {/* ── Documents ───────────────────────────────────────────────────── */}
         {attachedFiles.length > 0 && (
-          <section className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Documents</h2>
-              <span className="text-xs text-gray-300">{attachedFiles.length}</span>
+          <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
+              <h2 className="font-semibold text-gray-900">Documents</h2>
+              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">{attachedFiles.length}</span>
             </div>
-            <div className="space-y-2 max-w-lg">
+            <div className="divide-y divide-gray-50">
               {attachedFiles.map((f, i) => {
-                const dlUrl = f.key ? fileDownloadUrl(f.key, f.fileName) : f.url;
+                const viewUrl = f.publicUrl || f.url;
+                const dlUrl   = f.key ? fileDownloadUrl(f.key, f.fileName) : viewUrl;
+                const ext     = (f.fileName?.match(/\.([^.]+)$/) || [])[1]?.toUpperCase() || "FILE";
+                const isPdf   = f.fileType?.includes("pdf");
+                const isImage = f.fileType?.startsWith("image/");
                 return (
-                  <div key={i} className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-xl">
-                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 flex-shrink-0">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-sm font-medium text-[#0F172A] flex-1 min-w-0 truncate">{f.fileName}</span>
-                    <span className="text-[10px] text-gray-300 font-mono uppercase flex-shrink-0">{f.fileType?.split("/")[1] || "file"}</span>
+                  <div key={i} className="flex items-center gap-4 px-5 py-3.5">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border ${
+                      isPdf ? "bg-red-50 border-red-100" : "bg-gray-100 border-gray-200"
+                    }`}>
+                      <span className={`text-[9px] font-bold ${isPdf ? "text-red-500" : "text-gray-400"}`}>{ext}</span>
+                    </div>
+                    <span className="text-sm font-medium text-gray-900 flex-1 min-w-0 truncate">{f.fileName}</span>
                     <div className="flex gap-2 flex-shrink-0">
-                      {f.fileType?.includes("pdf") && (
-                        <a href={f.url} target="_blank" rel="noopener noreferrer"
-                          className="text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 px-2.5 py-1 rounded-lg transition-colors">
+                      {(isPdf || isImage) && viewUrl && (
+                        <a href={viewUrl} target="_blank" rel="noopener noreferrer"
+                          className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
                           View
                         </a>
                       )}
-                      <a href={dlUrl} download={f.fileName}
-                        className="text-xs font-semibold text-white px-2.5 py-1 rounded-lg transition-colors"
-                        style={{ background: primary }}>
-                        ↓ Download
-                      </a>
+                      {dlUrl && (
+                        <a href={dlUrl} download={f.fileName}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90"
+                          style={{ background: primary }}>
+                          ↓ Download
+                        </a>
+                      )}
                     </div>
                   </div>
                 );
@@ -582,9 +616,9 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-100 py-6 text-center">
+      <footer className="border-t border-gray-100 py-8 text-center">
         <p className="text-xs text-gray-400">
-          Delivered by <span className="font-medium" style={{ color: primary }}>{name}</span>
+          Delivered by <span className="font-semibold" style={{ color: primary }}>{name}</span>
         </p>
       </footer>
 
