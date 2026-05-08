@@ -12,6 +12,7 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const token  = searchParams.get("token");
   const format = searchParams.get("format") || "web"; // "web" | "print"
+  const extras = searchParams.get("extras") === "true"; // include floor plans, files, links.txt
 
   if (!token) return new Response("Missing params", { status: 400 });
 
@@ -80,6 +81,39 @@ export async function GET(req) {
 
   if (entries.length === 0) return new Response("Failed to fetch images", { status: 500 });
 
+  // Fetch floor plans + attached files when extras=true
+  const extraEntries = [];
+  let linksText = "";
+  if (extras) {
+    const floorPlans    = (gallery.floorPlans    || []).filter((fp) => !fp.hidden && fp.key);
+    const attachedFiles = (gallery.attachedFiles || []).filter((f)  => !f.hidden  && f.key);
+    const allExtras = [
+      ...floorPlans.map((fp) => ({ ...fp, folder: "Floor Plans" })),
+      ...attachedFiles.map((f) => ({ ...f, folder: "Extras" })),
+    ];
+    const extraResults = await Promise.allSettled(
+      allExtras.map(async (item) => {
+        const res = await fetch(`${r2Url}/${item.key}`);
+        if (!res.ok) return null;
+        const buf = Buffer.from(await res.arrayBuffer());
+        return { buffer: buf, fileName: `${item.folder}/${item.fileName || item.key.split("/").pop()}` };
+      })
+    );
+    for (const r of extraResults) {
+      if (r.status === "fulfilled" && r.value) extraEntries.push(r.value);
+    }
+
+    // Build links.txt for tour/video URLs
+    const lines = [];
+    if (gallery.matterportUrl && !gallery.matterportHidden)
+      lines.push(`3D Tour: ${gallery.matterportUrl}`);
+    if (gallery.videoUrl && !gallery.videoUrlHidden)
+      lines.push(`Video Tour: ${gallery.videoUrl}`);
+    for (const l of (gallery.virtualLinks || []).filter((l) => !l.hidden))
+      lines.push(`${l.label || "Virtual Tour"}: ${l.url}`);
+    if (lines.length) linksText = lines.join("\n");
+  }
+
   // Build zip in memory using archiver
   const zipBuffer = await new Promise((resolve, reject) => {
     const chunks = [];
@@ -87,8 +121,15 @@ export async function GET(req) {
     archive.on("data",  (chunk) => chunks.push(chunk));
     archive.on("end",   () => resolve(Buffer.concat(chunks)));
     archive.on("error", reject);
+    const photoFolder = extras ? "Photos/" : "";
     for (const { buffer, fileName } of entries) {
+      archive.append(buffer, { name: `${photoFolder}${fileName}` });
+    }
+    for (const { buffer, fileName } of extraEntries) {
       archive.append(buffer, { name: fileName });
+    }
+    if (linksText) {
+      archive.append(Buffer.from(linksText, "utf8"), { name: "Tour Links.txt" });
     }
     archive.finalize();
   });
@@ -111,7 +152,9 @@ export async function GET(req) {
   }
 
   const address = (gallery.bookingAddress || "gallery").replace(/[^a-z0-9]/gi, "-").toLowerCase();
-  const zipName = `${address}-${format === "web" ? "web-ready" : "print"}.zip`;
+  const zipName = extras
+    ? `${address}-package.zip`
+    : `${address}-${format === "web" ? "web-ready" : "print"}.zip`;
 
   return new Response(zipBuffer, {
     status: 200,

@@ -317,6 +317,8 @@ export default function GalleryDetailPage() {
   const [newLinkUrl,      setNewLinkUrl]      = useState("");
   const floorRef = useRef(null);
   const fileAttachRef = useRef(null);
+  const dragCounter = useRef(0);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
@@ -1035,14 +1037,31 @@ export default function GalleryDetailPage() {
         })()}
 
         {/* Upload zone */}
-        <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 mb-6 text-center cursor-pointer hover:border-[#3486cf]/40 hover:bg-gray-50 transition-colors"
+        <div
+          className={`border-2 border-dashed rounded-xl p-8 mb-6 text-center cursor-pointer transition-colors ${
+            isDragOver
+              ? "border-[#3486cf] bg-[#3486cf]/5"
+              : "border-gray-200 hover:border-[#3486cf]/40 hover:bg-gray-50"
+          }`}
           onClick={() => !uploading && fileRef.current?.click()}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            dragCounter.current++;
+            setIsDragOver(true);
+          }}
           onDragOver={(e) => e.preventDefault()}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            dragCounter.current--;
+            if (dragCounter.current === 0) setIsDragOver(false);
+          }}
           onDrop={(e) => {
             e.preventDefault();
+            dragCounter.current = 0;
+            setIsDragOver(false);
             const all = Array.from(e.dataTransfer.files);
-            const pdfs   = all.filter((f) => f.type === "application/pdf");
-            const media  = all.filter((f) => f.type.startsWith("image/") || f.type.startsWith("video/"));
+            const pdfs  = all.filter((f) => f.type === "application/pdf");
+            const media = all.filter((f) => f.type.startsWith("image/") || f.type.startsWith("video/"));
             if (pdfs.length)  uploadFloorPlans(pdfs);
             if (media.length) uploadFiles(media);
           }}>
@@ -1055,10 +1074,16 @@ export default function GalleryDetailPage() {
               </div>
               <p className="text-sm text-gray-500">Uploading… {progress}%</p>
             </div>
+          ) : isDragOver ? (
+            <>
+              <p className="text-3xl mb-2">📂</p>
+              <p className="text-sm font-semibold text-[#3486cf]">Drop to upload</p>
+              <p className="text-xs text-[#3486cf]/70 mt-1">Photos &amp; videos · PDFs auto-go to Floor Plans</p>
+            </>
           ) : (
             <>
               <p className="text-2xl mb-1">☁️</p>
-              <p className="text-sm text-gray-500">Drop files or <span className="text-[#3486cf] font-medium">click to upload</span></p>
+              <p className="text-sm text-gray-500">Drag &amp; drop files here, or <span className="text-[#3486cf] font-medium">click to browse</span></p>
               <p className="text-xs text-gray-400 mt-1">Photos &amp; videos · PDFs auto-go to Floor Plans</p>
             </>
           )}
@@ -1339,7 +1364,7 @@ export default function GalleryDetailPage() {
                         <span className="truncate">{fp.fileName}</span>
                       </a>
                     ) : (
-                      <img src={fp.url} alt={fp.fileName} className="w-full aspect-[4/3] object-cover" />
+                      <img src={fp.publicUrl || fp.url} alt={fp.fileName} className="w-full aspect-[4/3] object-cover" />
                     )}
                     {fp.hidden && (
                       <div className="absolute top-1 left-1">

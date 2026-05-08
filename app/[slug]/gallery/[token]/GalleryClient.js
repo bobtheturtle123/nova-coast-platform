@@ -133,6 +133,25 @@ function CopyLinkButton() {
   );
 }
 
+function InlineCopyRow({ url, primary, label = "Copy Link" }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="flex items-center gap-2 mt-2 px-3 py-2.5 bg-white border border-gray-200 rounded-xl">
+      <span className="text-xs text-gray-400 flex-1 truncate font-mono">{url}</span>
+      <button
+        onClick={() => navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })}
+        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex-shrink-0 whitespace-nowrap">
+        {copied ? "Copied!" : label}
+      </button>
+      <a href={url} target="_blank" rel="noopener noreferrer"
+        className="text-xs font-semibold px-3 py-1.5 rounded-lg flex-shrink-0 whitespace-nowrap"
+        style={{ color: primary }}>
+        Open ↗
+      </a>
+    </div>
+  );
+}
+
 export default function GalleryClient({ gallery, booking, tenant, slug, token }) {
   const [unlocked,     setUnlocked]     = useState(gallery.unlocked);
   const [clientSecret, setClientSecret] = useState(null);
@@ -216,11 +235,11 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             )}
             {unlocked && images.length > 0 && (
               <a
-                href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web`}
+                href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-white border border-white/60 hover:bg-white/10 transition-colors"
                 download
               >
-                ↓ Download All
+                ↓ Download Package
               </a>
             )}
           </div>
@@ -403,10 +422,13 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             </div>
             <div className="space-y-4">
               {videoUrl && (
-                <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
-                  <iframe src={toEmbedUrl(videoUrl)} title="Video Tour"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen className="w-full h-full" style={{ minHeight: 300 }} />
+                <div>
+                  <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
+                    <iframe src={toEmbedUrl(videoUrl)} title="Video Tour"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen className="w-full h-full" style={{ minHeight: 300 }} />
+                  </div>
+                  <InlineCopyRow url={videoUrl} primary={primary} />
                 </div>
               )}
               {videos.length > 0 && (
@@ -437,10 +459,13 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             </div>
             <div className="space-y-4">
               {matterportUrl && (
-                <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
-                  <iframe src={matterportUrl} title="3D Interactive Tour"
-                    allow="xr-spatial-tracking" allowFullScreen
-                    className="w-full h-full" style={{ minHeight: 400 }} />
+                <div>
+                  <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-900" style={{ aspectRatio: "16/9" }}>
+                    <iframe src={matterportUrl} title="3D Interactive Tour"
+                      allow="xr-spatial-tracking" allowFullScreen
+                      className="w-full h-full" style={{ minHeight: 400 }} />
+                  </div>
+                  <InlineCopyRow url={matterportUrl} primary={primary} label="Tour Link" />
                 </div>
               )}
               {virtualLinks.map((l, i) => (
@@ -494,7 +519,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                     </div>
                   ) : (
                     <>
-                      <img src={fp.url} alt={fp.fileName} className="w-full object-contain max-h-96 bg-white" />
+                      <img src={fp.publicUrl || fp.url} alt={fp.fileName} className="w-full object-contain max-h-96 bg-white" />
                       <div className="px-4 py-3 flex items-center justify-between border-t border-gray-50">
                         <span className="text-xs text-gray-500">{fp.fileName}</span>
                         {fp.key ? (
