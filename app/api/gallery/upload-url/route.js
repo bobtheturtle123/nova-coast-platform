@@ -44,10 +44,11 @@ export async function POST(req) {
       return Response.json({ error: `File too large. Maximum size is 200 MB per file.` }, { status: 400 });
     }
 
-    // Validate file type — only allow image and video types
+    // Validate file type — allow image, video, and PDF (for floor plans)
     const ALLOWED_TYPES = [
       "image/jpeg", "image/jpg", "image/png", "image/webp", "image/tiff", "image/heic",
       "video/mp4", "video/mov", "video/quicktime", "video/webm",
+      "application/pdf",
     ];
     if (fileType && !ALLOWED_TYPES.includes(fileType.toLowerCase())) {
       return Response.json({ error: "File type not allowed" }, { status: 400 });

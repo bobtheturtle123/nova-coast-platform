@@ -919,8 +919,11 @@ export default function GalleryDetailPage() {
             <div>
               <p className="text-sm font-medium text-blue-900">
                 Delivery scheduled for{" "}
-                {new Date(gallery.scheduledDelivery.scheduledAt?.toDate?.() || gallery.scheduledDelivery.scheduledAt)
-                  .toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                {(() => {
+                  const ts = gallery.scheduledDelivery.scheduledAt;
+                  const d = ts?.toDate?.() ?? (ts?._seconds ? new Date(ts._seconds * 1000) : new Date(ts));
+                  return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+                })()}
               </p>
               <p className="text-xs text-blue-600 mt-0.5">Email will send automatically at that time.</p>
             </div>

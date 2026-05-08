@@ -173,6 +173,24 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
                 <p className="text-xs text-gray-400">PDF / print ready</p>
               </a>
             )}
+
+            {gallery?.matterportUrl && (
+              <a href={gallery.matterportUrl} target="_blank" rel="noopener noreferrer"
+                className="flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all text-center">
+                <span className="text-2xl">🔮</span>
+                <p className="text-sm font-medium text-gray-700">3D Tour</p>
+                <p className="text-xs text-gray-400">Matterport walkthrough</p>
+              </a>
+            )}
+
+            {gallery?.videoUrl && (
+              <a href={gallery.videoUrl} target="_blank" rel="noopener noreferrer"
+                className="flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all text-center">
+                <span className="text-2xl">🎥</span>
+                <p className="text-sm font-medium text-gray-700">Video Tour</p>
+                <p className="text-xs text-gray-400">Watch the walkthrough</p>
+              </a>
+            )}
           </div>
 
           {/* Quick Reorder */}
@@ -286,6 +304,50 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
           {gallery.coverUrl && (
             <div className="rounded-xl overflow-hidden border border-gray-200">
               <img src={gallery.coverUrl} alt="Gallery preview" className="w-full h-48 object-cover" />
+            </div>
+          )}
+
+          {(gallery.matterportUrl || gallery.videoUrl) && (
+            <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Additional Links</p>
+              {gallery.matterportUrl && (
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">3D Tour</p>
+                    <p className="text-xs text-gray-400 truncate max-w-xs">{gallery.matterportUrl}</p>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button onClick={() => copy(gallery.matterportUrl, "matterport")}
+                      className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                      {copied === "matterport" ? "✓ Copied" : "Copy"}
+                    </button>
+                    <a href={gallery.matterportUrl} target="_blank" rel="noopener noreferrer"
+                      className="text-xs px-3 py-1.5 rounded-lg text-white transition-colors"
+                      style={{ background: branding.primary }}>
+                      Open →
+                    </a>
+                  </div>
+                </div>
+              )}
+              {gallery.videoUrl && (
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Video Tour</p>
+                    <p className="text-xs text-gray-400 truncate max-w-xs">{gallery.videoUrl}</p>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button onClick={() => copy(gallery.videoUrl, "video")}
+                      className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                      {copied === "video" ? "✓ Copied" : "Copy"}
+                    </button>
+                    <a href={gallery.videoUrl} target="_blank" rel="noopener noreferrer"
+                      className="text-xs px-3 py-1.5 rounded-lg text-white transition-colors"
+                      style={{ background: branding.primary }}>
+                      Open →
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
