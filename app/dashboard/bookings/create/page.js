@@ -664,14 +664,11 @@ export default function CreateBookingPage() {
                   <label className="label-field">Start Time</label>
                   {form.shootTime && (
                     <span className="text-xs font-semibold text-[#3486cf]">
-                      {SPECIAL_VALUES.has(form.shootTime)
-                        ? SPECIAL_SLOTS.find(s => s.value === form.shootTime)?.label
-                        : (() => { const [hh, mm] = form.shootTime.split(":"); const h = Number(hh); const sfx = h >= 12 ? "PM" : "AM"; return `${h % 12 || 12}:${mm} ${sfx}`; })()
-                      }
+                      {(() => { const [hh, mm] = form.shootTime.split(":"); const h = Number(hh); const sfx = h >= 12 ? "PM" : "AM"; return `${h % 12 || 12}:${mm} ${sfx}`; })()}
                     </span>
                   )}
                 </div>
-                <div className="grid grid-cols-4 gap-1.5 mb-2">
+                <div className="grid grid-cols-4 gap-1.5 mb-3">
                   {TIME_SLOTS.map((slot) => (
                     <button key={slot.value} type="button"
                       onClick={() => setForm((f) => ({ ...f, shootTime: slot.value }))}
@@ -684,24 +681,9 @@ export default function CreateBookingPage() {
                     </button>
                   ))}
                 </div>
-                {/* Photography special times */}
-                <div className="flex gap-1.5 mb-2">
-                  {SPECIAL_SLOTS.map((slot) => (
-                    <button key={slot.value} type="button"
-                      onClick={() => setForm((f) => ({ ...f, shootTime: slot.value }))}
-                      className={`flex-1 py-2 text-[13px] rounded-lg border text-center transition-colors font-medium ${
-                        form.shootTime === slot.value
-                          ? "border-amber-400 bg-amber-50 text-amber-700"
-                          : "border-gray-200 text-gray-500 hover:border-amber-300 hover:bg-amber-50/50"
-                      }`}>
-                      {slot.icon} {slot.label}
-                    </button>
-                  ))}
-                </div>
-                {/* Manual custom time override */}
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2">
                   <span className="text-[11px] text-gray-400">Custom:</span>
-                  <input type="time" value={SPECIAL_VALUES.has(form.shootTime) ? "" : form.shootTime}
+                  <input type="time" value={form.shootTime}
                     onChange={(e) => setForm((f) => ({ ...f, shootTime: e.target.value }))}
                     className="input-field text-sm py-1" style={{ width: "auto" }} />
                 </div>
@@ -746,24 +728,16 @@ export default function CreateBookingPage() {
               </div>
 
               {/* End time display */}
-              {(shootEndTime || SPECIAL_VALUES.has(form.shootTime)) && (
+              {shootEndTime && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl mb-1">
-                  {shootEndTime ? (
-                    <>
-                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
-                        <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l4 2"/>
-                      </svg>
-                      <span className="text-xs text-gray-500">Ends at</span>
-                      <span className="text-sm font-semibold text-gray-800">{shootEndTime}</span>
-                      {effectiveDuration > 0 && (
-                        <span className="text-xs text-gray-400 ml-auto">
-                          {effectiveDuration >= 60 ? `${effectiveDuration / 60}h` : `${effectiveDuration}m`}
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-xs text-amber-600 font-medium">
-                      {SPECIAL_SLOTS.find(s => s.value === form.shootTime)?.icon} {SPECIAL_SLOTS.find(s => s.value === form.shootTime)?.label} — exact time TBD
+                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
+                    <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l4 2"/>
+                  </svg>
+                  <span className="text-xs text-gray-500">Ends at</span>
+                  <span className="text-sm font-semibold text-gray-800">{shootEndTime}</span>
+                  {effectiveDuration > 0 && (
+                    <span className="text-xs text-gray-400 ml-auto">
+                      {effectiveDuration >= 60 ? `${effectiveDuration / 60}h` : `${effectiveDuration}m`}
                     </span>
                   )}
                 </div>

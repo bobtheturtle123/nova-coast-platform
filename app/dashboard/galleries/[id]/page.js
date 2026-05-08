@@ -842,15 +842,14 @@ export default function GalleryDetailPage() {
         </div>
 
         {/* Gallery access panel */}
-        {(gallery.authorizedEmails?.length > 0 || true) && (
-          <div className="mb-5 card p-4">
+        <div className="mb-5 card p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-semibold text-[#0F172A]">Gallery Access</p>
-              <span className="text-xs text-gray-400">No login required to view</span>
+              <span className="text-xs text-gray-400">Anyone with the link can view</span>
             </div>
             <div className="flex flex-wrap gap-1.5 mb-3 min-h-6">
               {(gallery.authorizedEmails || []).length === 0
-                ? <span className="text-xs text-gray-400 italic">No recipients added yet. Deliver to add access.</span>
+                ? <span className="text-xs text-gray-400 italic">No recipients yet — send the gallery to add them.</span>
                 : (gallery.authorizedEmails || []).map((email) => (
                   <span key={email} className="inline-flex items-center gap-1 bg-[#3486cf]/8 text-[#3486cf] text-xs px-2.5 py-1 rounded-full">
                     {email}
@@ -911,7 +910,6 @@ export default function GalleryDetailPage() {
               </div>
             </div>
           </div>
-        )}
 
         {/* Scheduled delivery banner */}
         {gallery.scheduledDelivery?.status === "pending" && (

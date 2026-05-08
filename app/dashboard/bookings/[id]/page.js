@@ -8,6 +8,7 @@ import WorkflowStepper from "@/components/booking/WorkflowStepper";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus, WORKFLOW_STATUSES } from "@/lib/workflowStatus";
 import { getItemPrice, formatPrice } from "@/lib/catalogUtils";
+import { getPlan } from "@/lib/plans";
 
 const WORKFLOW_STATUS_MAP = Object.fromEntries(WORKFLOW_STATUSES.map((s) => [s.id, s]));
 
@@ -210,6 +211,7 @@ export default function BookingDetailPage() {
   const [teamMembers,   setTeamMembers]   = useState([]);
   const [editingPhotog, setEditingPhotog] = useState(false);
   const [editPhotog,    setEditPhotog]    = useState({ photographerId: "", photographerName: "", photographerEmail: "", photographerPhone: "" });
+  const [tenantPlan,    setTenantPlan]    = useState("solo");
 
   // Services / catalog editing
   const [catalog,         setCatalog]         = useState({ packages: [], services: [], addons: [] });
@@ -312,6 +314,7 @@ export default function BookingDetailPage() {
         if (av?.showWeather !== undefined) setShowWeather(av.showWeather);
         if (tenantData.tenant?.costRates) setGlobalCostRates(tenantData.tenant.costRates);
         if (tenantData.tenant?.tempUnit)  setTempUnit(tenantData.tenant.tempUnit);
+        if (tenantData.tenant?.plan)      setTenantPlan(tenantData.tenant.plan);
       }
       if (teamData?.members) setTeamMembers(teamData.members.filter((m) => m.active !== false));
       if (activityData?.activity) { setActivity(activityData.activity); setActivityLoaded(true); }
@@ -1126,7 +1129,7 @@ export default function BookingDetailPage() {
             </div>
             {editingPhotog ? (
               <div className="space-y-3">
-                {teamMembers.length > 0 && (
+                {teamMembers.length > 0 && getPlan(tenantPlan).teamSeats !== 1 && (
                   <select value={editPhotog.photographerId}
                     onChange={(e) => {
                       const m = teamMembers.find((t) => t.id === e.target.value);
