@@ -1,14 +1,17 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
 import { getAppUrl } from "@/lib/appUrl";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import AgentShareButtons from "@/components/AgentShareButtons";
 import AgentTokenPersist from "@/components/AgentTokenPersist";
 import AgentSessionCheck from "@/components/AgentSessionCheck";
 
 export default async function AgentPortalPage({ params, searchParams }) {
-  const { slug } = params;
-  const token    = searchParams?.token;
+  const { slug }    = params;
+  const cookieStore = cookies();
+  // Prefer session cookie (set after login), fall back to invite-link token in URL
+  const token       = cookieStore.get(`agt_${slug}`)?.value || searchParams?.token;
 
   const tenant = await getTenantBySlug(slug);
   if (!tenant) {
@@ -196,7 +199,7 @@ export default async function AgentPortalPage({ params, searchParams }) {
                 {/* View button */}
                 <div className="px-4 pb-4 mt-auto">
                   <Link
-                    href={`/${slug}/agent/${b.id}?token=${token}`}
+                    href={`/${slug}/agent/${b.id}`}
                     className="block w-full text-center text-sm font-semibold py-2 rounded-lg text-white transition-opacity hover:opacity-90"
                     style={{ background: primary }}>
                     View Listing →

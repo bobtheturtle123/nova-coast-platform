@@ -1,17 +1,19 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import AgentBookingClient from "./AgentBookingClient";
 
 export default async function AgentBookingPage({ params, searchParams }) {
   const { slug, bookingId } = params;
-  const token = searchParams?.token;
+  const cookieStore = cookies();
+  const token = cookieStore.get(`agt_${slug}`)?.value || searchParams?.token;
 
   const tenant = await getTenantBySlug(slug);
   if (!tenant) return <ErrorScreen message="Business not found." />;
 
   // Verify token
-  if (!token) return <ErrorScreen message="No access token. Check your link." />;
+  if (!token) return <ErrorScreen message="No access token. Sign in to your portal." />;
 
   const agentsSnap = await adminDb
     .collection("tenants").doc(tenant.id)

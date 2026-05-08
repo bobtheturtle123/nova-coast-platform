@@ -2,14 +2,16 @@
 
 import { useEffect } from "react";
 
-// Saves the agent magic-link token to localStorage so returning agents
-// don't need to click the email link every visit.
+// On first visit with an invite link (?token=xxx), sets a server-side session
+// cookie via the session API so future visits don't need the token in the URL.
 export default function AgentTokenPersist({ slug, token }) {
   useEffect(() => {
     if (!slug || !token) return;
-    try {
-      localStorage.setItem(`agent-token-${slug}`, token);
-    } catch {}
+    fetch(`/api/${slug}/agent/session`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ token }),
+    }).catch(() => {});
   }, [slug, token]);
 
   return null;

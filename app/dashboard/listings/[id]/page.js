@@ -233,9 +233,8 @@ export default function ListingDetailPage() {
 const [listingUrl,       setListingUrl]        = useState("");
 
   // Agent access state
-  const [sendingAgentAccess,  setSendingAgentAccess]  = useState(false);
-  const [agentPortalUrl,      setAgentPortalUrl]      = useState("");
-  const [agentAccessMsg,      setAgentAccessMsg]      = useState("");
+  const [sendingAgentAccess, setSendingAgentAccess] = useState(false);
+  const [agentAccessMsg,     setAgentAccessMsg]     = useState("");
 
   // Invoice state
   const [sendingInvoice, setSendingInvoice] = useState(false);
@@ -373,8 +372,7 @@ const [listingUrl,       setListingUrl]        = useState("");
       });
       const data = await res.json();
       if (res.ok) {
-        setAgentPortalUrl(data.portalUrl);
-        setAgentAccessMsg(sendEmail ? `Portal link sent to ${booking?.clientEmail}` : "Portal link generated");
+        setAgentAccessMsg(`Invite sent to ${booking?.clientEmail}`);
       } else {
         setAgentAccessMsg(data.error || "Failed to send agent access");
       }
@@ -659,36 +657,19 @@ if (loading) return (
                 </div>
               )}
 
-              {/* Agent Portal Access */}
+              {/* Agent Portal */}
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <p className="text-xs text-gray-400 mb-2">Agent Portal</p>
-                {agentPortalUrl ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <code className="text-xs text-[#3486cf] flex-1 bg-gray-50 px-2 py-1 rounded border border-gray-100 truncate">{agentPortalUrl}</code>
-                      <button onClick={() => { navigator.clipboard.writeText(agentPortalUrl); setAgentAccessMsg("Copied!"); }}
-                        className="text-xs px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 flex-shrink-0">
-                        Copy
-                      </button>
-                    </div>
-                    <button onClick={() => sendAgentAccess(true)} disabled={sendingAgentAccess}
-                      className="text-xs text-[#3486cf] hover:underline">
-                      Resend email
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <button onClick={() => sendAgentAccess(true)} disabled={sendingAgentAccess || !booking.clientEmail}
-                      className="text-xs bg-[#3486cf] text-white px-3 py-1.5 rounded hover:bg-[#3486cf]/90 disabled:opacity-40 transition-colors">
-                      {sendingAgentAccess ? "Sending…" : "📧 Send Portal Link"}
-                    </button>
-                    <button onClick={() => sendAgentAccess(false)} disabled={sendingAgentAccess || !booking.clientEmail}
-                      className="text-xs border border-gray-200 text-gray-500 px-3 py-1.5 rounded hover:bg-gray-50 disabled:opacity-40 transition-colors">
-                      Generate Link
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => sendAgentAccess(true)} disabled={sendingAgentAccess || !booking.clientEmail}
+                    className="text-xs bg-[#3486cf] text-white px-3 py-1.5 rounded-lg hover:bg-[#3486cf]/90 disabled:opacity-40 transition-colors">
+                    {sendingAgentAccess ? "Sending…" : "Send Portal Invite"}
+                  </button>
+                  {agentAccessMsg && <p className="text-xs text-green-600">{agentAccessMsg}</p>}
+                </div>
+                {!booking.clientEmail && (
+                  <p className="text-xs text-gray-400 mt-1">Add a client email to enable portal invites.</p>
                 )}
-                {agentAccessMsg && <p className="text-xs text-green-600 mt-1">{agentAccessMsg}</p>}
               </div>
 
             </div>
@@ -902,8 +883,8 @@ if (loading) return (
                       </svg>
                       Open Gallery
                     </button>
-                    {gallery.accessToken && (
-                      <a href={`/${booking.tenantSlug || ""}/gallery/${gallery.accessToken}`}
+                    {gallery.accessToken && tenantSlug && (
+                      <a href={`${getAppUrl()}/${tenantSlug}/gallery/${gallery.accessToken}`}
                         target="_blank" rel="noopener noreferrer"
                         className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
                         Agent View ↗

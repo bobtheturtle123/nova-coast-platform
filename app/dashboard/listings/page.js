@@ -98,10 +98,21 @@ function ListingCard({ listing, revCount = 0 }) {
 
   return (
     <Link href={`/dashboard/listings/${listing.id}`}
-      className="group flex flex-col overflow-hidden transition-all duration-200"
+      className="group relative flex flex-col overflow-hidden transition-all duration-200"
       style={{ background: "#fff", borderRadius: 18, border: "1px solid var(--border-subtle)", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
       onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 28px rgba(0,0,0,0.1)"; e.currentTarget.style.borderColor = "var(--border)"; }}
       onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)"; e.currentTarget.style.borderColor = "var(--border-subtle)"; }}>
+
+      {/* Revision badge — outside overflow:hidden image area, always on top */}
+      {revCount > 0 && (
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full"
+          style={{ background: "#ef4444", color: "#fff", boxShadow: "0 2px 8px rgba(239,68,68,0.55)" }}>
+          <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          {revCount} rev
+        </div>
+      )}
 
       {/* Image area */}
       <div className="relative h-[188px] flex-shrink-0 overflow-hidden"
@@ -133,16 +144,8 @@ function ListingCard({ listing, revCount = 0 }) {
           )}
         </div>
 
-        {/* Top-right: revision badge (priority) or media count */}
-        {revCount > 0 ? (
-          <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full"
-            style={{ background: "#ef4444", color: "#fff", boxShadow: "0 2px 6px rgba(239,68,68,0.5)" }}>
-            <svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-            </svg>
-            {revCount}
-          </div>
-        ) : listing.gallery?.mediaCount > 0 ? (
+        {/* Top-right: media count (only when no pending revisions) */}
+        {revCount === 0 && listing.gallery?.mediaCount > 0 && (
           <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
             style={{ background: "rgba(0,0,0,0.42)", color: "#fff", backdropFilter: "blur(4px)" }}>
             <svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -150,7 +153,7 @@ function ListingCard({ listing, revCount = 0 }) {
             </svg>
             {listing.gallery.mediaCount}
           </div>
-        ) : null}
+        )}
 
         {/* Overlaid address on covered image */}
         {coverUrl && (

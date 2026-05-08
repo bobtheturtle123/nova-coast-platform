@@ -76,7 +76,9 @@ export async function POST(req, { params }) {
     }
   }
 
-  const portalUrl = `${getAppUrl()}/${tenant.slug}/agent?token=${accessToken}`;
+  // New agents: register page (creates account, then redirects to portal)
+  // Returning agents: they can sign in at the login page; register page shows a sign-in link too
+  const portalUrl = `${getAppUrl()}/${tenant.slug}/agent/register?token=${accessToken}`;
 
   // Send email if requested and Resend is configured
   if (sendEmail && process.env.RESEND_API_KEY) {
@@ -114,7 +116,7 @@ export async function POST(req, { params }) {
               Open My Portal →
             </a>
             <p style="color:#aaa;font-size:12px;margin:24px 0 0">
-              Bookmark this link — it's your permanent access to all listings from ${bizName}.
+              Once you create your account, you can sign in anytime at <a href="${getAppUrl()}/${tenant.slug}/agent/login" style="color:#aaa">${getAppUrl()}/${tenant.slug}/agent/login</a>.
             </p>
             <hr style="border:none;border-top:1px solid #f0f0f0;margin:24px 0"/>
             <p style="color:#ccc;font-size:11px;text-align:center">Powered by KyoriaOS - ${bizName}</p>
