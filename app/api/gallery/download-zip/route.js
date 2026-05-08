@@ -12,7 +12,7 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const token  = searchParams.get("token");
   const format = searchParams.get("format") || "web"; // "web" | "print"
-  const extras = searchParams.get("extras") === "true"; // include floor plans, files, links.txt
+  const extras = searchParams.get("extras") === "true"; // include floor plans, files, links.txt + BOTH photo formats
 
   if (!token) return new Response("Missing params", { status: 400 });
 
@@ -45,43 +45,68 @@ export async function GET(req) {
   const r2Url = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
   if (!r2Url) return new Response("Storage not configured", { status: 500 });
 
-  // Cap zip downloads to 300 images to prevent memory/timeout overruns
   const MAX_ZIP_FILES = 300;
   const toProcess = images.slice(0, MAX_ZIP_FILES);
-
-  // Fetch and process images in parallel batches of 10 to stay within timeout
-  const BATCH = 10;
+  const BATCH = 8;
   const entries = [];
-  for (let i = 0; i < toProcess.length; i += BATCH) {
-    const batch = toProcess.slice(i, i + BATCH);
-    const results = await Promise.allSettled(
-      batch.map(async (img) => {
-        const sourceRes = await fetch(`${r2Url}/${img.key}`);
-        if (!sourceRes.ok) return null;
-        const arrayBuffer = await sourceRes.arrayBuffer();
-        let buffer = Buffer.from(arrayBuffer);
-        const baseName = (img.fileName || "image").replace(/\.[^.]+$/, "");
-        let fileName;
-        if (format === "web") {
-          buffer = await sharp(buffer)
+
+  if (extras) {
+    // Dual-format: fetch each image once, produce Print + Web-MLS versions
+    for (let i = 0; i < toProcess.length; i += BATCH) {
+      const batch = toProcess.slice(i, i + BATCH);
+      const results = await Promise.allSettled(
+        batch.map(async (img) => {
+          const sourceRes = await fetch(`${r2Url}/${img.key}`);
+          if (!sourceRes.ok) return null;
+          const buffer = Buffer.from(await sourceRes.arrayBuffer());
+          const baseName = (img.fileName || "image").replace(/\.[^.]+$/, "");
+          const webBuffer = await sharp(buffer)
             .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
             .jpeg({ quality: WEB_QUALITY, progressive: true })
             .toBuffer();
-          fileName = `${baseName}-MLS.jpg`;
-        } else {
-          fileName = img.fileName || "image.jpg";
-        }
-        return { buffer, fileName };
-      })
-    );
-    for (const r of results) {
-      if (r.status === "fulfilled" && r.value) entries.push(r.value);
+          return [
+            { buffer, fileName: `Photos/Print/${img.fileName || "image.jpg"}` },
+            { buffer: webBuffer, fileName: `Photos/Web-MLS/${baseName}-MLS.jpg` },
+          ];
+        })
+      );
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value) entries.push(...r.value);
+      }
+    }
+  } else {
+    // Single format
+    for (let i = 0; i < toProcess.length; i += BATCH) {
+      const batch = toProcess.slice(i, i + BATCH);
+      const results = await Promise.allSettled(
+        batch.map(async (img) => {
+          const sourceRes = await fetch(`${r2Url}/${img.key}`);
+          if (!sourceRes.ok) return null;
+          const arrayBuffer = await sourceRes.arrayBuffer();
+          let buffer = Buffer.from(arrayBuffer);
+          const baseName = (img.fileName || "image").replace(/\.[^.]+$/, "");
+          let fileName;
+          if (format === "web") {
+            buffer = await sharp(buffer)
+              .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
+              .jpeg({ quality: WEB_QUALITY, progressive: true })
+              .toBuffer();
+            fileName = `${baseName}-MLS.jpg`;
+          } else {
+            fileName = img.fileName || "image.jpg";
+          }
+          return { buffer, fileName };
+        })
+      );
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value) entries.push(r.value);
+      }
     }
   }
 
   if (entries.length === 0) return new Response("Failed to fetch images", { status: 500 });
 
-  // Fetch floor plans + attached files when extras=true
+  // Fetch floor plans + attached files + build links.txt when extras=true
   const extraEntries = [];
   let linksText = "";
   if (extras) {
@@ -89,7 +114,7 @@ export async function GET(req) {
     const attachedFiles = (gallery.attachedFiles || []).filter((f)  => !f.hidden  && f.key);
     const allExtras = [
       ...floorPlans.map((fp) => ({ ...fp, folder: "Floor Plans" })),
-      ...attachedFiles.map((f) => ({ ...f, folder: "Extras" })),
+      ...attachedFiles.map((f) => ({ ...f, folder: "Documents" })),
     ];
     const extraResults = await Promise.allSettled(
       allExtras.map(async (item) => {
@@ -103,7 +128,6 @@ export async function GET(req) {
       if (r.status === "fulfilled" && r.value) extraEntries.push(r.value);
     }
 
-    // Build links.txt for tour/video URLs
     const lines = [];
     if (gallery.matterportUrl && !gallery.matterportHidden)
       lines.push(`3D Tour: ${gallery.matterportUrl}`);
@@ -114,16 +138,15 @@ export async function GET(req) {
     if (lines.length) linksText = lines.join("\n");
   }
 
-  // Build zip in memory using archiver
+  // Build zip
   const zipBuffer = await new Promise((resolve, reject) => {
     const chunks = [];
     const archive = archiver("zip", { zlib: { level: 6 } });
     archive.on("data",  (chunk) => chunks.push(chunk));
     archive.on("end",   () => resolve(Buffer.concat(chunks)));
     archive.on("error", reject);
-    const photoFolder = extras ? "Photos/" : "";
     for (const { buffer, fileName } of entries) {
-      archive.append(buffer, { name: `${photoFolder}${fileName}` });
+      archive.append(buffer, { name: fileName });
     }
     for (const { buffer, fileName } of extraEntries) {
       archive.append(buffer, { name: fileName });
@@ -134,26 +157,20 @@ export async function GET(req) {
     archive.finalize();
   });
 
-  // Log bulk download activity — respects tenant's viewer tracking preference
+  // Log download activity
   if (tenantDoc.data()?.gallerySettings?.viewerTracking !== false) {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null;
     adminDb
       .collection("tenants").doc(tenantId)
       .collection("galleries").doc(galleryId)
       .collection("activityLog")
-      .add({
-        event:     "download_zip",
-        format,
-        fileCount: entries.length,
-        timestamp: new Date(),
-        ip,
-      })
+      .add({ event: "download_zip", format: extras ? "package" : format, fileCount: entries.length, timestamp: new Date(), ip })
       .catch(() => {});
   }
 
   const address = (gallery.bookingAddress || "gallery").replace(/[^a-z0-9]/gi, "-").toLowerCase();
   const zipName = extras
-    ? `${address}-package.zip`
+    ? `${address}-complete-package.zip`
     : `${address}-${format === "web" ? "web-ready" : "print"}.zip`;
 
   return new Response(zipBuffer, {

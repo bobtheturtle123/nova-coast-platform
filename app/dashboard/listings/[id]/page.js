@@ -594,6 +594,7 @@ if (loading) return (
             {[
               { id: "overview",   label: "Overview" },
               { id: "orders",     label: "Booking Details" },
+              { id: "gallery",    label: "Gallery" },
               { id: "property",   label: "Property Site" },
               { id: "marketing",  label: "Marketing" },
               { id: "revisions",  label: "Revisions", badge: revisions ? revisions.filter((r) => r.status === "pending").length : 0 },
@@ -1205,6 +1206,93 @@ if (loading) return (
                   <p>Balance intent: <code className="font-mono">{booking.stripeBalanceIntentId}</code></p>
                 )}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ── GALLERY TAB ──────────────────────────────────────────────────── */}
+        {tab === "gallery" && (
+          <div className="max-w-3xl space-y-4">
+            {!gallery ? (
+              <div className="card p-10 text-center">
+                <p className="text-gray-400 text-sm mb-4">No gallery exists for this listing yet.</p>
+                <button onClick={openGalleryEditor}
+                  className="btn-primary px-5 py-2 text-sm">
+                  Create Gallery
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Stats */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: "Photos",      value: (gallery.media || []).filter((m) => !m.fileType?.startsWith("video/")).length },
+                    { label: "Videos",      value: (gallery.media || []).filter((m) =>  m.fileType?.startsWith("video/")).length },
+                    { label: "Floor Plans", value: (gallery.floorPlans    || []).length },
+                    { label: "Documents",   value: (gallery.attachedFiles || []).length },
+                  ].map((s) => (
+                    <div key={s.label} className="card p-4 text-center">
+                      <p className="text-2xl font-bold text-[#0F172A]">{s.value}</p>
+                      <p className="text-xs text-gray-400 mt-1">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Status + Actions */}
+                <div className="card p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${gallery.delivered ? "bg-green-500" : "bg-gray-300"}`} />
+                      <p className="text-sm font-semibold text-[#0F172A]">
+                        {gallery.delivered ? "Delivered to client" : gallery.unlocked ? "Ready — not yet delivered" : "Not yet delivered"}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-400 ml-4">
+                      {gallery.unlocked ? "Client downloads enabled" : "Downloads locked until delivery"}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button onClick={openGalleryEditor}
+                      className="btn-primary text-sm px-4 py-2">
+                      Open Editor
+                    </button>
+                    {tenantSlug && gallery.accessToken && (
+                      <a href={`/${tenantSlug}/gallery/${gallery.accessToken}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="btn-outline text-sm px-4 py-2">
+                        Preview →
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Photo thumbnails */}
+                {(() => {
+                  const photos = (gallery.media || []).filter((m) => !m.fileType?.startsWith("video/") && !m.hidden);
+                  if (photos.length === 0) return null;
+                  return (
+                    <div className="card p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Photos</p>
+                        <button onClick={openGalleryEditor}
+                          className="text-xs text-[#3486cf] hover:underline">
+                          Manage →
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                        {photos.slice(0, 12).map((m, i) => (
+                          <div key={i} className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                            <img src={m.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                      {photos.length > 12 && (
+                        <p className="text-xs text-gray-400 mt-2 text-center">+{photos.length - 12} more</p>
+                      )}
+                    </div>
+                  );
+                })()}
+              </>
             )}
           </div>
         )}

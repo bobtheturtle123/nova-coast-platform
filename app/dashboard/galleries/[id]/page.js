@@ -316,6 +316,7 @@ export default function GalleryDetailPage() {
   const [newLinkLabel,    setNewLinkLabel]    = useState("");
   const [newLinkUrl,      setNewLinkUrl]      = useState("");
   const floorRef = useRef(null);
+  const videoUploadRef = useRef(null);
   const fileAttachRef = useRef(null);
   const dragCounter = useRef(0);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -478,20 +479,20 @@ export default function GalleryDetailPage() {
     return null;
   }
 
-  function assignCategory(mediaKey, catName) {
-    setCategories((prev) => {
-      const next = {};
-      // Remove from any existing category
-      for (const [cat, keys] of Object.entries(prev)) {
-        next[cat] = keys.filter((k) => k !== mediaKey);
-      }
-      // Add to new category
-      if (catName && next[catName] !== undefined) {
-        next[catName] = [...next[catName], mediaKey];
-      } else if (catName) {
-        next[catName] = [mediaKey];
-      }
-      return next;
+  async function assignCategory(mediaKey, catName) {
+    const next = {};
+    for (const [cat, keys] of Object.entries(categories)) {
+      next[cat] = keys.filter((k) => k !== mediaKey);
+    }
+    if (catName) {
+      next[catName] = [...(next[catName] || []), mediaKey];
+    }
+    setCategories(next);
+    const token = await auth.currentUser.getIdToken();
+    await fetch(`/api/dashboard/galleries/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ categories: next }),
     });
   }
 
@@ -564,18 +565,22 @@ export default function GalleryDetailPage() {
     });
   }
 
-  function applyBulkCategory() {
+  async function applyBulkCategory() {
     if (!bulkCatTarget) return;
-    setCategories((prev) => {
-      const next = {};
-      for (const [cat, keys] of Object.entries(prev)) {
-        next[cat] = keys.filter((k) => !selectedKeys.has(k));
-      }
-      next[bulkCatTarget] = [...(next[bulkCatTarget] || []), ...Array.from(selectedKeys)];
-      return next;
-    });
+    const next = {};
+    for (const [cat, keys] of Object.entries(categories)) {
+      next[cat] = keys.filter((k) => !selectedKeys.has(k));
+    }
+    next[bulkCatTarget] = [...(next[bulkCatTarget] || []), ...Array.from(selectedKeys)];
+    setCategories(next);
     clearSelection();
     toast(`Assigned ${selectedKeys.size} photos to "${bulkCatTarget}".`);
+    const token = await auth.currentUser.getIdToken();
+    await fetch(`/api/dashboard/galleries/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ categories: next }),
+    });
   }
 
   function addCategory() {
@@ -1326,6 +1331,19 @@ export default function GalleryDetailPage() {
                 </button>
               </div>
             )}
+            {/* Upload video file */}
+            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
+              <button onClick={() => videoUploadRef.current?.click()} disabled={uploading}
+                className="btn-outline text-xs px-3 py-1.5 flex items-center gap-1.5">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                {uploading ? "Uploading…" : "Upload Video File"}
+              </button>
+              <input ref={videoUploadRef} type="file" accept="video/*,video/mp4,video/quicktime,video/webm" className="hidden"
+                onChange={(e) => { if (e.target.files?.[0]) uploadFiles(Array.from(e.target.files)); e.target.value = ""; }} />
+              <span className="text-xs text-gray-400">MP4, MOV, or WebM · max 200 MB</span>
+            </div>
           </div>
 
           {/* Floor Plans */}
