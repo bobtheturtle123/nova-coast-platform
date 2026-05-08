@@ -216,6 +216,72 @@ function AgentSettingsInner() {
           Sign Out
         </button>
       </div>
+
+      {/* Delete Account */}
+      <DeleteAccountSection slug={slug} router={router} />
+    </div>
+  );
+}
+
+function DeleteAccountSection({ slug, router }) {
+  const [open,        setOpen]        = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [deleting,    setDeleting]    = useState(false);
+  const [error,       setError]       = useState("");
+
+  async function handleDelete() {
+    if (confirmText !== "DELETE") { setError('Type DELETE (all caps) to confirm.'); return; }
+    setDeleting(true);
+    setError("");
+    const res = await fetch(`/api/${slug}/agent/account`, {
+      method:  "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ confirmation: "DELETE" }),
+    });
+    if (res.ok) {
+      try { const { auth } = await import("@/lib/firebase"); const { signOut } = await import("firebase/auth"); await signOut(auth).catch(() => {}); } catch {}
+      router.replace(`/${slug}/agent/login`);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || "Failed to delete account. Try again.");
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="bg-white border border-red-100 rounded-xl p-6">
+      <h2 className="text-sm font-semibold text-red-600 mb-1">Delete Account</h2>
+      <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+        Your account will be deactivated and you will lose access to this portal.
+        Your listing history and media will be preserved for your photographer.
+      </p>
+      {!open ? (
+        <button onClick={() => setOpen(true)}
+          className="text-sm font-medium px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
+          Delete My Account
+        </button>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            Type <strong className="font-mono text-red-600">DELETE</strong> to confirm:
+          </p>
+          <input type="text" value={confirmText} onChange={(e) => setConfirmText(e.target.value)}
+            placeholder="DELETE"
+            className="w-full border border-red-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-400/30 focus:border-red-400"
+          />
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex items-center gap-2">
+            <button onClick={handleDelete} disabled={deleting || confirmText !== "DELETE"}
+              className="text-sm font-semibold px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 transition-colors">
+              {deleting ? "Deleting…" : "Confirm Delete"}
+            </button>
+            <button onClick={() => { setOpen(false); setConfirmText(""); setError(""); }}
+              className="text-sm text-gray-400 hover:text-gray-600 transition-colors px-2">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

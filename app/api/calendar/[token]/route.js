@@ -85,7 +85,9 @@ function buildICal(member, bookings, tenantName) {
       const dateStr = typeof b.shootDate === "string" && b.shootDate.length === 10
         ? b.shootDate
         : new Date(b.shootDate).toISOString().slice(0, 10);
-      const timeStr = b.shootTime || b.preferredTime || "12:00";
+      // Guard against special presets (sunset/twilight) — fall back to noon
+      const rawTime = b.shootTime || b.preferredTime || "";
+      const timeStr = /^\d{2}:\d{2}$/.test(rawTime) ? rawTime : "12:00";
       const startISO = `${dateStr}T${timeStr}:00`;
       const d = new Date(startISO);
       dtStart = toICalDate(d);

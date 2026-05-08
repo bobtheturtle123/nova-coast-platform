@@ -23,7 +23,10 @@ export default async function AgentPortalLayout({ children, params }) {
             <span className="font-semibold text-sm" style={{ color: primary }}>{name}</span>
             <span className="text-gray-300 text-xs">· Agent Portal</span>
           </div>
-          <span className="text-xs text-gray-400">Powered by KyoriaOS</span>
+          <div className="flex items-center gap-3 text-xs text-gray-400">
+            <a href="/legal/privacy" className="hover:text-gray-500 transition-colors">Privacy</a>
+            <a href="/legal/cookies" className="hover:text-gray-500 transition-colors">Cookies</a>
+          </div>
         </div>
         <AgentNav slug={params.slug} />
       </header>

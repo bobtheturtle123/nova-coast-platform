@@ -8,27 +8,37 @@ import { calculateTenantPrice, getSqftTier, getItemPrice, formatPrice } from "@/
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 import { getPlan } from "@/lib/plans";
 
-const TIME_OPTIONS = [
-  "7:00 AM","7:15 AM","7:30 AM","7:45 AM",
-  "8:00 AM","8:15 AM","8:30 AM","8:45 AM",
-  "9:00 AM","9:15 AM","9:30 AM","9:45 AM",
-  "10:00 AM","10:15 AM","10:30 AM","10:45 AM",
-  "11:00 AM","11:15 AM","11:30 AM","11:45 AM",
-  "12:00 PM","12:15 PM","12:30 PM","12:45 PM",
-  "1:00 PM","1:15 PM","1:30 PM","1:45 PM",
-  "2:00 PM","2:15 PM","2:30 PM","2:45 PM",
-  "3:00 PM","3:15 PM","3:30 PM","3:45 PM",
-  "4:00 PM","4:15 PM","4:30 PM","4:45 PM",
-  "5:00 PM","5:15 PM","5:30 PM","5:45 PM",
-  "6:00 PM",
+// Time slot grid — 30-min increments + photography presets
+const TIME_SLOTS = [
+  { label: "7:00 AM",  value: "07:00" }, { label: "7:30 AM",  value: "07:30" },
+  { label: "8:00 AM",  value: "08:00" }, { label: "8:30 AM",  value: "08:30" },
+  { label: "9:00 AM",  value: "09:00" }, { label: "9:30 AM",  value: "09:30" },
+  { label: "10:00 AM", value: "10:00" }, { label: "10:30 AM", value: "10:30" },
+  { label: "11:00 AM", value: "11:00" }, { label: "11:30 AM", value: "11:30" },
+  { label: "12:00 PM", value: "12:00" }, { label: "12:30 PM", value: "12:30" },
+  { label: "1:00 PM",  value: "13:00" }, { label: "1:30 PM",  value: "13:30" },
+  { label: "2:00 PM",  value: "14:00" }, { label: "2:30 PM",  value: "14:30" },
+  { label: "3:00 PM",  value: "15:00" }, { label: "3:30 PM",  value: "15:30" },
+  { label: "4:00 PM",  value: "16:00" }, { label: "4:30 PM",  value: "16:30" },
+  { label: "5:00 PM",  value: "17:00" }, { label: "5:30 PM",  value: "17:30" },
+  { label: "6:00 PM",  value: "18:00" }, { label: "6:30 PM",  value: "18:30" },
+  { label: "7:00 PM",  value: "19:00" }, { label: "7:30 PM",  value: "19:30" },
 ];
-
-function timeToVal(t) {
-  const [h, rest] = t.split(":");
-  const [m, ampm] = rest.split(" ");
-  let hr = Number(h); if (ampm === "PM" && hr !== 12) hr += 12; if (ampm === "AM" && hr === 12) hr = 0;
-  return `${String(hr).padStart(2,"0")}:${m}`;
-}
+const SPECIAL_SLOTS = [
+  { label: "Golden Hour", value: "golden-hour", icon: "✦" },
+  { label: "Sunset",      value: "sunset",      icon: "☀" },
+  { label: "Twilight",    value: "twilight",     icon: "🌆" },
+];
+const DURATION_PRESETS = [
+  { label: "30 min", value: 30  },
+  { label: "1 hr",   value: 60  },
+  { label: "1.5 hr", value: 90  },
+  { label: "2 hr",   value: 120 },
+  { label: "2.5 hr", value: 150 },
+  { label: "3 hr",   value: 180 },
+  { label: "4 hr",   value: 240 },
+];
+const SPECIAL_VALUES = new Set(["golden-hour", "sunset", "twilight"]);
 
 function AutocompleteInput({ value, onChange, onSelect, suggestions, placeholder, type = "text", label, required, className }) {
   const [open, setOpen] = useState(false);
@@ -178,8 +188,9 @@ export default function CreateBookingPage() {
   const effectiveDuration = form.shootDuration !== "" ? Number(form.shootDuration) : computedDuration;
 
   const shootEndTime = useMemo(() => {
-    if (!form.shootTime || !effectiveDuration) return null;
+    if (!form.shootTime || SPECIAL_VALUES.has(form.shootTime) || !effectiveDuration) return null;
     const [h, m] = form.shootTime.split(":").map(Number);
+    if (isNaN(h) || isNaN(m)) return null;
     const totalMin = h * 60 + m + effectiveDuration;
     const endH = Math.floor(totalMin / 60) % 24;
     const endM = totalMin % 60;
@@ -639,37 +650,124 @@ export default function CreateBookingPage() {
 
             {/* Schedule + Team Availability */}
             <div className="card">
-              <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-3">Schedule</h2>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <label className="label-field">Shoot Date</label>
-                  <input type="date" value={form.shootDate} onChange={set("shootDate")} className="input-field w-full" />
-                </div>
-                <div>
+              <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-4">Schedule</h2>
+
+              {/* Date */}
+              <div className="mb-5">
+                <label className="label-field">Shoot Date</label>
+                <input type="date" value={form.shootDate} onChange={set("shootDate")} className="input-field w-full" />
+              </div>
+
+              {/* Time slots */}
+              <div className="mb-5">
+                <div className="flex items-center justify-between mb-2">
                   <label className="label-field">Start Time</label>
-                  <input type="time" value={form.shootTime} onChange={set("shootTime")} className="input-field w-full" />
+                  {form.shootTime && (
+                    <span className="text-xs font-semibold text-[#3486cf]">
+                      {SPECIAL_VALUES.has(form.shootTime)
+                        ? SPECIAL_SLOTS.find(s => s.value === form.shootTime)?.label
+                        : (() => { const [hh, mm] = form.shootTime.split(":"); const h = Number(hh); const sfx = h >= 12 ? "PM" : "AM"; return `${h % 12 || 12}:${mm} ${sfx}`; })()
+                      }
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-4 gap-1.5 mb-2">
+                  {TIME_SLOTS.map((slot) => (
+                    <button key={slot.value} type="button"
+                      onClick={() => setForm((f) => ({ ...f, shootTime: slot.value }))}
+                      className={`py-2 text-[13px] rounded-lg border text-center transition-colors font-medium ${
+                        form.shootTime === slot.value
+                          ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
+                          : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                      }`}>
+                      {slot.label}
+                    </button>
+                  ))}
+                </div>
+                {/* Photography special times */}
+                <div className="flex gap-1.5 mb-2">
+                  {SPECIAL_SLOTS.map((slot) => (
+                    <button key={slot.value} type="button"
+                      onClick={() => setForm((f) => ({ ...f, shootTime: slot.value }))}
+                      className={`flex-1 py-2 text-[13px] rounded-lg border text-center transition-colors font-medium ${
+                        form.shootTime === slot.value
+                          ? "border-amber-400 bg-amber-50 text-amber-700"
+                          : "border-gray-200 text-gray-500 hover:border-amber-300 hover:bg-amber-50/50"
+                      }`}>
+                      {slot.icon} {slot.label}
+                    </button>
+                  ))}
+                </div>
+                {/* Manual custom time override */}
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[11px] text-gray-400">Custom:</span>
+                  <input type="time" value={SPECIAL_VALUES.has(form.shootTime) ? "" : form.shootTime}
+                    onChange={(e) => setForm((f) => ({ ...f, shootTime: e.target.value }))}
+                    className="input-field text-sm py-1" style={{ width: "auto" }} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div>
-                  <label className="label-field">Duration (min)</label>
+
+              {/* Duration presets */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="label-field">Duration</label>
+                  {computedDuration > 0 && form.shootDuration === "" && (
+                    <span className="text-[11px] text-[#3486cf] font-medium">
+                      {computedDuration} min from services
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {DURATION_PRESETS.map((d) => {
+                    const isSelected = form.shootDuration === String(d.value)
+                      || (form.shootDuration === "" && computedDuration === d.value);
+                    return (
+                      <button key={d.value} type="button"
+                        onClick={() => setForm((f) => ({ ...f, shootDuration: f.shootDuration === String(d.value) ? "" : String(d.value) }))}
+                        className={`py-1.5 px-3 text-[13px] rounded-lg border transition-colors font-medium ${
+                          isSelected
+                            ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
+                            : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                        }`}>
+                        {d.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Custom duration input */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-gray-400">Custom (min):</span>
                   <input type="number" min="0" max="720" step="15"
                     value={form.shootDuration}
                     onChange={set("shootDuration")}
-                    className="input-field w-full"
-                    placeholder={computedDuration || "min"} />
-                  {computedDuration > 0 && form.shootDuration === "" && (
-                    <p className="text-[11px] text-gray-400 mt-0.5">Auto: {computedDuration} min from services</p>
-                  )}
-                </div>
-                <div>
-                  <label className="label-field">Est. End Time</label>
-                  <div className={`input-field w-full select-none ${shootEndTime ? "text-gray-700" : "text-gray-300"}`}
-                    style={{ background: "var(--bg-subtle)" }}>
-                    {shootEndTime || "—"}
-                  </div>
+                    className="input-field text-sm py-1 w-20"
+                    placeholder={computedDuration || "—"} />
                 </div>
               </div>
+
+              {/* End time display */}
+              {(shootEndTime || SPECIAL_VALUES.has(form.shootTime)) && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl mb-1">
+                  {shootEndTime ? (
+                    <>
+                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
+                        <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l4 2"/>
+                      </svg>
+                      <span className="text-xs text-gray-500">Ends at</span>
+                      <span className="text-sm font-semibold text-gray-800">{shootEndTime}</span>
+                      {effectiveDuration > 0 && (
+                        <span className="text-xs text-gray-400 ml-auto">
+                          {effectiveDuration >= 60 ? `${effectiveDuration / 60}h` : `${effectiveDuration}m`}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-xs text-amber-600 font-medium">
+                      {SPECIAL_SLOTS.find(s => s.value === form.shootTime)?.icon} {SPECIAL_SLOTS.find(s => s.value === form.shootTime)?.label} — exact time TBD
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Additional appointments */}
               {form.additionalAppointments.map((appt, i) => (

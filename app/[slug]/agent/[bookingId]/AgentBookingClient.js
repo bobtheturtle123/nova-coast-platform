@@ -13,6 +13,7 @@ const REVISION_STATUS = {
   pending:      { label: "Pending",      cls: "bg-amber-100 text-amber-700" },
   acknowledged: { label: "Acknowledged", cls: "bg-blue-100 text-blue-700" },
   resolved:     { label: "Resolved",     cls: "bg-emerald-100 text-emerald-700" },
+  cancelled:    { label: "Cancelled",    cls: "bg-gray-100 text-gray-500" },
 };
 
 export default function AgentBookingClient({ booking, gallery, branding, slug, token, allowRevisions, revisions: initialRevisions }) {
@@ -411,12 +412,30 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
                   const st = REVISION_STATUS[r.status] || { label: r.status, cls: "bg-gray-100 text-gray-600" };
                   return (
                     <div key={r.id} className="bg-white border border-gray-200 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
-                        {r.requestedAt && (
-                          <span className="text-xs text-gray-400">
-                            {new Date(r.requestedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                          </span>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                          {r.requestedAt && (
+                            <span className="text-xs text-gray-400">
+                              {new Date(r.requestedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </span>
+                          )}
+                        </div>
+                        {r.status === "pending" && (
+                          <button
+                            onClick={async () => {
+                              const res = await fetch(`/api/${slug}/agent/revision/${r.id}`, {
+                                method:  "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body:    JSON.stringify({ token, status: "cancelled" }),
+                              });
+                              if (res.ok) {
+                                setRevisions((prev) => prev.map((x) => x.id === r.id ? { ...x, status: "cancelled" } : x));
+                              }
+                            }}
+                            className="text-xs text-gray-400 hover:text-red-500 transition-colors flex-shrink-0">
+                            Cancel request
+                          </button>
                         )}
                       </div>
                       <p className="text-sm text-gray-700">{r.message}</p>
