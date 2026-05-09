@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
+import { getAppUrl } from "@/lib/appUrl";
 
 // ── Gallery Lightbox ──────────────────────────────────────────────────────────
 function GalleryLightbox({ images, startIndex, unlocked, onClose }) {
@@ -116,12 +117,12 @@ function downloadUrl(key, format, name) {
   return `/api/gallery/download?${params}`;
 }
 
-function CopyLinkButton() {
+function CopyLinkButton({ url }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
       onClick={() => {
-        navigator.clipboard.writeText(window.location.href).then(() => {
+        navigator.clipboard.writeText(url).then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
         });
@@ -240,7 +241,9 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           <span className="font-display text-white text-base tracking-widest drop-shadow opacity-90">
             {name?.toUpperCase()}
           </span>
-          {gallery.agentCanShare !== false && <CopyLinkButton />}
+          {gallery.agentCanShare !== false && (
+            <CopyLinkButton url={`${getAppUrl()}/${slug}/gallery/${token}`} />
+          )}
         </div>
         <div className="absolute bottom-6 left-5 right-5">
           <h1 className="font-display text-white text-2xl md:text-4xl drop-shadow mb-2">{address}</h1>

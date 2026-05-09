@@ -612,7 +612,7 @@ export default function BookingsPage() {
                   </div>
                   <WorkflowStatusBadge status={wfStatus} size="xs" />
                   <Link href={`/dashboard/bookings/${b.id}`} className="text-xs text-[#3486cf] hover:underline whitespace-nowrap">
-                    View →
+                    Open →
                   </Link>
                 </div>
               </div>

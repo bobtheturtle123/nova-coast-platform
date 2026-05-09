@@ -1060,7 +1060,7 @@ if (loading) return (
 
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">Booking Details</p>
-              <Link href={`/dashboard/bookings/${booking.id}/edit`}
+              <Link href={`/dashboard/bookings/${booking.id}`}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#3486cf] text-[#3486cf] hover:bg-[#3486cf]/5 transition-colors">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.536-6.536a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H8v-2.414A2 2 0 018.586 12.5L9 13z" />

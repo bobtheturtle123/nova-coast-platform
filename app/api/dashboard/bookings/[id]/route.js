@@ -39,7 +39,7 @@ export async function PATCH(req, { params }) {
   const body = await req.json();
   const allowed = [
     // Scheduling & status
-    "status", "workflowStatus", "shootDate", "shootTime", "preferredTime",
+    "status", "workflowStatus", "shootDate", "shootTime", "shootDuration", "preferredTime",
     "additionalAppointments",
     // Photographer assignment
     "photographerId", "photographerEmail", "photographerName", "photographerPhone",
@@ -49,7 +49,7 @@ export async function PATCH(req, { params }) {
     // Client info
     "clientName", "clientEmail", "clientPhone",
     // Property / address
-    "address", "addressLine", "city", "state", "zip", "fullAddress", "squareFootage", "propertyType",
+    "address", "unit", "addressLine", "city", "state", "zip", "fullAddress", "squareFootage", "propertyType",
     // Services
     "packageId", "serviceIds", "addonIds", "totalPrice",
     // Payment overrides

@@ -392,9 +392,11 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
             clientEmail:             form.clientEmail,
             clientPhone:             form.clientPhone,
             address:                 form.address,
+            unit:                    form.unit,
             city:                    form.city,
             state:                   form.state,
             zip:                     form.zip,
+            fullAddress:             [form.address, form.unit, form.city, form.state, form.zip].filter(Boolean).join(", "),
             squareFootage:           Number(form.sqft) || null,
             notes:                   form.notes,
             shootDate:               form.shootDate,
@@ -417,7 +419,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
         data = await res.json();
         if (res.ok) {
           if (onSuccess) onSuccess(bookingId);
-          else router.push(`/dashboard/listings/${bookingId}`);
+          else router.push("/dashboard/bookings");
         } else {
           setError(data.error || "Failed to save changes.");
         }
@@ -445,8 +447,8 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   const agentNameSuggestions  = agents.map((a) => a.name).filter(Boolean);
   const agentEmailSuggestions = agents.map((a) => a.email).filter(Boolean);
   const tier = getSqftTier(form.sqft, catalog.pricingConfig);
-  const backHref = isEdit ? `/dashboard/listings/${bookingId}` : "/dashboard/bookings";
-  const backLabel = isEdit ? "← Back to booking" : "← Bookings";
+  const backHref  = "/dashboard/bookings";
+  const backLabel = "← Bookings";
   const pageTitle = isEdit
     ? `Edit Booking${form.address ? ` · ${form.address}` : ""}`
     : "New Booking";
