@@ -8,6 +8,7 @@ import { calculateTenantPrice, getSqftTier, getItemPrice, formatPrice } from "@/
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 import { getPlan } from "@/lib/plans";
 import { WORKFLOW_STATUSES } from "@/lib/workflowStatus";
+import WeatherWidget from "@/components/dashboard/WeatherWidget";
 
 const TIME_SLOTS = [
   { label: "7:00 AM",  value: "07:00" }, { label: "7:30 AM",  value: "07:30" },
@@ -164,6 +165,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
         addons:        adn.items  || [],
         pricingConfig: tenantDoc.pricingConfig || null,
         bookingConfig: tenantDoc.bookingConfig || null,
+        showWeather:   tenantDoc.availability?.showWeather ?? true,
       });
       setTeam(teamData.members || []);
       setTimeBlocks(blocks.blocks || []);
@@ -676,6 +678,10 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                   {form.shootDate ? "Edit" : "Pick date →"}
                 </span>
               </button>
+
+              {catalog.showWeather && form.shootDate && form.address && (
+                <WeatherWidget address={form.address} date={form.shootDate} />
+              )}
 
               {form.additionalAppointments.map((appt, i) => (
                 <div key={i} className="grid grid-cols-2 gap-3 mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200 relative">

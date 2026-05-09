@@ -8,6 +8,7 @@ import { useToast } from "@/components/Toast";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus, WORKFLOW_STATUSES } from "@/lib/workflowStatus";
 import { getAppUrl } from "@/lib/appUrl";
+import WeatherWidget from "@/components/dashboard/WeatherWidget";
 
 // ─── Agent Image Field (upload file OR paste URL) ────────────────────────────
 function AgentImageField({ label, value, onChange, folder, placeholder, hint, preview }) {
@@ -207,6 +208,7 @@ export default function ListingDetailPage() {
   const [shootDate, setShootDate] = useState("");
   const [shootTime, setShootTime] = useState("");
   const [showDatePicker,        setShowDatePicker]        = useState(false);
+  const [showDtModal,           setShowDtModal]           = useState(false);
   const [schedApprovalDate,     setSchedApprovalDate]     = useState("");
   const [schedApprovalTime,     setSchedApprovalTime]     = useState("");
   const [schedApprovalSaving,   setSchedApprovalSaving]   = useState(false);
@@ -217,6 +219,7 @@ export default function ListingDetailPage() {
   const [savingPropSite, setSavingPropSite] = useState(false);
   const [propSiteMsg,   setPropSiteMsg]   = useState({ text: "", type: "" });
   const [tenantSlug,    setTenantSlug]    = useState("");
+  const [showWeather,   setShowWeather]   = useState(true);
 
   // Marketing tab state
   const [analytics,        setAnalytics]        = useState(null);
@@ -314,6 +317,7 @@ const [listingUrl,       setListingUrl]        = useState("");
         const catRes = await fetch(`/api/tenant-public/${tenant.slug}/catalog`);
         if (catRes.ok) setCatalog(await catRes.json());
       }
+      setShowWeather(tenant?.availability?.showWeather ?? true);
     }
 
     if (bRes.ok) {
@@ -904,7 +908,7 @@ if (loading) return (
                   ) : null}
                   {showDatePicker && (
                     <div className="space-y-2 mt-1">
-                      <button type="button" onClick={() => setShowDatePicker(true)}
+                      <button type="button" onClick={() => setShowDtModal(true)}
                         className="input-field w-full text-left flex items-center gap-2">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
                           <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
@@ -915,11 +919,19 @@ if (loading) return (
                             : "Pick date & time"}
                         </span>
                       </button>
-                      <button onClick={() => { patchBooking({ shootDate, shootTime }); setShowDatePicker(false); }} disabled={saving || !shootDate}
+                      <button type="button" onClick={() => { patchBooking({ shootDate, shootTime }); setShowDatePicker(false); }} disabled={saving || !shootDate}
                         className="btn-primary w-full py-2 text-xs">
                         {saving ? "Saving…" : "Save Shoot Date"}
                       </button>
                     </div>
+                  )}
+                  {showDtModal && (
+                    <DateTimePicker
+                      date={shootDate}
+                      time={shootTime}
+                      onConfirm={(d, t) => { setShootDate(d); setShootTime(t); setShowDtModal(false); }}
+                      onClose={() => setShowDtModal(false)}
+                    />
                   )}
                   {/* Additional appointments */}
                   {(booking.additionalAppointments || []).length > 0 && (
@@ -1100,6 +1112,14 @@ if (loading) return (
                       {new Date(booking.shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
                       {booking.shootTime ? ` · ${booking.shootTime}` : ""}
                     </span>
+                  </div>
+                )}
+                {showWeather && (booking.shootDate || booking.preferredDate) && (booking.fullAddress || booking.address) && (
+                  <div className="pt-1 -mx-1">
+                    <WeatherWidget
+                      address={booking.fullAddress || booking.address}
+                      date={(booking.shootDate || booking.preferredDate).split("T")[0]}
+                    />
                   </div>
                 )}
                 {!booking.shootDate && booking.preferredDate && (
