@@ -142,37 +142,43 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
 
   useEffect(() => {
     async function load() {
-      const token = await getToken();
-      const [svcRes, pkgRes, adnRes, teamRes, blocksRes, listRes, tenantRes, agentsRes] = await Promise.all([
-        fetch("/api/dashboard/products?type=services", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/products?type=packages", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/products?type=addons",   { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/team",                   { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/team/blocks",            { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/listings",               { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/tenant",                 { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/agents",                 { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-      const [svc, pkg, adn, teamData, blocks, list, tenantData, agentsData] = await Promise.all([
-        svcRes.json(), pkgRes.json(), adnRes.json(), teamRes.json(),
-        blocksRes.json(), listRes.json(), tenantRes.json(), agentsRes.json(),
-      ]);
-      const tenantDoc = tenantData?.tenant || {};
-      setTenantPlan(tenantDoc.subscriptionPlan || "solo");
-      setCatalog({
-        packages:      pkg.items  || [],
-        services:      svc.items  || [],
-        addons:        adn.items  || [],
-        pricingConfig: tenantDoc.pricingConfig || null,
-        bookingConfig: tenantDoc.bookingConfig || null,
-        showWeather:   tenantDoc.availability?.showWeather ?? true,
-      });
-      setTeam(teamData.members || []);
-      setTimeBlocks(blocks.blocks || []);
-      // Exclude the booking being edited from conflict detection
-      setBookings((list.listings || []).filter((b) => b.id !== bookingId));
-      setAgents(agentsData.agents || []);
-      setLoading(false);
+      try {
+        const token = await getToken();
+        const safeFetch = (url) =>
+          fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => (r.ok ? r.json() : {}))
+            .catch(() => ({}));
+
+        const [svc, pkg, adn, teamData, blocks, list, tenantData, agentsData] = await Promise.all([
+          safeFetch("/api/dashboard/products?type=services"),
+          safeFetch("/api/dashboard/products?type=packages"),
+          safeFetch("/api/dashboard/products?type=addons"),
+          safeFetch("/api/dashboard/team"),
+          safeFetch("/api/dashboard/team/blocks"),
+          safeFetch("/api/dashboard/listings"),
+          safeFetch("/api/dashboard/tenant"),
+          safeFetch("/api/dashboard/agents"),
+        ]);
+        const tenantDoc = tenantData?.tenant || {};
+        setTenantPlan(tenantDoc.subscriptionPlan || "solo");
+        setCatalog({
+          packages:      pkg.items  || [],
+          services:      svc.items  || [],
+          addons:        adn.items  || [],
+          pricingConfig: tenantDoc.pricingConfig || null,
+          bookingConfig: tenantDoc.bookingConfig || null,
+          showWeather:   tenantDoc.availability?.showWeather ?? true,
+        });
+        setTeam(teamData.members || []);
+        setTimeBlocks(blocks.blocks || []);
+        setBookings((list.listings || []).filter((b) => b.id !== bookingId));
+        setAgents(agentsData.agents || []);
+      } catch (err) {
+        console.error("BookingForm load error:", err);
+        setError("Failed to load form data. Please refresh and try again.");
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -684,7 +690,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
               )}
 
               {form.additionalAppointments.map((appt, i) => (
-                <div key={i} className="grid grid-cols-2 gap-3 mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200 relative">
+                <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200 relative">
                   <div className="absolute top-2 right-2">
                     <button type="button" onClick={() => setForm((f) => ({
                       ...f, additionalAppointments: f.additionalAppointments.filter((_, idx) => idx !== i)
@@ -974,7 +980,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                     </span>
                   )}
                 </div>
-                <div className="grid grid-cols-4 gap-1.5 mb-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 mb-3">
                   {TIME_SLOTS.map((slot) => (
                     <button key={slot.value} type="button"
                       onClick={() => setForm((f) => ({ ...f, shootTime: slot.value }))}

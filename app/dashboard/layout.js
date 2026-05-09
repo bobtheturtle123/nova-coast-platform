@@ -255,6 +255,13 @@ export default function DashboardLayout({ children }) {
           </svg>
         </button>
       </div>
+
+      {/* Legal links */}
+      <div className="px-4 pb-4 pt-2 flex items-center gap-3 flex-wrap">
+        <Link href="/terms"   className="text-[10px] text-gray-400 hover:text-[#3486cf] transition-colors">Terms</Link>
+        <Link href="/privacy" className="text-[10px] text-gray-400 hover:text-[#3486cf] transition-colors">Privacy</Link>
+        <Link href="/cookies" className="text-[10px] text-gray-400 hover:text-[#3486cf] transition-colors">Cookies</Link>
+      </div>
     </aside>
   );
 

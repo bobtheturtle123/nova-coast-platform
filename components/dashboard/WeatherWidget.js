@@ -87,7 +87,7 @@ export default function WeatherWidget({ address, date }) {
       </div>
 
       {/* Detail row */}
-      <div className="grid grid-cols-4 divide-x divide-gray-100 text-center">
+      <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-100 text-center">
         <Stat label="Wind" value={`${windSpeed} ${tempUnit === "C" ? "km/h" : "mph"}`} />
         <Stat label="Precip" value={`${precipitation}" ${tempUnit === "C" ? "mm" : "in"}`} />
         <Stat
