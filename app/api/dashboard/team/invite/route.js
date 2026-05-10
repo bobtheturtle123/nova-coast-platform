@@ -50,7 +50,7 @@ export async function POST(req) {
 
   try {
     const key = process.env.RESEND_API_KEY;
-    if (!key) return Response.json({ ok: true, inviteUrl, emailFailed: true });
+    if (!key) return Response.json({ ok: true, inviteUrl, emailFailed: true, token });
     await new Resend(key).emails.send({
       from:    "KyoriaOS <noreply@kyoriaos.com>",
       to:      email.trim(),
@@ -73,8 +73,8 @@ export async function POST(req) {
       `,
     });
   } catch {
-    return Response.json({ ok: true, inviteUrl, emailFailed: true });
+    return Response.json({ ok: true, inviteUrl, emailFailed: true, token });
   }
 
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, inviteUrl, token });
 }

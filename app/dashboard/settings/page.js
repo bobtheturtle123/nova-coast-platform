@@ -63,7 +63,7 @@ function StaffAccessSection() {
   const [invites,       setInvites]       = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [inviteEmail,   setInviteEmail]   = useState("");
-  const [inviteRole,    setInviteRole]    = useState("manager");
+  const [inviteRole,    setInviteRole]    = useState("photographer");
   const [sending,       setSending]       = useState(false);
   const [msg,           setMsg]           = useState("");
   const [copyId,        setCopyId]        = useState(null);
@@ -80,14 +80,21 @@ function StaffAccessSection() {
     if (!inviteEmail.trim()) return;
     setSending(true); setMsg("");
     const token = await auth.currentUser.getIdToken();
-    const res = await fetch("/api/dashboard/team/staff", {
+    const endpoint = ["manager","admin"].includes(inviteRole)
+      ? "/api/dashboard/team/staff"
+      : "/api/dashboard/team/invite";
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
     });
     const data = await res.json();
     if (res.ok) {
-      setMsg(`Invite sent to ${inviteEmail.trim()}`);
+      if (data.emailFailed) {
+        setMsg(`Email failed — share manually: ${data.inviteUrl || ""}`);
+      } else {
+        setMsg(`Invite sent to ${inviteEmail.trim()}`);
+      }
       setInvites((prev) => [{
         id: data.token,
         email: inviteEmail.trim(),
@@ -100,7 +107,7 @@ function StaffAccessSection() {
       setMsg(data.error || "Failed to send.");
     }
     setSending(false);
-    setTimeout(() => setMsg(""), 3000);
+    setTimeout(() => setMsg(""), 6000);
   }
 
   async function revokeInvite(id) {
@@ -121,7 +128,10 @@ function StaffAccessSection() {
       <div className="flex gap-3 flex-wrap mb-6">
         <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
           className="input-field flex-1 min-w-48" placeholder="colleague@email.com" />
-        <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="input-field w-36">
+        <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="input-field w-40">
+          <option value="photographer">Photographer</option>
+          <option value="editor">Editor</option>
+          <option value="assistant">Assistant</option>
           <option value="manager">Manager</option>
           <option value="admin">Admin</option>
         </select>
@@ -132,10 +142,13 @@ function StaffAccessSection() {
       {msg && <p className="text-sm text-green-700 mb-4">{msg}</p>}
 
       {/* Role descriptions */}
-      <div className="grid grid-cols-2 gap-3 mb-6 max-w-lg">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 max-w-2xl">
         {[
-          { role: "Admin", desc: "Full access except billing & platform settings" },
-          { role: "Manager", desc: "View/edit bookings, galleries, and team calendar" },
+          { role: "Photographer", desc: "Photographer portal — booking notifications & calendar" },
+          { role: "Editor",       desc: "Photographer portal — post-processing assignments" },
+          { role: "Assistant",    desc: "Photographer portal — on-site support access" },
+          { role: "Manager",      desc: "Dashboard login — bookings, galleries, team calendar" },
+          { role: "Admin",        desc: "Dashboard login — full access except billing" },
         ].map((r) => (
           <div key={r.role} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
             <p className="text-xs font-semibold text-[#0F172A]">{r.role}</p>

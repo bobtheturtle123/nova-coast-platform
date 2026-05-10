@@ -14,13 +14,18 @@ const ROLE_OPTIONS = [
   { id: "manager",      label: "Manager",      icon: "📋", desc: "Schedules & manages" },
   { id: "editor",       label: "Editor",       icon: "🎨", desc: "Post-processing" },
   { id: "assistant",    label: "Assistant",    icon: "🤝", desc: "On-site support" },
+  { id: "admin",        label: "Admin",        icon: "🔑", desc: "Full dashboard access" },
 ];
+
+// Roles that get dashboard (staff) access vs. photographer portal access
+const DASHBOARD_ROLES = ["manager", "admin"];
 
 const ROLE_COLORS = {
   photographer: { bg: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-100" },
   manager:      { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-100" },
   editor:       { bg: "bg-green-50",  text: "text-green-700",  border: "border-green-100" },
   assistant:    { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-100" },
+  admin:        { bg: "bg-red-50",    text: "text-red-700",    border: "border-red-100" },
 };
 
 const WEEK_DAYS = [
@@ -1036,10 +1041,11 @@ export default function TeamPage() {
   const [filterMember,  setFilterMember]  = useState("all");
   const [calModal,      setCalModal]      = useState(null);
   const [calView,       setCalView]       = useState("2wk");  // "2wk" | "week" | "month" | "day"
-  const [inviteEmail,   setInviteEmail]   = useState("");
-  const [showInvite,    setShowInvite]    = useState(false);
+  const [addMode,       setAddMode]       = useState(null); // null | "choice" | "invite"
+  const [inviteForm,    setInviteForm]    = useState({ email: "", role: "photographer" });
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteMsg,     setInviteMsg]     = useState("");
+  const [inviteUrl,     setInviteUrl]     = useState("");
   const [timeBlocks,    setTimeBlocks]    = useState([]);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [blockDetail,    setBlockDetail]    = useState(null); // { member, blocks, date }
@@ -1163,22 +1169,38 @@ export default function TeamPage() {
     router.replace(`/dashboard/team?tab=${id}`, { scroll: false });
   }
 
+  function closeAddModal() {
+    setAddMode(null);
+    setInviteForm({ email: "", role: "photographer" });
+    setInviteMsg("");
+    setInviteUrl("");
+  }
+
   async function sendInvite() {
-    if (!inviteEmail.trim()) return;
+    if (!inviteForm.email.trim()) return;
     setInviteSending(true);
     setInviteMsg("");
+    setInviteUrl("");
     try {
       const token = await getToken();
-      const res = await fetch("/api/dashboard/team/invite", {
+      // Manager/Admin get dashboard access; all others get photographer portal
+      const endpoint = DASHBOARD_ROLES.includes(inviteForm.role)
+        ? "/api/dashboard/team/staff"
+        : "/api/dashboard/team/invite";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ email: inviteEmail.trim() }),
+        body: JSON.stringify({ email: inviteForm.email.trim(), role: inviteForm.role }),
       });
       const data = await res.json();
       if (res.ok) {
-        setInviteMsg(`Invite sent to ${inviteEmail.trim()}!`);
-        setInviteEmail("");
-        setTimeout(() => { setShowInvite(false); setInviteMsg(""); }, 2500);
+        if (data.emailFailed) {
+          setInviteMsg("⚠ Email could not be sent — share this link manually:");
+          setInviteUrl(data.inviteUrl || "");
+        } else {
+          setInviteMsg(`✓ Invite sent to ${inviteForm.email.trim()}`);
+          setTimeout(closeAddModal, 2500);
+        }
       } else {
         setInviteMsg(data.error || "Failed to send invite.");
       }
@@ -1275,10 +1297,7 @@ export default function TeamPage() {
             <button onClick={() => setShowBlockModal(true)} className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
               🚫 Block Time
             </button>
-            <button onClick={() => setShowInvite(true)} className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
-              ✉ Invite via Email
-            </button>
-            <button onClick={() => setEditing("new")} className="btn-primary text-sm px-5 py-2 flex items-center gap-2">
+            <button onClick={() => setAddMode("choice")} className="btn-primary text-sm px-5 py-2 flex items-center gap-2">
               <span className="text-lg leading-none">+</span> Add Team Member
             </button>
           </div>
@@ -1989,46 +2008,113 @@ export default function TeamPage() {
         />
       )}
 
-      {/* Invite modal */}
-      {showInvite && (
+      {/* Choice modal — how to add */}
+      {addMode === "choice" && (
         <div className="modal-backdrop">
-          <div className="absolute inset-0" onClick={() => { setShowInvite(false); setInviteEmail(""); setInviteMsg(""); }} />
+          <div className="absolute inset-0" onClick={closeAddModal} />
+          <div className="modal-card relative w-full max-w-sm">
+            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              <h2 className="font-semibold text-[#0F172A] text-base">Add Team Member</h2>
+              <button onClick={closeAddModal} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
+            </div>
+            <div className="p-5 space-y-3">
+              <button onClick={() => setAddMode("invite")}
+                className="w-full flex items-start gap-4 p-4 border-2 border-gray-200 rounded-xl hover:border-[#3486cf] hover:bg-[#3486cf]/5 transition-all text-left">
+                <span className="text-2xl mt-0.5">📨</span>
+                <div>
+                  <p className="font-semibold text-[#0F172A] text-sm">Invite by Email</p>
+                  <p className="text-xs text-gray-500 mt-0.5">They get an email link to create their account and join your team.</p>
+                </div>
+              </button>
+              <button onClick={() => { closeAddModal(); setEditing("new"); }}
+                className="w-full flex items-start gap-4 p-4 border-2 border-gray-200 rounded-xl hover:border-[#3486cf] hover:bg-[#3486cf]/5 transition-all text-left">
+                <span className="text-2xl mt-0.5">📝</span>
+                <div>
+                  <p className="font-semibold text-[#0F172A] text-sm">Add Manually</p>
+                  <p className="text-xs text-gray-500 mt-0.5">You enter their details yourself. No account or email required.</p>
+                </div>
+              </button>
+            </div>
+            <div className="px-6 py-3 flex justify-end" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+              <button onClick={closeAddModal} className="btn-outline px-4 py-2 text-sm">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invite by email modal */}
+      {addMode === "invite" && (
+        <div className="modal-backdrop">
+          <div className="absolute inset-0" onClick={closeAddModal} />
           <div className="modal-card relative w-full max-w-md">
             <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-              <h2 className="font-semibold text-[#0F172A] text-base">Invite Photographer</h2>
-              <button onClick={() => { setShowInvite(false); setInviteEmail(""); setInviteMsg(""); }}
-                className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
+              <h2 className="font-semibold text-[#0F172A] text-base">Invite Team Member</h2>
+              <button onClick={closeAddModal} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
             </div>
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-gray-500">
-                We&apos;ll send the photographer an email with a link to accept the invite,
-                confirm their details, and connect their calendar.
-              </p>
+            <div className="p-6 space-y-5">
+              {/* Role selector */}
               <div>
-                <label className="label-field">Photographer&apos;s Email</label>
-                <input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && sendInvite()}
-                  className="input-field w-full"
-                  placeholder="photographer@example.com"
-                  autoFocus
-                />
+                <label className="label-field">Role</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {ROLE_OPTIONS.map((r) => (
+                    <button key={r.id} type="button"
+                      onClick={() => setInviteForm((f) => ({ ...f, role: r.id }))}
+                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
+                        inviteForm.role === r.id ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300"
+                      }`}>
+                      <span className="text-base leading-none">{r.icon}</span>
+                      <div>
+                        <p className="text-xs font-semibold text-[#0F172A]">{r.label}</p>
+                        <p className="text-[10px] text-gray-400">{r.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {DASHBOARD_ROLES.includes(inviteForm.role) ? (
+                  <p className="text-xs text-purple-600 mt-1.5">→ Gets dashboard login access</p>
+                ) : (
+                  <p className="text-xs text-blue-600 mt-1.5">→ Gets photographer portal access</p>
+                )}
               </div>
+
+              {/* Email */}
+              <div>
+                <label className="label-field">Email Address</label>
+                <input type="email" value={inviteForm.email}
+                  onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))}
+                  onKeyDown={(e) => e.key === "Enter" && sendInvite()}
+                  className="input-field w-full" placeholder="team@example.com" autoFocus />
+              </div>
+
+              {/* Feedback */}
               {inviteMsg && (
-                <p className={`text-sm ${inviteMsg.includes("sent") ? "text-green-600" : "text-red-500"}`}>
+                <div className={`text-sm rounded-lg px-4 py-3 ${
+                  inviteMsg.startsWith("✓") ? "bg-green-50 text-green-700 border border-green-200"
+                  : inviteMsg.startsWith("⚠") ? "bg-amber-50 text-amber-700 border border-amber-200"
+                  : "bg-red-50 text-red-600 border border-red-200"
+                }`}>
                   {inviteMsg}
-                </p>
+                  {inviteUrl && (
+                    <div className="mt-2 flex gap-2 items-center">
+                      <code className="text-xs bg-white border border-amber-200 rounded px-2 py-1 flex-1 truncate">{inviteUrl}</code>
+                      <button onClick={() => navigator.clipboard.writeText(inviteUrl)}
+                        className="text-xs font-medium text-amber-700 border border-amber-300 px-2 py-1 rounded hover:bg-amber-100 flex-shrink-0">
+                        Copy
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
-            <div className="px-6 py-4 flex justify-end gap-3" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-              <button onClick={() => { setShowInvite(false); setInviteEmail(""); setInviteMsg(""); }}
-                className="btn-outline px-4 py-2 text-sm">Cancel</button>
-              <button onClick={sendInvite} disabled={inviteSending || !inviteEmail.trim()}
-                className="btn-primary px-6 py-2 text-sm">
-                {inviteSending ? "Sending…" : "Send Invite"}
-              </button>
+            <div className="px-6 py-4 flex justify-between items-center" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+              <button onClick={() => setAddMode("choice")} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
+              <div className="flex gap-3">
+                <button onClick={closeAddModal} className="btn-outline px-4 py-2 text-sm">Cancel</button>
+                <button onClick={sendInvite} disabled={inviteSending || !inviteForm.email.trim()}
+                  className="btn-primary px-6 py-2 text-sm">
+                  {inviteSending ? "Sending…" : "Send Invite"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -55,7 +55,7 @@ export async function POST(req) {
   const { email, role } = await req.json();
   if (!email?.trim()) return Response.json({ error: "Email is required" }, { status: 400 });
 
-  const validRoles = ["admin", "manager"];
+  const validRoles = ["admin", "manager", "photographer", "editor", "assistant"];
   const staffRole = validRoles.includes(role) ? role : "manager";
 
   // Get tenant info for email
@@ -80,6 +80,7 @@ export async function POST(req) {
     });
 
   // Send email
+  let emailFailed = !resend;
   if (resend) {
     try {
       await resend.emails.send({
@@ -93,12 +94,12 @@ export async function POST(req) {
           <p>This invite expires in 7 days.</p>
         `,
       });
-    } catch (err) {
-      console.error("Staff invite email failed:", err);
+    } catch {
+      emailFailed = true;
     }
   }
 
-  return Response.json({ ok: true, inviteUrl, token });
+  return Response.json({ ok: true, inviteUrl, token, ...(emailFailed && { emailFailed: true }) });
 }
 
 export async function DELETE(req) {
