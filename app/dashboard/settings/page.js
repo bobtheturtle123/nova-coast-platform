@@ -573,6 +573,8 @@ export default function SettingsPage() {
     tagline: "", primaryColor: "#3486cf", accentColor: "#c9a96e",
     country: "US", tempUnit: "F",
   });
+  const [logoUrl,       setLogoUrl]       = useState("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // Pricing config state
   const [pricingMode,     setPricingMode]     = useState("sqft");
@@ -712,6 +714,7 @@ export default function SettingsPage() {
           country:       data.tenant.country  || "US",
           tempUnit:      data.tenant.tempUnit || "F",
         });
+        if (data.tenant.branding?.logoUrl) setLogoUrl(data.tenant.branding.logoUrl);
         // Load pricing config — always pre-populate tiers so Pricing Tiers section is ready
         {
           const pc = data.tenant.pricingConfig;
@@ -833,6 +836,7 @@ export default function SettingsPage() {
             tagline:      form.tagline,
             primaryColor: form.primaryColor,
             accentColor:  form.accentColor,
+            logoUrl:      logoUrl || null,
           },
         }),
       });
@@ -840,6 +844,24 @@ export default function SettingsPage() {
       else showMsg("Failed to save.", "error");
     } catch { showMsg("Something went wrong.", "error"); }
     setSaving(false);
+  }
+
+  async function uploadLogo(file) {
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/upload-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName: file.name, contentType: file.type, folder: "branding" }),
+      });
+      if (!res.ok) throw new Error("Failed to get upload URL");
+      const { uploadUrl, publicUrl } = await res.json();
+      await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+      setLogoUrl(publicUrl);
+    } catch { showMsg("Logo upload failed.", "error"); }
+    setUploadingLogo(false);
   }
 
   async function savePricingConfig() {
@@ -1309,6 +1331,33 @@ export default function SettingsPage() {
         <div className="card">
           <h2 className="font-semibold text-[#0F172A] text-base mb-4">Branding</h2>
           <div className="space-y-4">
+            {/* Logo */}
+            <div>
+              <label className="label-field">Business Logo</label>
+              <div className="flex items-center gap-4 mt-1">
+                {logoUrl ? (
+                  <div className="relative w-24 h-16 border border-gray-200 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
+                    <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain p-2" />
+                    <button type="button" onClick={() => setLogoUrl("")}
+                      className="absolute top-1 right-1 w-5 h-5 bg-white rounded-full shadow flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors border border-gray-200">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-24 h-16 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center text-gray-300">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 3h18M3 21h18" /></svg>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <label className={`inline-flex items-center gap-2 text-sm px-3 py-2 border border-gray-200 rounded-xl cursor-pointer hover:border-[#3486cf]/40 transition-colors ${uploadingLogo ? "opacity-50 pointer-events-none" : ""}`}>
+                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                    {uploadingLogo ? "Uploading…" : logoUrl ? "Replace logo" : "Upload logo"}
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0])} />
+                  </label>
+                  <p className="text-xs text-gray-400 mt-1.5">PNG or SVG recommended. Shown on invoices sent to clients.</p>
+                </div>
+              </div>
+            </div>
             <div>
               <label className="label-field">Tagline</label>
               <input type="text" value={form.tagline} onChange={set("tagline")} className="input-field w-full"
