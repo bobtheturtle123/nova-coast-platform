@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { v4 as uuidv4 } from "uuid";
+import { getEffectivePlan } from "@/lib/plans";
 
 // Base seats included per plan (owner counts as 1)
 const PLAN_BASE_SEATS = { solo: 1, studio: 5, pro: 12, scale: null, starter: 1 };
@@ -41,7 +42,7 @@ export async function POST(req) {
   // Seat limit enforcement
   const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
   const tenant    = tenantDoc.data() || {};
-  const plan      = tenant.subscriptionPlan || "solo";
+  const plan      = getEffectivePlan(tenant);
   const baseSeats = PLAN_BASE_SEATS[plan] ?? 1;
 
   if (baseSeats !== null) {

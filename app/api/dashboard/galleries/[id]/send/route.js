@@ -5,6 +5,7 @@ import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendMediaDeliveredSms } from "@/lib/sms";
 import { getAppUrl } from "@/lib/appUrl";
 import { safeDate } from "@/lib/dateUtils";
+import { getEffectivePlan } from "@/lib/plans";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -113,7 +114,7 @@ export async function POST(req, { params }) {
 
   // SMS notifications — Studio and Pro plans only
   const SMS_PLANS = ["studio", "pro", "scale"];
-  if (SMS_PLANS.includes(tenant?.subscriptionPlan)) {
+  if (SMS_PLANS.includes(getEffectivePlan(tenant))) {
     const appUrl     = getAppUrl();
     const galleryUrl = gallery.accessToken ? `${appUrl}/${tenant?.slug}/gallery/${gallery.accessToken}` : null;
     sendMediaDeliveredSms({ booking, tenant, galleryUrl }).catch(() => {});

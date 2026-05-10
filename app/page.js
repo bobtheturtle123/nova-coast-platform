@@ -543,18 +543,6 @@ export default function MarketingPage() {
                   </div>
                 ))}
               </div>
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                <p className="text-[10px] text-gold/60 uppercase tracking-wide mb-2 font-semibold flex items-center gap-1.5">
-                  <svg width="9" height="9" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                  Social Caption
-                </p>
-                <p className="text-xs text-white/55 italic leading-relaxed">
-                  &quot;Just listed in Coronado! Stunning 4BR/3BA ocean-view property, professional photography. Tap the link in bio to book a showing.&quot;
-                </p>
-                <div className="mt-3 text-[10px] text-gold font-semibold border border-gold/25 rounded-lg px-2.5 py-1.5 inline-block bg-gold/5 cursor-pointer">
-                  Copy caption →
-                </div>
-              </div>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
-import { getListingLimit } from "@/lib/plans";
+import { getListingLimit, getEffectivePlan } from "@/lib/plans";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -28,7 +28,7 @@ export async function POST(req, { params }) {
   const tenant = await getTenantById(ctx.tenantId);
   if (tenant) {
     const limit = getListingLimit(
-      tenant.subscriptionPlan || "solo",
+      getEffectivePlan(tenant),
       tenant.addonListings || 0
     );
     // Count all non-cancelled bookings that are active listing workspaces

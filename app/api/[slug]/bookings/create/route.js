@@ -5,7 +5,7 @@ import { createConnectedPaymentIntent } from "@/lib/stripe";
 import { sendBookingConfirmation } from "@/lib/email";
 import { v4 as uuidv4 } from "uuid";
 import { rateLimit } from "@/lib/rateLimit";
-import { getListingLimit } from "@/lib/plans";
+import { getListingLimit, getEffectivePlan } from "@/lib/plans";
 
 export async function POST(req, { params }) {
   // 5 booking attempts per IP per hour
@@ -25,7 +25,7 @@ export async function POST(req, { params }) {
 
     // Enforce plan listing limit — silently soft-block at plan cap
     const listingLimit = getListingLimit(
-      tenant.subscriptionPlan || "solo",
+      getEffectivePlan(tenant),
       tenant.addonListings || 0
     );
     const activeSnap = await adminDb
@@ -74,7 +74,7 @@ export async function POST(req, { params }) {
     const fullAddress  = `${address}, ${city}, ${state} ${zip}`;
 
     // Create payment intent — routed to tenant's Connect account (if onboarded)
-    const tenantPlanId = tenant.subscriptionPlan || "solo";
+    const tenantPlanId = getEffectivePlan(tenant);
 
     let paymentIntent;
     if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {

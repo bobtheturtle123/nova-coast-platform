@@ -534,13 +534,13 @@ if (loading) return (
   return (
     <div>
       {/* Hero */}
-      <div className="relative h-52 bg-[#3486cf] overflow-hidden">
+      <div className="relative h-72 bg-[#0F172A] overflow-hidden">
         {coverUrl ? (
-          <img src={coverUrl} alt={address} className="absolute inset-0 w-full h-full object-cover opacity-45" />
+          <img src={coverUrl} alt={address} className="absolute inset-0 w-full h-full object-cover" />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-[#1e5a8a] to-[#3486cf]" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
         <div className="absolute bottom-4 left-6 right-6">
           <div className="flex items-end justify-between">
             <div>
@@ -569,12 +569,6 @@ if (loading) return (
                 <button onClick={() => patchBooking({ status: "confirmed" })} disabled={saving}
                   className="px-4 py-2 text-sm font-semibold rounded-xl bg-green-500 text-white hover:bg-green-600 transition-colors">
                   ✓ Confirm
-                </button>
-              )}
-              {gallery && (
-                <button onClick={() => { setDeliveryMode("now"); setScheduledAt(""); setShowDeliver(true); }}
-                  className="px-4 py-2 text-sm font-semibold rounded-xl bg-gold text-[#0F172A] hover:bg-gold/90 transition-colors">
-                  Deliver →
                 </button>
               )}
             </div>
@@ -1392,29 +1386,155 @@ if (loading) return (
                   </div>
                 </div>
 
-                {/* Photo thumbnails */}
+                {/* Photos */}
                 {(() => {
                   const photos = (gallery.media || []).filter((m) => !m.fileType?.startsWith("video/") && !m.hidden);
                   if (photos.length === 0) return null;
                   return (
                     <div className="card p-4">
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Photos</p>
-                        <button onClick={openGalleryEditor}
-                          className="text-xs text-[#3486cf] hover:underline">
-                          Manage →
-                        </button>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Photos ({photos.length})</p>
+                        <button onClick={openGalleryEditor} className="text-xs text-[#3486cf] hover:underline">Manage →</button>
                       </div>
                       <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                        {photos.slice(0, 12).map((m, i) => (
+                        {photos.slice(0, 18).map((m, i) => (
                           <div key={i} className="aspect-square rounded-lg overflow-hidden bg-gray-100">
-                            <img src={m.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                            <img src={m.url} alt="" className="w-full h-full object-cover" />
                           </div>
                         ))}
                       </div>
-                      {photos.length > 12 && (
-                        <p className="text-xs text-gray-400 mt-2 text-center">+{photos.length - 12} more</p>
+                      {photos.length > 18 && (
+                        <p className="text-xs text-gray-400 mt-2 text-center">+{photos.length - 18} more</p>
                       )}
+                    </div>
+                  );
+                })()}
+
+                {/* Inline video files */}
+                {(() => {
+                  const videos = (gallery.media || []).filter((m) => m.fileType?.startsWith("video/") && !m.hidden);
+                  if (videos.length === 0) return null;
+                  return (
+                    <div className="card p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Videos ({videos.length})</p>
+                        <button onClick={openGalleryEditor} className="text-xs text-[#3486cf] hover:underline">Manage →</button>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {videos.map((m, i) => (
+                          <div key={i} className="aspect-video rounded-lg overflow-hidden bg-gray-900">
+                            <video src={m.url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Matterport / 3D Tour */}
+                {gallery.matterportUrl && !gallery.matterportHidden && (
+                  <div className="card p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">3D Tour</p>
+                      <button onClick={openGalleryEditor} className="text-xs text-[#3486cf] hover:underline">Edit →</button>
+                    </div>
+                    <a href={gallery.matterportUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-[#3486cf]/30 transition-colors group">
+                      <div className="w-10 h-10 rounded-lg bg-[#3486cf]/10 flex items-center justify-center flex-shrink-0">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="1.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.328l5.603 3.113z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-[#0F172A] group-hover:text-[#3486cf] transition-colors">View 3D Tour</p>
+                        <p className="text-xs text-gray-400 truncate">{gallery.matterportUrl}</p>
+                      </div>
+                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#CBD5E1" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </div>
+                )}
+
+                {/* Video Tour (YouTube / Vimeo URL) */}
+                {gallery.videoUrl && !gallery.videoUrlHidden && (
+                  <div className="card p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Video Tour</p>
+                      <button onClick={openGalleryEditor} className="text-xs text-[#3486cf] hover:underline">Edit →</button>
+                    </div>
+                    <a href={gallery.videoUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-red-200/50 transition-colors group">
+                      <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth="1.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.817v6.366a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-[#0F172A] group-hover:text-red-600 transition-colors">Watch Video Tour</p>
+                        <p className="text-xs text-gray-400 truncate">{gallery.videoUrl}</p>
+                      </div>
+                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#CBD5E1" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </div>
+                )}
+
+                {/* Floor Plans */}
+                {(() => {
+                  const plans = (gallery.floorPlans || []).filter((p) => !p.hidden);
+                  if (plans.length === 0) return null;
+                  return (
+                    <div className="card p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Floor Plans ({plans.length})</p>
+                        <button onClick={openGalleryEditor} className="text-xs text-[#3486cf] hover:underline">Manage →</button>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {plans.map((p, i) => {
+                          const isPdf = p.fileType === "application/pdf" || p.url?.toLowerCase().endsWith(".pdf");
+                          return isPdf ? (
+                            <a key={i} href={p.url} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-[#3486cf]/30 transition-colors group">
+                              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="1.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <span className="text-xs font-medium text-[#0F172A] group-hover:text-[#3486cf] transition-colors truncate">{p.name || `Floor Plan ${i + 1}`}</span>
+                            </a>
+                          ) : (
+                            <div key={i} className="aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 border border-gray-100">
+                              <img src={p.url} alt={p.name || `Floor Plan ${i + 1}`} className="w-full h-full object-contain" />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Attached Files */}
+                {(() => {
+                  const files = gallery.attachedFiles || [];
+                  if (files.length === 0) return null;
+                  return (
+                    <div className="card p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Files ({files.length})</p>
+                        <button onClick={openGalleryEditor} className="text-xs text-[#3486cf] hover:underline">Manage →</button>
+                      </div>
+                      <div className="space-y-1.5">
+                        {files.map((f, i) => (
+                          <a key={i} href={f.url} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-100 hover:border-[#3486cf]/30 transition-colors group">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#94A3B8" strokeWidth="1.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            </svg>
+                            <span className="text-xs font-medium text-[#0F172A] group-hover:text-[#3486cf] transition-colors truncate">{f.name || `File ${i + 1}`}</span>
+                          </a>
+                        ))}
+                      </div>
                     </div>
                   );
                 })()}
