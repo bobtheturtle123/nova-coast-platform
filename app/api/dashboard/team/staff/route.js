@@ -55,7 +55,7 @@ export async function POST(req) {
   const { email, role } = await req.json();
   if (!email?.trim()) return Response.json({ error: "Email is required" }, { status: 400 });
 
-  const validRoles = ["admin", "manager", "photographer", "editor", "assistant"];
+  const validRoles = ["admin", "manager", "photographer", "assistant"];
   const staffRole = validRoles.includes(role) ? role : "manager";
 
   // Get tenant info for email

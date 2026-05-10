@@ -24,15 +24,18 @@ function getWeekDates(anchor) {
 }
 
 export default function PhotographerSchedulePage() {
-  const [bookings,  setBookings]  = useState([]);
-  const [blocks,    setBlocks]    = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [anchor,    setAnchor]    = useState(new Date());
-  const [view,      setView]      = useState("week"); // week | month
-  const [showBlock, setShowBlock] = useState(false);
-  const [blockForm, setBlockForm] = useState({ startDate: "", endDate: "", reason: "Day Off", note: "" });
-  const [saving,    setSaving]    = useState(false);
+  const [bookings,    setBookings]    = useState([]);
+  const [blocks,      setBlocks]      = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [anchor,      setAnchor]      = useState(new Date());
+  const [view,        setView]        = useState("week"); // week | month
+  const [showBlock,   setShowBlock]   = useState(false);
+  const [blockForm,   setBlockForm]   = useState({ startDate: "", endDate: "", reason: "Day Off", note: "" });
+  const [saving,      setSaving]      = useState(false);
   const [memberColor, setMemberColor] = useState("#3486cf");
+  const [hasGcal,     setHasGcal]     = useState(false);
+  const [syncing,     setSyncing]     = useState(false);
+  const [syncMsg,     setSyncMsg]     = useState("");
 
   const getToken = () => auth.currentUser?.getIdToken();
 
@@ -48,10 +51,37 @@ export default function PhotographerSchedulePage() {
       setBookings(bData.bookings || []);
       setBlocks(blData.blocks   || []);
       setMemberColor(meData.member?.color || "#3486cf");
+      setHasGcal(!!meData.member?.googleCalendar?.connected);
       setLoading(false);
     }
     load();
   }, []);
+
+  async function syncGoogleCalendar() {
+    setSyncing(true);
+    setSyncMsg("");
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/photographer/google-sync", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Refresh blocks
+        const blRes  = await fetch("/api/photographer/blocks", { headers: { Authorization: `Bearer ${token}` } });
+        const blData = await blRes.json();
+        setBlocks(blData.blocks || []);
+        setSyncMsg(`Synced ${data.synced} events from Google Calendar`);
+      } else {
+        setSyncMsg(data.error || "Sync failed");
+      }
+    } catch {
+      setSyncMsg("Sync failed — check your connection");
+    }
+    setSyncing(false);
+    setTimeout(() => setSyncMsg(""), 5000);
+  }
 
   const weekDates = useMemo(() => getWeekDates(anchor), [anchor]);
 
@@ -131,10 +161,27 @@ export default function PhotographerSchedulePage() {
           <h1 className="font-bold text-2xl text-gray-900">Schedule</h1>
           <p className="text-gray-400 text-sm mt-0.5">Your upcoming shoots and blocked time</p>
         </div>
-        <button onClick={() => setShowBlock(true)} className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
-          🚫 Block Time Off
-        </button>
+        <div className="flex items-center gap-2">
+          {hasGcal && (
+            <button onClick={syncGoogleCalendar} disabled={syncing}
+              className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                className={syncing ? "animate-spin" : ""}>
+                <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" />
+              </svg>
+              {syncing ? "Syncing…" : "Sync Google Calendar"}
+            </button>
+          )}
+          <button onClick={() => setShowBlock(true)} className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
+            🚫 Block Time Off
+          </button>
+        </div>
       </div>
+      {syncMsg && (
+        <div className={`mb-4 text-sm px-4 py-2 rounded-lg ${syncMsg.includes("Synced") ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-600 border border-red-100"}`}>
+          {syncMsg}
+        </div>
+      )}
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         {/* Toolbar */}
@@ -196,10 +243,14 @@ export default function PhotographerSchedulePage() {
                         style={{ background: "repeating-linear-gradient(-45deg,#fee2e2,#fee2e2 3px,transparent 3px,transparent 10px)", opacity: 0.6 }} />
                     )}
                     {dayBlocks.map((bl) => (
-                      <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1.5 py-0.5 rounded-xl mb-1 flex items-center justify-between group relative z-10">
-                        <span className="text-red-600 font-medium truncate">{bl.reason}</span>
+                      <div key={bl.id} className={`text-xs border-l-2 px-1.5 py-0.5 rounded-xl mb-1 flex items-center justify-between group relative z-10 ${
+                        bl.source === "google" ? "bg-blue-50 border-blue-400" : "bg-red-100 border-red-400"
+                      }`}>
+                        <span className={`font-medium truncate ${bl.source === "google" ? "text-blue-600" : "text-red-600"}`}>
+                          {bl.source === "google" ? `G: ${bl.note || "Busy"}` : bl.reason}
+                        </span>
                         <button onClick={() => deleteBlock(bl.id)}
-                          className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 ml-1 text-[10px]">×</button>
+                          className="text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 ml-1 text-[10px]">×</button>
                       </div>
                     ))}
                     {dayEvents.map((ev) => (
@@ -255,19 +306,31 @@ export default function PhotographerSchedulePage() {
       {/* Existing blocks list */}
       {blocks.length > 0 && (
         <div className="mt-6 bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-200">
+          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
             <p className="font-semibold text-gray-800 text-sm">Your Time-Off Blocks</p>
+            {blocks.some((b) => b.source === "google") && (
+              <span className="text-xs text-gray-400 flex items-center gap-1">
+                <span className="inline-block w-2 h-2 rounded-full bg-blue-300" /> Google Calendar events shown. Remove any that shouldn't block bookings.
+              </span>
+            )}
           </div>
           {blocks.map((b) => (
             <div key={b.id} className="flex items-center justify-between px-4 py-3 border-b last:border-b-0 border-gray-50">
-              <div>
-                <p className="text-sm font-medium text-gray-800">{b.reason}</p>
-                <p className="text-xs text-gray-400">
-                  {new Date(b.startDate + "T12:00:00").toLocaleDateString()} – {new Date(b.endDate + "T12:00:00").toLocaleDateString()}
-                  {b.note && ` · ${b.note}`}
-                </p>
+              <div className="flex items-center gap-3">
+                {b.source === "google" ? (
+                  <span className="text-xs bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full font-medium shrink-0">Google</span>
+                ) : (
+                  <span className="text-xs bg-red-50 text-red-500 border border-red-100 px-2 py-0.5 rounded-full font-medium shrink-0">Manual</span>
+                )}
+                <div>
+                  <p className="text-sm font-medium text-gray-800">{b.reason}</p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(b.startDate + "T12:00:00").toLocaleDateString()} – {new Date(b.endDate + "T12:00:00").toLocaleDateString()}
+                    {b.note && ` · ${b.note}`}
+                  </p>
+                </div>
               </div>
-              <button onClick={() => deleteBlock(b.id)} className="text-xs text-red-400 hover:text-red-600 font-medium">Remove</button>
+              <button onClick={() => deleteBlock(b.id)} className="text-xs text-red-400 hover:text-red-600 font-medium shrink-0">Remove</button>
             </div>
           ))}
         </div>

@@ -957,7 +957,7 @@ export default function BookingsPage() {
                       </p>
                     )}
                     <div className="space-y-2">
-                      {teamMembers.filter((m) => m.active !== false).length > 0 && (
+                      {teamMembers.filter((m) => m.active !== false && (!m.role || m.role === "photographer" || m.role === "assistant")).length > 0 && (
                         <select
                           value={teamMembers.find((m) => m.email === form.photographerEmail)?.id || ""}
                           onChange={(e) => {
@@ -968,7 +968,7 @@ export default function BookingsPage() {
                           className="input-field w-full text-sm">
                           <option value="">— Select from your team —</option>
                           {teamMembers
-                            .filter((m) => m.active !== false)
+                            .filter((m) => m.active !== false && (!m.role || m.role === "photographer" || m.role === "assistant"))
                             .filter((m) => !zonePhotographers || zonePhotographers.includes(m.id))
                             .map((m) => (
                               <option key={m.id} value={m.id}>{m.name}</option>

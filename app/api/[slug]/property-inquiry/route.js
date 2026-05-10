@@ -58,7 +58,7 @@ export async function POST(req, { params }) {
     if (process.env.RESEND_API_KEY && agentEmail) {
       const resend = new Resend(process.env.RESEND_API_KEY);
       await resend.emails.send({
-        from:    `${tenant.businessName || "Property Inquiry"} <noreply@${process.env.RESEND_FROM_DOMAIN || "notifications.novaos.com"}>`,
+        from:    `${tenant.businessName || "Property Inquiry"} <noreply@mail.kyoriaos.com>`,
         to:      agentEmail,
         subject: `New inquiry: ${address || "Property listing"}`,
         html: `

@@ -11,7 +11,6 @@ import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 
 const ROLE_OPTIONS = [
   { id: "photographer", label: "Photographer", icon: "📷", desc: "Shows in booking schedule. Gets shoot notifications & their own calendar." },
-  { id: "editor",       label: "Editor",       icon: "🎨", desc: "Post-processing only. Not shown when clients book. No schedule slots." },
   { id: "assistant",    label: "Assistant",    icon: "🤝", desc: "On-site help. Can be assigned to shoots but won't appear in public booking." },
   { id: "manager",      label: "Manager",      icon: "📋", desc: "Can log into your dashboard. Manages bookings, galleries, and team." },
   { id: "admin",        label: "Admin",        icon: "🔑", desc: "Full dashboard access. Same as you, except cannot change billing." },
@@ -23,7 +22,6 @@ const DASHBOARD_ROLES = ["manager", "admin"];
 const ROLE_COLORS = {
   photographer: { bg: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-100" },
   manager:      { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-100" },
-  editor:       { bg: "bg-green-50",  text: "text-green-700",  border: "border-green-100" },
   assistant:    { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-100" },
   admin:        { bg: "bg-red-50",    text: "text-red-700",    border: "border-red-100" },
 };

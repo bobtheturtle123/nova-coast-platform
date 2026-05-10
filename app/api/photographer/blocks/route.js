@@ -18,7 +18,7 @@ export async function GET(req) {
 
   const snap = await adminDb
     .collection("tenants").doc(ctx.tenantId)
-    .collection("teamBlocks")
+    .collection("timeBlocks")
     .where("memberId", "==", ctx.memberId)
     .get();
 
@@ -31,6 +31,7 @@ export async function GET(req) {
       endDate:   data.endDate,
       reason:    data.reason,
       note:      data.note,
+      source:    data.source || "manual",
     };
   });
 
@@ -62,7 +63,7 @@ export async function POST(req) {
 
   await adminDb
     .collection("tenants").doc(ctx.tenantId)
-    .collection("teamBlocks").doc(id)
+    .collection("timeBlocks").doc(id)
     .set(block);
 
   return Response.json({ ok: true, block: { id, memberId: block.memberId, startDate: block.startDate, endDate: block.endDate, reason: block.reason, note: block.note } });
@@ -79,7 +80,7 @@ export async function DELETE(req) {
 
   const doc = await adminDb
     .collection("tenants").doc(ctx.tenantId)
-    .collection("teamBlocks").doc(id)
+    .collection("timeBlocks").doc(id)
     .get();
 
   if (!doc.exists || doc.data().memberId !== ctx.memberId) {

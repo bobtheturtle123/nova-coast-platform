@@ -130,7 +130,6 @@ function StaffAccessSection() {
           className="input-field flex-1 min-w-48" placeholder="colleague@email.com" />
         <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="input-field w-40">
           <option value="photographer">Photographer</option>
-          <option value="editor">Editor</option>
           <option value="assistant">Assistant</option>
           <option value="manager">Manager</option>
           <option value="admin">Admin</option>

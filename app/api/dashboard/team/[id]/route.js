@@ -21,7 +21,7 @@ export async function PATCH(req, { params }) {
     email:         (body.email || "").toLowerCase(),
     phone:         body.phone || "",
     homeZip:       (body.homeZip || "").slice(0, 10),
-    role:          ["photographer","manager","editor","assistant"].includes(body.role) ? body.role : "photographer",
+    role:          ["photographer","manager","assistant","admin"].includes(body.role) ? body.role : "photographer",
     skills:        Array.isArray(body.skills) ? body.skills.map(String).slice(0, 50) : [],
     color:         body.color || "#3486cf",
     active:        body.active !== false,
