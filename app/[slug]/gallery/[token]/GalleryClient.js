@@ -12,9 +12,7 @@ function GalleryLightbox({ images, startIndex, unlocked, onClose }) {
   const prev = () => { setLoaded(false); setIdx((i) => (i - 1 + images.length) % images.length); };
   const next = () => { setLoaded(false); setIdx((i) => (i + 1) % images.length); };
 
-  useEffect(() => {
-    setLoaded(false);
-  }, [idx]);
+  useEffect(() => { setLoaded(false); }, [idx]);
 
   useEffect(() => {
     function onKey(e) {
@@ -29,96 +27,119 @@ function GalleryLightbox({ images, startIndex, unlocked, onClose }) {
 
   const img = images[idx];
 
+  // SVG repeating watermark pattern — covers exactly the image, not the dark surround
+  const watermarkBg = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='90'%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial,sans-serif' font-size='13' font-weight='700' letter-spacing='3' fill='white' fill-opacity='0.22' transform='rotate(-25 110 45)'%3EPREVIEW ONLY%3C/text%3E%3C/svg%3E\")";
+
   return (
-    <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "rgba(0,0,0,0.97)" }} onClick={onClose}>
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-5 py-3 flex-shrink-0 z-10" onClick={(e) => e.stopPropagation()}>
-        <span className="text-white/50 text-sm font-medium tabular-nums">{idx + 1} <span className="text-white/25">/</span> {images.length}</span>
+    <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "rgba(10,10,12,0.97)" }} onClick={onClose}>
+
+      {/* ── Top bar ── */}
+      <div className="flex items-center justify-between px-5 py-3.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}
+        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.6), transparent)" }}>
+        <span className="text-white/40 text-sm tabular-nums font-medium">
+          {idx + 1} <span className="text-white/20 mx-0.5">/</span> {images.length}
+        </span>
         {img?.fileName && (
-          <span className="text-white/35 text-xs truncate max-w-[50%] text-center hidden sm:block">{img.fileName}</span>
+          <span className="text-white/30 text-xs truncate max-w-[45%] text-center hidden sm:block tracking-wide">
+            {img.fileName}
+          </span>
         )}
-        <button
-          onClick={onClose}
-          className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-white text-lg leading-none"
-          aria-label="Close">
-          ×
+        <button onClick={onClose} aria-label="Close"
+          className="w-9 h-9 rounded-full flex items-center justify-center transition-all"
+          style={{ background: "rgba(255,255,255,0.08)" }}
+          onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.16)"}
+          onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M1 1l12 12M13 1L1 13" stroke="white" strokeWidth="1.75" strokeLinecap="round"/>
+          </svg>
         </button>
       </div>
 
-      {/* Image area */}
-      <div className="flex-1 flex items-center justify-center relative min-h-0 px-12 sm:px-16" onClick={onClose}>
+      {/* ── Image area ── */}
+      <div className="flex-1 flex items-center justify-center min-h-0 relative" onClick={onClose}>
+
         {/* Left arrow */}
         {images.length > 1 && (
-          <button
-            onClick={(e) => { e.stopPropagation(); prev(); }}
-            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors z-10"
-            aria-label="Previous">
-            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
+          <button onClick={(e) => { e.stopPropagation(); prev(); }} aria-label="Previous"
+            className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full flex items-center justify-center transition-all"
+            style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(8px)" }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.18)"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}>
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
         )}
 
-        {/* Image + watermark */}
-        <div className="relative flex items-center justify-center w-full h-full" onClick={(e) => e.stopPropagation()}>
-          {!loaded && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-7 h-7 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
-            </div>
-          )}
-          <img
-            key={img?.url}
-            src={img?.url}
-            alt={img?.fileName || `Photo ${idx + 1}`}
-            draggable={false}
-            onLoad={() => setLoaded(true)}
-            onContextMenu={(e) => { if (!unlocked) e.preventDefault(); }}
-            className="max-h-full max-w-full object-contain select-none transition-opacity duration-200"
-            style={{ opacity: loaded ? 1 : 0, pointerEvents: !unlocked ? "none" : undefined }}
-          />
-          {!unlocked && (
-            <div className="absolute inset-0 pointer-events-none select-none overflow-hidden"
-              style={{ userSelect: "none", WebkitUserSelect: "none" }}>
-              {Array.from({ length: 6 }).map((_, row) =>
-                Array.from({ length: 4 }).map((_, col) => (
-                  <span key={`${row}-${col}`}
-                    className="absolute text-white/30 font-bold uppercase pointer-events-none select-none"
-                    style={{
-                      fontSize: "12px",
-                      top: `${row * 18 + 4}%`,
-                      left: `${col * 28 - 5}%`,
-                      transform: "rotate(-30deg)",
-                      whiteSpace: "nowrap",
-                      letterSpacing: "0.2em",
-                      textShadow: "0 1px 4px rgba(0,0,0,0.9)",
-                    }}>
-                    PREVIEW ONLY
-                  </span>
-                ))
-              )}
-            </div>
-          )}
+        {/* Tight image wrapper — watermark clips to image bounds */}
+        <div className="flex items-center justify-center w-full h-full px-16 sm:px-20" onClick={(e) => e.stopPropagation()}>
+          <div className="relative" style={{ display: "inline-flex", maxWidth: "100%", maxHeight: "100%" }}>
+            {!loaded && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-8 h-8 border-2 rounded-full animate-spin"
+                  style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.7)" }} />
+              </div>
+            )}
+            <img
+              key={img?.url}
+              src={img?.url}
+              alt={img?.fileName || `Photo ${idx + 1}`}
+              draggable={false}
+              onLoad={() => setLoaded(true)}
+              onContextMenu={(e) => { if (!unlocked) e.preventDefault(); }}
+              className="block select-none"
+              style={{
+                maxHeight: "calc(100vh - 160px)",
+                maxWidth: "100%",
+                objectFit: "contain",
+                opacity: loaded ? 1 : 0,
+                transition: "opacity 0.18s ease",
+                pointerEvents: !unlocked ? "none" : undefined,
+                boxShadow: loaded ? "0 8px 48px rgba(0,0,0,0.6)" : "none",
+              }}
+            />
+            {/* Watermark — positioned over the image only */}
+            {!unlocked && (
+              <div className="absolute inset-0 pointer-events-none select-none"
+                style={{
+                  backgroundImage: watermarkBg,
+                  backgroundRepeat: "repeat",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
+                }} />
+            )}
+          </div>
         </div>
 
         {/* Right arrow */}
         {images.length > 1 && (
-          <button
-            onClick={(e) => { e.stopPropagation(); next(); }}
-            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors z-10"
-            aria-label="Next">
-            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
+          <button onClick={(e) => { e.stopPropagation(); next(); }} aria-label="Next"
+            className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full flex items-center justify-center transition-all"
+            style={{ background: "rgba(255,255,255,0.08)", backdropFilter: "blur(8px)" }}
+            onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.18)"}
+            onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}>
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </button>
         )}
       </div>
 
-      {/* Thumbnail strip */}
+      {/* ── Thumbnail strip ── */}
       {images.length > 1 && (
-        <div className="flex-shrink-0 flex items-center gap-1.5 px-4 py-3 overflow-x-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex-shrink-0 flex items-center gap-1.5 px-4 pb-4 pt-2 overflow-x-auto"
+          style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7), transparent)" }}
+          onClick={(e) => e.stopPropagation()}>
           {images.map((im, i) => (
             <button key={i} onClick={() => { setLoaded(false); setIdx(i); }}
-              className={`flex-shrink-0 w-12 h-8 rounded overflow-hidden transition-all ${i === idx ? "ring-2 ring-white opacity-100" : "opacity-40 hover:opacity-70"}`}>
+              className="flex-shrink-0 overflow-hidden transition-all"
+              style={{
+                width: 52, height: 36,
+                borderRadius: 6,
+                outline: i === idx ? "2px solid rgba(255,255,255,0.8)" : "2px solid transparent",
+                outlineOffset: 2,
+                opacity: i === idx ? 1 : 0.4,
+              }}>
               <img src={im.url} alt="" className="w-full h-full object-cover" draggable={false} />
             </button>
           ))}
@@ -563,11 +584,17 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         )}
 
         {/* ── Floor Plans ─────────────────────────────────────────────────── */}
-        {floorPlans.length > 0 && unlocked && (
+        {floorPlans.length > 0 && (
           <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
               <h2 className="font-semibold text-gray-900">Floor Plans</h2>
               <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">{floorPlans.length}</span>
+              {!unlocked && (
+                <span className="ml-auto text-xs text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                  Download available after payment
+                </span>
+              )}
             </div>
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {floorPlans.map((fp, i) => {
@@ -594,7 +621,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                               View
                             </a>
                           )}
-                          {dlUrl && (
+                          {unlocked && dlUrl && (
                             <a href={dlUrl} download={fp.fileName}
                               className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90"
                               style={{ background: primary }}>
@@ -611,7 +638,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                         )}
                         <div className="px-4 py-3 flex items-center justify-between border-t border-gray-100 bg-white gap-2">
                           <span className="text-xs text-gray-500 truncate flex-1 min-w-0">{fp.fileName}</span>
-                          {fp.key && (
+                          {unlocked && fp.key && (
                             <div className="flex gap-1.5 flex-shrink-0">
                               <a href={downloadUrl(fp.key, "print", fp.fileName)} download
                                 className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide text-white bg-[#3486cf] transition-opacity hover:opacity-90">
@@ -634,11 +661,17 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         )}
 
         {/* ── Documents ───────────────────────────────────────────────────── */}
-        {attachedFiles.length > 0 && unlocked && (
+        {attachedFiles.length > 0 && (
           <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2.5">
               <h2 className="font-semibold text-gray-900">Documents</h2>
               <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">{attachedFiles.length}</span>
+              {!unlocked && (
+                <span className="ml-auto text-xs text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                  Download available after payment
+                </span>
+              )}
             </div>
             <div className="divide-y divide-gray-50">
               {attachedFiles.map((f, i) => {
@@ -662,7 +695,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                           View
                         </a>
                       )}
-                      {dlUrl && (
+                      {unlocked && dlUrl && (
                         <a href={dlUrl} download={f.fileName}
                           className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90"
                           style={{ background: primary }}>

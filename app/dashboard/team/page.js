@@ -1048,7 +1048,7 @@ export default function TeamPage() {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [blockDetail,    setBlockDetail]    = useState(null); // { member, blocks, date }
 
-  const getToken = () => auth.currentUser?.getIdToken();
+  const getToken = (forceRefresh = false) => auth.currentUser?.getIdToken(forceRefresh);
 
   // Handle OAuth callback params
   useEffect(() => {
@@ -1065,7 +1065,7 @@ export default function TeamPage() {
 
   useEffect(() => {
     async function load() {
-      const token = await getToken();
+      const token = await getToken(true);
       const [teamRes, listRes, svcRes, pkgRes, adnRes, blocksRes] = await Promise.all([
         fetch("/api/dashboard/team",                   { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/listings",               { headers: { Authorization: `Bearer ${token}` } }),
@@ -1222,12 +1222,20 @@ export default function TeamPage() {
   }
 
   async function deleteBlock(id) {
-    const token = await getToken();
-    await fetch(`/api/dashboard/team/blocks?id=${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
     setTimeBlocks((prev) => prev.filter((b) => b.id !== id));
+    try {
+      const token = await getToken(true);
+      const res = await fetch(`/api/dashboard/team/blocks?id=${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        setTimeBlocks((prev) => prev); // no rollback needed; reload will restore
+        toast("Failed to remove block.", "error");
+      }
+    } catch {
+      toast("Failed to remove block.", "error");
+    }
   }
 
   // ── Month view helpers ────────────────────────────────────────────────────
