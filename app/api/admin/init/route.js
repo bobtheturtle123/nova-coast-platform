@@ -8,15 +8,15 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
 
   const secret = searchParams.get("secret");
-  const expectedSecret = process.env.GRANT_INIT_SECRET;
+  const expectedSecret = process.env.ADMIN_SECRET;
 
   if (!expectedSecret || !secret || secret !== expectedSecret) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const email = process.env.SUPERADMIN_EMAIL;
+  const email = searchParams.get("email") || process.env.SUPERADMIN_EMAIL;
   if (!email) {
-    return Response.json({ error: "SUPERADMIN_EMAIL not set in env" }, { status: 500 });
+    return Response.json({ error: "Pass ?email= or set SUPERADMIN_EMAIL env var" }, { status: 400 });
   }
 
   try {
