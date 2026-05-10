@@ -1,13 +1,9 @@
 import { getTenantBySlug } from "@/lib/tenants";
 import { rateLimit } from "@/lib/rateLimit";
-
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const AI_KEY   = DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
-const AI_URL   = DEEPSEEK_API_KEY ? "https://api.deepseek.com/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
-const AI_MODEL = DEEPSEEK_API_KEY ? "deepseek-chat" : "gpt-4o-mini";
+import { callAI, aiAvailable } from "@/lib/ai";
 
 // POST /api/[slug]/property-chat
-// AI chatbot for the public property website (Groq free tier)
+// AI chatbot for the public property website
 export async function POST(req, { params }) {
   const rl = await rateLimit(req, `property-chat:${params.slug}`, 20, 3600);
   if (rl.limited) return Response.json({ reply: "Too many requests. Please try again later." }, { status: 429 });
@@ -19,11 +15,10 @@ export async function POST(req, { params }) {
     const { messages, pw } = await req.json();
     if (!messages?.length) return Response.json({ error: "No messages" }, { status: 400 });
 
-    if (!AI_KEY) {
+    if (!aiAvailable()) {
       return Response.json({ reply: "AI chat is not configured yet. Please contact the listing agent directly." });
     }
 
-    // Build system prompt from property data
     const address = pw.customName || pw.address || "this property";
     const details = [
       pw.price       && `Price: ${pw.price}`,
@@ -59,29 +54,14 @@ Photographer / Media: ${tenant.businessName || "Professional photography service
       .slice(-8)
       .map((m) => ({ role: m.role, content: String(m.content).slice(0, 1000) }));
 
-    const res = await fetch(AI_URL, {
-      method:  "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${AI_KEY}`,
-      },
-      body: JSON.stringify({
-        model:       AI_MODEL,
-        max_tokens:  300,
-        temperature: 0.5,
-        messages:    [{ role: "system", content: systemPrompt }, ...chatMessages],
-      }),
-    });
-
-    if (!res.ok) {
+    try {
+      const reply = await callAI(chatMessages, { max_tokens: 300, temperature: 0.5, system: systemPrompt }, "property-chat");
+      return Response.json({ reply });
+    } catch {
       return Response.json({ reply: "I'm having trouble responding right now. Please contact the listing agent directly." });
     }
-
-    const data  = await res.json();
-    const reply = data.choices?.[0]?.message?.content || "I'm not sure about that. Please contact the listing agent directly.";
-    return Response.json({ reply });
   } catch (err) {
-    console.error("Property chat error:", err);
+    console.error("[property-chat] Error:", err);
     return Response.json({ reply: "I'm having trouble responding right now. Please contact the listing agent directly." });
   }
 }

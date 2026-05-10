@@ -4,6 +4,7 @@ import { sendGalleryDelivery } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendMediaDeliveredSms } from "@/lib/sms";
 import { getAppUrl } from "@/lib/appUrl";
+import { safeDate } from "@/lib/dateUtils";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -142,10 +143,10 @@ export async function PATCH(req, { params }) {
   if (errorSnap.empty) return Response.json({ error: "No failed delivery found" }, { status: 404 });
 
   const failedDoc = errorSnap.docs[0];
-  const schedAt = failedDoc.data().scheduledAt?.toDate?.() ?? new Date(failedDoc.data().scheduledAt?._seconds * 1000);
+  const schedAt = safeDate(failedDoc.data().scheduledAt);
 
   // Reset the scheduled time to 2 minutes from now if the original time has already passed
-  const retryAt = schedAt > new Date() ? schedAt : new Date(Date.now() + 2 * 60 * 1000);
+  const retryAt = (schedAt && schedAt > new Date()) ? schedAt : new Date(Date.now() + 2 * 60 * 1000);
 
   await Promise.all([
     failedDoc.ref.update({ status: "pending", scheduledAt: retryAt, error: null }),

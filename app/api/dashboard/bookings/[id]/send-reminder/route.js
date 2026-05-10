@@ -1,6 +1,7 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
 import { sendPaymentReminder } from "@/lib/email";
+import { safeDate } from "@/lib/dateUtils";
 
 const EMAIL_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours between reminder sends
 
@@ -38,8 +39,8 @@ export async function POST(req, { params }) {
   }
 
   // Cooldown: prevent spamming reminder emails
-  const lastSent = booking.emailCooldowns?.reminder?.toDate?.() || booking.emailCooldowns?.reminder;
-  if (lastSent && Date.now() - new Date(lastSent).getTime() < EMAIL_COOLDOWN_MS) {
+  const lastSent = safeDate(booking.emailCooldowns?.reminder);
+  if (lastSent && Date.now() - lastSent.getTime() < EMAIL_COOLDOWN_MS) {
     return Response.json({ error: "Reminder was recently sent. Please wait before resending." }, { status: 429 });
   }
 

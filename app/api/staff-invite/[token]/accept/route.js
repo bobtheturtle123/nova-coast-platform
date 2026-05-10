@@ -1,4 +1,5 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { safeDate } from "@/lib/dateUtils";
 
 export async function POST(req, { params }) {
   const { token } = params;
@@ -34,8 +35,8 @@ export async function POST(req, { params }) {
   if (inviteData.accepted) {
     return Response.json({ error: "This invite has already been used." }, { status: 400 });
   }
-  const expiresAt = inviteData.expiresAt?.toDate?.() || new Date(inviteData.expiresAt);
-  if (expiresAt < new Date()) {
+  const expiresAt = safeDate(inviteData.expiresAt);
+  if (!expiresAt || expiresAt < new Date()) {
     return Response.json({ error: "This invite has expired." }, { status: 400 });
   }
 

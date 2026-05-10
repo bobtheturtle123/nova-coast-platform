@@ -593,7 +593,7 @@ export default function DashboardHome() {
         )}
 
         {/* ── Stats row ─────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           <StatCard label="Total Listings" value={stats.total} sub="all time"
             href="/dashboard/listings"
             iconBg="#F0F7FD"

@@ -25,10 +25,13 @@ export async function GET(req) {
 
   const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
 
-  // Fetch bookings + galleries in parallel
+  const { searchParams } = new URL(req.url);
+  const limitParam = Math.min(parseInt(searchParams.get("limit") || "100", 10), 500);
+
+  // Fetch bookings + galleries in parallel — bounded to prevent read explosion
   const [bookingSnap, gallerySnap] = await Promise.all([
-    tenantRef.collection("bookings").orderBy("createdAt", "desc").get(),
-    tenantRef.collection("galleries").get(),
+    tenantRef.collection("bookings").orderBy("createdAt", "desc").limit(limitParam).get(),
+    tenantRef.collection("galleries").orderBy("createdAt", "desc").limit(limitParam).get(),
   ]);
 
   // Build gallery map by bookingId

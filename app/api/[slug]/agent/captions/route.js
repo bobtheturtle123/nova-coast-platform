@@ -1,10 +1,7 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
-
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const AI_KEY   = DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
-const AI_URL   = DEEPSEEK_API_KEY ? "https://api.deepseek.com/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
-const AI_MODEL = DEEPSEEK_API_KEY ? "deepseek-chat" : "gpt-4o-mini";
+import { callAI, aiAvailable } from "@/lib/ai";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function GET(req, { params }) {
   const { searchParams } = new URL(req.url);
@@ -13,6 +10,12 @@ export async function GET(req, { params }) {
 
   if (!token || !bookingId) {
     return Response.json({ error: "token and bookingId required" }, { status: 400 });
+  }
+
+  // Per-slug rate limit — prevents agent portal caption abuse (15/hour per slug)
+  const rl = await rateLimit(req, `agent-captions:${params.slug}`, 15, 3600);
+  if (rl.limited) {
+    return Response.json({ error: "Too many requests. Please try again later." }, { status: 429 });
   }
 
   const tenant = await getTenantBySlug(params.slug);
@@ -40,7 +43,7 @@ export async function GET(req, { params }) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!AI_KEY) {
+  if (!aiAvailable()) {
     return Response.json({ error: "AI not configured" }, { status: 503 });
   }
 
@@ -59,22 +62,14 @@ export async function GET(req, { params }) {
   ].filter(Boolean).join("\n");
 
   try {
-    const res = await fetch(AI_URL, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${AI_KEY}` },
-      body: JSON.stringify({
-        model:       AI_MODEL,
-        max_tokens:  700,
-        temperature: 0.8,
-        messages: [{
-          role:    "user",
-          content: `Generate real estate marketing copy for this listing:\n\n${parts}\n\nReturn ONLY valid JSON (no markdown):\n{"instagram":"150-200 char caption with emojis and #JustListed #RealEstate","facebook":"2-3 sentence warm post","emailSubject":"Email subject under 60 chars"}`,
-        }],
-      }),
-    });
-
-    const data  = await res.json();
-    const raw   = data.choices?.[0]?.message?.content?.trim() || "{}";
+    const raw = await callAI(
+      [{
+        role:    "user",
+        content: `Generate real estate marketing copy for this listing:\n\n${parts}\n\nReturn ONLY valid JSON (no markdown):\n{"instagram":"150-200 char caption with emojis and #JustListed #RealEstate","facebook":"2-3 sentence warm post","emailSubject":"Email subject under 60 chars"}`,
+      }],
+      { max_tokens: 700, temperature: 0.8 },
+      "agent-captions"
+    );
     const clean = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
     const captions = JSON.parse(clean);
     return Response.json({ captions });

@@ -4,8 +4,16 @@ import { sendGalleryDelivery } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendMediaDeliveredSms } from "@/lib/sms";
 import { getAppUrl } from "@/lib/appUrl";
+import { safeDate } from "@/lib/dateUtils";
 
 export const dynamic = "force-dynamic";
+
+// Process an array of async tasks in batches to prevent resource exhaustion
+async function batchedSettled(items, fn, batchSize = 10) {
+  for (let i = 0; i < items.length; i += batchSize) {
+    await Promise.allSettled(items.slice(i, i + batchSize).map(fn));
+  }
+}
 
 export async function GET(req) {
   const authHeader = req.headers.get("authorization");
@@ -36,13 +44,14 @@ export async function GET(req) {
 
     console.log(`[cron/gallery-deliveries] Found ${snap.size} pending deliveries due`);
 
-    await Promise.allSettled(
-      snap.docs.map(async (doc) => {
+    console.log(`[cron/gallery-deliveries] Processing ${snap.size} jobs in batches of 10`);
+
+    await batchedSettled(snap.docs, async (doc) => {
         const job = doc.data();
         const { tenantId, galleryId, subject, note, to, cc } = job;
 
-        const schedAt = job.scheduledAt?.toDate?.() ?? new Date(job.scheduledAt?._seconds * 1000);
-        console.log(`[cron/gallery-deliveries] Processing job ${doc.id} — gallery ${galleryId} scheduled ${schedAt?.toISOString()}`);
+        const schedAt = safeDate(job.scheduledAt);
+        console.log(`[cron/gallery-deliveries] Processing job ${doc.id} — gallery ${galleryId} scheduled ${schedAt ? schedAt.toISOString() : "unknown"}`);
 
         try {
           // Claim the job atomically — prevents duplicate sends if cron overlaps
@@ -138,8 +147,7 @@ export async function GET(req) {
           ]);
           errors++;
         }
-      })
-    );
+    });
   } catch (err) {
     console.error("[cron/gallery-deliveries] Fatal error querying scheduledDeliveries:", err);
     return Response.json({ error: err.message }, { status: 500 });

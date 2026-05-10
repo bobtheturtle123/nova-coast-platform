@@ -387,6 +387,8 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 <div key={i} className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer"
                   onClick={() => setLightboxIdx(i)}>
                   <img src={m.url} alt={m.fileName || `Photo ${i + 1}`} draggable={false}
+                    loading={i < 12 ? "eager" : "lazy"}
+                    decoding="async"
                     onContextMenu={(e) => { if (!unlocked) e.preventDefault(); }}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 select-none"
                     style={!unlocked ? { pointerEvents: "none" } : {}} />

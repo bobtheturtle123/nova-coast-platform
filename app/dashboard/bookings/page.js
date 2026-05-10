@@ -641,10 +641,10 @@ export default function BookingsPage() {
             </div>
 
             <form onSubmit={createBooking}>
-              <div className="flex" style={{ borderTop: "none" }}>
+              <div className="flex flex-col sm:flex-row" style={{ borderTop: "none" }}>
 
                 {/* ── LEFT: form fields ─────────────────────────────────────── */}
-                <div className="flex-1 px-8 py-6 space-y-7 overflow-y-auto max-h-[70vh]">
+                <div className="flex-1 px-5 sm:px-8 py-6 space-y-7 overflow-y-auto max-h-[60vh] sm:max-h-[70vh]">
 
                   {createError && (
                     <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-2.5 rounded-xl">
@@ -743,7 +743,7 @@ export default function BookingsPage() {
                         placeholder="Full name *"
                         className="input-field w-full"
                       />
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <input
                           type="email"
                           value={form.clientEmail} onChange={(e) => setField("clientEmail", e.target.value)}
@@ -839,7 +839,7 @@ export default function BookingsPage() {
                       {catalog.packages?.filter((p) => p.active !== false).length > 0 && (
                         <div className="mb-4">
                           <p className="text-xs text-gray-400 mb-2">Packages</p>
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {catalog.packages.filter((p) => p.active !== false).map((pkg) => (
                               <PackageCard
                                 key={pkg.id}
@@ -951,7 +951,7 @@ export default function BookingsPage() {
                             ))}
                         </select>
                       )}
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <input
                           type="text"
                           value={form.photographerName} onChange={(e) => setField("photographerName", e.target.value)}
@@ -970,8 +970,8 @@ export default function BookingsPage() {
                 </div>
 
                 {/* ── RIGHT: order summary ──────────────────────────────────── */}
-                <div className="w-72 flex-shrink-0 px-6 py-6 flex flex-col"
-                  style={{ background: "var(--bg-subtle)", borderLeft: "1px solid var(--border-subtle)", borderRadius: "0 18px 18px 0" }}>
+                <div className="w-full sm:w-72 flex-shrink-0 px-5 sm:px-6 py-6 flex flex-col rounded-b-[18px] sm:rounded-b-none sm:rounded-r-[18px]"
+                  style={{ background: "var(--bg-subtle)", borderTop: "1px solid var(--border-subtle)" }}>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Order Summary</p>
 
                   {/* Line items */}

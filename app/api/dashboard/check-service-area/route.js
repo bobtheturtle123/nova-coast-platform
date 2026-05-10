@@ -47,7 +47,7 @@ export async function POST(req) {
 
     if ((lat == null || isNaN(lat)) && address?.trim()) {
       const liqKey    = process.env.LOCATIONIQ_KEY || process.env.NEXT_PUBLIC_LOCATIONIQ_KEY;
-      const mapboxKey = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+      const mapboxKey = process.env.MAPBOX_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
       let geocoded    = false;
 
       if (liqKey) {

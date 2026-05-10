@@ -1,7 +1,8 @@
 import { rateLimit } from "@/lib/rateLimit";
 
 const LOCATIONIQ_KEY  = process.env.LOCATIONIQ_KEY || process.env.NEXT_PUBLIC_LOCATIONIQ_KEY;
-const MAPBOX_TOKEN    = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+// Prefer server-side key (not exposed in browser bundle); fall back to public key for backwards compat
+const MAPBOX_TOKEN    = process.env.MAPBOX_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 // GET /api/autocomplete?q=123+Main+St
 // Proxies address autocomplete so API keys stay server-side only.

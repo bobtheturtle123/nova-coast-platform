@@ -14,10 +14,14 @@ export async function GET(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { searchParams } = new URL(req.url);
+  const limitParam = Math.min(parseInt(searchParams.get("limit") || "100", 10), 500);
+
   const snap = await adminDb
     .collection("tenants").doc(ctx.tenantId)
     .collection("bookings")
     .orderBy("createdAt", "desc")
+    .limit(limitParam)
     .get();
 
   const bookings = snap.docs.map((d) => {

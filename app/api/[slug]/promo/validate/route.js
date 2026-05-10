@@ -1,6 +1,7 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
 import { rateLimit } from "@/lib/rateLimit";
+import { safeDate } from "@/lib/dateUtils";
 
 // POST /api/[slug]/promo/validate
 // Body: { code: string, subtotal: number }
@@ -40,10 +41,10 @@ export async function POST(req, { params }) {
       return Response.json({ valid: false, message: "This code is no longer active" });
     }
 
-    // Check expiry
+    // Check expiry — treat unparseable dates as expired to be safe
     if (promo.expiresAt) {
-      const expiry = promo.expiresAt?.toDate ? promo.expiresAt.toDate() : new Date(promo.expiresAt);
-      if (expiry < new Date()) {
+      const expiry = safeDate(promo.expiresAt);
+      if (!expiry || expiry < new Date()) {
         return Response.json({ valid: false, message: "This code has expired" });
       }
     }

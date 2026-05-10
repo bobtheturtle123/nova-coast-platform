@@ -2,6 +2,7 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { rateLimitTenant } from "@/lib/rateLimit";
+import { trackPlatformUsage } from "@/lib/usageTracking";
 
 // Hard cap on files per gallery — prevents unlimited storage accumulation.
 // 1000 covers portrait photographers with large shoot volumes; normal shoots are 50-200 photos.
@@ -86,6 +87,10 @@ export async function POST(req) {
 
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
     const publicUrl = `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${key}`;
+
+    // Track upload count and estimated bytes for cost observability
+    trackPlatformUsage("uploadsCount");
+    if (fileSize) trackPlatformUsage("uploadBytes", fileSize);
 
     return Response.json({ uploadUrl, publicUrl, key });
   } catch (err) {

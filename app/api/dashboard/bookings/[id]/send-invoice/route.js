@@ -3,6 +3,7 @@ import { getTenantById } from "@/lib/tenants";
 import { sendInvoiceEmail } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 import { getAppUrl } from "@/lib/appUrl";
+import { safeDate } from "@/lib/dateUtils";
 
 const EMAIL_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours between invoice sends
 
@@ -32,8 +33,8 @@ export async function POST(req, { params }) {
   const booking = bookingDoc.data();
 
   // Cooldown: prevent spamming invoice emails to the same client
-  const lastSent = booking.emailCooldowns?.invoice?.toDate?.() || booking.emailCooldowns?.invoice;
-  if (lastSent && Date.now() - new Date(lastSent).getTime() < EMAIL_COOLDOWN_MS) {
+  const lastSent = safeDate(booking.emailCooldowns?.invoice);
+  if (lastSent && Date.now() - lastSent.getTime() < EMAIL_COOLDOWN_MS) {
     return Response.json({ error: "Invoice was recently sent. Please wait before resending." }, { status: 429 });
   }
 

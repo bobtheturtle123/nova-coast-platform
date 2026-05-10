@@ -1,12 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { rateLimitTenant } from "@/lib/rateLimit";
-
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const AI_KEY           = DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
-const AI_URL           = DEEPSEEK_API_KEY
-  ? "https://api.deepseek.com/v1/chat/completions"
-  : "https://api.openai.com/v1/chat/completions";
-const AI_MODEL         = DEEPSEEK_API_KEY ? "deepseek-chat" : "gpt-4o-mini";
+import { callAI, aiAvailable } from "@/lib/ai";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -29,7 +23,7 @@ export async function POST(req) {
 
   // AI-backed modes require the key + rate limit; CSV is parsed locally so skip those checks
   if (mode !== "csv") {
-    if (!AI_KEY) {
+    if (!aiAvailable()) {
       return Response.json({ error: "AI not configured. Set DEEPSEEK_API_KEY or OPENAI_API_KEY to enable pricing import." }, { status: 503 });
     }
     const rl = await rateLimitTenant(ctx.tenantId, "products-import", 5, 3600);
@@ -273,19 +267,7 @@ Rules:
 - Return at least 1 item if you find any pricing at all`;
 
   try {
-    const aiRes = await fetch(AI_URL, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${AI_KEY}` },
-      body: JSON.stringify({
-        model:       AI_MODEL,
-        max_tokens:  1500,
-        temperature: 0.2,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-
-    const aiData = await aiRes.json();
-    const raw    = aiData.choices?.[0]?.message?.content?.trim() || "[]";
+    const raw    = await callAI([{ role: "user", content: prompt }], { max_tokens: 1500, temperature: 0.2 }, "products-import");
     const clean  = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
     const parsed = JSON.parse(clean);
 

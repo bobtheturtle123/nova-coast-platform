@@ -18,12 +18,12 @@
   },
   "crons": [
     {
-      "path": "/api/cron/shoot-reminders",
+      "path": "/api/cron/gallery-deliveries",
       "schedule": "0 14 * * *"
     },
     {
-      "path": "/api/cron/gallery-deliveries",
-      "schedule": "0 14 * * *"
+      "path": "/api/cron/shoot-reminders",
+      "schedule": "15 14 * * *"
     }
   ]
 }

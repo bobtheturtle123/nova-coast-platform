@@ -1,13 +1,8 @@
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { rateLimitTenant } from "@/lib/rateLimit";
-
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const AI_KEY   = DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
-const AI_URL   = DEEPSEEK_API_KEY ? "https://api.deepseek.com/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
-const AI_MODEL = DEEPSEEK_API_KEY ? "deepseek-chat" : "gpt-4o-mini";
+import { callAI, aiAvailable } from "@/lib/ai";
 
 // POST /api/dashboard/listings/[id]/social-captions
-// AI-generated Instagram, Facebook, and email subject for a listing (Groq free tier)
 export async function POST(req, { params }) {
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
   if (!token) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -16,9 +11,9 @@ export async function POST(req, { params }) {
     const decoded = await adminAuth.verifyIdToken(token);
     if (!decoded.tenantId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!AI_KEY) {
+    if (!aiAvailable()) {
       return Response.json(
-        { error: "AI not configured. Add DEEPSEEK_API_KEY or GROQ_API_KEY to enable." },
+        { error: "AI not configured. Add DEEPSEEK_API_KEY or OPENAI_API_KEY to enable." },
         { status: 503 }
       );
     }
@@ -53,41 +48,20 @@ export async function POST(req, { params }) {
       pw.agentBrokerage && `Brokerage: ${pw.agentBrokerage}`,
     ].filter(Boolean).join("\n");
 
-    const res = await fetch(AI_URL, {
-      method:  "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${AI_KEY}`,
-      },
-      body: JSON.stringify({
-        model:       AI_MODEL,
-        max_tokens:  700,
-        temperature: 0.8,
-        messages: [{
-          role:    "user",
-          content: `Generate real estate marketing copy for this listing:\n\n${parts}\n\nReturn ONLY valid JSON (no markdown, no extra text):\n{\n  "instagram": "Engaging caption 150-200 chars with relevant emojis, end with #JustListed #RealEstate hashtags",\n  "facebook": "2-3 sentence post that's warm and informative, good for sharing",\n  "emailSubject": "Attention-grabbing email subject under 60 characters"\n}`,
-        }],
-      }),
-    });
+    const raw = await callAI(
+      [{
+        role:    "user",
+        content: `Generate real estate marketing copy for this listing:\n\n${parts}\n\nReturn ONLY valid JSON (no markdown, no extra text):\n{\n  "instagram": "Engaging caption 150-200 chars with relevant emojis, end with #JustListed #RealEstate hashtags",\n  "facebook": "2-3 sentence post that's warm and informative, good for sharing",\n  "emailSubject": "Attention-grabbing email subject under 60 characters"\n}`,
+      }],
+      { max_tokens: 700, temperature: 0.8 },
+      "social-captions"
+    );
 
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("[social-captions] Groq error:", err);
-      return Response.json({ error: "AI request failed" }, { status: 500 });
-    }
-
-    const data = await res.json();
-    const raw  = data.choices?.[0]?.message?.content?.trim() || "{}";
     const clean = raw.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
-
-    try {
-      const captions = JSON.parse(clean);
-      return Response.json({ captions });
-    } catch {
-      return Response.json({ error: "Could not parse AI response" }, { status: 500 });
-    }
+    const captions = JSON.parse(clean);
+    return Response.json({ captions });
   } catch (err) {
-    console.error("Social captions error:", err);
-    return Response.json({ error: "Failed" }, { status: 500 });
+    console.error("[social-captions] Error:", err.message);
+    return Response.json({ error: "AI request failed" }, { status: 500 });
   }
 }

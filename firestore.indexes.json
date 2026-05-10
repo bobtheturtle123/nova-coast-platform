@@ -1,0 +1,60 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "shootDate",  "order": "ASCENDING" },
+        { "fieldPath": "status",     "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "preferredDate", "order": "ASCENDING" },
+        { "fieldPath": "status",        "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "scheduledDeliveries",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "status",      "order": "ASCENDING" },
+        { "fieldPath": "scheduledAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "scheduledDeliveries",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "tenantId",  "order": "ASCENDING" },
+        { "fieldPath": "galleryId", "order": "ASCENDING" },
+        { "fieldPath": "status",    "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "galleries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "bookingId",  "order": "ASCENDING" },
+        { "fieldPath": "createdAt",  "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

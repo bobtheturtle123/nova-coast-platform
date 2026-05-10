@@ -27,7 +27,10 @@ export async function POST(req) {
       case "payment_intent.succeeded": {
         const pi = event.data.object;
         const { bookingId, type, tenantId } = pi.metadata;
-        if (!bookingId || !tenantId) break;
+        if (!bookingId || !tenantId) {
+          console.warn(`[stripe/webhook] payment_intent.succeeded missing metadata — pi=${pi.id} bookingId=${bookingId} tenantId=${tenantId}`);
+          break;
+        }
 
         const bookingRef = adminDb
           .collection("tenants").doc(tenantId)
@@ -113,7 +116,10 @@ export async function POST(req) {
       case "checkout.session.completed": {
         const session = event.data.object;
         const { bookingId, tenantId, type, pack } = session.metadata || {};
-        if (!tenantId) break;
+        if (!tenantId) {
+          console.warn(`[stripe/webhook] checkout.session.completed missing tenantId — session=${session.id}`);
+          break;
+        }
 
         // One-time listing credit top-up
         if (type === "topup" && pack) {
@@ -128,7 +134,10 @@ export async function POST(req) {
         }
 
         // Booking deposit via Checkout session
-        if (type !== "deposit" || !bookingId) break;
+        if (type !== "deposit" || !bookingId) {
+          if (type !== "topup") console.warn(`[stripe/webhook] checkout.session.completed deposit missing bookingId — session=${session.id} type=${type}`);
+          break;
+        }
 
         const bookingRef = adminDb
           .collection("tenants").doc(tenantId)
@@ -165,7 +174,10 @@ export async function POST(req) {
       case "payment_intent.payment_failed": {
         const pi = event.data.object;
         const { bookingId, tenantId } = pi.metadata;
-        if (!bookingId || !tenantId) break;
+        if (!bookingId || !tenantId) {
+          console.warn(`[stripe/webhook] payment_intent.payment_failed missing metadata — pi=${pi.id} bookingId=${bookingId} tenantId=${tenantId}`);
+          break;
+        }
         await adminDb
           .collection("tenants").doc(tenantId)
           .collection("bookings").doc(bookingId)

@@ -1,6 +1,7 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
 import { sendBookingApproved } from "@/lib/email";
+import { safeDate } from "@/lib/dateUtils";
 
 const EMAIL_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours between sends of same type
 
@@ -28,8 +29,8 @@ export async function POST(req, { params }) {
   const booking = doc.data();
 
   // Cooldown: prevent re-sending confirmation within 4 hours
-  const lastSent = booking.emailCooldowns?.confirmation?.toDate?.() || booking.emailCooldowns?.confirmation;
-  if (lastSent && Date.now() - new Date(lastSent).getTime() < EMAIL_COOLDOWN_MS) {
+  const lastSent = safeDate(booking.emailCooldowns?.confirmation);
+  if (lastSent && Date.now() - lastSent.getTime() < EMAIL_COOLDOWN_MS) {
     return Response.json({ error: "Confirmation was recently sent. Please wait before resending." }, { status: 429 });
   }
 

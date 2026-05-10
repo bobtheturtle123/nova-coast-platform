@@ -1,10 +1,6 @@
 import { adminAuth } from "@/lib/firebase-admin";
 import { rateLimitTenant } from "@/lib/rateLimit";
-
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const AI_KEY   = DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
-const AI_URL   = DEEPSEEK_API_KEY ? "https://api.deepseek.com/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
-const AI_MODEL = DEEPSEEK_API_KEY ? "deepseek-chat" : "gpt-4o-mini";
+import { callAI, aiAvailable } from "@/lib/ai";
 
 const SYSTEM_PROMPT = `You are a helpful assistant built into KyoriaOS, a SaaS platform for real estate photography businesses.
 
@@ -72,7 +68,7 @@ export async function POST(req) {
     return Response.json({ reply: "You've sent a lot of messages recently. Please wait a moment before trying again." });
   }
 
-  if (!AI_KEY) {
+  if (!aiAvailable()) {
     return Response.json({
       reply: "The AI assistant isn't configured yet. Add DEEPSEEK_API_KEY or OPENAI_API_KEY to your Vercel environment variables.",
     });
@@ -81,41 +77,18 @@ export async function POST(req) {
   const { messages, context } = await req.json();
   if (!messages?.length) return Response.json({ error: "messages required" }, { status: 400 });
 
-  // Build system prompt — append live context if provided (e.g. team setup state)
   let systemPrompt = SYSTEM_PROMPT;
   if (context) {
     systemPrompt += `\n\nCURRENT USER CONTEXT:\n${String(context).slice(0, 1000)}`;
   }
 
-  // Limit conversation history to last 10 messages
   const trimmedMessages = messages.slice(-10).map((m) => ({
     role:    m.role === "assistant" ? "assistant" : "user",
     content: String(m.content).slice(0, 2000),
   }));
 
   try {
-    const res = await fetch(AI_URL, {
-      method:  "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        "Authorization": `Bearer ${AI_KEY}`,
-      },
-      body: JSON.stringify({
-        model:       AI_MODEL,
-        max_tokens:  512,
-        messages:    [{ role: "system", content: systemPrompt }, ...trimmedMessages],
-        temperature: 0.7,
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("[ai-chat] Groq error:", err);
-      return Response.json({ reply: "Something went wrong. Please try again or contact contact@kyoriaos.com." });
-    }
-
-    const data  = await res.json();
-    const reply = data.choices?.[0]?.message?.content || "I couldn't generate a response. Please try again.";
+    const reply = await callAI(trimmedMessages, { max_tokens: 512, temperature: 0.7, system: systemPrompt }, "ai-chat");
     return Response.json({ reply });
   } catch (err) {
     console.error("[ai-chat] Error:", err);

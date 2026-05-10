@@ -2,6 +2,7 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
 import { stripe } from "@/lib/stripe";
 import { getAppUrl } from "@/lib/appUrl";
+import { safeDate } from "@/lib/dateUtils";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -35,8 +36,8 @@ export async function POST(req, { params }) {
 
   // Return the existing checkout URL if one was recently generated (within 4 hours)
   // rather than creating a new Stripe session every time the button is clicked.
-  const lastSent = booking.emailCooldowns?.deposit?.toDate?.() || booking.emailCooldowns?.deposit;
-  if (lastSent && Date.now() - new Date(lastSent).getTime() < 4 * 60 * 60 * 1000 && booking.depositCheckoutUrl) {
+  const lastSent = safeDate(booking.emailCooldowns?.deposit);
+  if (lastSent && Date.now() - lastSent.getTime() < 4 * 60 * 60 * 1000 && booking.depositCheckoutUrl) {
     return Response.json({ url: booking.depositCheckoutUrl, cached: true });
   }
 
