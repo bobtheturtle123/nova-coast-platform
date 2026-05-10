@@ -73,12 +73,14 @@ function formatPhone(raw) {
 }
 
 // ─── Order summary line items ─────────────────────────────────────────────────
-function OrderSummary({ pricing, catalog, packageId, serviceIds, addonIds, address, city, payFull, tip }) {
+function OrderSummary({ pricing, catalog, packageIds, serviceIds, addonIds, address, city, payFull, tip }) {
   if (!pricing || !catalog) return null;
   const depLabel = depositLabel(catalog?.bookingConfig?.deposit);
   const totalCharge = (payFull ? pricing.subtotal : pricing.deposit) + (tip || 0);
 
-  const pkgItem = packageId && catalog.packages?.find((p) => p.id === packageId);
+  const pkgItems = (packageIds || [])
+    .map((id) => catalog.packages?.find((p) => p.id === id))
+    .filter(Boolean);
   const services = (serviceIds || [])
     .map((id) => catalog.services?.find((s) => s.id === id))
     .filter(Boolean);
@@ -100,16 +102,16 @@ function OrderSummary({ pricing, catalog, packageId, serviceIds, addonIds, addre
 
       {/* Line items */}
       <div className="space-y-2 text-sm">
-        {pkgItem && (
-          <div className="flex justify-between gap-2">
-            <span className="text-[#0F172A] font-medium flex-1">{pkgItem.name}</span>
-            <span className="text-[#3486cf] font-semibold flex-shrink-0">${pricing.base?.toLocaleString()}</span>
+        {pkgItems.map((pkg) => (
+          <div key={pkg.id} className="flex justify-between gap-2">
+            <span className="text-[#0F172A] font-medium flex-1">{pkg.name}</span>
+            <span className="text-[#3486cf] font-semibold flex-shrink-0">${(pkg.price || 0).toLocaleString()}</span>
           </div>
-        )}
+        ))}
         {services.map((s) => (
           <div key={s.id} className="flex justify-between gap-2">
             <span className="text-[#0F172A] flex-1">{s.name}</span>
-            <span className="text-[#3486cf] flex-shrink-0">${pricing.base?.toLocaleString()}</span>
+            <span className="text-[#3486cf] flex-shrink-0">${(s.price || 0).toLocaleString()}</span>
           </div>
         ))}
         {addons.map((a) => (
@@ -182,7 +184,7 @@ export default function TenantPaymentPage() {
   const store  = useBookingStore();
 
   const {
-    pricing, packageId, serviceIds, addonIds,
+    pricing, packageIds, serviceIds, addonIds,
     address, city, state, zip, squareFootage, propertyType, notes,
     preferredDate, preferredTime, preferredTimeSpecific, twilightTime, travelFee,
     clientName, clientEmail, clientPhone, customFields,
@@ -270,7 +272,7 @@ export default function TenantPaymentPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          packageId, serviceIds, addonIds,
+          packageIds, packageId: packageIds?.[0] ?? null, serviceIds, addonIds,
           address, city, state, zip, squareFootage, propertyType, notes,
           preferredDate, preferredTime, preferredTimeSpecific, twilightTime,
           clientName, clientEmail, clientPhone,
@@ -577,7 +579,7 @@ export default function TenantPaymentPage() {
             <OrderSummary
               pricing={pricing}
               catalog={catalog}
-              packageId={packageId}
+              packageIds={packageIds}
               serviceIds={serviceIds}
               addonIds={addonIds}
               address={address}

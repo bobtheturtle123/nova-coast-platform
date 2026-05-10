@@ -528,7 +528,10 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                   <PlacesAutocomplete
                     label="Street Address" required
                     value={form.address}
-                    onChange={(v) => setForm((f) => ({ ...f, address: v }))}
+                    onChange={(v) => {
+                      setForm((f) => ({ ...f, address: v }));
+                      if (v !== confirmedAddress) setConfirmedAddress("");
+                    }}
                     onSelect={({ address, city, state, zip, lat, lng }) => {
                       setForm((f) => ({
                         ...f,

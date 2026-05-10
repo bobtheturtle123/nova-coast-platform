@@ -1494,18 +1494,20 @@ if (loading) return (
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {plans.map((p, i) => {
-                          const isPdf = p.fileType === "application/pdf" || p.url?.toLowerCase().endsWith(".pdf");
+                          const src    = p.publicUrl || p.url;
+                          const label  = p.fileName || p.name || `Floor Plan ${i + 1}`;
+                          const isPdf  = p.fileType === "application/pdf" || src?.toLowerCase().endsWith(".pdf");
                           return isPdf ? (
-                            <a key={i} href={p.url} target="_blank" rel="noopener noreferrer"
+                            <a key={i} href={src} target="_blank" rel="noopener noreferrer"
                               className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 border border-gray-100 hover:border-[#3486cf]/30 transition-colors group">
                               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="1.5">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                               </svg>
-                              <span className="text-xs font-medium text-[#0F172A] group-hover:text-[#3486cf] transition-colors truncate">{p.name || `Floor Plan ${i + 1}`}</span>
+                              <span className="text-xs font-medium text-[#0F172A] group-hover:text-[#3486cf] transition-colors truncate">{label}</span>
                             </a>
                           ) : (
                             <div key={i} className="aspect-[4/3] rounded-lg overflow-hidden bg-gray-100 border border-gray-100">
-                              <img src={p.url} alt={p.name || `Floor Plan ${i + 1}`} className="w-full h-full object-contain" />
+                              <img src={src} alt={label} className="w-full h-full object-contain" />
                             </div>
                           );
                         })}

@@ -8,7 +8,7 @@ const INITIAL_STATE = {
   tenantName:   null,
 
   // Step 1
-  packageId:  null,
+  packageIds: [],
   serviceIds: [],
 
   // Step 2
@@ -69,12 +69,15 @@ export const useBookingStore = create(
         set({ tenantSlug, tenantId, tenantName }),
 
       // ─── Setters ──────────────────────────────────────────────
-      setPackage: (packageId) =>
-        set({ packageId, serviceIds: [] }),
+      togglePackage: (packageId) =>
+        set((state) => ({
+          packageIds: state.packageIds.includes(packageId)
+            ? state.packageIds.filter((id) => id !== packageId)
+            : [...state.packageIds, packageId],
+        })),
 
       toggleService: (serviceId) =>
         set((state) => ({
-          packageId: null,
           serviceIds: state.serviceIds.includes(serviceId)
             ? state.serviceIds.filter((id) => id !== serviceId)
             : [...state.serviceIds, serviceId],
@@ -105,10 +108,10 @@ export const useBookingStore = create(
       resetBooking: () => set(INITIAL_STATE),
 
       // Pre-fill from a previous booking for quick reorder
-      preloadReorder: ({ packageId, serviceIds, addonIds, address, city, state, zip, lat, lng, squareFootage, propertyType, clientName, clientEmail, clientPhone }) =>
+      preloadReorder: ({ packageId, packageIds, serviceIds, addonIds, address, city, state, zip, lat, lng, squareFootage, propertyType, clientName, clientEmail, clientPhone }) =>
         set({
           ...INITIAL_STATE,
-          packageId:     packageId  || null,
+          packageIds:    packageIds || (packageId ? [packageId] : []),
           serviceIds:    serviceIds || [],
           addonIds:      addonIds   || [],
           address:       address    || "",
@@ -133,8 +136,8 @@ export const useBookingStore = create(
         return [address, city, state, zip].filter(Boolean).join(", ");
       },
       hasSelections: () => {
-        const { packageId, serviceIds } = get();
-        return !!packageId || serviceIds.length > 0;
+        const { packageIds, serviceIds } = get();
+        return packageIds.length > 0 || serviceIds.length > 0;
       },
 
       // Helper: base URL for this tenant's booking flow

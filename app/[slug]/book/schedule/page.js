@@ -47,7 +47,7 @@ export default function TenantSchedulePage() {
 
   const {
     preferredDate, preferredTime, twilightTime, photographerId,
-    packageId, serviceIds,
+    packageIds, serviceIds,
     lat, lng,
     setSchedule,
   } = useBookingStore();
@@ -85,14 +85,13 @@ export default function TenantSchedulePage() {
   const isTwilightBooking = useMemo(() => {
     if (!catalog) return false;
     const selServices = (catalog.services || []).filter((s) => serviceIds.includes(s.id));
-    const selPackage  = (catalog.packages || []).find((p) => p.id === packageId);
-    // Also check services included inside the selected package
-    const pkgIncludedServices = selPackage?.includes?.length
-      ? (catalog.services || []).filter((s) => selPackage.includes.includes(s.id))
-      : [];
-    const all = [...selServices, ...(selPackage ? [selPackage] : []), ...pkgIncludedServices];
+    const selPackages = (catalog.packages || []).filter((p) => (packageIds || []).includes(p.id));
+    const pkgIncludedServices = selPackages.flatMap((pkg) =>
+      pkg.includes?.length ? (catalog.services || []).filter((s) => pkg.includes.includes(s.id)) : []
+    );
+    const all = [...selServices, ...selPackages, ...pkgIncludedServices];
     return all.some((s) => s.isTwilight || s.name?.toLowerCase().includes("twilight"));
-  }, [catalog, serviceIds, packageId]);
+  }, [catalog, serviceIds, packageIds]);
 
   // Fetch sunset time when date changes (only for twilight bookings with coordinates)
   useEffect(() => {

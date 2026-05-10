@@ -105,7 +105,7 @@ function UnscheduledTab({ listings }) {
 }
 
 // ─── Calendar tab ─────────────────────────────────────────────────────────────
-function CalendarTab({ listings, blocks, loading }) {
+function CalendarTab({ listings, blocks, loading, onDeleteBlock }) {
   const today = new Date();
   const [year,     setYear]     = useState(today.getFullYear());
   const [month,    setMonth]    = useState(today.getMonth());
@@ -269,9 +269,15 @@ function CalendarTab({ listings, blocks, loading }) {
                             style={{ background: "repeating-linear-gradient(-45deg,#fee2e2,#fee2e2 3px,transparent 3px,transparent 10px)", opacity: 0.5 }} />
                         )}
                         {dayBlocks.map((bl) => (
-                          <div key={bl.id} className="text-[10px] bg-red-100 border-l-2 border-red-400 px-1.5 py-0.5 rounded mb-1 relative z-10">
-                            <span className="text-red-600 font-medium truncate block">{bl.reason}</span>
-                            {bl.memberName && <span className="text-red-400">{bl.memberName}</span>}
+                          <div key={bl.id} className="text-[10px] bg-red-100 border-l-2 border-red-400 px-1.5 py-0.5 rounded mb-1 relative z-10 group">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-red-600 font-medium truncate">{bl.reason}</span>
+                              {onDeleteBlock && (
+                                <button onClick={() => onDeleteBlock(bl.id)}
+                                  className="opacity-0 group-hover:opacity-100 text-red-500 flex-shrink-0 leading-none">×</button>
+                              )}
+                            </div>
+                            {bl.memberName && <span className="text-red-400 block">{bl.memberName}</span>}
                           </div>
                         ))}
                         {shoots.map((l) => (
@@ -333,8 +339,12 @@ function CalendarTab({ listings, blocks, loading }) {
                         </div>
                         <div className="space-y-0.5">
                           {dayBlockList.map((bl) => (
-                            <div key={bl.id} className="text-[9px] font-semibold text-red-500 bg-red-100 px-1 py-0.5 rounded truncate">
-                              🚫 {bl.reason}{bl.memberName ? ` · ${bl.memberName}` : ""}
+                            <div key={bl.id} className="flex items-center gap-0.5 text-[9px] font-semibold text-red-500 bg-red-100 px-1 py-0.5 rounded group">
+                              <span className="truncate flex-1">🚫 {bl.reason}{bl.memberName ? ` · ${bl.memberName}` : ""}</span>
+                              {onDeleteBlock && (
+                                <button onClick={(e) => { e.stopPropagation(); onDeleteBlock(bl.id); }}
+                                  className="opacity-0 group-hover:opacity-100 flex-shrink-0 ml-0.5 leading-none">×</button>
+                              )}
                             </div>
                           ))}
                           {shoots.slice(0, 2).map((l) => (
@@ -493,6 +503,17 @@ export default function SchedulePage() {
     });
   }, []);
 
+  async function deleteBlock(id) {
+    setBlocks((prev) => prev.filter((b) => b.id !== id));
+    try {
+      const token = await auth.currentUser.getIdToken();
+      await fetch(`/api/dashboard/team/blocks?id=${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch { /* optimistic delete; reload will restore on refresh */ }
+  }
+
   function switchTab(id) {
     setActiveTab(id);
     router.replace(`/dashboard/calendar?tab=${id}`, { scroll: false });
@@ -529,7 +550,7 @@ export default function SchedulePage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "calendar"    && <CalendarTab listings={listings} blocks={blocks} loading={loading} />}
+      {activeTab === "calendar"    && <CalendarTab listings={listings} blocks={blocks} loading={loading} onDeleteBlock={deleteBlock} />}
       {activeTab === "unscheduled" && <UnscheduledTab listings={listings} />}
     </div>
   );

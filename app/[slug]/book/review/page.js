@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
-import { calculateTenantPrice, getSqftTier, depositLabel } from "@/lib/catalogUtils";
+import { calculateTenantPrice, getSqftTier, depositLabel, getItemPrice } from "@/lib/catalogUtils";
 import StepProgress from "@/components/booking/StepProgress";
 
 export default function TenantReviewPage() {
@@ -11,7 +11,7 @@ export default function TenantReviewPage() {
   const router = useRouter();
   const store  = useBookingStore();
   const {
-    packageId, serviceIds, addonIds, address, city, state, zip,
+    packageIds, serviceIds, addonIds, address, city, state, zip,
     squareFootage, propertyType, notes, travelFee, setTravelFee, setPricing, pricing,
     promoCode, discount, setPromo, clearPromo,
   } = store;
@@ -66,7 +66,7 @@ export default function TenantReviewPage() {
         setCatalog(catalogRes);
         const fee = travelRes?.travelFee ?? 0;
         setTravelFee(fee);
-        const p = calculateTenantPrice(packageId, serviceIds, addonIds, fee, catalogRes, Number(squareFootage) || 0);
+        const p = calculateTenantPrice(packageIds, serviceIds, addonIds, fee, catalogRes, Number(squareFootage) || 0);
         setPricing(p);
       } finally {
         setLoading(false);
@@ -76,7 +76,7 @@ export default function TenantReviewPage() {
   }, []);
 
   // Build readable line items from catalog
-  const pkgItem  = catalog?.packages?.find((p) => p.id === packageId);
+  const pkgItems = (packageIds || []).map((id) => catalog?.packages?.find((p) => p.id === id)).filter(Boolean);
   const svcItems = (serviceIds || []).map((id) => catalog?.services?.find((s) => s.id === id)).filter(Boolean);
   const adnItems = (addonIds   || []).map((id) => catalog?.addons?.find((a) => a.id === id)).filter(Boolean);
 
@@ -143,19 +143,19 @@ export default function TenantReviewPage() {
                   className="text-xs text-[#3486cf] hover:underline">Edit</button>
               </div>
               <div className="space-y-2">
-                {pkgItem && (
-                  <div className="flex items-center justify-between">
+                {pkgItems.map((pkg) => (
+                  <div key={pkg.id} className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-[#0F172A]">{pkgItem.name}</p>
-                      {pkgItem.description && (
-                        <p className="text-xs text-gray-400 mt-0.5">{pkgItem.description}</p>
+                      <p className="text-sm font-semibold text-[#0F172A]">{pkg.name}</p>
+                      {pkg.description && (
+                        <p className="text-xs text-gray-400 mt-0.5">{pkg.description}</p>
                       )}
                     </div>
                     <p className="text-sm font-semibold text-[#3486cf] flex-shrink-0 ml-4">
-                      ${pricing?.base?.toLocaleString()}
+                      ${getItemPrice(pkg, tier)?.toLocaleString()}
                     </p>
                   </div>
-                )}
+                ))}
                 {svcItems.map((s) => (
                   <div key={s.id} className="flex items-center justify-between">
                     <div>
@@ -163,7 +163,7 @@ export default function TenantReviewPage() {
                       {s.description && <p className="text-xs text-gray-400 mt-0.5">{s.description}</p>}
                     </div>
                     <p className="text-sm font-semibold text-[#3486cf] flex-shrink-0 ml-4">
-                      ${pricing?.base?.toLocaleString()}
+                      ${getItemPrice(s, tier)?.toLocaleString()}
                     </p>
                   </div>
                 ))}

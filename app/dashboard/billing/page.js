@@ -63,9 +63,9 @@ export default function BillingPage() {
 
   useEffect(() => {
     auth.currentUser?.getIdTokenResult().then(async (result) => {
-      // Staff members (admin/manager added via invite) have a `role` claim.
-      // The account owner has no `role` claim — only `tenantId`.
-      if (result.claims.role) setIsOwner(false);
+      // Manager/staff cannot manage billing; admin and owner can.
+      const role = result.claims.role;
+      if (role === "manager" || role === "staff") setIsOwner(false);
 
       const token = result.token;
       const [tenantRes, statsRes, teamRes] = await Promise.all([

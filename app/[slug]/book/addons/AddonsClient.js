@@ -58,7 +58,7 @@ const ADDON_IMAGES = {
 
 export default function TenantAddonsClient({ slug, addons = [], catalog }) {
   const router = useRouter();
-  const { packageId, serviceIds, addonIds, squareFootage, toggleAddon, setPricing, travelFee } =
+  const { packageIds, serviceIds, addonIds, squareFootage, toggleAddon, setPricing, travelFee } =
     useBookingStore();
   const [lightboxAddon, setLightboxAddon] = useState(null);
 
@@ -69,7 +69,7 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
   }
 
   function handleContinue() {
-    const pricing = calculateTenantPrice(packageId, serviceIds, addonIds, travelFee, catalog, squareFootage);
+    const pricing = calculateTenantPrice(packageIds, serviceIds, addonIds, travelFee, catalog, squareFootage);
     setPricing(pricing);
     router.push(`/${slug}/book/property`);
   }

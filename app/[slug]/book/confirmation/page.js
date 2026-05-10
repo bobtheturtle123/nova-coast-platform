@@ -10,7 +10,7 @@ function ConfirmationContent() {
   const searchParams = useSearchParams();
 
   const { bookingId, clientName, clientEmail, address, city, state, zip,
-          preferredDate, pricing, packageId, serviceIds, addonIds, paidInFull, resetBooking } = useBookingStore();
+          preferredDate, pricing, packageIds, serviceIds, addonIds, paidInFull, resetBooking } = useBookingStore();
 
   const bId = searchParams.get("bookingId") || bookingId;
 
@@ -21,7 +21,7 @@ function ConfirmationContent() {
     : "To be confirmed";
 
   const fullAddress = [address, city, state, zip].filter(Boolean).join(", ");
-  const selectionCount = (packageId ? 1 : serviceIds?.length || 0) + (addonIds?.length || 0);
+  const selectionCount = (packageIds?.length || 0) + (serviceIds?.length || 0) + (addonIds?.length || 0);
 
   return (
     <div className="step-container py-16">

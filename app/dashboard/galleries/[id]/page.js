@@ -9,20 +9,33 @@ import { getAppUrl } from "@/lib/appUrl";
 
 const APP_URL = getAppUrl();
 
-// ─── Floor plan image with error fallback ────────────────────────────────────
+// ─── Floor plan image with loading skeleton + error fallback ─────────────────
 function FloorPlanThumb({ src, alt }) {
+  const [loaded,  setLoaded]  = useState(false);
   const [errored, setErrored] = useState(false);
-  if (errored) {
-    return (
-      <div className="w-full aspect-[4/3] flex flex-col items-center justify-center bg-gray-100 text-gray-400 gap-1">
-        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        <span className="text-xs">No preview</span>
-      </div>
-    );
-  }
-  return <img src={src} alt={alt} onError={() => setErrored(true)} className="w-full aspect-[4/3] object-cover" />;
+
+  const fallback = (
+    <div className="w-full aspect-[4/3] flex flex-col items-center justify-center bg-gray-100 text-gray-400 gap-1">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+      <span className="text-xs">No preview</span>
+    </div>
+  );
+
+  if (!src || errored) return fallback;
+
+  return (
+    <div className="relative w-full aspect-[4/3] bg-gray-100">
+      {!loaded && <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-none" />}
+      <img
+        src={src} alt={alt}
+        onLoad={() => setLoaded(true)}
+        onError={() => setErrored(true)}
+        className={`w-full h-full object-cover transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
+      />
+    </div>
+  );
 }
 
 // ─── Image thumbnail with loading/error ───────────────────────────────────────
@@ -527,17 +540,22 @@ export default function GalleryDetailPage() {
     if (e?.shiftKey && lastSelectedIdxRef.current !== null) {
       const start = Math.min(lastSelectedIdxRef.current, idx);
       const end   = Math.max(lastSelectedIdxRef.current, idx);
+      const rangeKeys = [];
+      for (let i = start; i <= end; i++) {
+        const k = displayImages[i]?.key;
+        if (k) rangeKeys.push(k);
+      }
       setSelectedKeys((prev) => {
         const next = new Set(prev);
-        for (let i = start; i <= end; i++) {
-          const k = displayImages[i]?.key;
-          if (k) next.add(k);
-        }
+        rangeKeys.forEach((k) => next.add(k));
         return next;
       });
+      if (bulkCatTarget && rangeKeys.length > 0) applyKeysToCategory(rangeKeys, bulkCatTarget);
     } else {
+      const adding = !selectedKeys.has(key);
       toggleSelect(key);
       lastSelectedIdxRef.current = idx;
+      if (bulkCatTarget && adding) applyKeysToCategory([key], bulkCatTarget);
     }
   }
 
@@ -612,6 +630,23 @@ export default function GalleryDetailPage() {
     setCategories(next);
     clearSelection();
     toast(`Assigned ${selectedKeys.size} photos to "${cat}".`);
+    const token = await auth.currentUser.getIdToken();
+    await fetch(`/api/dashboard/galleries/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ categories: next }),
+    });
+  }
+
+  async function applyKeysToCategory(keysToAssign, cat) {
+    if (!cat || !keysToAssign.length) return;
+    const keySet = new Set(keysToAssign);
+    const next = {};
+    for (const [c, ks] of Object.entries(categories)) {
+      next[c] = ks.filter((k) => !keySet.has(k));
+    }
+    next[cat] = [...new Set([...(next[cat] || []), ...keysToAssign])];
+    setCategories(next);
     const token = await auth.currentUser.getIdToken();
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
@@ -1062,8 +1097,16 @@ export default function GalleryDetailPage() {
               </div>
               <div className="flex gap-2">
                 {isPending && (
-                  <button onClick={() => { setDeliveryMode("later"); setShowDeliver(true); }}
-                    className="text-xs font-medium text-blue-700 hover:underline">Edit</button>
+                  <button onClick={() => {
+                    const raw = gallery.scheduledDelivery.scheduledAt;
+                    const d = raw?.toDate?.() ?? (raw?._seconds ? new Date(raw._seconds * 1000) : new Date(raw));
+                    if (d && !isNaN(d.getTime())) {
+                      const p = (n) => String(n).padStart(2, "0");
+                      setScheduledAt(`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`);
+                    }
+                    setDeliveryMode("later");
+                    setShowDeliver(true);
+                  }} className="text-xs font-medium text-blue-700 hover:underline">Edit</button>
                 )}
                 {isError && (
                   <button onClick={retryScheduledDelivery}
@@ -1176,15 +1219,38 @@ export default function GalleryDetailPage() {
                     <span className="text-sm font-semibold text-[#3486cf]">
                       {selectedKeys.size > 0 ? `${selectedKeys.size} selected` : "Tap photos to select"}
                     </span>
-                    {selectedKeys.size > 0 && catNames.length > 0 && (
-                      <select
-                        value=""
-                        onChange={(e) => { const cat = e.target.value; if (cat) applyBulkCategory(cat); }}
-                        className="text-xs input-field py-1 flex-1 max-w-xs"
-                      >
-                        <option value="">Assign to category…</option>
-                        {catNames.map((c) => <option key={c} value={c}>{c}</option>)}
-                      </select>
+                    {catNames.length > 0 && (
+                      bulkCatTarget ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-[#3486cf] font-medium">
+                            → <strong>{bulkCatTarget}</strong>
+                          </span>
+                          {selectedKeys.size > 0 && (
+                            <button
+                              onClick={() => applyBulkCategory(bulkCatTarget)}
+                              className="text-xs px-2 py-1 rounded border border-[#3486cf]/30 text-[#3486cf] hover:bg-[#3486cf]/5"
+                            >
+                              Apply to all
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setBulkCatTarget("")}
+                            className="text-xs text-gray-400 hover:text-gray-600 px-1"
+                            title="Clear category target"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : (
+                        <select
+                          value=""
+                          onChange={(e) => { const cat = e.target.value; if (cat) setBulkCatTarget(cat); }}
+                          className="text-xs input-field py-1 flex-1 max-w-xs"
+                        >
+                          <option value="">Assign to category…</option>
+                          {catNames.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      )
                     )}
                     {selectedKeys.size > 0 && (
                       <>
@@ -1668,7 +1734,7 @@ export default function GalleryDetailPage() {
                       onChange={(e) => setScheduledAt(e.target.value)}
                       className="input-field w-full"
                     />
-                    <p className="text-xs text-gray-400 mt-1">Email delivers automatically at this time. You can cancel it before then.</p>
+                    <p className="text-xs text-gray-400 mt-1">Email delivers within the hour of the scheduled time. You can cancel it before then.</p>
                   </div>
                 )}
               </div>

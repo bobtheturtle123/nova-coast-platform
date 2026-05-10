@@ -40,7 +40,7 @@ export async function POST(req, { params }) {
 
     const body = await req.json();
     const {
-      packageId, serviceIds, addonIds,
+      packageIds: rawPkgIds, packageId: rawPkgId, serviceIds, addonIds,
       address, city, state, zip, squareFootage, propertyType, notes,
       preferredDate, preferredTime, preferredTimeSpecific, twilightTime,
       clientName, clientEmail, clientPhone,
@@ -49,13 +49,19 @@ export async function POST(req, { params }) {
       contractSignerName,
     } = body;
 
+    // Normalize: accept either packageIds array or legacy packageId string
+    const packageIds = Array.isArray(rawPkgIds) && rawPkgIds.length > 0
+      ? rawPkgIds
+      : (rawPkgId ? [rawPkgId] : []);
+    const packageId = packageIds[0] ?? null; // backward-compat field
+
     if (!clientName || !clientEmail || !clientPhone) {
       return Response.json({ error: "Missing client information" }, { status: 400 });
     }
 
     // Re-calculate server-side to prevent tampering (pass squareFootage for tier pricing)
     const catalog = await getTenantCatalog(tenant.id);
-    const pricing = calculateTenantPrice(packageId, serviceIds, addonIds, travelFee || 0, catalog, squareFootage || 0);
+    const pricing = calculateTenantPrice(packageIds, serviceIds, addonIds, travelFee || 0, catalog, squareFootage || 0);
     const tip = Math.max(0, Number(rawTip) || 0);
 
     // Determine payment type and amount
@@ -108,9 +114,13 @@ export async function POST(req, { params }) {
       return null;
     }
     let suggestedShooterPay = null;
-    if (packageId) {
-      const pkg = (catalog.packages || []).find((p) => p.id === packageId);
-      suggestedShooterPay = getItemPayRate(pkg);
+    if (packageIds.length > 0) {
+      const total = packageIds.reduce((sum, pid) => {
+        const pkg = (catalog.packages || []).find((p) => p.id === pid);
+        const r = getItemPayRate(pkg);
+        return sum + (r != null ? r : 0);
+      }, 0);
+      if (total > 0) suggestedShooterPay = total;
     } else if ((serviceIds || []).length > 0) {
       const total = (serviceIds || []).reduce((sum, sid) => {
         const svc = (catalog.services || []).find((s) => s.id === sid);
@@ -138,7 +148,8 @@ export async function POST(req, { params }) {
         propertyType:  propertyType || "residential",
         notes:         notes || "",
 
-        packageId:  packageId || null,
+        packageId:  packageId  || null,
+        packageIds: packageIds || [],
         serviceIds: serviceIds || [],
         addonIds:   addonIds  || [],
 

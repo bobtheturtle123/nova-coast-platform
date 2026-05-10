@@ -122,8 +122,8 @@ const PACKAGE_TIER_TAGS = {
 export default function TenantBookStep1Client({ slug, tenantId, tenantName, catalog }) {
   const router = useRouter();
   const {
-    packageId, serviceIds, squareFootage,
-    setPackage, toggleService, hasSelections, setTenant, setSquareFootage,
+    packageIds, serviceIds, squareFootage,
+    togglePackage, toggleService, hasSelections, setTenant, setSquareFootage,
   } = useBookingStore();
 
   const pricingConfig = catalog.pricingConfig || {};
@@ -221,8 +221,8 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <p className="section-label mb-2">Step 1 of 6</p>
-            <h1 className="font-display text-4xl text-[#3486cf] mb-1">Choose your package.</h1>
-            <p className="font-body text-gray-500">Select a package below, or scroll down to build your own.</p>
+            <h1 className="font-display text-4xl text-[#3486cf] mb-1">Choose your services.</h1>
+            <p className="font-body text-gray-500">Select one or more packages, then add individual services below.</p>
           </div>
           {usesGate && (
             <button
@@ -237,11 +237,11 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
         {/* Packages */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
           {packages.map((pkg) => {
-            const selected = packageId === pkg.id;
+            const selected = packageIds.includes(pkg.id);
             const images   = getImages(pkg);
             const img      = images[0];
             return (
-              <button key={pkg.id} onClick={() => setPackage(pkg.id)}
+              <button key={pkg.id} onClick={() => togglePackage(pkg.id)}
                 className={clsx(
                   "relative text-left border rounded-xl transition-all duration-200 focus:outline-none overflow-hidden flex flex-col",
                   selected
@@ -311,7 +311,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
           <>
             <div className="flex items-center gap-4 mb-8">
               <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-gray-400 uppercase tracking-widest">Or build your own</span>
+              <span className="text-xs text-gray-400 uppercase tracking-widest">Add individual services</span>
               <div className="flex-1 h-px bg-gray-200" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-12">

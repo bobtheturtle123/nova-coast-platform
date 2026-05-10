@@ -13,10 +13,10 @@ export default function WeatherWidget({ address, date }) {
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (!address?.trim() || !date) { setWeather(null); return; }
+    if (!address?.trim() || !date) { setWeather(null); setLoading(false); return; }
 
-    setLoading(true);
     timerRef.current = setTimeout(async () => {
+      setLoading(true);
       try {
         const token = await auth.currentUser?.getIdToken();
         const params = new URLSearchParams({ address, date });
@@ -30,14 +30,14 @@ export default function WeatherWidget({ address, date }) {
       } finally {
         setLoading(false);
       }
-    }, 700);
+    }, 800);
 
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [address, date]);
 
   if (!address?.trim() || !date) return null;
 
-  if (loading || (!weather && !loading)) {
+  if (loading) {
     return (
       <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
         <div className="w-3.5 h-3.5 border-2 border-gray-200 border-t-[#3486cf] rounded-full animate-spin flex-shrink-0" />
@@ -45,6 +45,8 @@ export default function WeatherWidget({ address, date }) {
       </div>
     );
   }
+
+  if (!weather) return null;
 
   if (!weather?.available) {
     const msg =
