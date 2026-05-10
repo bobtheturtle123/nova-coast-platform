@@ -137,6 +137,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   const [travelFee,         setTravelFee]         = useState(null);
   const [serviceArea,       setServiceArea]       = useState(null);
   const [showSchedulePopup, setShowSchedulePopup] = useState(false);
+  const [confirmedAddress,  setConfirmedAddress]  = useState(init.address || "");
 
   const getToken = () => auth.currentUser?.getIdToken();
 
@@ -538,6 +539,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                         lat:     lat     ?? f.lat,
                         lng:     lng     ?? f.lng,
                       }));
+                      if (address) setConfirmedAddress(address);
                     }}
                     placeholder="Start typing an address…"
                   />
@@ -685,8 +687,8 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                 </span>
               </button>
 
-              {catalog.showWeather && form.shootDate && form.address && (
-                <WeatherWidget address={form.address} date={form.shootDate} />
+              {catalog.showWeather && form.shootDate && confirmedAddress && (
+                <WeatherWidget address={confirmedAddress} date={form.shootDate} />
               )}
 
               {form.additionalAppointments.map((appt, i) => (

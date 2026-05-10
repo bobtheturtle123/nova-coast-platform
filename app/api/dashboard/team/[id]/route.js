@@ -71,6 +71,21 @@ export async function PATCH(req, { params }) {
   }
   await batch.commit();
 
+  // If the member has an accepted Firebase account, update their custom claims
+  // so the role change takes effect on their next token refresh (within 1 hour).
+  if (memberDoc.exists && memberDoc.data().uid) {
+    try {
+      const uid = memberDoc.data().uid;
+      const existing = (await adminAuth.getUser(uid)).customClaims || {};
+      await adminAuth.setCustomUserClaims(uid, {
+        ...existing,
+        role:     update.role,
+        tenantId: ctx.tenantId,
+        memberId: params.id,
+      });
+    } catch { /* user may not exist in auth */ }
+  }
+
   return Response.json({ ok: true });
 }
 
@@ -85,9 +100,18 @@ export async function DELETE(req, { params }) {
   batch.delete(memberRef);
 
   if (memberDoc.exists) {
-    const calToken = memberDoc.data().calendarToken;
-    if (calToken) {
-      batch.delete(adminDb.collection("calendarTokens").doc(calToken));
+    const data = memberDoc.data();
+
+    // Revoke Firebase auth claims so the member loses portal access immediately
+    if (data.uid) {
+      try {
+        await adminAuth.setCustomUserClaims(data.uid, {});
+        await adminAuth.revokeRefreshTokens(data.uid);
+      } catch { /* user may not exist */ }
+    }
+
+    if (data.calendarToken) {
+      batch.delete(adminDb.collection("calendarTokens").doc(data.calendarToken));
     }
   }
 

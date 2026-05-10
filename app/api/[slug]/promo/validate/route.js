@@ -14,7 +14,7 @@ export async function POST(req, { params }) {
   }
 
   try {
-    const { code, subtotal = 0 } = await req.json();
+    const { code, subtotal = 0, clientEmail = "" } = await req.json();
 
     if (!code?.trim()) {
       return Response.json({ valid: false, message: "Enter a promo code" }, { status: 400 });
@@ -59,6 +59,24 @@ export async function POST(req, { params }) {
       return Response.json({ valid: false, message: `Minimum order of $${promo.minOrder} required` });
     }
 
+    // Check first-time client restriction
+    if (promo.firstTimeOnly) {
+      if (clientEmail?.trim()) {
+        const email = clientEmail.trim().toLowerCase();
+        // Check if any booking exists with this email under this tenant
+        const bookingSnap = await adminDb
+          .collection("tenants").doc(tenant.id)
+          .collection("bookings")
+          .where("clientEmail", "==", email)
+          .limit(1)
+          .get();
+        if (!bookingSnap.empty) {
+          return Response.json({ valid: false, message: "This code is valid for first-time clients only" });
+        }
+      }
+      // If no email provided yet, allow but flag it — enforced again at checkout
+    }
+
     // Calculate discount
     const sub = Number(subtotal) || 0;
     let discount = 0;
@@ -69,17 +87,22 @@ export async function POST(req, { params }) {
     }
     const finalTotal = Math.max(0, sub - discount);
 
+    const discountMsg = promo.type === "flat"
+      ? `$${promo.value} off applied`
+      : `${promo.value}% off applied`;
+
     return Response.json({
       valid: true,
-      promoId:    snap.docs[0].id,
-      code:       normalized,
-      type:       promo.type,
-      value:      promo.value,
+      promoId:      snap.docs[0].id,
+      code:         normalized,
+      type:         promo.type,
+      value:        promo.value,
       discount,
       finalTotal,
-      message:    promo.type === "flat"
-        ? `$${promo.value} off applied`
-        : `${promo.value}% off applied`,
+      firstTimeOnly: !!promo.firstTimeOnly,
+      message:      promo.firstTimeOnly
+        ? `${discountMsg} — first-time clients only`
+        : discountMsg,
     });
   } catch (err) {
     console.error("Promo validate error:", err);

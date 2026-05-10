@@ -45,6 +45,7 @@ export default function BillingPage() {
   const [msg,           setMsg]          = useState({ text: "", type: "error" });
   const [cancelModal,   setCancelModal]  = useState(false);
   const [agentProWorking, setAgentProWorking] = useState(false);
+  const [isOwner,       setIsOwner]      = useState(true); // staff admins cannot manage billing
 
   const searchParams = useSearchParams();
 
@@ -61,7 +62,12 @@ export default function BillingPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    auth.currentUser?.getIdToken().then(async (token) => {
+    auth.currentUser?.getIdTokenResult().then(async (result) => {
+      // Staff members (admin/manager added via invite) have a `role` claim.
+      // The account owner has no `role` claim — only `tenantId`.
+      if (result.claims.role) setIsOwner(false);
+
+      const token = result.token;
       const [tenantRes, statsRes, teamRes] = await Promise.all([
         fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/stats",  { headers: { Authorization: `Bearer ${token}` } }),
@@ -278,15 +284,24 @@ export default function BillingPage() {
           </p>
         )}
 
+        {!isOwner && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3">
+            Billing is managed by the account owner. Contact them to make changes.
+          </p>
+        )}
         {subscribed ? (
           <div className="flex flex-wrap gap-2 mt-4 pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-            <button onClick={openPortal} disabled={working} className="btn-outline">
-              {working ? "Loading…" : "Manage subscription →"}
-            </button>
-            <button onClick={() => setCancelModal(true)} disabled={working}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 text-red-600 text-[13px] font-medium hover:bg-red-50 transition-colors disabled:opacity-50">
-              Cancel subscription
-            </button>
+            {isOwner && (
+              <>
+                <button onClick={openPortal} disabled={working} className="btn-outline">
+                  {working ? "Loading…" : "Manage subscription →"}
+                </button>
+                <button onClick={() => setCancelModal(true)} disabled={working}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 text-red-600 text-[13px] font-medium hover:bg-red-50 transition-colors disabled:opacity-50">
+                  Cancel subscription
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <p className="text-xs text-gray-400 mt-3">

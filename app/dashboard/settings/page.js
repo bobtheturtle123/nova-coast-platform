@@ -678,7 +678,7 @@ export default function SettingsPage() {
 
   // Promo codes state
   const [promoCodes,    setPromoCodes]    = useState([]);
-  const [promoForm,     setPromoForm]     = useState({ code: "", type: "flat", value: "", description: "", usageLimit: "", minOrder: "", expiresAt: "" });
+  const [promoForm,     setPromoForm]     = useState({ code: "", type: "flat", value: "", description: "", usageLimit: "", minOrder: "", expiresAt: "", firstTimeOnly: false });
   const [showPromoForm, setShowPromoForm] = useState(false);
   const [savingPromo,   setSavingPromo]   = useState(false);
   const [promoError,    setPromoError]    = useState("");
@@ -1166,7 +1166,7 @@ export default function SettingsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create code");
       setPromoCodes((prev) => [{ id: data.id, ...promoForm, code: promoForm.code.trim().toUpperCase(), usageCount: 0, active: true }, ...prev]);
-      setPromoForm({ code: "", type: "flat", value: "", description: "" });
+      setPromoForm({ code: "", type: "flat", value: "", description: "", usageLimit: "", minOrder: "", expiresAt: "", firstTimeOnly: false });
       setShowPromoForm(false);
     } catch (err) { setPromoError(err.message); }
     setSavingPromo(false);
@@ -2214,6 +2214,16 @@ export default function SettingsPage() {
                   className="input-field w-full text-sm" placeholder="0" min="0" step="1" />
               </div>
             </div>
+            <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
+              <input type="checkbox"
+                checked={!!promoForm.firstTimeOnly}
+                onChange={(e) => setPromoForm((f) => ({ ...f, firstTimeOnly: e.target.checked }))}
+                className="w-4 h-4 accent-[#3486cf]" />
+              <span className="text-sm text-gray-700">
+                First-time clients only
+                <span className="text-xs text-gray-400 ml-1">(validates at checkout)</span>
+              </span>
+            </label>
             {promoError && <p className="text-xs text-red-500">{promoError}</p>}
             <button type="submit" disabled={savingPromo} className="btn-primary px-6 py-2 text-sm">
               {savingPromo ? "Creating…" : "Create Code"}
@@ -2234,8 +2244,11 @@ export default function SettingsPage() {
                     {p.code}
                   </span>
                   <div className="min-w-0">
-                    <p className="text-sm text-[#0F172A] font-medium">
+                    <p className="text-sm text-[#0F172A] font-medium flex items-center gap-1.5 flex-wrap">
                       {p.type === "flat" ? `$${p.value} off` : `${p.value}% off`}
+                      {p.firstTimeOnly && (
+                        <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full font-semibold">1st visit</span>
+                      )}
                     </p>
                     {p.description && <p className="text-xs text-gray-400 truncate">{p.description}</p>}
                   </div>

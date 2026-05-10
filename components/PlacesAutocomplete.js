@@ -10,8 +10,16 @@ function debounce(fn, ms) {
 
 function parseResult(result) {
   const a = result.address || {};
-  const streetNum  = a.house_number || "";
+  let streetNum  = a.house_number || "";
   const streetName = a.road || a.pedestrian || "";
+
+  // If the API didn't return a house number, try to extract it from display_name.
+  // display_name often looks like "1308 Paseo Redondo, Burbank, ..."
+  if (!streetNum && result.display_name) {
+    const match = result.display_name.match(/^(\d+[A-Za-z]?[-\d]*)\s/);
+    if (match) streetNum = match[1];
+  }
+
   const address    = [streetNum, streetName].filter(Boolean).join(" ") || result.display_name?.split(",")[0] || "";
   const city       = a.city || a.town || a.village || a.county || "";
   const state      = a.state || "";

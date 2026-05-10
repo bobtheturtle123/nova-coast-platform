@@ -29,6 +29,9 @@ export async function GET(req) {
       memberId:  data.memberId,
       startDate: data.startDate,
       endDate:   data.endDate,
+      allDay:    data.allDay !== false,
+      startTime: data.startTime || null,
+      endTime:   data.endTime   || null,
       reason:    data.reason,
       note:      data.note,
       source:    data.source || "manual",
@@ -48,6 +51,7 @@ export async function POST(req) {
     return Response.json({ error: "startDate and endDate required" }, { status: 400 });
   }
 
+  const allDay = body.allDay !== false; // default all day
   const id = uuidv4();
   const block = {
     id,
@@ -55,6 +59,9 @@ export async function POST(req) {
     tenantId:   ctx.tenantId,
     startDate:  body.startDate,
     endDate:    body.endDate,
+    allDay,
+    startTime:  allDay ? null : (body.startTime || "09:00"),
+    endTime:    allDay ? null : (body.endTime   || "17:00"),
     reason:     body.reason || "Blocked",
     note:       body.note   || "",
     createdAt:  new Date(),
@@ -66,7 +73,7 @@ export async function POST(req) {
     .collection("timeBlocks").doc(id)
     .set(block);
 
-  return Response.json({ ok: true, block: { id, memberId: block.memberId, startDate: block.startDate, endDate: block.endDate, reason: block.reason, note: block.note } });
+  return Response.json({ ok: true, block: { id, memberId: block.memberId, startDate: block.startDate, endDate: block.endDate, allDay: block.allDay, startTime: block.startTime, endTime: block.endTime, reason: block.reason, note: block.note } });
 }
 
 // DELETE — remove a block (only own blocks)

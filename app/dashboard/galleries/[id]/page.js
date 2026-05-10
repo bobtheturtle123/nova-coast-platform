@@ -9,6 +9,22 @@ import { getAppUrl } from "@/lib/appUrl";
 
 const APP_URL = getAppUrl();
 
+// ─── Floor plan image with error fallback ────────────────────────────────────
+function FloorPlanThumb({ src, alt }) {
+  const [errored, setErrored] = useState(false);
+  if (errored) {
+    return (
+      <div className="w-full aspect-[4/3] flex flex-col items-center justify-center bg-gray-100 text-gray-400 gap-1">
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <span className="text-xs">No preview</span>
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} onError={() => setErrored(true)} className="w-full aspect-[4/3] object-cover" />;
+}
+
 // ─── Image thumbnail with loading/error ───────────────────────────────────────
 function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
   onDragStart, onDragOver, onDrop, onDragEnd, index, onAssignCategory,
@@ -23,7 +39,7 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
       onDragOver={!selectMode ? onDragOver : undefined}
       onDrop={!selectMode ? onDrop : undefined}
       onDragEnd={!selectMode ? onDragEnd : undefined}
-      onClick={selectMode ? (e) => { e.stopPropagation(); onSelect?.(); } : undefined}
+      onClick={selectMode ? (e) => { e.stopPropagation(); onSelect?.(e); } : undefined}
       className={`aspect-square rounded-xl overflow-hidden bg-gray-100 relative group
         ${selectMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}
         ${isDragging ? "opacity-40 scale-95" : ""}
@@ -45,7 +61,7 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
       {/* Selection checkbox — always visible in select mode, hover-only otherwise */}
       <div
         className={`absolute top-1.5 left-1.5 z-10 transition-opacity ${selected || selectMode ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
-        onClick={(e) => { e.stopPropagation(); onSelect?.(); }}
+        onClick={(e) => { e.stopPropagation(); onSelect?.(e); }}
       >
         <div className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer
           ${selected ? "bg-gold border-gold" : "bg-white/80 border-white/60 hover:border-gold"}`}>
@@ -319,6 +335,7 @@ export default function GalleryDetailPage() {
   const videoUploadRef = useRef(null);
   const fileAttachRef = useRef(null);
   const dragCounter = useRef(0);
+  const lastSelectedIdxRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => {
@@ -506,6 +523,24 @@ export default function GalleryDetailPage() {
     });
   }
 
+  function handleSelectWithShift(key, idx, e) {
+    if (e?.shiftKey && lastSelectedIdxRef.current !== null) {
+      const start = Math.min(lastSelectedIdxRef.current, idx);
+      const end   = Math.max(lastSelectedIdxRef.current, idx);
+      setSelectedKeys((prev) => {
+        const next = new Set(prev);
+        for (let i = start; i <= end; i++) {
+          const k = displayImages[i]?.key;
+          if (k) next.add(k);
+        }
+        return next;
+      });
+    } else {
+      toggleSelect(key);
+      lastSelectedIdxRef.current = idx;
+    }
+  }
+
   function selectAll() {
     setSelectedKeys(new Set(displayImages.map((m) => m.key).filter(Boolean)));
   }
@@ -519,6 +554,7 @@ export default function GalleryDetailPage() {
     setSelectMode(false);
     setSelectedKeys(new Set());
     setBulkCatTarget("");
+    lastSelectedIdxRef.current = null;
   }
 
   async function deleteMedia(keys) {
@@ -565,16 +601,17 @@ export default function GalleryDetailPage() {
     });
   }
 
-  async function applyBulkCategory() {
-    if (!bulkCatTarget) return;
+  async function applyBulkCategory(catOverride) {
+    const cat = catOverride || bulkCatTarget;
+    if (!cat) return;
     const next = {};
-    for (const [cat, keys] of Object.entries(categories)) {
-      next[cat] = keys.filter((k) => !selectedKeys.has(k));
+    for (const [c, keys] of Object.entries(categories)) {
+      next[c] = keys.filter((k) => !selectedKeys.has(k));
     }
-    next[bulkCatTarget] = [...(next[bulkCatTarget] || []), ...Array.from(selectedKeys)];
+    next[cat] = [...(next[cat] || []), ...Array.from(selectedKeys)];
     setCategories(next);
     clearSelection();
-    toast(`Assigned ${selectedKeys.size} photos to "${bulkCatTarget}".`);
+    toast(`Assigned ${selectedKeys.size} photos to "${cat}".`);
     const token = await auth.currentUser.getIdToken();
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
@@ -1140,23 +1177,14 @@ export default function GalleryDetailPage() {
                       {selectedKeys.size > 0 ? `${selectedKeys.size} selected` : "Tap photos to select"}
                     </span>
                     {selectedKeys.size > 0 && catNames.length > 0 && (
-                      <>
-                        <select
-                          value={bulkCatTarget}
-                          onChange={(e) => setBulkCatTarget(e.target.value)}
-                          className="text-xs input-field py-1 flex-1 max-w-xs"
-                        >
-                          <option value="">Assign to category…</option>
-                          {catNames.map((c) => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                        <button
-                          onClick={applyBulkCategory}
-                          disabled={!bulkCatTarget}
-                          className="btn-primary text-xs px-3 py-1.5 disabled:opacity-40"
-                        >
-                          Apply
-                        </button>
-                      </>
+                      <select
+                        value=""
+                        onChange={(e) => { const cat = e.target.value; if (cat) applyBulkCategory(cat); }}
+                        className="text-xs input-field py-1 flex-1 max-w-xs"
+                      >
+                        <option value="">Assign to category…</option>
+                        {catNames.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
                     )}
                     {selectedKeys.size > 0 && (
                       <>
@@ -1196,7 +1224,7 @@ export default function GalleryDetailPage() {
                       onDragEnd={handleDragEnd}
                       onAssignCategory={(cat) => assignCategory(m.key, cat)}
                       selected={selectedKeys.has(m.key)}
-                      onSelect={() => m.key && toggleSelect(m.key)}
+                      onSelect={(e) => m.key && handleSelectWithShift(m.key, i, e)}
                       onDelete={() => m.key && deleteMedia([m.key])}
                       selectMode={selectMode}
                       hidden={!!m.hidden}
@@ -1382,7 +1410,7 @@ export default function GalleryDetailPage() {
                         <span className="truncate">{fp.fileName}</span>
                       </a>
                     ) : (
-                      <img src={fp.publicUrl || fp.url} alt={fp.fileName} className="w-full aspect-[4/3] object-cover" />
+                      <FloorPlanThumb src={fp.publicUrl || fp.url} alt={fp.fileName} />
                     )}
                     {fp.hidden && (
                       <div className="absolute top-1 left-1">
@@ -1654,7 +1682,7 @@ export default function GalleryDetailPage() {
                     <input
                       type="datetime-local"
                       value={scheduledAt}
-                      min={(() => { const d = new Date(); d.setMinutes(d.getMinutes() + 15); return d.toISOString().slice(0,16); })()}
+                      min={(() => { const d = new Date(Date.now() + 15 * 60000); const p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; })()}
                       onChange={(e) => setScheduledAt(e.target.value)}
                       className="input-field w-full"
                     />

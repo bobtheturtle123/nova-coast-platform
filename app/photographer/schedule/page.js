@@ -30,7 +30,7 @@ export default function PhotographerSchedulePage() {
   const [anchor,      setAnchor]      = useState(new Date());
   const [view,        setView]        = useState("week"); // week | month
   const [showBlock,   setShowBlock]   = useState(false);
-  const [blockForm,   setBlockForm]   = useState({ startDate: "", endDate: "", reason: "Day Off", note: "" });
+  const [blockForm,   setBlockForm]   = useState({ startDate: "", endDate: "", reason: "Day Off", note: "", allDay: true, startTime: "09:00", endTime: "17:00" });
   const [saving,      setSaving]      = useState(false);
   const [memberColor, setMemberColor] = useState("#3486cf");
   const [hasGcal,     setHasGcal]     = useState(false);
@@ -134,7 +134,7 @@ export default function PhotographerSchedulePage() {
     if (res.ok) {
       setBlocks((prev) => [...prev, data.block]);
       setShowBlock(false);
-      setBlockForm({ startDate: "", endDate: "", reason: "Day Off", note: "" });
+      setBlockForm({ startDate: "", endDate: "", reason: "Day Off", note: "", allDay: true, startTime: "09:00", endTime: "17:00" });
     }
     setSaving(false);
   }
@@ -326,6 +326,7 @@ export default function PhotographerSchedulePage() {
                   <p className="text-sm font-medium text-gray-800">{b.reason}</p>
                   <p className="text-xs text-gray-400">
                     {new Date(b.startDate + "T12:00:00").toLocaleDateString()} – {new Date(b.endDate + "T12:00:00").toLocaleDateString()}
+                    {!b.allDay && b.startTime && b.endTime && ` · ${b.startTime} – ${b.endTime}`}
                     {b.note && ` · ${b.note}`}
                   </p>
                 </div>
@@ -349,7 +350,7 @@ export default function PhotographerSchedulePage() {
                 <div>
                   <label className="label-field">Start Date</label>
                   <input type="date" value={blockForm.startDate}
-                    onChange={(e) => setBlockForm((f) => ({ ...f, startDate: e.target.value }))}
+                    onChange={(e) => setBlockForm((f) => ({ ...f, startDate: e.target.value, endDate: f.endDate || e.target.value }))}
                     className="input-field w-full" />
                 </div>
                 <div>
@@ -359,6 +360,29 @@ export default function PhotographerSchedulePage() {
                     className="input-field w-full" />
                 </div>
               </div>
+              {/* All day toggle */}
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input type="checkbox" checked={!!blockForm.allDay}
+                  onChange={(e) => setBlockForm((f) => ({ ...f, allDay: e.target.checked }))}
+                  className="w-4 h-4 accent-[#3486cf]" />
+                <span className="text-sm text-gray-700">All day</span>
+              </label>
+              {!blockForm.allDay && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label-field">Start Time</label>
+                    <input type="time" value={blockForm.startTime}
+                      onChange={(e) => setBlockForm((f) => ({ ...f, startTime: e.target.value }))}
+                      className="input-field w-full" />
+                  </div>
+                  <div>
+                    <label className="label-field">End Time</label>
+                    <input type="time" value={blockForm.endTime}
+                      onChange={(e) => setBlockForm((f) => ({ ...f, endTime: e.target.value }))}
+                      className="input-field w-full" />
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="label-field">Reason</label>
                 <select value={blockForm.reason}
