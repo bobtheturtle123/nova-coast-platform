@@ -555,14 +555,19 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                           <img src={viewUrl} alt={fp.fileName}
                             className="w-full object-contain max-h-80 bg-white" />
                         )}
-                        <div className="px-4 py-3 flex items-center justify-between border-t border-gray-100 bg-white">
-                          <span className="text-xs text-gray-500 truncate flex-1 mr-3">{fp.fileName}</span>
-                          {dlUrl && (
-                            <a href={dlUrl} download={fp.fileName}
-                              className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white flex-shrink-0 transition-opacity hover:opacity-90"
-                              style={{ background: primary }}>
-                              ↓ Download
-                            </a>
+                        <div className="px-4 py-3 flex items-center justify-between border-t border-gray-100 bg-white gap-2">
+                          <span className="text-xs text-gray-500 truncate flex-1 min-w-0">{fp.fileName}</span>
+                          {fp.key && (
+                            <div className="flex gap-1.5 flex-shrink-0">
+                              <a href={downloadUrl(fp.key, "print", fp.fileName)} download
+                                className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide text-white bg-[#3486cf] transition-opacity hover:opacity-90">
+                                Print
+                              </a>
+                              <a href={downloadUrl(fp.key, "web", fp.fileName)} download
+                                className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide text-white bg-[#c4974a] transition-opacity hover:opacity-90">
+                                Web
+                              </a>
+                            </div>
                           )}
                         </div>
                       </>

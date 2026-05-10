@@ -577,7 +577,7 @@ if (loading) return (
       </div>
 
       {/* Tabs + Upload Media inline */}
-      <div className="bg-white border-b border-gray-200 px-6">
+      <div className="bg-white border-b border-gray-200 px-6 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div className="flex gap-0">
             {[

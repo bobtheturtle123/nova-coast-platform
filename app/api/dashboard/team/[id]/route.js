@@ -17,14 +17,16 @@ export async function PATCH(req, { params }) {
 
   const body = await req.json();
   const update = {
-    name:    (body.name || "").slice(0, 80),
-    email:   (body.email || "").toLowerCase(),
-    phone:   body.phone || "",
-    skills:  Array.isArray(body.skills) ? body.skills.map(String).slice(0, 50) : [],
-    color:   body.color || "#3486cf",
-    active:  body.active !== false,
-    payRate: body.payRate != null ? Number(body.payRate) || 0 : 0,
-    serviceRates: body.serviceRates && typeof body.serviceRates === "object"
+    name:          (body.name || "").slice(0, 80),
+    email:         (body.email || "").toLowerCase(),
+    phone:         body.phone || "",
+    homeZip:       (body.homeZip || "").slice(0, 10),
+    role:          ["photographer","manager","editor","assistant"].includes(body.role) ? body.role : "photographer",
+    skills:        Array.isArray(body.skills) ? body.skills.map(String).slice(0, 50) : [],
+    color:         body.color || "#3486cf",
+    active:        body.active !== false,
+    payRate:       body.payRate != null ? Number(body.payRate) || 0 : 0,
+    serviceRates:  body.serviceRates && typeof body.serviceRates === "object"
       ? Object.fromEntries(
           Object.entries(body.serviceRates)
             .slice(0, 100)
@@ -36,6 +38,8 @@ export async function PATCH(req, { params }) {
             ])
         )
       : {},
+    bufferMinutes: body.bufferMinutes != null ? Number(body.bufferMinutes) || 0 : 0,
+    workingHours:  body.workingHours && typeof body.workingHours === "object" ? body.workingHours : {},
   };
 
   const memberRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(params.id);

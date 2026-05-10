@@ -5,6 +5,10 @@ export const metadata = {
   title: "KyoriaOS: Business software for real estate photographers",
   description: "Booking, payments, and media delivery built for real estate photography businesses.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: "/kyoriaos-logo.png", type: "image/png" }],
+    apple: "/kyoriaos-logo.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

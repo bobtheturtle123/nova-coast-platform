@@ -84,7 +84,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-12 w-auto object-contain mx-auto" />
-          <p className="text-gray-500 text-sm mt-2">Create your account — free trial included</p>
+          <p className="text-gray-500 text-sm mt-2">Create your account</p>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">

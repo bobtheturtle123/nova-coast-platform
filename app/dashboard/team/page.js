@@ -9,6 +9,40 @@ import { getAppUrl } from "@/lib/appUrl";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 
+const ROLE_OPTIONS = [
+  { id: "photographer", label: "Photographer", icon: "📷", desc: "Shoots & delivers" },
+  { id: "manager",      label: "Manager",      icon: "📋", desc: "Schedules & manages" },
+  { id: "editor",       label: "Editor",       icon: "🎨", desc: "Post-processing" },
+  { id: "assistant",    label: "Assistant",    icon: "🤝", desc: "On-site support" },
+];
+
+const ROLE_COLORS = {
+  photographer: { bg: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-100" },
+  manager:      { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-100" },
+  editor:       { bg: "bg-green-50",  text: "text-green-700",  border: "border-green-100" },
+  assistant:    { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-100" },
+};
+
+const WEEK_DAYS = [
+  { key: "sun", label: "Sun" },
+  { key: "mon", label: "Mon" },
+  { key: "tue", label: "Tue" },
+  { key: "wed", label: "Wed" },
+  { key: "thu", label: "Thu" },
+  { key: "fri", label: "Fri" },
+  { key: "sat", label: "Sat" },
+];
+
+const DEFAULT_WORKING_HOURS = {
+  sun: { enabled: false, start: "09:00", end: "17:00" },
+  mon: { enabled: true,  start: "09:00", end: "17:00" },
+  tue: { enabled: true,  start: "09:00", end: "17:00" },
+  wed: { enabled: true,  start: "09:00", end: "17:00" },
+  thu: { enabled: true,  start: "09:00", end: "17:00" },
+  fri: { enabled: true,  start: "09:00", end: "17:00" },
+  sat: { enabled: false, start: "09:00", end: "17:00" },
+};
+
 const SKILL_LABELS = {
   classicDaytime:         "Classic Daytime",
   luxuryDaytime:          "Luxury Daytime",
@@ -393,13 +427,18 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
     email:         member?.email         || "",
     phone:         member?.phone         || "",
     homeZip:       member?.homeZip       || "",
+    role:          member?.role          || "photographer",
     skills:        member?.skills        || [],
     color:         member?.color         || COLORS[0],
     active:        member?.active        !== false,
     payRate:       member?.payRate       ?? "",
     serviceRates:  member?.serviceRates  || {},
     bufferMinutes: member?.bufferMinutes ?? "",
+    workingHours:  member?.workingHours  || DEFAULT_WORKING_HOURS,
   });
+  const [showWorkingHours, setShowWorkingHours] = useState(
+    !!member?.workingHours && Object.keys(member.workingHours).length > 0
+  );
   const [showServiceRates, setShowServiceRates] = useState(
     Object.keys(member?.serviceRates || {}).length > 0
   );
@@ -440,6 +479,25 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
         </div>
 
         <div className="p-6 space-y-4">
+          {/* Role selector */}
+          <div>
+            <label className="label-field">Role</label>
+            <div className="grid grid-cols-2 gap-2">
+              {ROLE_OPTIONS.map((r) => (
+                <button key={r.id} type="button" onClick={() => setForm((f) => ({ ...f, role: r.id }))}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
+                    form.role === r.id ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300"
+                  }`}>
+                  <span className="text-lg leading-none">{r.icon}</span>
+                  <div>
+                    <p className="text-xs font-semibold text-[#0F172A]">{r.label}</p>
+                    <p className="text-[10px] text-gray-400">{r.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="label-field">Name</label>
@@ -586,6 +644,53 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
               <option value={90}>+90 min</option>
             </select>
             <p className="text-xs text-gray-400 mt-0.5">For photographers who need more time between jobs.</p>
+          </div>
+
+          {/* Working Hours */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="label-field mb-0">Working Hours</label>
+              <button type="button" onClick={() => setShowWorkingHours((v) => !v)}
+                className="text-xs text-[#3486cf] hover:underline">
+                {showWorkingHours ? "Hide" : "Set hours"}
+              </button>
+            </div>
+            {showWorkingHours && (
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                {WEEK_DAYS.map(({ key, label }) => {
+                  const day = form.workingHours?.[key] || { enabled: false, start: "09:00", end: "17:00" };
+                  return (
+                    <div key={key} className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 last:border-b-0">
+                      <span className="w-8 text-xs font-medium text-gray-500 flex-shrink-0">{label}</span>
+                      <input type="checkbox" checked={!!day.enabled}
+                        onChange={(e) => setForm((f) => ({
+                          ...f,
+                          workingHours: { ...f.workingHours, [key]: { ...day, enabled: e.target.checked } },
+                        }))} />
+                      {day.enabled ? (
+                        <>
+                          <input type="time" value={day.start || "09:00"}
+                            onChange={(e) => setForm((f) => ({
+                              ...f,
+                              workingHours: { ...f.workingHours, [key]: { ...day, start: e.target.value } },
+                            }))}
+                            className="input-field text-xs py-1 px-2 w-28 flex-shrink-0" />
+                          <span className="text-xs text-gray-400">—</span>
+                          <input type="time" value={day.end || "17:00"}
+                            onChange={(e) => setForm((f) => ({
+                              ...f,
+                              workingHours: { ...f.workingHours, [key]: { ...day, end: e.target.value } },
+                            }))}
+                            className="input-field text-xs py-1 px-2 w-28 flex-shrink-0" />
+                        </>
+                      ) : (
+                        <span className="text-xs text-gray-400">Off</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -1174,7 +1279,7 @@ export default function TeamPage() {
               ✉ Invite via Email
             </button>
             <button onClick={() => setEditing("new")} className="btn-primary text-sm px-5 py-2 flex items-center gap-2">
-              <span className="text-lg leading-none">+</span> Add Manually
+              <span className="text-lg leading-none">+</span> Add Team Member
             </button>
           </div>
         ) : (
@@ -1209,6 +1314,20 @@ export default function TeamPage() {
       {/* Team tab content */}
       {activeTab === "team" && <div className="p-6">
 
+      {/* Empty state */}
+      {members.length === 0 && (
+        <div className="card p-10 text-center mb-6">
+          <div className="text-5xl mb-3">👥</div>
+          <p className="font-semibold text-[#0F172A] mb-1">No team members yet</p>
+          <p className="text-sm text-gray-500 mb-5 max-w-sm mx-auto">
+            Add photographers, managers, editors, and assistants. Only photographers appear in booking schedule.
+          </p>
+          <button onClick={() => setEditing("new")} className="btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-2">
+            <span className="text-lg leading-none">+</span> Add Your First Team Member
+          </button>
+        </div>
+      )}
+
       {/* Team member cards */}
       {members.length > 0 && (
         <div className="flex gap-3 flex-wrap mb-6">
@@ -1220,7 +1339,14 @@ export default function TeamPage() {
               </div>
               <button onClick={() => setEditing(m)} className="text-left">
                 <p className="text-sm font-medium text-[#0F172A]">{m.name}</p>
-                <p className="text-xs text-gray-400">{m.skills?.length || 0} skills</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {(() => { const rc = ROLE_COLORS[m.role || "photographer"] || ROLE_COLORS.photographer; return (
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border capitalize ${rc.bg} ${rc.text} ${rc.border}`}>
+                      {m.role || "photographer"}
+                    </span>
+                  ); })()}
+                  {m.skills?.length > 0 && <span className="text-[10px] text-gray-400">{m.skills.length} skills</span>}
+                </div>
               </button>
               <button
                 onClick={() => setCalModal(m)}
