@@ -8,84 +8,6 @@ import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 import { getAppUrl } from "@/lib/appUrl";
 import TimeRangePicker from "@/components/TimeRangePicker";
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const MOCK_LISTINGS = [
-  { id: "m1", address: "4821 Ocean View Dr, La Jolla, CA",       clientName: "Sarah Mitchell", status: "confirmed",       totalPrice: 1199, depositAmount: 599,  depositPaid: true,  paidInFull: false, balancePaid: false, shootDate: "2026-05-02", gallery: {} },
-  { id: "m2", address: "1205 Hillcrest Ave, Del Mar, CA",        clientName: "James Holbrook", status: "completed",       totalPrice: 549,  depositAmount: 274,  depositPaid: true,  paidInFull: true,  balancePaid: true,  shootDate: "2026-04-28", gallery: { delivered: true } },
-  { id: "m3", address: "780 Sunset Blvd, Coronado, CA",          clientName: "Priya Anand",    status: "requested",       totalPrice: 1999, depositAmount: 999,  depositPaid: false, paidInFull: false, balancePaid: false, shootDate: "2026-05-06", gallery: {} },
-  { id: "m4", address: "330 Harbor Dr, Point Loma, CA",          clientName: "Tom Reyes",      status: "confirmed",       totalPrice: 875,  depositAmount: 437,  depositPaid: true,  paidInFull: false, balancePaid: false, shootDate: "2026-05-04", gallery: {} },
-  { id: "m5", address: "2190 Rancho Santa Fe Rd, Encinitas, CA", clientName: "Amanda Flores",  status: "completed",       totalPrice: 1549, depositAmount: 774,  depositPaid: true,  paidInFull: true,  balancePaid: true,  shootDate: "2026-04-22", gallery: { delivered: true } },
-  { id: "m6", address: "555 Coast Blvd, La Jolla, CA",           clientName: "Derek Wang",     status: "pending_payment", totalPrice: 299,  depositAmount: 149,  depositPaid: false, paidInFull: false, balancePaid: false, shootDate: "2026-05-09", gallery: {} },
-  { id: "m7", address: "892 Torrey Pines Rd, San Diego, CA",     clientName: "Natalie Cruz",   status: "confirmed",       totalPrice: 2399, depositAmount: 1199, depositPaid: true,  paidInFull: false, balancePaid: false, shootDate: "2026-05-01", gallery: {} },
-  { id: "m8", address: "110 Prospect St, La Jolla, CA",          clientName: "Alex Yuen",      status: "completed",       totalPrice: 749,  depositAmount: 374,  depositPaid: true,  paidInFull: true,  balancePaid: true,  shootDate: "2026-04-19", gallery: { delivered: true } },
-];
-
-const MOCK_DATA = {
-  "7d": [
-    { label: "Apr 29", revenue: 549,  bookings: 1 },
-    { label: "Apr 30", revenue: 0,    bookings: 0 },
-    { label: "May 1",  revenue: 875,  bookings: 1 },
-    { label: "May 2",  revenue: 1199, bookings: 1 },
-    { label: "May 3",  revenue: 0,    bookings: 0 },
-    { label: "May 4",  revenue: 0,    bookings: 0 },
-    { label: "May 5",  revenue: 299,  bookings: 1 },
-  ],
-  "30d": [
-    { label: "Apr 1",  revenue: 980,  bookings: 2 },
-    { label: "Apr 8",  revenue: 1420, bookings: 3 },
-    { label: "Apr 15", revenue: 890,  bookings: 2 },
-    { label: "Apr 22", revenue: 1650, bookings: 4 },
-    { label: "Apr 28", revenue: 1020, bookings: 2 },
-  ],
-  "3m": [
-    { label: "Mar", revenue: 7880, bookings: 13 },
-    { label: "Apr", revenue: 5960, bookings: 9  },
-    { label: "May", revenue: 2920, bookings: 4  },
-  ],
-  "6m": [
-    { label: "Dec", revenue: 5120, bookings: 9  },
-    { label: "Jan", revenue: 4290, bookings: 7  },
-    { label: "Feb", revenue: 6740, bookings: 11 },
-    { label: "Mar", revenue: 7880, bookings: 13 },
-    { label: "Apr", revenue: 5960, bookings: 9  },
-    { label: "May", revenue: 2920, bookings: 4  },
-  ],
-  "12m": [
-    { label: "Jun '25", revenue: 3400, bookings: 6  },
-    { label: "Jul",     revenue: 4800, bookings: 8  },
-    { label: "Aug",     revenue: 5600, bookings: 9  },
-    { label: "Sep",     revenue: 3900, bookings: 6  },
-    { label: "Oct",     revenue: 4200, bookings: 7  },
-    { label: "Nov",     revenue: 3850, bookings: 6  },
-    { label: "Dec",     revenue: 5120, bookings: 9  },
-    { label: "Jan '26", revenue: 4290, bookings: 7  },
-    { label: "Feb",     revenue: 6740, bookings: 11 },
-    { label: "Mar",     revenue: 7880, bookings: 13 },
-    { label: "Apr",     revenue: 5960, bookings: 9  },
-    { label: "May",     revenue: 2920, bookings: 4  },
-  ],
-  "all": [
-    { label: "Jan '25", revenue: 1200, bookings: 2  },
-    { label: "Feb",     revenue: 2100, bookings: 3  },
-    { label: "Mar",     revenue: 3200, bookings: 5  },
-    { label: "Apr",     revenue: 2800, bookings: 4  },
-    { label: "May",     revenue: 3100, bookings: 5  },
-    { label: "Jun",     revenue: 3400, bookings: 6  },
-    { label: "Jul",     revenue: 4800, bookings: 8  },
-    { label: "Aug",     revenue: 5600, bookings: 9  },
-    { label: "Sep",     revenue: 3900, bookings: 6  },
-    { label: "Oct",     revenue: 4200, bookings: 7  },
-    { label: "Nov",     revenue: 3850, bookings: 6  },
-    { label: "Dec",     revenue: 5120, bookings: 9  },
-    { label: "Jan '26", revenue: 4290, bookings: 7  },
-    { label: "Feb",     revenue: 6740, bookings: 11 },
-    { label: "Mar",     revenue: 7880, bookings: 13 },
-    { label: "Apr",     revenue: 5960, bookings: 9  },
-    { label: "May",     revenue: 2920, bookings: 4  },
-  ],
-};
-
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function avatarColor(str) {
   const p = ["#3486cf","#1e6091","#2e7d32","#6a1b9a","#d84315","#00695c","#b5872d","#c0392b"];
@@ -300,16 +222,13 @@ function AreaChart({ data, formatY }) {
 }
 
 // ── Revenue section ───────────────────────────────────────────────────────────
-function RevenueSection({ listings, isMock }) {
+function RevenueSection({ listings }) {
   const [period, setPeriod] = useState("6m");
   const [metric, setMetric] = useState("revenue");
 
   const chartData = useMemo(() => {
-    if (isMock) {
-      return MOCK_DATA[period].map(d => ({ label: d.label, value: metric === "revenue" ? d.revenue : d.bookings }));
-    }
     return buildChartData(listings, period, metric);
-  }, [period, metric, listings, isMock]);
+  }, [period, metric, listings]);
 
   const total  = chartData.reduce((s, d) => s + d.value, 0);
   const change = useMemo(() => {
@@ -334,8 +253,7 @@ function RevenueSection({ listings, isMock }) {
         <div>
           <p className="text-[12px] font-semibold uppercase tracking-[0.07em] mb-1.5" style={{ color: "#6B7280" }}>
             {periodLabel} · {metric === "revenue" ? "Revenue" : "Bookings"}
-            {isMock && <span className="ml-2 font-normal normal-case tracking-normal text-gray-300 italic">sample</span>}
-          </p>
+            </p>
           <p className="text-[32px] font-bold leading-none tracking-tight mb-2" style={{ color: "#0F172A" }}>{displayTotal}</p>
           <div className="flex items-center gap-3">
             {change && (
@@ -401,29 +319,26 @@ export default function DashboardHome() {
     });
   }, []);
 
-  const isMock  = listings.length === 0;
-  const display = isMock ? MOCK_LISTINGS : listings;
-
   const stats = useMemo(() => ({
-    total:     display.length,
-    pending:   display.filter(l => l.status === "requested").length,
-    confirmed: display.filter(l => l.status === "confirmed").length,
-    completed: display.filter(l => l.status === "completed").length,
-    revenue:   display.reduce((s, l) => {
+    total:     listings.length,
+    pending:   listings.filter(l => l.status === "requested").length,
+    confirmed: listings.filter(l => l.status === "confirmed").length,
+    completed: listings.filter(l => l.status === "completed").length,
+    revenue:   listings.reduce((s, l) => {
       if (l.paidInFull || l.balancePaid) return s + (l.totalPrice || 0);
       if (l.depositPaid)                 return s + (l.depositAmount || 0);
       return s;
     }, 0),
-  }), [display]);
+  }), [listings]);
 
   const ACTIVE_WF = ["booked","appointment_confirmed","photographer_assigned","shot_completed","editing_complete","qa_review","postponed"];
-  const upcoming = display
+  const upcoming = listings
     .filter(l => ACTIVE_WF.includes(resolveWorkflowStatus(l)) && (l.shootDate || l.preferredDate))
     .sort((a, b) => (a.shootDate || a.preferredDate || "").localeCompare(b.shootDate || b.preferredDate || ""))
     .slice(0, 5);
 
   // Action required items
-  const actionItems = isMock ? [] : [
+  const actionItems = [
     ...pendingRevisions.map(r => ({
       type: "revision_request", id: r.id,
       label: r.agentName || r.agentEmail || "Client",
@@ -431,11 +346,11 @@ export default function DashboardHome() {
       href: r.bookingId ? `/dashboard/listings/${r.bookingId}` : `/dashboard/revisions`,
       urgency: "high",
     })),
-    ...display.filter(l => l.status === "requested" && !l.depositPaid)
+    ...listings.filter(l => l.status === "requested" && !l.depositPaid)
       .map(l => ({ type: "booking_request", id: l.id, label: l.clientName, detail: l.address?.split(",")[0], href: `/dashboard/listings/${l.id}`, urgency: "high" })),
-    ...display.filter(l => (l.paidInFull || l.balancePaid ? false : l.depositPaid) && !l.balancePaid && resolveWorkflowStatus(l) === "delivered")
+    ...listings.filter(l => (l.paidInFull || l.balancePaid ? false : l.depositPaid) && !l.balancePaid && resolveWorkflowStatus(l) === "delivered")
       .map(l => ({ type: "balance_due",     id: l.id, label: l.clientName, detail: `Balance $${((l.totalPrice || 0) - (l.depositAmount || 0)).toLocaleString()}`, href: `/dashboard/listings/${l.id}`, urgency: "medium" })),
-    ...display.filter(l => ACTIVE_WF.includes(resolveWorkflowStatus(l)) && !l.shootDate && !l.preferredDate)
+    ...listings.filter(l => ACTIVE_WF.includes(resolveWorkflowStatus(l)) && !l.shootDate && !l.preferredDate)
       .map(l => ({ type: "no_date",         id: l.id, label: l.clientName, detail: l.address?.split(",")[0], href: `/dashboard/listings/${l.id}`, urgency: "medium" })),
   ].slice(0, 8);
 
@@ -504,8 +419,7 @@ export default function DashboardHome() {
           <div>
             <h1 className="text-[26px] font-bold tracking-tight" style={{ color: "#0F172A" }}>
               {greeting}{firstName ? `, ${firstName}` : ""}
-              {isMock && <span className="ml-2 text-sm font-normal" style={{ color: "#9CA3AF" }}>· sample data</span>}
-            </h1>
+              </h1>
             <p className="text-[13.5px] mt-1 flex items-center gap-1.5" style={{ color: "#6B7280" }}>
               <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 inline-block" style={{ background: "#9CA3AF" }} />
               {dateLabel}
@@ -658,7 +572,7 @@ export default function DashboardHome() {
         )}
 
         {/* ── Revenue chart ─────────────────────────────────────────────── */}
-        <RevenueSection listings={display} isMock={isMock} />
+        <RevenueSection listings={listings} />
 
         {/* ── Upcoming Shoots ───────────────────────────────────────────── */}
         <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
@@ -705,7 +619,7 @@ export default function DashboardHome() {
 
                 return (
                   <Link key={l.id}
-                    href={isMock ? "/dashboard/listings" : `/dashboard/listings/${l.id}`}
+                    href={`/dashboard/listings/${l.id}`}
                     className="group flex items-center gap-4 px-6 py-4 transition-colors hover:bg-gray-50"
                     style={{ borderBottom: idx < upcoming.length - 1 ? "1px solid #F3F4F6" : "none" }}>
 
@@ -787,7 +701,6 @@ export default function DashboardHome() {
                 </div>
                 <h2 className="text-[15px] font-semibold" style={{ color: "#0F172A" }}>Recent Listings</h2>
               </div>
-              {isMock && <span className="text-[12px] bg-gray-100 px-2 py-0.5 rounded-full" style={{ color: "#6B7280" }}>sample</span>}
             </div>
             <Link href="/dashboard/listings" className="text-[12.5px] hover:text-[#374151] transition-colors" style={{ color: "#6B7280" }}>
               View all →
@@ -809,20 +722,19 @@ export default function DashboardHome() {
                 </tr>
               </thead>
               <tbody>
-                {display.slice(0, 8).map((l, idx) => {
+                {listings.length === 0 && (
+                  <tr><td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-400">No bookings yet. Share your booking link to get started.</td></tr>
+                )}
+                {listings.slice(0, 8).map((l, idx) => {
                   const pay = payLabel(l);
                   return (
                     <tr key={l.id} className="group transition-colors hover:bg-gray-50"
-                      style={{ borderBottom: idx < Math.min(display.length, 8) - 1 ? "1px solid #F3F4F6" : "none" }}>
+                      style={{ borderBottom: idx < Math.min(listings.length, 8) - 1 ? "1px solid #F3F4F6" : "none" }}>
                       <td className="px-6 py-4 max-w-[220px]">
-                        {isMock ? (
-                          <span className="font-medium line-clamp-1 block text-[14px]" style={{ color: "#0F172A" }}>{l.address?.split(",")[0]}</span>
-                        ) : (
-                          <Link href={`/dashboard/listings/${l.id}`}
-                            className="font-medium group-hover:text-[#374151] transition-colors line-clamp-1 block text-[14px]" style={{ color: "#0F172A" }}>
-                            {l.address?.split(",")[0]}
-                          </Link>
-                        )}
+                        <Link href={`/dashboard/listings/${l.id}`}
+                          className="font-medium group-hover:text-[#374151] transition-colors line-clamp-1 block text-[14px]" style={{ color: "#0F172A" }}>
+                          {l.address?.split(",")[0]}
+                        </Link>
                         <span className="text-[12px]" style={{ color: "#6B7280" }}>{l.address?.split(",").slice(1, 2).join(",").trim()}</span>
                       </td>
                       <td className="px-4 py-4">

@@ -1644,24 +1644,6 @@ export default function GalleryDetailPage() {
                   placeholder="Great shoot today! Let me know if you need anything adjusted." />
               </div>
 
-              {/* Gallery access settings */}
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Gallery Access</p>
-                <p className="text-xs text-gray-400">Recipients get view access via the link — no account needed. Emails listed here are recorded for your reference.</p>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-[#0F172A]">Agents can reshare this gallery</p>
-                    <p className="text-xs text-gray-400">If on, the gallery page shows a copy-link button to the viewer.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAgentCanShare((v) => !v)}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${agentCanShare ? "bg-[#3486cf]" : "bg-gray-300"}`}>
-                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${agentCanShare ? "translate-x-4" : "translate-x-0.5"}`} />
-                  </button>
-                </div>
-              </div>
-
               {/* Send time */}
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">When to Send</label>
@@ -1690,6 +1672,29 @@ export default function GalleryDetailPage() {
                   </div>
                 )}
               </div>
+
+              {/* Gallery access (subtle, collapsed) */}
+              <details className="group">
+                <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600 select-none list-none flex items-center gap-1.5">
+                  <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"
+                    className="transition-transform group-open:rotate-90 flex-shrink-0">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                  Access settings
+                </summary>
+                <div className="mt-2 pl-4 border-l border-gray-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-[#0F172A]">Agents can reshare this gallery</p>
+                    <p className="text-xs text-gray-400">Shows a copy-link button to the viewer.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAgentCanShare((v) => !v)}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${agentCanShare ? "bg-[#3486cf]" : "bg-gray-300"}`}>
+                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${agentCanShare ? "translate-x-4" : "translate-x-0.5"}`} />
+                  </button>
+                </div>
+              </details>
 
               {/* Email preview */}
               {deliveryMode === "now" && (

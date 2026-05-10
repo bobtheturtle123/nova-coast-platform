@@ -115,13 +115,17 @@ function exportCSV(bookings, period) {
 }
 
 export default function ReportsPage() {
-  const [bookings, setBookings] = useState([]);
-  const [catalog,  setCatalog]  = useState(null);
-  const [loading,  setLoading]  = useState(true);
-  const [period,   setPeriod]   = useState("12");
+  const [bookings,  setBookings]  = useState([]);
+  const [catalog,   setCatalog]   = useState(null);
+  const [loading,   setLoading]   = useState(true);
+  const [period,    setPeriod]    = useState("12");
+  const [isOwner,   setIsOwner]   = useState(true);
 
   useEffect(() => {
     auth.currentUser?.getIdToken(true).then(async (token) => {
+      const result = await auth.currentUser?.getIdTokenResult();
+      if (result?.claims?.role) { setIsOwner(false); setLoading(false); return; }
+
       const [bookRes, tenantRes] = await Promise.all([
         fetch("/api/dashboard/bookings", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/tenant",   { headers: { Authorization: `Bearer ${token}` } }),
@@ -307,6 +311,18 @@ export default function ReportsPage() {
   if (loading) return (
     <div className="p-8 flex items-center justify-center h-64">
       <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
+    </div>
+  );
+
+  if (!isOwner) return (
+    <div className="p-8 flex flex-col items-center justify-center h-64 text-center gap-3">
+      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+        </svg>
+      </div>
+      <p className="font-semibold text-gray-700">Revenue reports are restricted to account owners</p>
+      <p className="text-sm text-gray-400">Contact the account owner for financial data.</p>
     </div>
   );
 

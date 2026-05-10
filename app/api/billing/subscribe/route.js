@@ -7,6 +7,7 @@ async function getCtx(req) {
   if (!auth) return null;
   const decoded = await adminAuth.verifyIdToken(auth);
   if (!decoded.tenantId) return null;
+  if (decoded.role) return null; // staff members cannot make purchases
   return { uid: decoded.uid, tenantId: decoded.tenantId };
 }
 

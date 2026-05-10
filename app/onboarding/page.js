@@ -7,6 +7,82 @@ import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 import { getAppUrl } from "@/lib/appUrl";
 
+// ── Inline quick-add package form ────────────────────────────────────────────
+function QuickPackageForm({ user, onDone }) {
+  const [name,    setName]    = useState("");
+  const [price,   setPrice]   = useState("");
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
+  const [error,   setError]   = useState("");
+
+  async function handleAdd() {
+    if (!name.trim() || !price) { setError("Name and price are required."); return; }
+    setSaving(true); setError("");
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/dashboard/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ type: "packages", name: name.trim(), price: Number(price), active: true }),
+      });
+      if (!res.ok) throw new Error();
+      setSaved(true);
+    } catch { setError("Couldn't save. Please try again."); }
+    finally { setSaving(false); }
+  }
+
+  if (saved) {
+    return (
+      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <p className="font-medium text-emerald-800 text-sm">"{name}" added successfully</p>
+            <p className="text-xs text-emerald-600">Clients can now book this package.</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => { setSaved(false); setName(""); setPrice(""); }}
+            className="text-xs text-emerald-700 border border-emerald-300 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors">
+            + Add another
+          </button>
+          <button onClick={onDone}
+            className="btn-primary text-sm px-5 py-2 flex-1">
+            Continue →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
+      {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>}
+      <div>
+        <label className="label-field">Package Name</label>
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+          className="input-field w-full mt-1" placeholder="Standard Real Estate Shoot" />
+      </div>
+      <div>
+        <label className="label-field">Price</label>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-gray-400 text-sm">$</span>
+          <input type="number" min="0" step="1" value={price} onChange={(e) => setPrice(e.target.value)}
+            className="input-field w-36" placeholder="299" />
+        </div>
+      </div>
+      <button onClick={handleAdd} disabled={saving}
+        className="btn-primary w-full py-3 text-sm">
+        {saving ? "Saving…" : "Add Package →"}
+      </button>
+    </div>
+  );
+}
+
 const STEPS = [
   { id: "basics",   label: "Basics",    desc: "Your contact info" },
   { id: "services", label: "Services",  desc: "What you offer" },
@@ -28,6 +104,10 @@ export default function OnboardingPage() {
   // Step 1 — basics
   const [phone,   setPhone]   = useState("");
   const [fromZip, setFromZip] = useState("");
+
+  // Step 3 — coverage
+  const [travelRadius, setTravelRadius] = useState("");
+  const [travelRate,   setTravelRate]   = useState("");
 
   // Step 5 — team invites
   const [invites,    setInvites]    = useState([{ email: "", role: "photographer" }]);
@@ -149,6 +229,19 @@ export default function OnboardingPage() {
     setTimeout(() => next(), 1200);
   }
 
+  async function saveCoverage() {
+    setSaving(true); setError("");
+    try {
+      const fields = { onboardingStep: 4 };
+      if (travelRadius) fields.travelRadiusMiles = travelRadius === "unlimited" ? 9999 : Number(travelRadius);
+      if (travelRate)   fields.travelRatePerMile = Number(travelRate);
+      const res = await patch(fields);
+      if (!res.ok) throw new Error();
+      next();
+    } catch { setError("Couldn't save. Please try again."); }
+    finally { setSaving(false); }
+  }
+
   async function finish() {
     setSaving(true);
     await patch({ onboardingCompleted: true, onboardingStep: STEPS.length }).catch(() => {});
@@ -250,36 +343,14 @@ export default function OnboardingPage() {
         {/* ── STEP 1: Services ─────────────────────────────────────────────── */}
         {step === 1 && (
           <div>
-            <h1 className="font-display text-3xl text-[#3486cf] mb-1">Add your services</h1>
+            <h1 className="font-display text-3xl text-[#3486cf] mb-1">Add your first package</h1>
             <p className="text-gray-500 mb-6 leading-relaxed">
-              Services and packages are what clients see when they book. Without at least one, your booking form won't have anything to choose from.
+              A package is what clients select when booking. Add your most common shoot — you can create more from the Services page later.
             </p>
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              {[
-                { icon: "📦", title: "Packages", desc: "Bundled offerings with a fixed price — e.g. \"Standard Shoot\" for $299. Clients pick one package per booking." },
-                { icon: "🛠️", title: "Services", desc: "Standalone items clients can select — e.g. \"Aerial Drone\", \"Floor Plan\", \"Virtual Staging\"." },
-                { icon: "➕", title: "Add-ons", desc: "Optional extras clients can add at checkout — e.g. \"Rush Delivery (+$50)\"." },
-              ].map((item, i) => (
-                <div key={item.title} className={`flex items-start gap-4 px-5 py-4 ${i > 0 ? "border-t border-gray-100" : ""}`}>
-                  <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center text-lg flex-shrink-0">{item.icon}</div>
-                  <div>
-                    <p className="font-medium text-[#0F172A] text-sm">{item.title}</p>
-                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-              <div className="px-5 py-4 border-t border-gray-100 bg-gray-50">
-                <Link href="/dashboard/products" target="_blank" rel="noopener noreferrer"
-                  className="btn-primary text-sm px-5 py-2.5 inline-flex items-center gap-1.5">
-                  Add Services & Packages ↗
-                </Link>
-                <p className="text-xs text-gray-400 mt-2">Opens in a new tab — come back here when done.</p>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
+            <QuickPackageForm user={user} onDone={next} />
+            <div className="flex gap-3 mt-4">
               <button onClick={prev} className="btn-outline px-5 py-3">← Back</button>
-              <button onClick={next} className="btn-primary flex-1 py-3">I've added services →</button>
-              <button onClick={skip} className="btn-outline px-5 py-3 text-gray-400">Skip</button>
+              <button onClick={skip} className="text-sm text-gray-400 hover:text-[#3486cf] px-5 py-3 transition-colors">Skip for now →</button>
             </div>
           </div>
         )}
@@ -337,36 +408,45 @@ export default function OnboardingPage() {
         {/* ── STEP 3: Service areas ─────────────────────────────────────────── */}
         {step === 3 && (
           <div>
-            <h1 className="font-display text-3xl text-[#3486cf] mb-1">Define where you work</h1>
+            <h1 className="font-display text-3xl text-[#3486cf] mb-1">Where do you shoot?</h1>
             <p className="text-gray-500 mb-6 leading-relaxed">
-              Draw coverage zones on a map so the booking form auto-calculates travel fees and prevents out-of-area bookings. Totally optional — skip if you work everywhere.
+              This helps calculate travel fees automatically. You can set up detailed coverage zones from Settings later — for now, just tell us your typical range.
             </p>
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-6">
-              {[
-                { icon: "🗺️", title: "Draw coverage zones", desc: "Mark the areas you serve. Multiple zones are supported — cities, counties, or custom shapes." },
-                { icon: "💰", title: "Auto travel fees", desc: "Shoots outside your home zone automatically add a travel fee at checkout. You set the rate." },
-                { icon: "📸", title: "Route by photographer", desc: "On Studio plan+, assign team members to specific zones so the right person gets the job." },
-              ].map((item, i) => (
-                <div key={item.title} className={`flex items-start gap-4 px-5 py-4 ${i > 0 ? "border-t border-gray-100" : ""}`}>
-                  <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center text-lg flex-shrink-0">{item.icon}</div>
-                  <div>
-                    <p className="font-medium text-[#0F172A] text-sm">{item.title}</p>
-                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{item.desc}</p>
-                  </div>
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4 mb-4">
+              <div>
+                <label className="label-field">Travel radius from your home base</label>
+                <select value={travelRadius} onChange={(e) => setTravelRadius(e.target.value)} className="input-field w-full mt-1">
+                  <option value="">Select a range…</option>
+                  <option value="10">Up to 10 miles</option>
+                  <option value="25">Up to 25 miles</option>
+                  <option value="50">Up to 50 miles</option>
+                  <option value="100">Up to 100 miles</option>
+                  <option value="unlimited">No limit — I travel anywhere</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1.5">Shoots beyond this range will have a travel fee added at checkout.</p>
+              </div>
+              <div>
+                <label className="label-field">Travel fee per mile (optional)</label>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-gray-400 text-sm">$</span>
+                  <input type="number" min="0" step="0.01" value={travelRate} onChange={(e) => setTravelRate(e.target.value)}
+                    className="input-field w-32" placeholder="0.67" />
+                  <span className="text-xs text-gray-400">per mile (IRS rate is $0.67)</span>
                 </div>
-              ))}
-              <div className="px-5 py-4 border-t border-gray-100 bg-gray-50">
-                <Link href="/dashboard/service-areas" target="_blank" rel="noopener noreferrer"
-                  className="btn-outline text-sm px-5 py-2.5 inline-flex items-center gap-1.5 text-[#3486cf] border-[#3486cf]/30">
-                  Set Up Service Areas ↗
-                </Link>
-                <p className="text-xs text-gray-400 mt-2">Opens in a new tab — come back here when done.</p>
               </div>
             </div>
+            <p className="text-xs text-gray-400 mb-4">
+              Want full zone control?{" "}
+              <Link href="/dashboard/service-areas" className="text-[#3486cf] hover:underline">
+                Set up service areas →
+              </Link>
+            </p>
             <div className="flex gap-3">
               <button onClick={prev} className="btn-outline px-5 py-3">← Back</button>
-              <button onClick={next} className="btn-primary flex-1 py-3">Continue →</button>
-              <button onClick={skip} className="btn-outline px-5 py-3 text-gray-400">Skip</button>
+              <button onClick={saveCoverage} disabled={saving} className="btn-primary flex-1 py-3">
+                {saving ? "Saving…" : "Continue →"}
+              </button>
+              <button onClick={skip} className="text-sm text-gray-400 hover:text-[#3486cf] px-5 py-3 transition-colors">Skip →</button>
             </div>
           </div>
         )}
@@ -383,7 +463,7 @@ export default function OnboardingPage() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 pb-3 border-b border-gray-100">
                 {[
                   ["Photographer", "Assigned shoots, calendar, uploads"],
-                  ["Editor",       "Upload & deliver media only"],
+                  ["Assistant",    "Support role, assigned shoots only"],
                   ["Manager",      "All bookings + team, no billing"],
                   ["Admin",        "Full access except owner billing"],
                 ].map(([role, desc]) => (
@@ -404,7 +484,7 @@ export default function OnboardingPage() {
                     onChange={(e) => setInvites((arr) => arr.map((v, j) => j === i ? { ...v, role: e.target.value } : v))}
                     className="input-field w-36 flex-shrink-0">
                     <option value="photographer">Photographer</option>
-                    <option value="editor">Editor</option>
+                    <option value="assistant">Assistant</option>
                     <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
                   </select>

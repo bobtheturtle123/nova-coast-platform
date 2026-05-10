@@ -7,6 +7,7 @@ async function getCtx(req) {
   if (!auth) return null;
   const decoded = await adminAuth.verifyIdToken(auth);
   if (!decoded.tenantId) return null;
+  if (decoded.role) return null; // staff members cannot access billing portal
   return { tenantId: decoded.tenantId };
 }
 
