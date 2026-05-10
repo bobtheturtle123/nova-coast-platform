@@ -465,6 +465,7 @@ export default function ListingsPage() {
 
         ) : (
           /* ── LIST ────────────────────────────────────────────────────────── */
+          <>
           <div className="rounded-2xl overflow-x-auto"
             style={{ background: "#fff", border: "1px solid var(--border-subtle)", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
           <div style={{ minWidth: 640 }}>
@@ -571,6 +572,7 @@ export default function ListingsPage() {
               </button>
             </div>
           )}
+          </>
         )}
 
       </div>
