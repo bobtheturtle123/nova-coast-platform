@@ -210,23 +210,31 @@ const COLS = "52px 1fr 126px 154px 112px 76px 22px";
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function ListingsPage() {
-  const [listings,       setListings]       = useState([]);
-  const [loading,        setLoading]        = useState(true);
-  const [filter,         setFilter]         = useState("all");
-  const [payFilter,      setPayFilter]      = useState("any");
-  const [sortBy,         setSortBy]         = useState("newest");
-  const [search,         setSearch]         = useState("");
-  const [view,           setView]           = useState("grid");
+  const [listings,         setListings]         = useState([]);
+  const [loading,          setLoading]          = useState(true);
+  const [hasMore,          setHasMore]          = useState(false);
+  const [cursor,           setCursor]           = useState(null);
+  const [loadingMore,      setLoadingMore]      = useState(false);
+  const [filter,           setFilter]           = useState("all");
+  const [payFilter,        setPayFilter]        = useState("any");
+  const [sortBy,           setSortBy]           = useState("newest");
+  const [search,           setSearch]           = useState("");
+  const [view,             setView]             = useState("grid");
   const [pendingRevCounts, setPendingRevCounts] = useState({});
 
   useEffect(() => {
     auth.currentUser?.getIdToken(true).then(async (token) => {
       const headers = { Authorization: `Bearer ${token}` };
       const [listRes, revRes] = await Promise.all([
-        fetch("/api/dashboard/listings", { headers }),
+        fetch("/api/dashboard/listings?limit=50", { headers }),
         fetch("/api/dashboard/revisions?status=pending", { headers }),
       ]);
-      if (listRes.ok) { const data = await listRes.json(); setListings(data.listings); }
+      if (listRes.ok) {
+        const data = await listRes.json();
+        setListings(data.listings || []);
+        setHasMore(data.hasMore || false);
+        setCursor(data.nextCursor || null);
+      }
       if (revRes.ok) {
         const revData = await revRes.json();
         const counts = {};
@@ -238,6 +246,26 @@ export default function ListingsPage() {
       setLoading(false);
     });
   }, []);
+
+  async function loadMore() {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return;
+      const res = await fetch(
+        `/api/dashboard/listings?limit=50&after=${encodeURIComponent(cursor)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setListings((prev) => [...prev, ...(data.listings || [])]);
+        setHasMore(data.hasMore || false);
+        setCursor(data.nextCursor || null);
+      }
+    } catch { /* ignore */ }
+    setLoadingMore(false);
+  }
 
   const filtered = useMemo(() => {
     let list = listings;
@@ -418,11 +446,22 @@ export default function ListingsPage() {
 
         ) : view === "grid" ? (
           /* ── GRID ────────────────────────────────────────────────────────── */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filtered.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} revCount={pendingRevCounts[listing.id] || 0} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filtered.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} revCount={pendingRevCounts[listing.id] || 0} />
+              ))}
+            </div>
+            {hasMore && (
+              <div className="mt-6 flex justify-center">
+                <button onClick={loadMore} disabled={loadingMore}
+                  className="px-6 py-2.5 text-sm font-semibold rounded-xl border transition-colors"
+                  style={{ background: "#fff", border: "1px solid var(--border)", color: loadingMore ? "#94A3B8" : "#0F172A" }}>
+                  {loadingMore ? "Loading…" : "Load more listings"}
+                </button>
+              </div>
+            )}
+          </>
 
         ) : (
           /* ── LIST ────────────────────────────────────────────────────────── */
@@ -523,6 +562,15 @@ export default function ListingsPage() {
             })}
           </div>{/* minWidth wrapper */}
           </div>
+          {hasMore && (
+            <div className="mt-4 flex justify-center py-3" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+              <button onClick={loadMore} disabled={loadingMore}
+                className="px-6 py-2 text-sm font-semibold rounded-xl border transition-colors"
+                style={{ background: "#fff", border: "1px solid var(--border)", color: loadingMore ? "#94A3B8" : "#0F172A" }}>
+                {loadingMore ? "Loading…" : "Load more listings"}
+              </button>
+            </div>
+          )}
         )}
 
       </div>

@@ -23,16 +23,39 @@ export async function GET(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { searchParams } = new URL(req.url);
+  const PAGE_SIZE  = Math.min(parseInt(searchParams.get("limit") || "50", 10), 200);
+  const afterParam = searchParams.get("after"); // ISO string of last doc's createdAt (cursor)
+
   const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
 
-  const { searchParams } = new URL(req.url);
-  const limitParam = Math.min(parseInt(searchParams.get("limit") || "100", 10), 500);
+  // Build paginated bookings query — fetch PAGE_SIZE + 1 to detect hasMore
+  let bookingsQuery = tenantRef
+    .collection("bookings")
+    .orderBy("createdAt", "desc")
+    .limit(PAGE_SIZE + 1);
 
-  // Fetch bookings + galleries in parallel — bounded to prevent read explosion
+  if (afterParam) {
+    bookingsQuery = bookingsQuery.startAfter(new Date(afterParam));
+  }
+
+  // Run bookings query and a gallery fetch in parallel
+  // Galleries limited to same window — covers the returned bookings
   const [bookingSnap, gallerySnap] = await Promise.all([
-    tenantRef.collection("bookings").orderBy("createdAt", "desc").limit(limitParam).get(),
-    tenantRef.collection("galleries").orderBy("createdAt", "desc").limit(limitParam).get(),
+    bookingsQuery.get(),
+    tenantRef.collection("galleries").orderBy("createdAt", "desc").limit(PAGE_SIZE + 50).get(),
   ]);
+
+  // Determine if there is a next page
+  const hasMore = bookingSnap.docs.length > PAGE_SIZE;
+  const docs    = hasMore ? bookingSnap.docs.slice(0, PAGE_SIZE) : bookingSnap.docs;
+
+  // Cursor is the createdAt of the last returned doc (for next page request)
+  const lastDoc     = docs[docs.length - 1];
+  const lastCreated = lastDoc?.data().createdAt;
+  const nextCursor  = lastCreated
+    ? (lastCreated.toDate ? lastCreated.toDate().toISOString() : new Date(lastCreated).toISOString())
+    : null;
 
   // Build gallery map by bookingId
   const galleryMap = {};
@@ -50,45 +73,38 @@ export async function GET(req) {
     }
   }
 
-  const listings = bookingSnap.docs
+  const listings = docs
     .filter((doc) => doc.data().isListing !== false)
     .map((doc) => {
-    const b = serialize(doc.data());
-    return {
-      id:           doc.id,
-      // Client / agent
-      clientName:   b.clientName   || "",
-      clientEmail:  b.clientEmail  || "",
-      clientPhone:  b.clientPhone  || "",
-      // Property
-      address:      b.address      || "",
-      fullAddress:  b.fullAddress  || b.address || "",
-      city:         b.city         || "",
-      state:        b.state        || "",
-      squareFootage:b.squareFootage|| "",
-      propertyType: b.propertyType || "",
-      // Shoot
-      status:       b.status       || "pending_payment",
-      shootDate:    b.shootDate    || b.preferredDate || null,
-      preferredDate:b.preferredDate|| null,
-      // Pricing
-      totalPrice:       b.totalPrice       || 0,
-      depositAmount:    b.depositAmount    || 0,
-      remainingBalance: b.remainingBalance || 0,
-      depositPaid:  b.depositPaid  || false,
-      balancePaid:  b.balancePaid  || false,
-      paidInFull:   b.paidInFull   || false,
-      // Services
-      packageId:   b.packageId  || null,
-      serviceIds:  b.serviceIds || [],
-      addonIds:    b.addonIds   || [],
-      // Timestamps
-      createdAt:   b.createdAt  || null,
-      // Gallery
-      galleryId:   b.galleryId  || null,
-      gallery:     galleryMap[doc.id] || null,
-    };
-  });
+      const b = serialize(doc.data());
+      return {
+        id:           doc.id,
+        clientName:   b.clientName   || "",
+        clientEmail:  b.clientEmail  || "",
+        clientPhone:  b.clientPhone  || "",
+        address:      b.address      || "",
+        fullAddress:  b.fullAddress  || b.address || "",
+        city:         b.city         || "",
+        state:        b.state        || "",
+        squareFootage:b.squareFootage|| "",
+        propertyType: b.propertyType || "",
+        status:       b.status       || "pending_payment",
+        shootDate:    b.shootDate    || b.preferredDate || null,
+        preferredDate:b.preferredDate|| null,
+        totalPrice:       b.totalPrice       || 0,
+        depositAmount:    b.depositAmount    || 0,
+        remainingBalance: b.remainingBalance || 0,
+        depositPaid:  b.depositPaid  || false,
+        balancePaid:  b.balancePaid  || false,
+        paidInFull:   b.paidInFull   || false,
+        packageId:   b.packageId  || null,
+        serviceIds:  b.serviceIds || [],
+        addonIds:    b.addonIds   || [],
+        createdAt:   b.createdAt  || null,
+        galleryId:   b.galleryId  || null,
+        gallery:     galleryMap[doc.id] || null,
+      };
+    });
 
-  return Response.json({ listings });
+  return Response.json({ listings, hasMore, nextCursor });
 }

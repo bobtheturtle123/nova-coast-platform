@@ -244,6 +244,9 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
 export default function BookingsPage() {
   const [bookings,    setBookings]    = useState([]);
   const [loading,     setLoading]     = useState(true);
+  const [hasMore,     setHasMore]     = useState(false);
+  const [cursor,      setCursor]      = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [filter,      setFilter]      = useState("all");
   const [search,      setSearch]      = useState("");
   const [showCreate,  setShowCreate]  = useState(false);
@@ -329,17 +332,29 @@ export default function BookingsPage() {
     } catch { /* ignore */ }
   }
 
-  async function loadBookings() {
+  async function loadBookings(afterCursor = null, append = false) {
     try {
       const token = await auth.currentUser?.getIdToken();
-      if (!token) { setLoading(false); return; }
-      const res = await fetch("/api/dashboard/bookings", { headers: { Authorization: `Bearer ${token}` } });
+      if (!token) { if (!append) setLoading(false); return; }
+      const url = afterCursor
+        ? `/api/dashboard/bookings?limit=50&after=${encodeURIComponent(afterCursor)}`
+        : "/api/dashboard/bookings?limit=50";
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setBookings(data.bookings || []);
+        setBookings((prev) => append ? [...prev, ...(data.bookings || [])] : (data.bookings || []));
+        setHasMore(data.hasMore || false);
+        setCursor(data.nextCursor || null);
       }
     } catch { /* ignore */ }
-    setLoading(false);
+    if (!append) setLoading(false);
+  }
+
+  async function handleLoadMore() {
+    if (!cursor || loadingMore) return;
+    setLoadingMore(true);
+    await loadBookings(cursor, true);
+    setLoadingMore(false);
   }
 
   function exportBookingsCSV() {
@@ -618,6 +633,15 @@ export default function BookingsPage() {
               </div>
             );
           })}
+          {hasMore && (
+            <div className="px-6 py-4 flex justify-center" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+              <button onClick={handleLoadMore} disabled={loadingMore}
+                className="px-6 py-2 text-sm font-semibold rounded-xl border transition-colors"
+                style={{ background: "#fff", border: "1px solid var(--border)", color: loadingMore ? "#94A3B8" : "#0F172A" }}>
+                {loadingMore ? "Loading…" : "Load more bookings"}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
