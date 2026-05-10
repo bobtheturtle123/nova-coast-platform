@@ -10,11 +10,11 @@ import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 
 const ROLE_OPTIONS = [
-  { id: "photographer", label: "Photographer", icon: "📷", desc: "Shoots & delivers" },
-  { id: "manager",      label: "Manager",      icon: "📋", desc: "Schedules & manages" },
-  { id: "editor",       label: "Editor",       icon: "🎨", desc: "Post-processing" },
-  { id: "assistant",    label: "Assistant",    icon: "🤝", desc: "On-site support" },
-  { id: "admin",        label: "Admin",        icon: "🔑", desc: "Full dashboard access" },
+  { id: "photographer", label: "Photographer", icon: "📷", desc: "Shows in booking schedule. Gets shoot notifications & their own calendar." },
+  { id: "editor",       label: "Editor",       icon: "🎨", desc: "Post-processing only. Not shown when clients book. No schedule slots." },
+  { id: "assistant",    label: "Assistant",    icon: "🤝", desc: "On-site help. Can be assigned to shoots but won't appear in public booking." },
+  { id: "manager",      label: "Manager",      icon: "📋", desc: "Can log into your dashboard. Manages bookings, galleries, and team." },
+  { id: "admin",        label: "Admin",        icon: "🔑", desc: "Full dashboard access. Same as you, except cannot change billing." },
 ];
 
 // Roles that get dashboard (staff) access vs. photographer portal access
@@ -1341,7 +1341,7 @@ export default function TeamPage() {
           <p className="text-sm text-gray-500 mb-5 max-w-sm mx-auto">
             Add photographers, managers, editors, and assistants. Only photographers appear in booking schedule.
           </p>
-          <button onClick={() => setEditing("new")} className="btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-2">
+          <button onClick={() => setAddMode("choice")} className="btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-2">
             <span className="text-lg leading-none">+</span> Add Your First Team Member
           </button>
         </div>

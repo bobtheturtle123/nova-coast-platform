@@ -28,7 +28,7 @@ export default function MarketingPage() {
               href="/auth/register"
               className="text-sm bg-navy text-white px-4 py-2 rounded-xl hover:bg-navy/90 transition-colors font-medium"
             >
-              Start free trial
+              Get Started
             </Link>
           </div>
         </div>
@@ -54,7 +54,7 @@ export default function MarketingPage() {
                   href="/auth/register"
                   className="bg-gold text-navy font-semibold px-8 py-4 rounded-xl hover:bg-gold/90 transition-colors text-center text-sm"
                 >
-                  Start your 14-day free trial
+                  Start for free
                 </Link>
                 <a
                   href="#how-it-works"
@@ -517,7 +517,7 @@ export default function MarketingPage() {
                 href="/auth/register"
                 className="inline-block bg-gold text-navy font-semibold px-7 py-3 rounded-xl hover:bg-gold/90 transition-colors text-sm"
               >
-                Start free trial →
+                Get started →
               </Link>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
@@ -590,7 +590,7 @@ export default function MarketingPage() {
                   "Assign photographers from the dashboard",
                   "Full revenue breakdown per listing",
                   "Private gallery link re-sent on demand",
-                  "Agent portal with captions, brochure, QR code",
+                  "Agent portal with brochure, QR code, and downloads",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3 text-sm text-white/70">
                     <span className="text-gold mt-0.5 flex-shrink-0 font-bold">✓</span>{item}
@@ -649,9 +649,9 @@ export default function MarketingPage() {
             href="/auth/register"
             className="inline-block bg-gold text-navy font-semibold px-10 py-4 rounded-xl hover:bg-gold/90 transition-colors text-base"
           >
-            Start free, no credit card needed
+            Get started — no credit card needed
           </Link>
-          <p className="text-white/25 text-xs mt-5">14-day free trial · No contract · Cancel anytime</p>
+          <p className="text-white/25 text-xs mt-5">No contract · Cancel anytime</p>
         </div>
       </section>
 

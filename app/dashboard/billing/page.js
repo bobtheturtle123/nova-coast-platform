@@ -183,7 +183,7 @@ export default function BillingPage() {
     </div>
   );
 
-  const plan       = tenant?.subscriptionPlan || "starter";
+  const plan       = tenant?.permanentPlan || tenant?.subscriptionPlan || "starter";
   const status     = tenant?.subscriptionStatus || "trialing";
   const subscribed = !!tenant?.stripeSubscriptionId;
 
@@ -213,7 +213,7 @@ export default function BillingPage() {
 
   // Seat usage
   const BASE_SEATS     = { solo: 1, studio: 5, pro: 12, scale: null, starter: 1 };
-  const baseSeatLimit  = BASE_SEATS[plan] ?? 1;
+  const baseSeatLimit  = Object.prototype.hasOwnProperty.call(BASE_SEATS, plan) ? BASE_SEATS[plan] : 1;
   const totalSeats     = baseSeatLimit === null ? null : baseSeatLimit + addonSeats;
   const seatsUsed      = teamMemberCount + 1; // +1 for owner
   const seatPct        = totalSeats === null ? 0 : Math.min(100, Math.round((seatsUsed / totalSeats) * 100));

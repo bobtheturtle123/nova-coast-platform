@@ -84,7 +84,7 @@ export async function POST(req) {
   if (resend) {
     try {
       await resend.emails.send({
-        from:    `${tenant.businessName || "KyoriaOS"} <noreply@kyoriaos.com>`,
+        from:    `${tenant.businessName || "KyoriaOS"} <noreply@mail.kyoriaos.com>`,
         to:      email.trim(),
         subject: `You've been invited to manage ${tenant.businessName || "a photography studio"}`,
         html: `

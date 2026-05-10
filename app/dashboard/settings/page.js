@@ -144,11 +144,11 @@ function StaffAccessSection() {
       {/* Role descriptions */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 max-w-2xl">
         {[
-          { role: "Photographer", desc: "Photographer portal — booking notifications & calendar" },
-          { role: "Editor",       desc: "Photographer portal — post-processing assignments" },
-          { role: "Assistant",    desc: "Photographer portal — on-site support access" },
-          { role: "Manager",      desc: "Dashboard login — bookings, galleries, team calendar" },
-          { role: "Admin",        desc: "Dashboard login — full access except billing" },
+          { role: "Photographer", desc: "Shows in booking schedule. Gets shoot notifications & photographer portal." },
+          { role: "Editor",       desc: "Photographer portal only. Not assigned to client-facing booking slots." },
+          { role: "Assistant",    desc: "Can be assigned to shoots. Not shown in public booking flow." },
+          { role: "Manager",      desc: "Dashboard login — can manage bookings, galleries, and team calendar." },
+          { role: "Admin",        desc: "Full dashboard access — everything except billing settings." },
         ].map((r) => (
           <div key={r.role} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
             <p className="text-xs font-semibold text-[#0F172A]">{r.role}</p>
