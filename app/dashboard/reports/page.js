@@ -126,7 +126,7 @@ export default function ReportsPage() {
     if (!user) { setLoading(false); return; }
     user.getIdTokenResult(true).then(async (result) => {
       const role = result?.claims?.role ?? null;
-      if (role !== null && role !== "admin") { setIsOwner(false); setLoading(false); return; }
+      if (role !== null && role !== "owner" && role !== "admin") { setIsOwner(false); setLoading(false); return; }
       const token = result.token;
 
       const [bookRes, tenantRes] = await Promise.all([

@@ -9,7 +9,7 @@ export default function LuxuryTemplate({
   pw, booking, images, videos, address, heroImg, stats, details,
   mapEmbedUrl, displayImages, showAllPhotos, setShowAllPhotos,
   setLightboxIdx, branding, theme,
-  ContactFormComponent,
+  ContactFormComponent, galleryMatterportUrl,
 }) {
   const statusLabel = pw.status;
   const allPhotos = images;

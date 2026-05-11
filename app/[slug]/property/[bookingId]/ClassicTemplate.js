@@ -8,7 +8,7 @@ export default function ClassicTemplate({
   pw, booking, images, videos, address, heroImg, stats, details,
   mapEmbedUrl, displayImages, showAllPhotos, setShowAllPhotos,
   setLightboxIdx, branding, theme, tenantSlug,
-  ContactFormComponent,
+  ContactFormComponent, galleryMatterportUrl,
 }) {
   const statusColors = {
     "For Sale":    "bg-green-500 text-white",
