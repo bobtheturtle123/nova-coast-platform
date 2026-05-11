@@ -945,7 +945,7 @@ if (loading) return (
             </div>
 
             {/* Services */}
-            {(booking.packageId || booking.serviceIds?.length > 0 || booking.customLineItems?.length > 0) && (
+            {((booking.packageIds?.length > 0 || booking.packageId) || booking.serviceIds?.length > 0 || booking.customLineItems?.length > 0) && (
               <div className="card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Services Booked</p>
                 {(() => {
@@ -955,14 +955,15 @@ if (loading) return (
                     ...(catalog?.addons    || []),
                   ];
                   const nameOf = (id) => allItems.find((x) => x.id === id)?.name || id;
+                  const pkgIds = booking.packageIds?.length > 0 ? booking.packageIds : (booking.packageId ? [booking.packageId] : []);
                   return (
                     <div className="space-y-1.5">
-                      {booking.packageId && (
-                        <div className="flex items-center gap-2">
+                      {pkgIds.map((pid) => (
+                        <div key={pid} className="flex items-center gap-2">
                           <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">Package</span>
-                          <span className="text-sm font-medium text-[#0F172A]">{nameOf(booking.packageId)}</span>
+                          <span className="text-sm font-medium text-[#0F172A]">{nameOf(pid)}</span>
                         </div>
-                      )}
+                      ))}
                       {booking.serviceIds?.map((s) => (
                         <div key={s} className="flex items-center gap-2">
                           <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-medium">Service</span>
@@ -1157,14 +1158,15 @@ if (loading) return (
                     ...(catalog?.addons    || []),
                   ];
                   const nameOf = (svcId) => allItems.find((x) => x.id === svcId)?.name || svcId;
+                  const pkgIds2 = booking.packageIds?.length > 0 ? booking.packageIds : (booking.packageId ? [booking.packageId] : []);
                   return (
                     <div className="space-y-2 text-sm">
-                      {booking.packageId && (
-                        <div className="flex items-center gap-2">
+                      {pkgIds2.map((pid) => (
+                        <div key={pid} className="flex items-center gap-2">
                           <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">Package</span>
-                          <span className="font-medium text-[#0F172A]">{nameOf(booking.packageId)}</span>
+                          <span className="font-medium text-[#0F172A]">{nameOf(pid)}</span>
                         </div>
-                      )}
+                      ))}
                       {booking.serviceIds?.map((s) => (
                         <div key={s} className="flex items-center gap-2">
                           <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-medium">Service</span>

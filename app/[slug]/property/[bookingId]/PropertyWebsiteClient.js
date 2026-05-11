@@ -200,7 +200,7 @@ function ContactForm({ pw, address, branding, bookingId, tenantSlug }) {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function PropertyWebsiteClient({ pw, booking, galleryMedia, branding, bookingId, tenantSlug }) {
+export default function PropertyWebsiteClient({ pw, booking, galleryMedia, galleryMatterportUrl, galleryFloorPlans = [], branding, bookingId, tenantSlug }) {
   const images    = galleryMedia.filter((m) => !m.fileType?.startsWith("video/"));
   const videos    = galleryMedia.filter((m) =>  m.fileType?.startsWith("video/"));
   const [lightboxIdx, setLightboxIdx] = useState(null);
@@ -265,6 +265,7 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
     mapEmbedUrl, displayImages, showAllPhotos, setShowAllPhotos,
     setLightboxIdx, branding, theme, tenantSlug,
     ContactFormComponent,
+    galleryMatterportUrl, galleryFloorPlans,
   };
 
   // Dispatch to non-Modern templates
@@ -440,6 +441,60 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, brand
                     <video src={v.url} controls className="w-full h-full object-contain" />
                   </div>
                 ))}
+              </section>
+            )}
+
+            {/* 3D Tour */}
+            {galleryMatterportUrl && (
+              <section>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">3D Tour</h2>
+                <a href={galleryMatterportUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-4 p-5 rounded-xl border border-gray-200 bg-gray-50 hover:border-gray-300 transition-colors group">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: branding.primary + "18" }}>
+                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke={branding.primary} strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.328l5.603 3.113z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 group-hover:text-[color:var(--tw-prose-links)] transition-colors">
+                      View Interactive 3D Tour
+                    </p>
+                    <p className="text-sm text-gray-400 truncate mt-0.5">{galleryMatterportUrl}</p>
+                  </div>
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#CBD5E1" strokeWidth="2" className="flex-shrink-0">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              </section>
+            )}
+
+            {/* Floor Plans */}
+            {galleryFloorPlans.length > 0 && (
+              <section>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Floor Plans</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {galleryFloorPlans.map((p, i) => {
+                    const src   = p.publicUrl || p.url;
+                    const label = p.fileName  || p.name || `Floor Plan ${i + 1}`;
+                    const isPdf = p.fileType === "application/pdf" || src?.toLowerCase().endsWith(".pdf");
+                    return isPdf ? (
+                      <a key={i} href={src} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 bg-gray-50 hover:border-gray-300 transition-colors group">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#6B7280" strokeWidth="1.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 truncate">{label}</span>
+                      </a>
+                    ) : (
+                      <div key={i} className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                        <img src={src} alt={label} className="w-full object-contain max-h-80" />
+                        {label && <p className="text-xs text-gray-500 text-center py-2 px-3 truncate">{label}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
               </section>
             )}
 

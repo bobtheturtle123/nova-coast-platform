@@ -84,6 +84,8 @@ export default async function PropertyWebsitePage({ params }) {
 
   // Fetch gallery
   let galleryMedia = [];
+  let galleryMatterportUrl = null;
+  let galleryFloorPlans = [];
   if (booking.galleryId) {
     const galleryDoc = await adminDb
       .collection("tenants").doc(tenant.id)
@@ -100,6 +102,10 @@ export default async function PropertyWebsitePage({ params }) {
         ...(showAll ? images : images.slice(0, previewCount)),
         ...(showAll ? videos : videos.slice(0, 1)),
       ];
+      if (gallery.matterportUrl && !gallery.matterportHidden) {
+        galleryMatterportUrl = gallery.matterportUrl;
+      }
+      galleryFloorPlans = (gallery.floorPlans || []).filter((p) => !p.hidden);
     }
   }
 
@@ -121,6 +127,8 @@ export default async function PropertyWebsitePage({ params }) {
         clientEmail: booking.clientEmail,
       }}
       galleryMedia={galleryMedia}
+      galleryMatterportUrl={galleryMatterportUrl}
+      galleryFloorPlans={galleryFloorPlans}
       branding={branding}
       bookingId={params.bookingId}
       tenantSlug={params.slug}
