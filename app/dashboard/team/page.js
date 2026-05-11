@@ -16,6 +16,22 @@ const ROLE_OPTIONS = [
   { id: "admin",        label: "Admin",        icon: "🔑", desc: "Full dashboard access. Same as you, except cannot change billing." },
 ];
 
+const PERMISSION_DEFS = [
+  { key: "canViewRevenue",    label: "View Revenue",     desc: "See revenue stats and the revenue chart" },
+  { key: "canViewReports",    label: "View Reports",     desc: "Access the reports page" },
+  { key: "canManageTeam",     label: "Manage Team",      desc: "Add, edit, and remove team members" },
+  { key: "canManageProducts", label: "Manage Products",  desc: "Create and edit services, packages, and add-ons" },
+  { key: "canEditSettings",   label: "Edit Settings",    desc: "Change branding, availability, and booking settings" },
+  { key: "canCreateBookings", label: "Create Bookings",  desc: "Manually create new bookings from the dashboard" },
+];
+
+const DEFAULT_PERMISSIONS = {
+  admin:        { canViewRevenue: true,  canViewReports: true,  canManageTeam: true,  canManageProducts: true,  canEditSettings: true,  canCreateBookings: true  },
+  manager:      { canViewRevenue: false, canViewReports: false, canManageTeam: false, canManageProducts: true,  canEditSettings: false, canCreateBookings: true  },
+  photographer: { canViewRevenue: false, canViewReports: false, canManageTeam: false, canManageProducts: false, canEditSettings: false, canCreateBookings: false },
+  assistant:    { canViewRevenue: false, canViewReports: false, canManageTeam: false, canManageProducts: false, canEditSettings: false, canCreateBookings: false },
+};
+
 // Roles that get dashboard (staff) access vs. photographer portal access
 const DASHBOARD_ROLES = ["manager", "admin"];
 
@@ -425,12 +441,13 @@ function BookingUnscheduledTab({ listings }) {
 
 // ─── Member form modal ────────────────────────────────────────────────────────
 function MemberForm({ member, products, onSave, onDelete, onClose }) {
+  const initialRole = member?.role || "photographer";
   const [form, setForm] = useState({
     name:          member?.name          || "",
     email:         member?.email         || "",
     phone:         member?.phone         || "",
     homeZip:       member?.homeZip       || "",
-    role:          member?.role          || "photographer",
+    role:          initialRole,
     skills:        member?.skills        || [],
     color:         member?.color         || COLORS[0],
     active:        member?.active        !== false,
@@ -438,7 +455,9 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
     serviceRates:  member?.serviceRates  || {},
     bufferMinutes: member?.bufferMinutes ?? "",
     workingHours:  member?.workingHours  || DEFAULT_WORKING_HOURS,
+    permissions:   member?.permissions   || { ...DEFAULT_PERMISSIONS[initialRole] },
   });
+  const [showPermissions, setShowPermissions] = useState(false);
   const [showWorkingHours, setShowWorkingHours] = useState(
     !!member?.workingHours && Object.keys(member.workingHours).length > 0
   );
@@ -487,7 +506,11 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
             <label className="label-field">Role</label>
             <div className="grid grid-cols-2 gap-2">
               {ROLE_OPTIONS.map((r) => (
-                <button key={r.id} type="button" onClick={() => setForm((f) => ({ ...f, role: r.id }))}
+                <button key={r.id} type="button" onClick={() => setForm((f) => ({
+                  ...f,
+                  role: r.id,
+                  permissions: { ...DEFAULT_PERMISSIONS[r.id] },
+                }))}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
                     form.role === r.id ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300"
                   }`}>
@@ -695,6 +718,49 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
               </div>
             )}
           </div>
+
+          {/* Permissions */}
+          {(form.role === "admin" || form.role === "manager") && (
+            <div>
+              <button type="button" onClick={() => setShowPermissions((v) => !v)}
+                className="flex items-center gap-1.5 text-xs font-medium text-[#3486cf] hover:underline">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"
+                  className={`transition-transform ${showPermissions ? "rotate-90" : ""}`}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+                {showPermissions ? "Hide permissions" : "Customize permissions"}
+              </button>
+              {showPermissions && (
+                <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
+                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Dashboard Permissions</p>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {PERMISSION_DEFS.map(({ key, label, desc }) => (
+                      <div key={key} className="flex items-center justify-between px-4 py-3 gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium text-[#0F172A]">{label}</p>
+                          <p className="text-[11px] text-gray-400">{desc}</p>
+                        </div>
+                        <button type="button"
+                          onClick={() => setForm((f) => ({
+                            ...f,
+                            permissions: { ...f.permissions, [key]: !f.permissions[key] },
+                          }))}
+                          className={`relative inline-flex w-9 h-5 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                            form.permissions[key] ? "bg-[#3486cf]" : "bg-gray-200"
+                          }`}>
+                          <span className={`inline-block w-4 h-4 rounded-full bg-white shadow transform transition-transform ${
+                            form.permissions[key] ? "translate-x-4" : "translate-x-0"
+                          }`} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             <input type="checkbox" id="active" checked={form.active}

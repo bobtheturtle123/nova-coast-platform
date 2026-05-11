@@ -6,7 +6,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useBookingStore } from "@/store/bookingStore";
 import StepProgress from "@/components/booking/StepProgress";
-import { depositLabel } from "@/lib/catalogUtils";
+import { depositLabel, getItemPrice } from "@/lib/catalogUtils";
 import { getAppUrl } from "@/lib/appUrl";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
@@ -105,13 +105,13 @@ function OrderSummary({ pricing, catalog, packageIds, serviceIds, addonIds, addr
         {pkgItems.map((pkg) => (
           <div key={pkg.id} className="flex justify-between gap-2">
             <span className="text-[#0F172A] font-medium flex-1">{pkg.name}</span>
-            <span className="text-[#3486cf] font-semibold flex-shrink-0">${(pkg.price || 0).toLocaleString()}</span>
+            <span className="text-[#3486cf] font-semibold flex-shrink-0">${getItemPrice(pkg, pricing?.tier).toLocaleString()}</span>
           </div>
         ))}
         {services.map((s) => (
           <div key={s.id} className="flex justify-between gap-2">
             <span className="text-[#0F172A] flex-1">{s.name}</span>
-            <span className="text-[#3486cf] flex-shrink-0">${(s.price || 0).toLocaleString()}</span>
+            <span className="text-[#3486cf] flex-shrink-0">${getItemPrice(s, pricing?.tier).toLocaleString()}</span>
           </div>
         ))}
         {addons.map((a) => (

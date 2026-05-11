@@ -298,9 +298,13 @@ export default function DashboardHome() {
   const [pendingRevisions, setPendingRevisions] = useState([]);
   const [loading,          setLoading]          = useState(true);
   const [linkCopied,       setLinkCopied]       = useState(false);
+  const [userRole,         setUserRole]         = useState(null); // null = owner
 
   useEffect(() => {
-    auth.currentUser?.getIdToken(true).then(async (token) => {
+    auth.currentUser?.getIdTokenResult(true).then(async (result) => {
+      const role = result.claims.role || null;
+      setUserRole(role);
+      const token = result.token;
       const h = { Authorization: `Bearer ${token}` };
       const [listRes, tenantRes, svcRes, pkgRes, revRes] = await Promise.all([
         fetch("/api/dashboard/listings",               { headers: h }),
@@ -523,11 +527,13 @@ export default function DashboardHome() {
             iconBg="#F0F7FD"
             icon={<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#6BAED0" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}
           />
-          <StatCard label="Revenue Collected" value={`$${stats.revenue.toLocaleString()}`} sub="deposits + paid"
-            href="/dashboard/reports"
-            iconBg="#ECFDF5"
-            icon={<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#059669" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
-          />
+          {(userRole === null || userRole === "admin") && (
+            <StatCard label="Revenue Collected" value={`$${stats.revenue.toLocaleString()}`} sub="deposits + paid"
+              href="/dashboard/reports"
+              iconBg="#ECFDF5"
+              icon={<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#059669" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
+            />
+          )}
         </div>
 
         {/* ── Action Required ───────────────────────────────────────────── */}
@@ -572,7 +578,9 @@ export default function DashboardHome() {
         )}
 
         {/* ── Revenue chart ─────────────────────────────────────────────── */}
-        <RevenueSection listings={listings} />
+        {(userRole === null || userRole === "admin") && (
+          <RevenueSection listings={listings} />
+        )}
 
         {/* ── Upcoming Shoots ───────────────────────────────────────────── */}
         <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
