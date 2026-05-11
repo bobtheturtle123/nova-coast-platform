@@ -8,7 +8,7 @@ import { formatPrice } from "@/lib/pricing";
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
 // ── Premium Lightbox ──────────────────────────────────────────────────────────
-function Lightbox({ photos, startIndex, onClose }) {
+function Lightbox({ photos, startIndex, onClose, isUnlocked }) {
   const [idx, setIdx] = useState(startIndex);
   const thumbsRef = useRef(null);
 
@@ -33,7 +33,7 @@ function Lightbox({ photos, startIndex, onClose }) {
   const photo = photos[idx];
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col select-none" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] bg-black/50 flex flex-col select-none" onClick={onClose}>
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 py-3 flex-shrink-0 bg-black/60 backdrop-blur-sm" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 min-w-0">
@@ -64,9 +64,10 @@ function Lightbox({ photos, startIndex, onClose }) {
           key={idx}
           src={photo?.url}
           alt={photo?.fileName || `Photo ${idx + 1}`}
-          className="max-h-full max-w-full object-contain"
+          className="max-h-full max-w-full object-contain select-none"
           style={{ maxHeight: "calc(100vh - 160px)" }}
           draggable={false}
+          onContextMenu={isUnlocked ? undefined : e => e.preventDefault()}
           onClick={e => e.stopPropagation()}
         />
         <button onClick={next}
@@ -241,12 +242,12 @@ export default function GalleryClient({ gallery, booking }) {
   const groupKeys        = Object.keys(groups);
   const hasCategories    = groupKeys.some(k => k !== "");
 
-  // Tabs
+  // Tabs — Video and 3D Tour are hidden entirely until paid
   const tabs = [
-    photos.length > 0 && { id: "photos",     label: `Photos (${photos.length})` },
-    hasVideo          && { id: "videos",     label: "Video",    locked: !isUnlocked },
-    hasMatterport     && { id: "matterport", label: "3D Tour",  locked: !isUnlocked },
-    hasFloorPlans     && { id: "floorplans", label: "Floor Plans" },
+    photos.length > 0              && { id: "photos",     label: `Photos (${photos.length})` },
+    hasVideo      && isUnlocked    && { id: "videos",     label: "Video" },
+    hasMatterport && isUnlocked    && { id: "matterport", label: "3D Tour" },
+    hasFloorPlans                  && { id: "floorplans", label: "Floor Plans" },
   ].filter(Boolean);
 
   const [activeTab, setActiveTab] = useState(tabs[0]?.id || "photos");
@@ -297,11 +298,6 @@ export default function GalleryClient({ gallery, booking }) {
               className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition-all whitespace-nowrap flex-shrink-0
                 ${activeTab === t.id ? "border-[#c9a96e] text-white" : "border-transparent text-white/30 hover:text-white/55"}`}>
               {t.label}
-              {t.locked && (
-                <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-white/20">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                </svg>
-              )}
             </button>
           ))}
         </div>
@@ -328,9 +324,10 @@ export default function GalleryClient({ gallery, booking }) {
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
                       {catPhotos.map((photo, i) => (
                         <div key={i} onClick={() => setLightboxIdx(photo._idx)}
+                          onContextMenu={isUnlocked ? undefined : e => e.preventDefault()}
                           className="aspect-square overflow-hidden rounded-sm cursor-pointer group relative bg-white/5">
-                          <img src={photo.url} alt="" loading="lazy"
-                            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                          <img src={photo.url} alt="" loading="lazy" draggable={false}
+                            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 select-none" />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors duration-300" />
                         </div>
                       ))}
@@ -343,9 +340,10 @@ export default function GalleryClient({ gallery, booking }) {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
               {photos.map((photo, i) => (
                 <div key={i} onClick={() => setLightboxIdx(i)}
+                  onContextMenu={isUnlocked ? undefined : e => e.preventDefault()}
                   className="aspect-square overflow-hidden rounded-sm cursor-pointer group relative bg-white/5">
-                  <img src={photo.url} alt="" loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                  <img src={photo.url} alt="" loading="lazy" draggable={false}
+                    className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 select-none" />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors duration-300" />
                 </div>
               ))}
@@ -431,37 +429,43 @@ export default function GalleryClient({ gallery, booking }) {
                     </div>
                   ) : (
                     <div className="relative">
+                      {/* Image — pointer-events off so the blocker div catches all mouse events */}
                       <img
                         src={src} alt={label}
-                        className="w-full h-auto block"
+                        className="w-full h-auto block select-none"
                         draggable={false}
-                        style={{ userSelect: "none", WebkitUserSelect: "none" }}
-                        onContextMenu={isUnlocked ? undefined : e => e.preventDefault()}
+                        style={{ userSelect: "none", WebkitUserSelect: "none", pointerEvents: "none" }}
                       />
-                      {/* Watermark/lock overlay when not unlocked */}
-                      {!isUnlocked && (
-                        <div className="absolute inset-0 flex items-center justify-center"
-                          style={{ background: "rgba(10,10,11,0.55)", backdropFilter: "blur(2px)" }}>
-                          <div className="bg-[#111113]/90 border border-white/10 rounded-2xl px-8 py-6 flex flex-col items-center gap-4 text-center shadow-2xl">
-                            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-white/40">
+                      {!isUnlocked ? (
+                        <>
+                          {/* Repeating diagonal PREVIEW ONLY watermark */}
+                          <div
+                            className="absolute inset-0 pointer-events-none"
+                            style={{
+                              backgroundImage: `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="220" height="100"><text transform="rotate(-30 110 50)" x="5" y="58" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="rgba(255,255,255,0.22)" letter-spacing="3">PREVIEW ONLY</text></svg>')}")`,
+                              backgroundRepeat: "repeat",
+                            }}
+                          />
+                          {/* Transparent blocker: catches right-click and drag */}
+                          <div
+                            className="absolute inset-0 z-10"
+                            onContextMenu={e => e.preventDefault()}
+                            onDragStart={e => e.preventDefault()}
+                          />
+                          {/* Lock badge top-right */}
+                          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 bg-black/70 backdrop-blur-sm border border-white/10 rounded-lg px-2.5 py-1.5">
+                            <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" className="text-[#c9a96e] flex-shrink-0">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                             </svg>
-                            <div>
-                              <p className="text-white/70 text-sm font-semibold">Download locked</p>
-                              <p className="text-white/30 text-xs mt-1">Pay your balance to download floor plans</p>
-                            </div>
-                            {balance > 0 && (
-                              <button onClick={openPayment}
-                                className="bg-[#c9a96e] text-[#0F172A] font-semibold px-5 py-2 rounded-xl text-xs hover:bg-[#b8945a] transition-colors">
-                                Pay {formatPrice(balance)} to Unlock
-                              </button>
-                            )}
+                            <button onClick={openPayment} className="text-[10px] font-semibold text-[#c9a96e] hover:text-[#e8c080] transition-colors whitespace-nowrap">
+                              Pay to download
+                            </button>
                           </div>
-                        </div>
-                      )}
-                      {isUnlocked && (
-                        <div className="px-4 py-3 border-t border-white/[0.06] flex items-center justify-between">
-                          <p className="text-xs text-white/30 truncate">{label}</p>
+                        </>
+                      ) : null}
+                      <div className="px-4 py-3 border-t border-white/[0.06] flex items-center justify-between">
+                        <p className="text-xs text-white/30 truncate">{label}</p>
+                        {isUnlocked ? (
                           <a href={src} target="_blank" rel="noopener noreferrer" download
                             className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors flex-shrink-0 ml-4">
                             <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -469,8 +473,10 @@ export default function GalleryClient({ gallery, booking }) {
                             </svg>
                             Download
                           </a>
-                        </div>
-                      )}
+                        ) : (
+                          <span className="text-[10px] text-white/20 flex-shrink-0 ml-4">Preview only</span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -482,7 +488,7 @@ export default function GalleryClient({ gallery, booking }) {
 
       {/* Premium Lightbox */}
       {lightboxIdx !== null && (
-        <Lightbox photos={photos} startIndex={lightboxIdx} onClose={() => setLightboxIdx(null)} />
+        <Lightbox photos={photos} startIndex={lightboxIdx} onClose={() => setLightboxIdx(null)} isUnlocked={isUnlocked} />
       )}
 
       {/* Payment modal */}
