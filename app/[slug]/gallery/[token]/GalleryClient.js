@@ -506,7 +506,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         )}
 
         {/* ── Video Tour ──────────────────────────────────────────────────── */}
-        {hasVideos && (
+        {hasVideos && unlocked && (
           <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 className="font-semibold text-gray-900">Video Tour</h2>
@@ -544,7 +544,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         )}
 
         {/* ── 3D Tour ─────────────────────────────────────────────────────── */}
-        {has3D && (
+        {has3D && unlocked && (
           <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 className="font-semibold text-gray-900">3D Tour</h2>
@@ -615,7 +615,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                           <p className="text-xs text-gray-400 mt-0.5">Floor Plan</p>
                         </div>
                         <div className="flex gap-2 flex-shrink-0">
-                          {viewUrl && (
+                          {unlocked && viewUrl && (
                             <a href={viewUrl} target="_blank" rel="noopener noreferrer"
                               className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-white transition-colors">
                               View
@@ -628,13 +628,48 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                               ↓ Download
                             </a>
                           )}
+                          {!unlocked && (
+                            <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg">
+                              Pay to access
+                            </span>
+                          )}
                         </div>
                       </div>
                     ) : (
                       <>
                         {viewUrl && (
-                          <img src={viewUrl} alt={fp.fileName}
-                            className="w-full object-contain max-h-80 bg-white" />
+                          <div className="relative w-full bg-white overflow-hidden">
+                            <img
+                              src={viewUrl}
+                              alt={fp.fileName}
+                              draggable={false}
+                              onContextMenu={(e) => { if (!unlocked) e.preventDefault(); }}
+                              className="w-full object-contain max-h-80 select-none"
+                              style={!unlocked ? { pointerEvents: "none" } : {}}
+                            />
+                            {!unlocked && (
+                              <>
+                                <div
+                                  className="absolute inset-0 pointer-events-none select-none"
+                                  style={{
+                                    backgroundImage: `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="220" height="100"><text transform="rotate(-30 110 50)" x="5" y="58" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="rgba(0,0,0,0.18)" letter-spacing="3">PREVIEW ONLY</text></svg>')}")`,
+                                    backgroundRepeat: "repeat",
+                                    userSelect: "none",
+                                    WebkitUserSelect: "none",
+                                  }}
+                                />
+                                <div
+                                  className="absolute inset-0 z-10"
+                                  onContextMenu={(e) => e.preventDefault()}
+                                  onDragStart={(e) => e.preventDefault()}
+                                  style={{ cursor: "default" }}
+                                />
+                                <div className="absolute top-2 right-2 z-20 text-[10px] font-bold uppercase tracking-wider text-white bg-amber-500 px-2 py-1 rounded-lg shadow">
+                                  Pay to download
+                                </div>
+                              </>
+                            )}
+                          </div>
                         )}
                         <div className="px-4 py-3 flex items-center justify-between border-t border-gray-100 bg-white gap-2">
                           <span className="text-xs text-gray-500 truncate flex-1 min-w-0">{fp.fileName}</span>
@@ -689,7 +724,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                     </div>
                     <span className="text-sm font-medium text-gray-900 flex-1 min-w-0 truncate">{f.fileName}</span>
                     <div className="flex gap-2 flex-shrink-0">
-                      {(isPdf || isImage) && viewUrl && (
+                      {unlocked && (isPdf || isImage) && viewUrl && (
                         <a href={viewUrl} target="_blank" rel="noopener noreferrer"
                           className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
                           View
