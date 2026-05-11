@@ -19,7 +19,7 @@
   "crons": [
     {
       "path": "/api/cron/gallery-deliveries",
-      "schedule": "0 * * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/cron/shoot-reminders",
