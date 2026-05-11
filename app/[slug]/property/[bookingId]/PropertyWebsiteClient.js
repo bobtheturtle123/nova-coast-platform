@@ -447,26 +447,27 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, galle
             {/* 3D Tour */}
             {galleryMatterportUrl && (
               <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">3D Tour</h2>
-                <a href={galleryMatterportUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-4 p-5 rounded-xl border border-gray-200 bg-gray-50 hover:border-gray-300 transition-colors group">
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: branding.primary + "18" }}>
-                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke={branding.primary} strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.328l5.603 3.113z" />
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900">3D Tour</h2>
+                  <a href={galleryMatterportUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-medium flex items-center gap-1.5 transition-opacity hover:opacity-70"
+                    style={{ color: theme.primary }}>
+                    Open fullscreen
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 group-hover:text-[color:var(--tw-prose-links)] transition-colors">
-                      View Interactive 3D Tour
-                    </p>
-                    <p className="text-sm text-gray-400 truncate mt-0.5">{galleryMatterportUrl}</p>
-                  </div>
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#CBD5E1" strokeWidth="2" className="flex-shrink-0">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </a>
+                  </a>
+                </div>
+                <div className="relative rounded-xl overflow-hidden border border-gray-200" style={{ aspectRatio: "16/9" }}>
+                  <iframe
+                    src={galleryMatterportUrl}
+                    className="w-full h-full absolute inset-0"
+                    allowFullScreen
+                    allow="xr-spatial-tracking"
+                    loading="lazy"
+                    title="3D Tour"
+                  />
+                </div>
               </section>
             )}
 

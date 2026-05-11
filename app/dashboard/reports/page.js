@@ -122,10 +122,12 @@ export default function ReportsPage() {
   const [isOwner,   setIsOwner]   = useState(true);
 
   useEffect(() => {
-    auth.currentUser?.getIdToken(true).then(async (token) => {
-      const result = await auth.currentUser?.getIdTokenResult();
-      const role = result?.claims?.role || null;
+    const user = auth.currentUser;
+    if (!user) { setLoading(false); return; }
+    user.getIdTokenResult(true).then(async (result) => {
+      const role = result?.claims?.role ?? null;
       if (role !== null && role !== "admin") { setIsOwner(false); setLoading(false); return; }
+      const token = result.token;
 
       const [bookRes, tenantRes] = await Promise.all([
         fetch("/api/dashboard/bookings", { headers: { Authorization: `Bearer ${token}` } }),
