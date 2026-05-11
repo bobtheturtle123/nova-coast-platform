@@ -1467,8 +1467,8 @@ export default function GalleryDetailPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {floorPlans.map((fp, i) => (
                   <div key={fp.key || i} className={`relative group rounded-xl overflow-hidden border border-gray-100 bg-gray-50 ${fp.hidden ? "opacity-50" : ""}`}>
-                    {fp.fileType?.includes("pdf") ? (
-                      <a href={fp.url} target="_blank" rel="noopener noreferrer"
+                    {fp.fileType?.includes("pdf") || (fp.publicUrl || fp.url)?.toLowerCase().endsWith(".pdf") ? (
+                      <a href={fp.publicUrl || fp.url} target="_blank" rel="noopener noreferrer"
                         className="flex items-center gap-2 p-3 text-xs text-[#3486cf] font-medium hover:bg-gray-100 transition-colors">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -1498,7 +1498,16 @@ export default function GalleryDetailPage() {
                       className="absolute bottom-1 left-1 text-[10px] px-1.5 py-0.5 bg-black/60 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity">
                       {fp.hidden ? "Show" : "Hide"}
                     </button>
-                    <button onClick={() => setFloorPlans((p) => p.filter((_, idx) => idx !== i))}
+                    <button onClick={async () => {
+                        const updated = floorPlans.filter((_, idx) => idx !== i);
+                        setFloorPlans(updated);
+                        const token = await auth.currentUser.getIdToken();
+                        await fetch(`/api/dashboard/galleries/${id}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                          body: JSON.stringify({ floorPlans: updated }),
+                        });
+                      }}
                       className="absolute top-1 right-1 w-5 h-5 bg-black/60 text-white rounded-full text-xs leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       ×
                     </button>
