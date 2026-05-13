@@ -9,8 +9,9 @@ function AgentSettingsInner() {
 
   const [agent,     setAgent]     = useState(null);
   const [loading,   setLoading]   = useState(true);
-  const [phone,     setPhone]     = useState("");
-  const [saved,     setSaved]     = useState(false);
+  const [phone,      setPhone]      = useState("");
+  const [smsConsent, setSmsConsent] = useState(false);
+  const [saved,      setSaved]      = useState(false);
 
   // Password change state
   const [currentPw,  setCurrentPw]  = useState("");
@@ -33,6 +34,7 @@ function AgentSettingsInner() {
         if (d?.agent) {
           setAgent(d.agent);
           setPhone(d.agent.phone || "");
+          setSmsConsent(d.agent.smsConsent === true);
         }
         setLoading(false);
       })
@@ -55,7 +57,13 @@ function AgentSettingsInner() {
     const res = await fetch(`/api/${slug}/agent/me`, {
       method:  "PATCH",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ token: accessToken, phone }),
+      body:    JSON.stringify({
+        token:               accessToken,
+        phone,
+        smsConsent,
+        smsConsentTimestamp: smsConsent ? new Date().toISOString() : null,
+        smsConsentSource:    "account_signup",
+      }),
     });
     if (res.ok) {
       setSaved(true);
@@ -147,7 +155,13 @@ function AgentSettingsInner() {
               className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#3486cf]/30 focus:border-[#3486cf]"
               placeholder="(555) 000-0000"
             />
-            <p className="text-[11px] text-gray-400 mt-1 leading-snug">By providing your phone number, you agree to receive SMS notifications related to your bookings and account. Msg &amp; data rates may apply. Reply STOP to unsubscribe.</p>
+            <label className="flex items-start gap-2 mt-2 cursor-pointer">
+              <input type="checkbox" checked={smsConsent} onChange={(e) => setSmsConsent(e.target.checked)}
+                className="mt-0.5 flex-shrink-0 accent-[#3486cf]" />
+              <span className="text-[11px] text-gray-500 leading-snug">
+                I agree to receive SMS notifications about my bookings and account updates. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to unsubscribe. <a href="/sms-consent" target="_blank" className="text-[#3486cf] hover:underline">Learn more</a>
+              </span>
+            </label>
           </div>
         </div>
         <div className="mt-5 flex items-center gap-3">

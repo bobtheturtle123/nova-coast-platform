@@ -247,6 +247,15 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const [payMsg,       setPayMsg]       = useState("");
   const [lightboxIdx,  setLightboxIdx]  = useState(null);
 
+  // Block right-click on the entire page before payment
+  useEffect(() => {
+    if (!unlocked) {
+      const prevent = (e) => e.preventDefault();
+      document.addEventListener("contextmenu", prevent);
+      return () => document.removeEventListener("contextmenu", prevent);
+    }
+  }, [unlocked]);
+
   const primary = tenant.branding?.primaryColor || "#3486cf";
   const accent  = tenant.branding?.accentColor  || "#c9a96e";
   const name    = tenant.branding?.businessName || tenant.businessName;
@@ -280,11 +289,12 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   }
 
   const matterportUrl  = !gallery.matterportHidden ? (gallery.matterportUrl || null) : null;
+  const cubeCasaUrl    = gallery.cubeCasaUrl || null;
   const videoUrl       = !gallery.videoUrlHidden   ? (gallery.videoUrl      || null) : null;
   const virtualLinks   = (gallery.virtualLinks  || []).filter((l) => !l.hidden);
   const floorPlans     = (gallery.floorPlans    || []).filter((fp) => !fp.hidden);
   const attachedFiles  = (gallery.attachedFiles || []).filter((f) => !f.hidden);
-  const has3D          = matterportUrl || virtualLinks.length > 0;
+  const has3D          = !!(matterportUrl || cubeCasaUrl || virtualLinks.length > 0);
   const hasExtras      = has3D || floorPlans.length > 0 || attachedFiles.length > 0;
   const hasVideos      = videos.length > 0 || !!videoUrl;
 
@@ -573,6 +583,19 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                   {unlocked && <InlineCopyRow url={matterportUrl} primary={primary} label="Copy Tour Link" />}
                 </div>
               )}
+              {cubeCasaUrl && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Floor Plan · Cubo Casa</span>
+                  </div>
+                  <div className="rounded-xl overflow-hidden bg-gray-900" style={{ aspectRatio: "16/9" }}>
+                    <iframe src={cubeCasaUrl} title="Cubo Casa Floor Plan"
+                      allow="xr-spatial-tracking" allowFullScreen
+                      className="w-full h-full" style={{ minHeight: 360 }} />
+                  </div>
+                  {unlocked && <InlineCopyRow url={cubeCasaUrl} primary={primary} label="Copy Floor Plan Link" />}
+                </div>
+              )}
               {virtualLinks.map((l, i) => (
                 <div key={i} className="flex items-center gap-3 p-4 border border-gray-100 rounded-xl bg-gray-50">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -671,7 +694,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                                 <div
                                   className="absolute inset-0 pointer-events-none select-none"
                                   style={{
-                                    backgroundImage: `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="220" height="100"><text transform="rotate(-30 110 50)" x="5" y="58" font-family="Arial,sans-serif" font-size="13" font-weight="bold" fill="rgba(0,0,0,0.18)" letter-spacing="3">PREVIEW ONLY</text></svg>')}")`,
+                                    backgroundImage: `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="90"><text transform="rotate(-30 100 45)" x="10" y="52" font-family="Arial,sans-serif" font-size="15" font-weight="900" fill="rgba(0,0,0,0.35)" letter-spacing="4">PREVIEW ONLY</text></svg>')}")`,
                                     backgroundRepeat: "repeat",
                                     userSelect: "none",
                                     WebkitUserSelect: "none",

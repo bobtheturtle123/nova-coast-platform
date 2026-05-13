@@ -13,6 +13,7 @@ export default function JoinClient({ token, tenantId, companyName, inviteEmail }
     email:    inviteEmail || "",
     password: "",
   });
+  const [smsConsent, setSmsConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done,       setDone]       = useState(false);
   const [error,      setError]      = useState("");
@@ -29,10 +30,13 @@ export default function JoinClient({ token, tenantId, companyName, inviteEmail }
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name:     form.name.trim(),
-          phone:    form.phone.trim(),
-          email:    form.email.trim(),
-          password: form.password,
+          name:                form.name.trim(),
+          phone:               form.phone.trim(),
+          email:               form.email.trim(),
+          password:            form.password,
+          smsConsent:          smsConsent,
+          smsConsentTimestamp: smsConsent ? new Date().toISOString() : null,
+          smsConsentSource:    "account_signup",
         }),
       });
       const data = await res.json();
@@ -101,7 +105,15 @@ export default function JoinClient({ token, tenantId, companyName, inviteEmail }
               onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#3486cf]/60 transition-colors"
               placeholder="+1 (555) 000-0000" />
-            <p className="text-[11px] text-gray-400 mt-1 leading-snug">By providing your phone number, you agree to receive SMS notifications related to your bookings and account. Msg &amp; data rates may apply. Reply STOP to unsubscribe.</p>
+            {form.phone && (
+              <label className="flex items-start gap-2 mt-2 cursor-pointer">
+                <input type="checkbox" checked={smsConsent} onChange={(e) => setSmsConsent(e.target.checked)}
+                  className="mt-0.5 flex-shrink-0 accent-[#3486cf]" />
+                <span className="text-[11px] text-gray-500 leading-snug">
+                  I agree to receive SMS notifications about my bookings and account updates. Message frequency varies. Msg &amp; data rates may apply. Reply STOP to unsubscribe. <a href="/sms-consent" target="_blank" className="text-[#3486cf] hover:underline">Learn more</a>
+                </span>
+              </label>
+            )}
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Create Password *</label>

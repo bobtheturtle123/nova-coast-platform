@@ -660,9 +660,9 @@ export default function MarketingPage() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-white/35 text-xs">
           <span>© {new Date().getFullYear()} KyoriaOS. All rights reserved.</span>
           <div className="flex gap-6">
-            <a href="/legal/privacy" className="hover:text-white/65 transition-colors">Privacy Policy</a>
-            <a href="/legal/terms" className="hover:text-white/65 transition-colors">Terms of Service</a>
-            <a href="/legal/sms-consent" className="hover:text-white/65 transition-colors">SMS Consent</a>
+            <a href="/privacy" className="hover:text-white/65 transition-colors">Privacy Policy</a>
+            <a href="/terms" className="hover:text-white/65 transition-colors">Terms of Service</a>
+            <a href="/sms-consent" className="hover:text-white/65 transition-colors">SMS Consent</a>
             <a href="mailto:contact@kyoriaos.com" className="hover:text-white/65 transition-colors">Support</a>
           </div>
         </div>

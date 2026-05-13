@@ -331,6 +331,8 @@ export default function GalleryDetailPage() {
   // 3D / floor plans / files state
   const [matterportUrl,    setMatterportUrl]    = useState("");
   const [matterportHidden, setMatterportHidden] = useState(false);
+  const [cubeCasaUrl,      setCubeCasaUrl]      = useState("");
+  const [savingCubeCasa,   setSavingCubeCasa]   = useState(false);
   const [videoUrl,         setVideoUrl]         = useState(""); // YouTube / Vimeo URL
   const [videoUrlHidden,   setVideoUrlHidden]   = useState(false);
   const [virtualLinks,    setVirtualLinks]    = useState([]); // [{label, url}]
@@ -386,6 +388,7 @@ export default function GalleryDetailPage() {
         // Load extras
         if (data.gallery.matterportUrl)    setMatterportUrl(data.gallery.matterportUrl);
         if (data.gallery.matterportHidden) setMatterportHidden(data.gallery.matterportHidden);
+        if (data.gallery.cubeCasaUrl)      setCubeCasaUrl(data.gallery.cubeCasaUrl);
         if (data.gallery.videoUrl)         setVideoUrl(data.gallery.videoUrl);
         if (data.gallery.videoUrlHidden)   setVideoUrlHidden(data.gallery.videoUrlHidden);
         if (data.gallery.virtualLinks)     setVirtualLinks(data.gallery.virtualLinks);
@@ -812,6 +815,58 @@ export default function GalleryDetailPage() {
     }
   }
 
+  async function saveCubeCasa() {
+    setSavingCubeCasa(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/galleries/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ cubeCasaUrl }),
+      });
+      if (res.ok) {
+        setGallery((g) => ({ ...g, cubeCasaUrl }));
+        toast("Cubo Casa link saved.");
+      } else toast("Failed to save.", "error");
+    } catch (err) {
+      toast("Failed to save.", "error");
+    } finally {
+      setSavingCubeCasa(false);
+    }
+  }
+
+  function openDropboxChooser() {
+    const appKey = process.env.NEXT_PUBLIC_DROPBOX_APP_KEY;
+    if (!appKey) { toast("Dropbox is not configured. Add NEXT_PUBLIC_DROPBOX_APP_KEY to .env.", "error"); return; }
+    const launch = () => {
+      window.Dropbox.choose({
+        success: async (files) => {
+          toast(`Importing ${files.length} file${files.length !== 1 ? "s" : ""} from Dropbox…`);
+          try {
+            const fileObjects = await Promise.all(files.map(async (f) => {
+              const res = await fetch(f.link);
+              const blob = await res.blob();
+              return new File([blob], f.name, { type: blob.type || "image/jpeg" });
+            }));
+            await uploadFiles(fileObjects);
+          } catch (e) { toast("Dropbox import failed: " + e.message, "error"); }
+        },
+        cancel: () => {},
+        linkType: "direct",
+        multiselect: true,
+        extensions: [".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".heic", ".mp4", ".mov", ".webm"],
+      });
+    };
+    if (typeof window !== "undefined" && !window.Dropbox) {
+      const s = document.createElement("script");
+      s.src = "https://www.dropbox.com/static/api/2/dropins.js";
+      s.id = "dropboxjs";
+      s.setAttribute("data-app-key", appKey);
+      s.onload = launch;
+      document.head.appendChild(s);
+    } else { launch(); }
+  }
+
   async function saveVideo() {
     setSavingVideo(true);
     try {
@@ -1152,6 +1207,8 @@ export default function GalleryDetailPage() {
           }}>
           <input ref={fileRef} type="file" multiple accept="image/*,video/*" className="hidden"
             onChange={(e) => e.target.files?.length && uploadFiles(Array.from(e.target.files))} />
+        {/* Cloud import buttons — shown below drop zone, outside the drop target */}
+
           {uploading ? (
             <div>
               <div className="w-full bg-gray-200 rounded-full h-2 mb-2 max-w-xs mx-auto">
@@ -1173,6 +1230,20 @@ export default function GalleryDetailPage() {
             </>
           )}
         </div>
+
+        {/* Cloud import */}
+        {process.env.NEXT_PUBLIC_DROPBOX_APP_KEY && (
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs text-gray-400">Import from:</span>
+            <button
+              onClick={openDropboxChooser}
+              disabled={uploading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#0061FF"><path d="M12 14.56l-5.6-3.36L0 14.56 6.4 18l5.6-3.44zM6.4 2L0 5.44l6.4 3.36 5.6-3.36L6.4 2zm5.6 3.36L17.6 2 24 5.44l-5.6 3.36L12 5.36zm0 5.44l5.6 3.36L24 10.44 17.6 7.08 12 10.8zM12 15.2l-5.6 3.44L0 15.2l6.4 3.36L12 22l5.6-3.44L24 15.2l-6.4 3.44L12 15.2z"/></svg>
+              Dropbox
+            </button>
+          </div>
+        )}
 
         {/* Tabs */}
         {allMedia.length > 0 && (
@@ -1380,6 +1451,39 @@ export default function GalleryDetailPage() {
                   {matterportHidden ? "Hidden from gallery" : "Hide from gallery"}
                 </button>
               </div>
+            )}
+          </div>
+
+          {/* Cubo Casa Floor Plan */}
+          <div className="card shadow-card mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#0F172A]">Cubo Casa Floor Plan</p>
+                <p className="text-xs text-gray-400">Paste your Cubo Casa interactive floor plan URL — embedded directly in the client gallery.</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={cubeCasaUrl}
+                onChange={(e) => setCubeCasaUrl(e.target.value)}
+                placeholder="https://app.cubecasa.com/en/viewer/..."
+                className="input-field flex-1 text-sm"
+              />
+              <button onClick={saveCubeCasa} disabled={savingCubeCasa} className="btn-primary px-4 py-2 text-xs whitespace-nowrap">
+                {savingCubeCasa ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {cubeCasaUrl && (
+              <p className="text-xs text-green-600 flex items-center gap-1 mt-2">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                Cubo Casa floor plan will appear as an interactive embed in the client gallery.
+              </p>
             )}
           </div>
 
