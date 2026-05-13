@@ -1405,45 +1405,48 @@ export default function GalleryDetailPage() {
                   </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {displayImages.map((m, i) => (
-                  m.fileType?.startsWith("video/") ? (
-                    <div key={m.key || i} className={`group relative rounded-xl overflow-hidden border border-gray-100 ${m.hidden ? "opacity-50" : ""}`}>
-                      <video src={m.url} controls className="w-full aspect-video object-cover" />
-                      <div className="flex items-center justify-between px-2 py-1 bg-gray-50">
-                        <p className="text-[10px] text-gray-400 truncate flex-1">{m.fileName}</p>
-                        <div className="flex gap-1">
-                          <button onClick={() => m.key && toggleHideMedia(m.key)}
-                            className="text-[10px] text-gray-400 hover:text-[#3486cf] px-1">
-                            {m.hidden ? "Show" : "Hide"}
-                          </button>
-                          <button onClick={() => m.key && deleteMedia([m.key])} disabled={deleting}
-                            className="text-[10px] text-red-400 hover:text-red-600 px-1">Del</button>
+                  {displayImages.map((m, i) => {
+                    if (m.fileType?.startsWith("video/")) {
+                      return (
+                        <div key={m.key || i} className={`group relative rounded-xl overflow-hidden border border-gray-100 ${m.hidden ? "opacity-50" : ""}`}>
+                          <video src={m.url} controls className="w-full aspect-video object-cover" />
+                          <div className="flex items-center justify-between px-2 py-1 bg-gray-50">
+                            <p className="text-[10px] text-gray-400 truncate flex-1">{m.fileName}</p>
+                            <div className="flex gap-1">
+                              <button onClick={() => m.key && toggleHideMedia(m.key)}
+                                className="text-[10px] text-gray-400 hover:text-[#3486cf] px-1">
+                                {m.hidden ? "Show" : "Hide"}
+                              </button>
+                              <button onClick={() => m.key && deleteMedia([m.key])} disabled={deleting}
+                                className="text-[10px] text-red-400 hover:text-red-600 px-1">Del</button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <MediaThumb
-                      key={m.key || i}
-                      src={m.url} alt={m.fileName || `Photo ${i+1}`}
-                      isFirst={i === 0 && activeTab === "all"}
-                      index={i}
-                      isDragging={dragIdx === i}
-                      category={getMediaCategory(m.key)}
-                      categories={catNames}
-                      onDragStart={(e) => handleDragStart(e, i)}
-                      onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(e, i)}
-                      onDragEnd={handleDragEnd}
-                      onAssignCategory={(cat) => assignCategory(m.key, cat)}
-                      selected={selectedKeys.has(m.key)}
-                      onSelect={(e) => m.key && handleSelectWithShift(m.key, i, e)}
-                      onDelete={() => m.key && deleteMedia([m.key])}
-                      selectMode={selectMode}
-                      hidden={!!m.hidden}
-                      onToggleHide={() => m.key && toggleHideMedia(m.key)}
-                    />
-                  )
-                  ))}
+                      );
+                    }
+                    return (
+                      <MediaThumb
+                        key={m.key || i}
+                        src={m.url} alt={m.fileName || `Photo ${i+1}`}
+                        isFirst={i === 0 && activeTab === "all"}
+                        index={i}
+                        isDragging={dragIdx === i}
+                        category={getMediaCategory(m.key)}
+                        categories={catNames}
+                        onDragStart={(e) => handleDragStart(e, i)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, i)}
+                        onDragEnd={handleDragEnd}
+                        onAssignCategory={(cat) => assignCategory(m.key, cat)}
+                        selected={selectedKeys.has(m.key)}
+                        onSelect={(e) => m.key && handleSelectWithShift(m.key, i, e)}
+                        onDelete={() => m.key && deleteMedia([m.key])}
+                        selectMode={selectMode}
+                        hidden={!!m.hidden}
+                        onToggleHide={() => m.key && toggleHideMedia(m.key)}
+                      />
+                    );
+                  })}
                 </div>
 
           </>
