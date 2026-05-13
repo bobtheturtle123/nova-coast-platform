@@ -147,6 +147,7 @@ function AgentSettingsInner() {
               className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#3486cf]/30 focus:border-[#3486cf]"
               placeholder="(555) 000-0000"
             />
+            <p className="text-[11px] text-gray-400 mt-1 leading-snug">By providing your phone number, you agree to receive SMS notifications related to your bookings and account. Msg &amp; data rates may apply. Reply STOP to unsubscribe.</p>
           </div>
         </div>
         <div className="mt-5 flex items-center gap-3">

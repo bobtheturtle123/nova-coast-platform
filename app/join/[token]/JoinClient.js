@@ -101,6 +101,7 @@ export default function JoinClient({ token, tenantId, companyName, inviteEmail }
               onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#3486cf]/60 transition-colors"
               placeholder="+1 (555) 000-0000" />
+            <p className="text-[11px] text-gray-400 mt-1 leading-snug">By providing your phone number, you agree to receive SMS notifications related to your bookings and account. Msg &amp; data rates may apply. Reply STOP to unsubscribe.</p>
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Create Password *</label>

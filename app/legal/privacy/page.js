@@ -92,15 +92,27 @@ export default function PrivacyPolicyPage() {
         <p>To exercise these rights, email <a href="mailto:privacy@kyoriaos.com">privacy@kyoriaos.com</a>. We will respond within 30 days.</p>
       </Section>
 
-      <Section title="9. Children's Privacy">
+      <Section title="9. SMS Communications">
+        <p>KyoriaOS uses Twilio to send transactional SMS notifications on behalf of photographers using the platform. These messages may include booking confirmations, appointment reminders, gallery delivery notifications, and other service-related updates.</p>
+        <p>By providing your phone number through a booking form or account settings, you consent to receive these transactional SMS messages.</p>
+        <ul>
+          <li><strong>Message frequency varies</strong> based on your booking activity</li>
+          <li><strong>Message and data rates may apply</strong> depending on your carrier plan</li>
+          <li>Reply <strong>STOP</strong> at any time to unsubscribe from SMS messages</li>
+          <li>Reply <strong>HELP</strong> for assistance or contact <a href="mailto:contact@kyoriaos.com">contact@kyoriaos.com</a></li>
+        </ul>
+        <p>Phone numbers are used solely for transactional notifications. We do not sell or share phone numbers with third parties for marketing purposes. SMS opt-in data is never shared with third parties.</p>
+      </Section>
+
+      <Section title="10. Children's Privacy">
         <p>KyoriaOS is not intended for use by anyone under 18 years of age. We do not knowingly collect personal information from children.</p>
       </Section>
 
-      <Section title="10. Changes to This Policy">
+      <Section title="11. Changes to This Policy">
         <p>We may update this Privacy Policy from time to time. We will notify account holders of material changes by email or by displaying a notice in the platform. Your continued use of the service after changes constitutes acceptance of the updated policy.</p>
       </Section>
 
-      <Section title="11. Contact">
+      <Section title="12. Contact">
         <p>Questions about this Privacy Policy? Contact us at:</p>
         <p>
           <strong>KyoriaOS</strong><br />

@@ -34,24 +34,25 @@ function GalleryLightbox({ images, startIndex, unlocked, onClose }) {
     <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "rgba(10,10,12,0.97)" }} onClick={onClose}>
 
       {/* ── Top bar ── */}
-      <div className="flex items-center justify-between px-5 py-3.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}
-        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.6), transparent)" }}>
-        <span className="text-white/40 text-sm tabular-nums font-medium">
-          {idx + 1} <span className="text-white/20 mx-0.5">/</span> {images.length}
+      <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}
+        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)" }}>
+        <span className="text-white/50 text-sm tabular-nums font-medium">
+          {idx + 1} <span className="text-white/25 mx-0.5">/</span> {images.length}
         </span>
         {img?.fileName && (
-          <span className="text-white/30 text-xs truncate max-w-[45%] text-center hidden sm:block tracking-wide">
+          <span className="text-white/30 text-xs truncate max-w-[40%] text-center hidden sm:block tracking-wide">
             {img.fileName}
           </span>
         )}
         <button onClick={onClose} aria-label="Close"
-          className="w-9 h-9 rounded-full flex items-center justify-center transition-all"
-          style={{ background: "rgba(255,255,255,0.08)" }}
-          onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.16)"}
-          onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M1 1l12 12M13 1L1 13" stroke="white" strokeWidth="1.75" strokeLinecap="round"/>
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl font-semibold text-sm transition-all select-none"
+          style={{ background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.85)" }}
+          onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.22)"}
+          onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.12)"}>
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+            <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
+          Close
         </button>
       </div>
 
@@ -506,10 +507,16 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         )}
 
         {/* ── Video Tour ──────────────────────────────────────────────────── */}
-        {hasVideos && unlocked && (
+        {hasVideos && (
           <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-semibold text-gray-900">Video Tour</h2>
+              {!unlocked && (
+                <span className="text-xs text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                  Download available after payment
+                </span>
+              )}
             </div>
             <div className="p-4 space-y-3">
               {videoUrl && (
@@ -519,7 +526,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen className="w-full h-full" style={{ minHeight: 280 }} />
                   </div>
-                  <InlineCopyRow url={videoUrl} primary={primary} />
+                  {unlocked && <InlineCopyRow url={videoUrl} primary={primary} />}
                 </div>
               )}
               {videos.length > 0 && (
@@ -544,10 +551,16 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         )}
 
         {/* ── 3D Tour ─────────────────────────────────────────────────────── */}
-        {has3D && unlocked && (
+        {has3D && (
           <section className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-semibold text-gray-900">3D Tour</h2>
+              {!unlocked && (
+                <span className="text-xs text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                  Link available after payment
+                </span>
+              )}
             </div>
             <div className="p-4 space-y-3">
               {matterportUrl && (
@@ -557,7 +570,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                       allow="xr-spatial-tracking" allowFullScreen
                       className="w-full h-full" style={{ minHeight: 360 }} />
                   </div>
-                  <InlineCopyRow url={matterportUrl} primary={primary} label="Copy Tour Link" />
+                  {unlocked && <InlineCopyRow url={matterportUrl} primary={primary} label="Copy Tour Link" />}
                 </div>
               )}
               {virtualLinks.map((l, i) => (
@@ -569,14 +582,20 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                     </svg>
                   </div>
                   <span className="font-medium text-sm text-gray-900 flex-1">{l.label}</span>
-                  <div className="flex gap-2 flex-shrink-0">
-                    <CopyUrlButton url={l.url} />
-                    <a href={l.url} target="_blank" rel="noopener noreferrer"
-                      className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-                      style={{ color: primary }}>
-                      Open ↗
-                    </a>
-                  </div>
+                  {unlocked ? (
+                    <div className="flex gap-2 flex-shrink-0">
+                      <CopyUrlButton url={l.url} />
+                      <a href={l.url} target="_blank" rel="noopener noreferrer"
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+                        style={{ color: primary }}>
+                        Open ↗
+                      </a>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg flex-shrink-0">
+                      Pay to access
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -748,10 +767,17 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-100 py-8 text-center">
+      <footer className="border-t border-gray-100 py-8 text-center space-y-2">
         <p className="text-xs text-gray-400">
           Delivered by <span className="font-semibold" style={{ color: primary }}>{name}</span>
         </p>
+        <div className="flex items-center justify-center gap-4 text-[11px] text-gray-300">
+          <a href="/legal/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-gray-500 transition-colors">Privacy Policy</a>
+          <span>·</span>
+          <a href="/legal/terms" target="_blank" rel="noopener noreferrer" className="hover:text-gray-500 transition-colors">Terms of Service</a>
+          <span>·</span>
+          <a href="/legal/sms-consent" target="_blank" rel="noopener noreferrer" className="hover:text-gray-500 transition-colors">SMS Consent</a>
+        </div>
       </footer>
 
       {/* Lightbox */}
