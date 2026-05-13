@@ -331,12 +331,12 @@ export default function GalleryDetailPage() {
   // 3D / floor plans / files state
   const [matterportUrl,    setMatterportUrl]    = useState("");
   const [matterportHidden, setMatterportHidden] = useState(false);
-  const [cubiCasaOpen,     setCubiCasaOpen]     = useState(false);
-  const [cubiCasaApiKey,   setCubiCasaApiKey]   = useState("");
-  const [cubiCasaOrders,   setCubiCasaOrders]   = useState(null);
-  const [cubiCasaLoading,  setCubiCasaLoading]  = useState(false);
-  const [cubiCasaError,    setCubiCasaError]    = useState(null);
-  const [syncingOrder,     setSyncingOrder]     = useState(null);
+  const [cubiCasaOpen,      setCubiCasaOpen]      = useState(false);
+  const [cubiCasaConnected, setCubiCasaConnected] = useState(false);
+  const [cubiCasaOrders,    setCubiCasaOrders]    = useState(null);
+  const [cubiCasaLoading,   setCubiCasaLoading]   = useState(false);
+  const [cubiCasaError,     setCubiCasaError]     = useState(null);
+  const [syncingOrder,      setSyncingOrder]      = useState(null);
   const [videoUrl,         setVideoUrl]         = useState(""); // YouTube / Vimeo URL
   const [videoUrlHidden,   setVideoUrlHidden]   = useState(false);
   const [virtualLinks,    setVirtualLinks]    = useState([]); // [{label, url}]
@@ -381,7 +381,7 @@ export default function GalleryDetailPage() {
           if (tpl?.body) {
             defaultNote = tpl.body.replace("{{clientName}}", data.gallery.clientName || "");
           }
-          if (tData.tenant?.cubiCasaApiKey) setCubiCasaApiKey(tData.tenant.cubiCasaApiKey);
+          if (tData.tenant?.cubiCasaToken?.accessToken) setCubiCasaConnected(true);
         }
         setEmailSubject(defaultSubject);
         if (defaultNote) setEmailNote(defaultNote);
@@ -820,28 +820,58 @@ export default function GalleryDetailPage() {
   }
 
   async function fetchCubiCasaOrders() {
-    if (!cubiCasaApiKey.trim()) { setCubiCasaError("Enter your CubiCasa API key first."); return; }
     setCubiCasaLoading(true);
     setCubiCasaError(null);
     try {
       const token = await auth.currentUser.getIdToken();
-      const res = await fetch(`/api/dashboard/cubicasa/orders?apiKey=${encodeURIComponent(cubiCasaApiKey.trim())}`, {
+      const res   = await fetch("/api/dashboard/cubicasa/orders", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
+      if (res.status === 403 && data.error === "not_connected") {
+        setCubiCasaConnected(false);
+        setCubiCasaError(null);
+        return;
+      }
       if (!res.ok) throw new Error(data.error || "Failed to fetch orders");
       setCubiCasaOrders(Array.isArray(data) ? data : (data.orders || data.data || []));
-      // Persist key to tenant settings so they don't re-enter it next time
-      fetch("/api/dashboard/tenant", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ cubiCasaApiKey: cubiCasaApiKey.trim() }),
-      }).catch(() => {});
     } catch (e) {
       setCubiCasaError(e.message);
     } finally {
       setCubiCasaLoading(false);
     }
+  }
+
+  async function disconnectCubiCasa() {
+    const token = await auth.currentUser.getIdToken();
+    await fetch("/api/dashboard/cubicasa/orders", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setCubiCasaConnected(false);
+    setCubiCasaOrders(null);
+  }
+
+  function connectCubiCasa() {
+    auth.currentUser.getIdToken().then((token) => {
+      const popup = window.open(
+        `/api/auth/cubicasa/authorize?token=${encodeURIComponent(token)}`,
+        "cubicasa-oauth",
+        "width=520,height=680,scrollbars=yes,resizable=yes"
+      );
+      const listener = (e) => {
+        if (e.data?.type === "cubicasa-connected") {
+          window.removeEventListener("message", listener);
+          popup?.close();
+          setCubiCasaConnected(true);
+          fetchCubiCasaOrders();
+        } else if (e.data?.type === "cubicasa-error") {
+          window.removeEventListener("message", listener);
+          setCubiCasaError(e.data.error || "Connection failed.");
+        }
+      };
+      window.addEventListener("message", listener);
+    });
   }
 
   async function syncCubiCasaOrder(order, variant) {
@@ -1009,10 +1039,10 @@ export default function GalleryDetailPage() {
     : null;
 
   // Determine what images to show in current tab
-  let displayImages = images;
-  if (activeTab !== "all" && activeTab !== "videos") {
+  let displayImages = allMedia;
+  if (activeTab !== "all") {
     const catKeys = categories[activeTab] || [];
-    displayImages = images.filter((m) => catKeys.includes(m.key));
+    displayImages = allMedia.filter((m) => catKeys.includes(m.key));
   }
 
   return (
@@ -1209,27 +1239,6 @@ export default function GalleryDetailPage() {
           );
         })()}
 
-        <details open className="group mb-6">
-          <summary className="flex items-center justify-between mb-4 cursor-pointer list-none">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-[#0F172A]">Photos &amp; Videos</p>
-                <p className="text-xs text-gray-400">{allMedia.length} item{allMedia.length !== 1 ? "s" : ""}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={(e) => { e.preventDefault(); fileRef.current?.click(); }} disabled={uploading}
-                className="btn-outline text-xs px-3 py-1.5">+ Upload</button>
-              <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </summary>
         {/* Upload zone */}
         <div
           className={`border-2 border-dashed rounded-xl p-8 mb-6 text-center cursor-pointer transition-colors ${
@@ -1305,9 +1314,8 @@ export default function GalleryDetailPage() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
                 {[
-                  { id: "all",    label: `All (${images.length})` },
+                  { id: "all",    label: `All (${allMedia.length})` },
                   ...catNames.map((c) => ({ id: c, label: `${c} (${(categories[c] || []).length})` })),
-                  ...(videos.length > 0 ? [{ id: "videos", label: `Videos (${videos.length})` }] : []),
                 ].map((t) => (
                   <button key={t.id} onClick={() => setActiveTab(t.id)}
                     className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
@@ -1336,7 +1344,6 @@ export default function GalleryDetailPage() {
               </div>
             </div>
 
-            {activeTab !== "videos" && (
               <>
                 {/* Bulk selection toolbar */}
                 {(selectMode || selectedKeys.size > 0) && (
@@ -1397,10 +1404,25 @@ export default function GalleryDetailPage() {
                       Exit selection mode
                     </button>
                   </div>
-                )}
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {displayImages.map((m, i) => (
+                  m.fileType?.startsWith("video/") ? (
+                    <div key={m.key || i} className={`group relative rounded-xl overflow-hidden border border-gray-100 ${m.hidden ? "opacity-50" : ""}`}>
+                      <video src={m.url} controls className="w-full aspect-video object-cover" />
+                      <div className="flex items-center justify-between px-2 py-1 bg-gray-50">
+                        <p className="text-[10px] text-gray-400 truncate flex-1">{m.fileName}</p>
+                        <div className="flex gap-1">
+                          <button onClick={() => m.key && toggleHideMedia(m.key)}
+                            className="text-[10px] text-gray-400 hover:text-[#3486cf] px-1">
+                            {m.hidden ? "Show" : "Hide"}
+                          </button>
+                          <button onClick={() => m.key && deleteMedia([m.key])} disabled={deleting}
+                            className="text-[10px] text-red-400 hover:text-red-600 px-1">Del</button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
                     <MediaThumb
                       key={m.key || i}
                       src={m.url} alt={m.fileName || `Photo ${i+1}`}
@@ -1421,42 +1443,14 @@ export default function GalleryDetailPage() {
                       hidden={!!m.hidden}
                       onToggleHide={() => m.key && toggleHideMedia(m.key)}
                     />
+                  )
                   ))}
                 </div>
               </>
             )}
 
-            {activeTab === "videos" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {videos.map((v, i) => (
-                  <div key={v.key || i} className={`group relative ${v.hidden ? "opacity-50" : ""}`}>
-                    <video src={v.url} controls className="w-full rounded-xl" />
-                    <div className="flex items-center justify-between mt-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <p className="text-xs text-gray-400 truncate">{v.fileName}</p>
-                        {v.hidden && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-xl bg-gray-200 text-gray-500 flex-shrink-0">Hidden</span>}
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                          onClick={() => v.key && toggleHideMedia(v.key)}
-                          className="text-xs text-gray-400 hover:text-[#3486cf] px-2 py-0.5">
-                          {v.hidden ? "Show" : "Hide"}
-                        </button>
-                        <button
-                          onClick={() => v.key && deleteMedia([v.key])}
-                          disabled={deleting}
-                          className="text-xs text-red-400 hover:text-red-600 px-2 py-0.5">
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </>
         )}
-        </details>
       </div>
 
       {/* ── Extras: 3D / Floor Plans / Files ─────────────────────────────── */}
@@ -1592,7 +1586,7 @@ export default function GalleryDetailPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button type="button" onClick={(e) => { e.preventDefault(); setCubiCasaOpen(true); }}
+                <button type="button" onClick={(e) => { e.preventDefault(); setCubiCasaOpen(true); if (cubiCasaConnected && !cubiCasaOrders) fetchCubiCasaOrders(); }}
                   className="btn-outline text-xs px-3 py-1.5 flex items-center gap-1.5">
                   <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -1977,68 +1971,87 @@ export default function GalleryDetailPage() {
                 className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
             </div>
             <div className="p-6 space-y-4">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={cubiCasaApiKey}
-                  onChange={(e) => setCubiCasaApiKey(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && fetchCubiCasaOrders()}
-                  placeholder="CubiCasa API key…"
-                  className="input-field flex-1 text-sm font-mono"
-                />
-                <button onClick={fetchCubiCasaOrders} disabled={cubiCasaLoading || !cubiCasaApiKey.trim()}
-                  className="btn-primary px-4 py-2 text-xs whitespace-nowrap">
-                  {cubiCasaLoading ? "Loading…" : "Fetch Orders"}
-                </button>
-              </div>
-              {cubiCasaError && (
-                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{cubiCasaError}</p>
-              )}
-              {cubiCasaOrders !== null && (
-                cubiCasaOrders.length === 0 ? (
-                  <p className="text-sm text-gray-400 italic text-center py-4">No orders found for this API key.</p>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-xs text-gray-500 font-medium">{cubiCasaOrders.length} order{cubiCasaOrders.length !== 1 ? "s" : ""} found</p>
-                      <button
-                        onClick={async () => {
-                          for (const order of cubiCasaOrders) await syncCubiCasaOrder(order, "basic");
-                        }}
-                        disabled={!!syncingOrder}
+              {!cubiCasaConnected ? (
+                <div className="text-center py-6 space-y-3">
+                  <div className="w-14 h-14 rounded-full bg-[#3486cf]/8 flex items-center justify-center mx-auto">
+                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="1.6">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-semibold text-[#0F172A]">Connect your CubiCasa account</p>
+                  <p className="text-xs text-gray-400 max-w-xs mx-auto">Log in with CubiCasa once and your floor plan orders will sync automatically.</p>
+                  <button onClick={connectCubiCasa}
+                    className="btn-primary px-6 py-2.5 text-sm mx-auto block">
+                    Connect CubiCasa Account
+                  </button>
+                  {cubiCasaError && (
+                    <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{cubiCasaError}</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                      <span className="text-xs text-gray-500 font-medium">CubiCasa connected</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={fetchCubiCasaOrders} disabled={cubiCasaLoading}
                         className="text-xs text-[#3486cf] hover:underline disabled:opacity-50">
-                        Sync All
+                        {cubiCasaLoading ? "Loading…" : "Refresh"}
+                      </button>
+                      <button onClick={disconnectCubiCasa}
+                        className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+                        Disconnect
                       </button>
                     </div>
-                    {cubiCasaOrders.map((order) => (
-                      <div key={order.id} className="flex items-center justify-between gap-3 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-100">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-[#0F172A] truncate">{order.address || order.id}</p>
-                          {order.createdAt && <p className="text-xs text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</p>}
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <button
-                            onClick={() => syncCubiCasaOrder(order, "basic")}
-                            disabled={!!syncingOrder}
-                            className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-white hover:border-[#3486cf]/30 hover:text-[#3486cf] transition-colors disabled:opacity-50 whitespace-nowrap">
-                            {syncingOrder === order.id + "_basic" ? "Syncing…" : "Sync"}
-                          </button>
-                          <button
-                            onClick={() => syncCubiCasaOrder(order, "dimensions")}
-                            disabled={!!syncingOrder}
-                            className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-white hover:border-[#3486cf]/30 hover:text-[#3486cf] transition-colors disabled:opacity-50 whitespace-nowrap">
-                            {syncingOrder === order.id + "_dimensions" ? "Syncing…" : "w/ Dimensions"}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
                   </div>
-                )
+                  {cubiCasaError && (
+                    <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{cubiCasaError}</p>
+                  )}
+                  {cubiCasaOrders === null && !cubiCasaLoading && (
+                    <button onClick={fetchCubiCasaOrders}
+                      className="btn-outline text-xs px-4 py-2 w-full">
+                      Load Orders
+                    </button>
+                  )}
+                  {cubiCasaOrders !== null && (
+                    cubiCasaOrders.length === 0 ? (
+                      <p className="text-sm text-gray-400 italic text-center py-4">No orders found in your CubiCasa account.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs text-gray-500 font-medium">{cubiCasaOrders.length} order{cubiCasaOrders.length !== 1 ? "s" : ""}</p>
+                          <button
+                            onClick={async () => { for (const order of cubiCasaOrders) await syncCubiCasaOrder(order, "basic"); }}
+                            disabled={!!syncingOrder}
+                            className="text-xs text-[#3486cf] hover:underline disabled:opacity-50">
+                            Sync All
+                          </button>
+                        </div>
+                        {cubiCasaOrders.map((order) => (
+                          <div key={order.id} className="flex items-center justify-between gap-3 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-[#0F172A] truncate">{order.address || order.id}</p>
+                              {order.createdAt && <p className="text-xs text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</p>}
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              <button onClick={() => syncCubiCasaOrder(order, "basic")} disabled={!!syncingOrder}
+                                className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-white hover:border-[#3486cf]/30 hover:text-[#3486cf] transition-colors disabled:opacity-50 whitespace-nowrap">
+                                {syncingOrder === order.id + "_basic" ? "Syncing…" : "Sync"}
+                              </button>
+                              <button onClick={() => syncCubiCasaOrder(order, "dimensions")} disabled={!!syncingOrder}
+                                className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-white hover:border-[#3486cf]/30 hover:text-[#3486cf] transition-colors disabled:opacity-50 whitespace-nowrap">
+                                {syncingOrder === order.id + "_dimensions" ? "Syncing…" : "w/ Dimensions"}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  )}
+                </>
               )}
-              <p className="text-xs text-gray-400 pt-1">
-                Find your API key in your{" "}
-                <a href="https://cubicasa.com/account" target="_blank" rel="noopener noreferrer" className="text-[#3486cf] hover:underline">CubiCasa account settings</a>.
-              </p>
             </div>
           </div>
         </div>
