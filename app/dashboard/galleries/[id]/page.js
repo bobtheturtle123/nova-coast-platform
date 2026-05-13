@@ -1344,7 +1344,6 @@ export default function GalleryDetailPage() {
               </div>
             </div>
 
-              <>
                 {/* Bulk selection toolbar */}
                 {(selectMode || selectedKeys.size > 0) && (
                   <div className="flex items-center gap-3 bg-[#3486cf]/5 border border-[#3486cf]/20 rounded-xl px-3 py-2 mb-3 flex-wrap">
@@ -1446,8 +1445,6 @@ export default function GalleryDetailPage() {
                   )
                   ))}
                 </div>
-              </>
-            )}
 
           </>
         )}
