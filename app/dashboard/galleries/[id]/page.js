@@ -331,8 +331,12 @@ export default function GalleryDetailPage() {
   // 3D / floor plans / files state
   const [matterportUrl,    setMatterportUrl]    = useState("");
   const [matterportHidden, setMatterportHidden] = useState(false);
-  const [cubeCasaUrl,      setCubeCasaUrl]      = useState("");
-  const [savingCubeCasa,   setSavingCubeCasa]   = useState(false);
+  const [cubiCasaOpen,     setCubiCasaOpen]     = useState(false);
+  const [cubiCasaApiKey,   setCubiCasaApiKey]   = useState("");
+  const [cubiCasaOrders,   setCubiCasaOrders]   = useState(null);
+  const [cubiCasaLoading,  setCubiCasaLoading]  = useState(false);
+  const [cubiCasaError,    setCubiCasaError]    = useState(null);
+  const [syncingOrder,     setSyncingOrder]     = useState(null);
   const [videoUrl,         setVideoUrl]         = useState(""); // YouTube / Vimeo URL
   const [videoUrlHidden,   setVideoUrlHidden]   = useState(false);
   const [virtualLinks,    setVirtualLinks]    = useState([]); // [{label, url}]
@@ -388,7 +392,6 @@ export default function GalleryDetailPage() {
         // Load extras
         if (data.gallery.matterportUrl)    setMatterportUrl(data.gallery.matterportUrl);
         if (data.gallery.matterportHidden) setMatterportHidden(data.gallery.matterportHidden);
-        if (data.gallery.cubeCasaUrl)      setCubeCasaUrl(data.gallery.cubeCasaUrl);
         if (data.gallery.videoUrl)         setVideoUrl(data.gallery.videoUrl);
         if (data.gallery.videoUrlHidden)   setVideoUrlHidden(data.gallery.videoUrlHidden);
         if (data.gallery.virtualLinks)     setVirtualLinks(data.gallery.virtualLinks);
@@ -815,23 +818,46 @@ export default function GalleryDetailPage() {
     }
   }
 
-  async function saveCubeCasa() {
-    setSavingCubeCasa(true);
+  async function fetchCubiCasaOrders() {
+    if (!cubiCasaApiKey.trim()) { setCubiCasaError("Enter your CubiCasa API key first."); return; }
+    setCubiCasaLoading(true);
+    setCubiCasaError(null);
     try {
       const token = await auth.currentUser.getIdToken();
-      const res = await fetch(`/api/dashboard/galleries/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ cubeCasaUrl }),
+      const res = await fetch(`/api/dashboard/cubicasa/orders?apiKey=${encodeURIComponent(cubiCasaApiKey.trim())}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) {
-        setGallery((g) => ({ ...g, cubeCasaUrl }));
-        toast("Cubo Casa link saved.");
-      } else toast("Failed to save.", "error");
-    } catch (err) {
-      toast("Failed to save.", "error");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to fetch orders");
+      setCubiCasaOrders(Array.isArray(data) ? data : (data.orders || data.data || []));
+    } catch (e) {
+      setCubiCasaError(e.message);
     } finally {
-      setSavingCubeCasa(false);
+      setCubiCasaLoading(false);
+    }
+  }
+
+  async function syncCubiCasaOrder(order, variant) {
+    const key = order.id + "_" + variant;
+    setSyncingOrder(key);
+    try {
+      const fileUrl =
+        variant === "dimensions" ? (order.floorPlanWithDimensionsUrl || order.dimensions_url || order.files?.find((f) => f.type?.includes("dimension"))?.url)
+        : variant === "all"      ? (order.floorPlanUrl || order.image_url || order.files?.[0]?.url)
+        :                          (order.floorPlanUrl || order.image_url || order.files?.[0]?.url);
+      if (!fileUrl) throw new Error("No floor plan URL found for this order");
+      const proxyRes = await fetch(`/api/dashboard/cubicasa/proxy?url=${encodeURIComponent(fileUrl)}`);
+      if (!proxyRes.ok) throw new Error("Failed to download floor plan from CubiCasa");
+      const blob = await proxyRes.blob();
+      const ext  = blob.type?.includes("pdf") ? ".pdf" : ".png";
+      const label = variant === "dimensions" ? " (With Dimensions)" : "";
+      const file  = new File([blob], `${order.address || "Floor Plan"}${label}${ext}`, { type: blob.type || "image/png" });
+      await uploadFloorPlans([file]);
+      toast(`Floor plan synced from CubiCasa`);
+    } catch (e) {
+      toast("Sync failed: " + e.message, "error");
+    } finally {
+      setSyncingOrder(null);
     }
   }
 
@@ -1454,38 +1480,6 @@ export default function GalleryDetailPage() {
             )}
           </div>
 
-          {/* Cubo Casa Floor Plan */}
-          <div className="card shadow-card mb-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-[#0F172A]">Cubo Casa Floor Plan</p>
-                <p className="text-xs text-gray-400">Paste your Cubo Casa interactive floor plan URL — embedded directly in the client gallery.</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={cubeCasaUrl}
-                onChange={(e) => setCubeCasaUrl(e.target.value)}
-                placeholder="https://app.cubecasa.com/en/viewer/..."
-                className="input-field flex-1 text-sm"
-              />
-              <button onClick={saveCubeCasa} disabled={savingCubeCasa} className="btn-primary px-4 py-2 text-xs whitespace-nowrap">
-                {savingCubeCasa ? "Saving…" : "Save"}
-              </button>
-            </div>
-            {cubeCasaUrl && (
-              <p className="text-xs text-green-600 flex items-center gap-1 mt-2">
-                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                Cubo Casa floor plan will appear as an interactive embed in the client gallery.
-              </p>
-            )}
-          </div>
 
           {/* Video Tour URL */}
           <div className="card shadow-card mb-4">
@@ -1545,8 +1539,8 @@ export default function GalleryDetailPage() {
           </div>
 
           {/* Floor Plans */}
-          <div className="card shadow-card mb-4">
-            <div className="flex items-center justify-between mb-3">
+          <details open className="group card shadow-card mb-4">
+            <summary className="flex items-center justify-between mb-3 cursor-pointer list-none">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
                   <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
@@ -1558,13 +1552,25 @@ export default function GalleryDetailPage() {
                   <p className="text-xs text-gray-400">PNG, JPG, or PDF</p>
                 </div>
               </div>
-              <button onClick={() => floorRef.current?.click()} disabled={uploadingFloor}
-                className="btn-outline text-xs px-3 py-1.5">
-                {uploadingFloor ? "Uploading…" : "+ Upload"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={(e) => { e.preventDefault(); setCubiCasaOpen(true); }}
+                  className="btn-outline text-xs px-3 py-1.5 flex items-center gap-1.5">
+                  <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  CubiCasa
+                </button>
+                <button type="button" onClick={(e) => { e.preventDefault(); floorRef.current?.click(); }} disabled={uploadingFloor}
+                  className="btn-outline text-xs px-3 py-1.5">
+                  {uploadingFloor ? "Uploading…" : "+ Upload"}
+                </button>
+                <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </summary>
               <input ref={floorRef} type="file" multiple accept="image/*,.pdf" className="hidden"
                 onChange={(e) => e.target.files?.length && uploadFloorPlans(Array.from(e.target.files))} />
-            </div>
             {floorPlans.length === 0 ? (
               <p className="text-xs text-gray-400 italic">No floor plans uploaded yet.</p>
             ) : (
@@ -1619,7 +1625,7 @@ export default function GalleryDetailPage() {
                 ))}
               </div>
             )}
-          </div>
+          </details>
 
           {/* Attached files / documents */}
           <div className="card p-5">
@@ -1908,6 +1914,87 @@ export default function GalleryDetailPage() {
                     ? "Schedule Delivery →"
                     : `Deliver to ${emailTo.length + emailCc.length} →`}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CubiCasa Floor Plan Importer */}
+      {cubiCasaOpen && (
+        <div className="modal-backdrop">
+          <div className="absolute inset-0" onClick={() => { setCubiCasaOpen(false); setCubiCasaOrders(null); setCubiCasaError(null); }} />
+          <div className="modal-card relative w-full max-w-xl max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              <div>
+                <h2 className="font-semibold text-[#0F172A] text-base">CubiCasa Floor Plans</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Import floor plans directly from your CubiCasa account.</p>
+              </div>
+              <button onClick={() => { setCubiCasaOpen(false); setCubiCasaOrders(null); setCubiCasaError(null); }}
+                className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={cubiCasaApiKey}
+                  onChange={(e) => setCubiCasaApiKey(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && fetchCubiCasaOrders()}
+                  placeholder="CubiCasa API key…"
+                  className="input-field flex-1 text-sm font-mono"
+                />
+                <button onClick={fetchCubiCasaOrders} disabled={cubiCasaLoading || !cubiCasaApiKey.trim()}
+                  className="btn-primary px-4 py-2 text-xs whitespace-nowrap">
+                  {cubiCasaLoading ? "Loading…" : "Fetch Orders"}
+                </button>
+              </div>
+              {cubiCasaError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{cubiCasaError}</p>
+              )}
+              {cubiCasaOrders !== null && (
+                cubiCasaOrders.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic text-center py-4">No orders found for this API key.</p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs text-gray-500 font-medium">{cubiCasaOrders.length} order{cubiCasaOrders.length !== 1 ? "s" : ""} found</p>
+                      <button
+                        onClick={async () => {
+                          for (const order of cubiCasaOrders) await syncCubiCasaOrder(order, "basic");
+                        }}
+                        disabled={!!syncingOrder}
+                        className="text-xs text-[#3486cf] hover:underline disabled:opacity-50">
+                        Sync All
+                      </button>
+                    </div>
+                    {cubiCasaOrders.map((order) => (
+                      <div key={order.id} className="flex items-center justify-between gap-3 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-100">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-[#0F172A] truncate">{order.address || order.id}</p>
+                          {order.createdAt && <p className="text-xs text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</p>}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <button
+                            onClick={() => syncCubiCasaOrder(order, "basic")}
+                            disabled={!!syncingOrder}
+                            className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-white hover:border-[#3486cf]/30 hover:text-[#3486cf] transition-colors disabled:opacity-50 whitespace-nowrap">
+                            {syncingOrder === order.id + "_basic" ? "Syncing…" : "Sync"}
+                          </button>
+                          <button
+                            onClick={() => syncCubiCasaOrder(order, "dimensions")}
+                            disabled={!!syncingOrder}
+                            className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-white hover:border-[#3486cf]/30 hover:text-[#3486cf] transition-colors disabled:opacity-50 whitespace-nowrap">
+                            {syncingOrder === order.id + "_dimensions" ? "Syncing…" : "w/ Dimensions"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+              <p className="text-xs text-gray-400 pt-1">
+                Find your API key in your{" "}
+                <a href="https://cubicasa.com/account" target="_blank" rel="noopener noreferrer" className="text-[#3486cf] hover:underline">CubiCasa account settings</a>.
+              </p>
             </div>
           </div>
         </div>
