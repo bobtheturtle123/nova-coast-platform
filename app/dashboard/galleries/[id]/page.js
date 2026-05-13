@@ -381,6 +381,7 @@ export default function GalleryDetailPage() {
           if (tpl?.body) {
             defaultNote = tpl.body.replace("{{clientName}}", data.gallery.clientName || "");
           }
+          if (tData.tenant?.cubiCasaApiKey) setCubiCasaApiKey(tData.tenant.cubiCasaApiKey);
         }
         setEmailSubject(defaultSubject);
         if (defaultNote) setEmailNote(defaultNote);
@@ -830,6 +831,12 @@ export default function GalleryDetailPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to fetch orders");
       setCubiCasaOrders(Array.isArray(data) ? data : (data.orders || data.data || []));
+      // Persist key to tenant settings so they don't re-enter it next time
+      fetch("/api/dashboard/tenant", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ cubiCasaApiKey: cubiCasaApiKey.trim() }),
+      }).catch(() => {});
     } catch (e) {
       setCubiCasaError(e.message);
     } finally {
@@ -1202,6 +1209,27 @@ export default function GalleryDetailPage() {
           );
         })()}
 
+        <details open className="group mb-6">
+          <summary className="flex items-center justify-between mb-4 cursor-pointer list-none">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#0F172A]">Photos &amp; Videos</p>
+                <p className="text-xs text-gray-400">{allMedia.length} item{allMedia.length !== 1 ? "s" : ""}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={(e) => { e.preventDefault(); fileRef.current?.click(); }} disabled={uploading}
+                className="btn-outline text-xs px-3 py-1.5">+ Upload</button>
+              <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </summary>
         {/* Upload zone */}
         <div
           className={`border-2 border-dashed rounded-xl p-8 mb-6 text-center cursor-pointer transition-colors ${
@@ -1428,6 +1456,7 @@ export default function GalleryDetailPage() {
             )}
           </>
         )}
+        </details>
       </div>
 
       {/* ── Extras: 3D / Floor Plans / Files ─────────────────────────────── */}
@@ -1437,8 +1466,9 @@ export default function GalleryDetailPage() {
           <p className="text-xs text-gray-400 mb-5">Add 3D tours, floor plans, and documents — all delivered alongside photos in the client gallery.</p>
 
           {/* 3D / Matterport */}
-          <div className="card shadow-card mb-4">
-            <div className="flex items-center gap-2 mb-3">
+          <details open className="group card shadow-card mb-4">
+            <summary className="flex items-center justify-between mb-3 cursor-pointer list-none">
+              <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -1448,7 +1478,11 @@ export default function GalleryDetailPage() {
                 <p className="text-sm font-semibold text-[#0F172A]">3D Tour Link</p>
                 <p className="text-xs text-gray-400">Paste your Matterport, iGuide, Zillow 3D, or similar URL — it will be embedded in the client gallery.</p>
               </div>
-            </div>
+              </div>
+                <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+            </summary>
             <div className="flex gap-2">
               <input
                 type="url"
@@ -1478,12 +1512,13 @@ export default function GalleryDetailPage() {
                 </button>
               </div>
             )}
-          </div>
+          </details>
 
 
           {/* Video Tour URL */}
-          <div className="card shadow-card mb-4">
-            <div className="flex items-center gap-2 mb-3">
+          <details open className="group card shadow-card mb-4">
+            <summary className="flex items-center justify-between mb-3 cursor-pointer list-none">
+              <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
@@ -1493,7 +1528,11 @@ export default function GalleryDetailPage() {
                 <p className="text-sm font-semibold text-[#0F172A]">Video Tour</p>
                 <p className="text-xs text-gray-400">YouTube or Vimeo URL — embedded in client gallery</p>
               </div>
-            </div>
+              </div>
+                <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+            </summary>
             <div className="flex gap-2">
               <input
                 type="url"
@@ -1536,7 +1575,7 @@ export default function GalleryDetailPage() {
                 onChange={(e) => { if (e.target.files?.[0]) uploadFiles(Array.from(e.target.files)); e.target.value = ""; }} />
               <span className="text-xs text-gray-400">MP4, MOV, or WebM · max 200 MB</span>
             </div>
-          </div>
+          </details>
 
           {/* Floor Plans */}
           <details open className="group card shadow-card mb-4">
@@ -1628,8 +1667,8 @@ export default function GalleryDetailPage() {
           </details>
 
           {/* Attached files / documents */}
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-3">
+          <details open className="group card p-5">
+            <summary className="flex items-center justify-between mb-3 cursor-pointer list-none">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
                   <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
@@ -1641,13 +1680,18 @@ export default function GalleryDetailPage() {
                   <p className="text-xs text-gray-400">PDF, Word, ZIP, or any other file</p>
                 </div>
               </div>
+              <div className="flex items-center gap-2">
               <button onClick={() => fileAttachRef.current?.click()} disabled={uploadingFile}
                 className="btn-outline text-xs px-3 py-1.5">
                 {uploadingFile ? "Uploading…" : "+ Attach"}
               </button>
+                <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </summary>
               <input ref={fileAttachRef} type="file" multiple className="hidden"
                 onChange={(e) => e.target.files?.length && uploadAttachedFile(Array.from(e.target.files))} />
-            </div>
             {attachedFiles.length === 0 ? (
               <p className="text-xs text-gray-400 italic">No files attached.</p>
             ) : (
@@ -1683,7 +1727,7 @@ export default function GalleryDetailPage() {
                 ))}
               </div>
             )}
-          </div>
+          </details>
         </div>
 
         {/* ── Activity Log ──────────────────────────────────────────────── */}
