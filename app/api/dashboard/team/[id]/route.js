@@ -16,6 +16,8 @@ export async function PATCH(req, { params }) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
+  const VALID_PERM_KEYS = ["canViewRevenue","canViewReports","canManageTeam","canManageProducts","canEditSettings","canCreateBookings"];
+
   const update = {
     name:          (body.name || "").slice(0, 80),
     email:         (body.email || "").toLowerCase(),
@@ -40,6 +42,9 @@ export async function PATCH(req, { params }) {
       : {},
     bufferMinutes: body.bufferMinutes != null ? Number(body.bufferMinutes) || 0 : 0,
     workingHours:  body.workingHours && typeof body.workingHours === "object" ? body.workingHours : {},
+    permissions:   body.permissions && typeof body.permissions === "object"
+      ? Object.fromEntries(VALID_PERM_KEYS.map((k) => [k, !!body.permissions[k]]))
+      : Object.fromEntries(VALID_PERM_KEYS.map((k) => [k, false])),
   };
 
   const memberRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(params.id);

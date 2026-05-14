@@ -719,48 +719,47 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
             )}
           </div>
 
-          {/* Permissions */}
-          {(form.role === "admin" || form.role === "manager") && (
-            <div>
-              <button type="button" onClick={() => setShowPermissions((v) => !v)}
-                className="flex items-center gap-1.5 text-xs font-medium text-[#3486cf] hover:underline">
-                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"
-                  className={`transition-transform ${showPermissions ? "rotate-90" : ""}`}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-                {showPermissions ? "Hide permissions" : "Customize permissions"}
-              </button>
-              {showPermissions && (
-                <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
-                    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Dashboard Permissions</p>
-                  </div>
-                  <div className="divide-y divide-gray-100">
-                    {PERMISSION_DEFS.map(({ key, label, desc }) => (
-                      <div key={key} className="flex items-center justify-between px-4 py-3 gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-[#0F172A]">{label}</p>
-                          <p className="text-[11px] text-gray-400">{desc}</p>
-                        </div>
-                        <button type="button"
-                          onClick={() => setForm((f) => ({
-                            ...f,
-                            permissions: { ...f.permissions, [key]: !f.permissions[key] },
-                          }))}
-                          className={`relative inline-flex w-9 h-5 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
-                            form.permissions[key] ? "bg-[#3486cf]" : "bg-gray-200"
-                          }`}>
-                          <span className={`inline-block w-4 h-4 rounded-full bg-white shadow transform transition-transform ${
-                            form.permissions[key] ? "translate-x-4" : "translate-x-0"
-                          }`} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+          {/* Permissions — available for all roles */}
+          <div>
+            <button type="button" onClick={() => setShowPermissions((v) => !v)}
+              className="flex items-center gap-1.5 text-xs font-medium text-[#3486cf] hover:underline">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"
+                className={`transition-transform ${showPermissions ? "rotate-90" : ""}`}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              {showPermissions ? "Hide permissions" : "Customize permissions"}
+            </button>
+            {showPermissions && (
+              <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden">
+                <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Dashboard Access</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Control what this team member can see and do in the dashboard</p>
                 </div>
-              )}
-            </div>
-          )}
+                <div className="divide-y divide-gray-100">
+                  {PERMISSION_DEFS.map(({ key, label, desc }) => (
+                    <div key={key} className="flex items-center justify-between px-4 py-3 gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-[#0F172A]">{label}</p>
+                        <p className="text-[11px] text-gray-400">{desc}</p>
+                      </div>
+                      <button type="button"
+                        onClick={() => setForm((f) => ({
+                          ...f,
+                          permissions: { ...f.permissions, [key]: !f.permissions[key] },
+                        }))}
+                        className={`relative inline-flex w-9 h-5 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
+                          form.permissions[key] ? "bg-[#3486cf]" : "bg-gray-200"
+                        }`}>
+                        <span className={`inline-block w-4 h-4 rounded-full bg-white shadow transform transition-transform ${
+                          form.permissions[key] ? "translate-x-4" : "translate-x-0"
+                        }`} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="flex items-center gap-2">
             <input type="checkbox" id="active" checked={form.active}
@@ -788,20 +787,20 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
   );
 }
 
-// ─── Calendar sync modal ─────────────────────────────────────────────────────
+// ─── Calendar sync modal — admin read-only status view ───────────────────────
 function CalendarSyncModal({ member, onClose, onRegenerate }) {
   const APP_URL = getAppUrl();
   const isGCalConnected = !!member.googleCalendar?.refreshToken;
 
-  const [gcalError,   setGcalError]   = useState("");
-  const [syncing,     setSyncing]     = useState(false);
-  const [syncResult,  setSyncResult]  = useState(null);
-  const [lastSynced,  setLastSynced]  = useState(member.googleCalendar?.lastSynced || null);
+  const [syncError,  setSyncError]  = useState("");
+  const [syncing,    setSyncing]    = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
+  const [lastSynced, setLastSynced] = useState(member.googleCalendar?.lastSynced || null);
 
   async function syncNow() {
     setSyncing(true);
     setSyncResult(null);
-    setGcalError("");
+    setSyncError("");
     try {
       const { auth: firebaseAuth } = await import("@/lib/firebase");
       const token = await firebaseAuth.currentUser.getIdToken();
@@ -811,44 +810,23 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
         body:    JSON.stringify({ memberId: member.id }),
       });
       const d = await res.json();
-      if (!res.ok) { setGcalError(d.error || "Sync failed"); return; }
+      if (!res.ok) { setSyncError(d.error || "Sync failed"); return; }
       setSyncResult(d.synced);
       setLastSynced(new Date().toISOString());
     } catch (e) {
-      setGcalError(e.message);
+      setSyncError(e.message);
     } finally {
       setSyncing(false);
     }
   }
 
-  async function connectGoogleCalendar() {
-    setGcalError("");
-    try {
-      const { auth: firebaseAuth } = await import("@/lib/firebase");
-      const token = await firebaseAuth.currentUser.getIdToken();
-      // Quick preflight check
-      const check = await fetch(`/api/calendar/oauth/start?token=${token}&memberId=${member.id}&preflight=1`);
-      if (!check.ok) {
-        const d = await check.json().catch(() => ({}));
-        setGcalError(d.error || "Configuration error");
-        return;
-      }
-      window.location.href = `/api/calendar/oauth/start?token=${token}&memberId=${member.id}`;
-    } catch (e) {
-      setGcalError(e.message);
-    }
-  }
-  const feedUrl = member.calendarToken
-    ? `${APP_URL}/api/calendar/${member.calendarToken}`
-    : null;
-
-  const webcalUrl  = feedUrl ? feedUrl.replace(/^https?:\/\//, "webcal://") : null;
-  const gcalUrl    = feedUrl
+  const feedUrl   = member.calendarToken ? `${APP_URL}/api/calendar/${member.calendarToken}` : null;
+  const webcalUrl = feedUrl ? feedUrl.replace(/^https?:\/\//, "webcal://") : null;
+  const gcalUrl   = feedUrl
     ? `https://calendar.google.com/calendar/r/settings/addbyurl?url=${encodeURIComponent(feedUrl)}`
     : null;
 
   const [copied, setCopied] = useState(false);
-
   function copyLink() {
     if (!feedUrl) return;
     navigator.clipboard.writeText(feedUrl);
@@ -867,31 +845,8 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
 
         <div className="p-6 space-y-4">
 
-          {/* ── Hero: Two-way Google Calendar Sync ── */}
-          {!isGCalConnected ? (
-            <div className="border-2 border-dashed border-[#3486cf]/30 rounded-xl p-5 text-center">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="mx-auto mb-3">
-                <rect width="24" height="24" rx="3" fill="#4285F4"/>
-                <path d="M18 12c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6 6-2.69 6-6z" fill="white"/>
-                <path d="M14.5 12c0-1.38-1.12-2.5-2.5-2.5S9.5 10.62 9.5 12s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z" fill="#4285F4"/>
-              </svg>
-              <p className="text-sm font-semibold text-[#0F172A] mb-1">Connect Google Calendar</p>
-              <p className="text-xs text-gray-500 mb-4 leading-relaxed max-w-xs mx-auto">
-                KyoriaOS reads {member.name}&apos;s Google Calendar to block off busy times and prevent double-booking. Confirmed shoots are also written back to their calendar automatically.
-              </p>
-              <button onClick={connectGoogleCalendar} className="btn-primary px-6 py-2 text-sm">
-                Connect Google Calendar
-              </button>
-              {gcalError && (
-                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 text-left">
-                  <p className="font-semibold mb-1">Setup required</p>
-                  <p>{gcalError === "GOOGLE_CLIENT_ID not configured"
-                    ? "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your Vercel environment variables."
-                    : gcalError}</p>
-                </div>
-              )}
-            </div>
-          ) : (
+          {/* Connection status */}
+          {isGCalConnected ? (
             <div className="border border-green-200 bg-green-50 rounded-xl p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -905,7 +860,7 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
                     <p className="text-xs text-green-700 mt-0.5">
                       {lastSynced
                         ? `Last synced ${new Date(lastSynced).toLocaleString()}`
-                        : "Not yet synced — click Sync Now to import busy times"}
+                        : "Not yet synced"}
                     </p>
                     {syncResult !== null && (
                       <p className="text-xs text-green-600 font-medium mt-1">{syncResult} busy block{syncResult !== 1 ? "s" : ""} imported</p>
@@ -919,37 +874,35 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
                   {syncing ? "Syncing…" : "Sync Now"}
                 </button>
               </div>
-              {gcalError && (
+              {syncError && (
                 <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
-                  {gcalError}
+                  {syncError}
                 </div>
               )}
             </div>
-          )}
-
-          {/* How it works — only show when not connected */}
-          {!isGCalConnected && (
-            <div className="grid grid-cols-3 gap-2 text-center">
-              {[
-                { icon: "🔗", label: "Connect once" },
-                { icon: "📅", label: "Reads busy times" },
-                { icon: "✅", label: "Prevents conflicts" },
-              ].map(({ icon, label }) => (
-                <div key={label} className="bg-gray-50 rounded-lg py-3 px-2">
-                  <p className="text-lg mb-1">{icon}</p>
-                  <p className="text-[11px] text-gray-500 font-medium">{label}</p>
-                </div>
-              ))}
+          ) : (
+            <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-amber-600">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-amber-800">Not connected</p>
+                <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                  {member.name} hasn&apos;t connected their Google Calendar yet. Each team member connects their own account from their personal <strong>My Profile</strong> page.
+                </p>
+              </div>
             </div>
           )}
 
-          {/* ── Optional: ICS subscription (secondary) ── */}
+          {/* ICS feed (secondary) */}
           {feedUrl && (
             <details className="group border border-gray-200 rounded-xl">
               <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
                 <div>
-                  <p className="text-xs font-semibold text-gray-600">Sync shoots to your calendar app</p>
-                  <p className="text-[11px] text-gray-400">Optional — one-way feed to Google, Apple, Outlook</p>
+                  <p className="text-xs font-semibold text-gray-600">ICS Calendar Feed</p>
+                  <p className="text-[11px] text-gray-400">One-way read-only feed for Google, Apple, Outlook</p>
                 </div>
                 <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -978,8 +931,7 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
                   </a>
                 </div>
                 <div className="pt-1 border-t border-gray-100">
-                  <button onClick={onRegenerate}
-                    className="text-xs text-red-400 hover:text-red-600">
+                  <button onClick={onRegenerate} className="text-xs text-red-400 hover:text-red-600">
                     Regenerate link
                   </button>
                 </div>
@@ -1483,11 +1435,11 @@ export default function TeamPage() {
               </button>
               <button
                 onClick={() => setCalModal(m)}
-                title="Calendar sync"
+                title={m.googleCalendar?.refreshToken ? `Last synced: ${m.googleCalendar.lastSynced ? new Date(m.googleCalendar.lastSynced).toLocaleDateString() : "never"}` : "Not connected — member connects from their profile"}
                 className={`ml-2 text-xs px-2.5 py-1 rounded-full border font-medium transition-colors flex items-center gap-1.5 ${
                   m.googleCalendar?.refreshToken
                     ? "border-green-200 bg-green-50 text-green-700"
-                    : "border-gray-200 text-gray-400 hover:border-[#3486cf]/40 hover:text-[#3486cf]"
+                    : "border-gray-200 text-gray-400 hover:border-amber-300 hover:text-amber-600"
                 }`}
               >
                 <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -1496,7 +1448,7 @@ export default function TeamPage() {
                   <line x1="8" y1="2" x2="8" y2="6"/>
                   <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                {m.googleCalendar?.refreshToken ? "Synced" : "Sync Cal"}
+                {m.googleCalendar?.refreshToken ? "Cal Synced" : "No Cal"}
               </button>
             </div>
           ))}

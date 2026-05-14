@@ -55,16 +55,19 @@ export async function POST(req) {
     }
   }
 
+  const VALID_PERM_KEYS = ["canViewRevenue","canViewReports","canManageTeam","canManageProducts","canEditSettings","canCreateBookings"];
+
   const body  = await req.json();
   const id    = uuidv4().replace(/-/g, "").slice(0, 16);
   const calendarToken = uuidv4().replace(/-/g, "");
+  const role  = ["photographer","manager","assistant","admin"].includes(body.role) ? body.role : "photographer";
   const member = {
     id,
     name:          (body.name || "").slice(0, 80),
     email:         (body.email || "").toLowerCase(),
     phone:         body.phone || "",
     homeZip:       (body.homeZip || "").slice(0, 10),
-    role:          ["photographer","manager","assistant","admin"].includes(body.role) ? body.role : "photographer",
+    role,
     skills:        Array.isArray(body.skills) ? body.skills.map(String).slice(0, 50) : [],
     color:         body.color || "#3486cf",
     active:        body.active !== false,
@@ -72,6 +75,9 @@ export async function POST(req) {
     serviceRates:  body.serviceRates && typeof body.serviceRates === "object" ? body.serviceRates : {},
     bufferMinutes: body.bufferMinutes != null ? Number(body.bufferMinutes) || 0 : 0,
     workingHours:  body.workingHours && typeof body.workingHours === "object" ? body.workingHours : {},
+    permissions:   body.permissions && typeof body.permissions === "object"
+      ? Object.fromEntries(VALID_PERM_KEYS.map((k) => [k, !!body.permissions[k]]))
+      : Object.fromEntries(VALID_PERM_KEYS.map((k) => [k, false])),
     calendarToken,
     tenantId:      ctx.tenantId,
   };
