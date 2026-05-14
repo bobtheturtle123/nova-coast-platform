@@ -60,73 +60,63 @@ function NotifToggleRow({ notif, pref, plan, onToggle }) {
 
 // ─── Staff Access Section ─────────────────────────────────────────────────────
 function StaffAccessSection() {
-  const [invites,       setInvites]       = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [inviteEmail,   setInviteEmail]   = useState("");
-  const [inviteRole,    setInviteRole]    = useState("photographer");
-  const [sending,       setSending]       = useState(false);
-  const [msg,           setMsg]           = useState("");
-  const [copyId,        setCopyId]        = useState(null);
+  const [members,     setMembers]     = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole,  setInviteRole]  = useState("photographer");
+  const [sending,     setSending]     = useState(false);
+  const [msg,         setMsg]         = useState("");
 
-  useEffect(() => {
+  function loadMembers() {
     auth.currentUser?.getIdToken().then(async (token) => {
-      const res = await fetch("/api/dashboard/team/staff", { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) { const d = await res.json(); setInvites(d.invites || []); }
+      const res = await fetch("/api/dashboard/team", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { const d = await res.json(); setMembers(d.members || d.team || []); }
       setLoading(false);
     });
-  }, []);
+  }
+
+  useEffect(() => { loadMembers(); }, []);
 
   async function sendInvite() {
     if (!inviteEmail.trim()) return;
     setSending(true); setMsg("");
     const token = await auth.currentUser.getIdToken();
-    const endpoint = ["manager","admin"].includes(inviteRole)
-      ? "/api/dashboard/team/staff"
-      : "/api/dashboard/team/invite";
-    const res = await fetch(endpoint, {
+    const res = await fetch("/api/dashboard/team/staff", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
     });
     const data = await res.json();
     if (res.ok) {
-      if (data.emailFailed) {
-        setMsg(`Email failed — share manually: ${data.inviteUrl || ""}`);
-      } else {
-        setMsg(`Invite sent to ${inviteEmail.trim()}`);
-      }
-      setInvites((prev) => [{
-        id: data.token,
-        email: inviteEmail.trim(),
-        role: inviteRole,
-        accepted: false,
-        createdAt: new Date().toISOString(),
-      }, ...prev]);
+      setMsg(data.emailFailed ? `Email failed — share: ${data.inviteUrl}` : `Invite sent to ${inviteEmail.trim()}`);
       setInviteEmail("");
+      loadMembers();
     } else {
       setMsg(data.error || "Failed to send.");
     }
     setSending(false);
-    setTimeout(() => setMsg(""), 6000);
+    setTimeout(() => setMsg(""), 8000);
   }
 
-  async function revokeInvite(id) {
-    if (!window.confirm("Revoke this staff invite / remove access?")) return;
+  async function removeMember(id) {
+    if (!window.confirm("Remove this team member / revoke access?")) return;
     const token = await auth.currentUser.getIdToken();
-    await fetch(`/api/dashboard/team/staff?id=${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-    setInvites((prev) => prev.filter((i) => i.id !== id));
+    await fetch(`/api/dashboard/team/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    setMembers((prev) => prev.filter((m) => m.id !== id));
   }
 
   return (
     <div id="settings-staff-access" className="card mt-6 scroll-mt-24">
-      <h2 className="font-semibold text-[#0F172A] text-base mb-1">Staff Access</h2>
-      <p className="text-sm text-gray-500 mb-6">
-        Invite employees or virtual assistants to manage bookings and galleries. They get dashboard access but cannot change billing or settings.
+      <h2 className="font-semibold text-[#0F172A] text-base mb-1">Team Members</h2>
+      <p className="text-sm text-gray-500 mb-5">
+        Invite photographers, assistants, and staff. They appear on the Team page and in the booking scheduler.
+        Full profiles (pay rates, skills, hours) can be set on the <a href="/dashboard/team" className="text-[#3486cf] hover:underline">Team page</a>.
       </p>
 
       {/* Invite form */}
-      <div className="flex gap-3 flex-wrap mb-6">
+      <div className="flex gap-3 flex-wrap mb-4">
         <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendInvite()}
           className="input-field flex-1 min-w-48" placeholder="colleague@email.com" />
         <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="input-field w-40">
           <option value="photographer">Photographer</option>
@@ -140,49 +130,217 @@ function StaffAccessSection() {
       </div>
       {msg && <p className="text-sm text-green-700 mb-4">{msg}</p>}
 
-      {/* Role descriptions */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 max-w-2xl">
-        {[
-          { role: "Photographer", desc: "Shows in booking schedule. Gets shoot notifications & photographer portal." },
-          { role: "Editor",       desc: "Photographer portal only. Not assigned to client-facing booking slots." },
-          { role: "Assistant",    desc: "Can be assigned to shoots. Not shown in public booking flow." },
-          { role: "Manager",      desc: "Dashboard login — can manage bookings, galleries, and team calendar." },
-          { role: "Admin",        desc: "Full dashboard access — everything except billing settings." },
-        ].map((r) => (
-          <div key={r.role} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-            <p className="text-xs font-semibold text-[#0F172A]">{r.role}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{r.desc}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Invite list */}
+      {/* Member list */}
       {loading ? (
         <div className="flex justify-center py-6">
           <div className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
         </div>
-      ) : invites.length === 0 ? (
-        <p className="text-sm text-gray-400">No staff invites yet.</p>
+      ) : members.length === 0 ? (
+        <p className="text-sm text-gray-400">No team members yet. Send an invite above.</p>
       ) : (
         <div className="space-y-2">
-          {invites.map((inv) => (
-            <div key={inv.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl">
-              <div>
-                <p className="text-sm font-medium text-[#0F172A]">{inv.email}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {inv.role} ·{" "}
-                  {inv.accepted
-                    ? <span className="text-green-600 font-medium">Active</span>
-                    : <span className="text-amber-500">Pending</span>}
-                  {inv.createdAt && ` · Invited ${new Date(inv.createdAt).toLocaleDateString()}`}
-                </p>
+          {members.map((m) => (
+            <div key={m.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-white"
+                  style={{ background: m.color || "#3486cf" }}>
+                  {(m.name || m.email || "?")[0].toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-[#0F172A] truncate">{m.name || m.email}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {m.role} ·{" "}
+                    {m.status === "invited"
+                      ? <span className="text-amber-500">Invite pending</span>
+                      : <span className="text-green-600">Active</span>}
+                    {m.email && m.name ? ` · ${m.email}` : ""}
+                  </p>
+                </div>
               </div>
-              <button onClick={() => revokeInvite(inv.id)}
-                className="text-xs text-red-400 hover:text-red-600 font-medium ml-4">
-                Revoke
+              <button onClick={() => removeMember(m.id)}
+                className="text-xs text-red-400 hover:text-red-600 font-medium ml-4 flex-shrink-0">
+                Remove
               </button>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Calendar Sync Section ────────────────────────────────────────────────────
+function CalendarSyncSection() {
+  const [team,        setTeam]        = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [blockSync,   setBlockSync]   = useState(false);
+  const [saving,      setSaving]      = useState(false);
+  const [syncing,     setSyncing]     = useState({});
+  const [syncErrors,  setSyncErrors]  = useState({});
+  const [syncCounts,  setSyncCounts]  = useState({});
+
+  function loadAll() {
+    auth.currentUser?.getIdToken().then(async (token) => {
+      const [teamRes, tenantRes] = await Promise.all([
+        fetch("/api/dashboard/team",   { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (teamRes.ok)   { const d = await teamRes.json();   setTeam(d.members || d.team || []); }
+      if (tenantRes.ok) { const d = await tenantRes.json(); setBlockSync(d.tenant?.calendarBlockSync || false); }
+      setLoading(false);
+    });
+  }
+
+  useEffect(() => { loadAll(); }, []);
+
+  async function toggleBlockSync(val) {
+    setSaving(true);
+    const token = await auth.currentUser.getIdToken();
+    await fetch("/api/dashboard/tenant", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ calendarBlockSync: val }),
+    });
+    setBlockSync(val);
+    setSaving(false);
+  }
+
+  async function syncNow(memberId) {
+    setSyncing((s) => ({ ...s, [memberId]: true }));
+    setSyncErrors((e) => ({ ...e, [memberId]: null }));
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch("/api/dashboard/team/google-sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ memberId }),
+    });
+    const d = await res.json();
+    if (!res.ok) {
+      setSyncErrors((e) => ({ ...e, [memberId]: d.error }));
+    } else {
+      setSyncCounts((c) => ({ ...c, [memberId]: d.synced }));
+      setTeam((prev) => prev.map((m) => m.id === memberId
+        ? { ...m, googleCalendar: { ...m.googleCalendar, lastSynced: new Date().toISOString() } }
+        : m
+      ));
+    }
+    setSyncing((s) => ({ ...s, [memberId]: false }));
+  }
+
+  function connectCalendar(memberId) {
+    auth.currentUser?.getIdToken().then((token) => {
+      const url = `/api/calendar/oauth/start?token=${token}&memberId=${memberId}`;
+      const popup = window.open(url, "gcal-oauth", "width=600,height=700,noopener");
+      const handler = (e) => {
+        if (e.data?.type === "gcal-connected") {
+          window.removeEventListener("message", handler);
+          popup?.close();
+          loadAll();
+        } else if (e.data?.type === "gcal-error") {
+          window.removeEventListener("message", handler);
+          setSyncErrors((er) => ({ ...er, [memberId]: e.data.error || "Connection failed" }));
+        }
+      };
+      window.addEventListener("message", handler);
+    });
+  }
+
+  const photographersAndAssistants = team.filter((m) =>
+    ["photographer", "assistant"].includes(m.role)
+  );
+
+  return (
+    <div id="settings-calendar-sync" className="card mt-6 scroll-mt-24">
+      <h2 className="font-semibold text-[#0F172A] text-base mb-1">Calendar Block Syncing</h2>
+      <p className="text-sm text-gray-500 mb-5">
+        Adjust how calendar blocks are synced to external calendars.
+      </p>
+
+      {/* Master toggle */}
+      <div className="flex items-start justify-between p-4 bg-gray-50 rounded-xl mb-4 border border-gray-100">
+        <div className="flex-1 pr-4">
+          <p className="text-sm font-semibold text-[#0F172A]">Sync KyoriaOS Blocks to External Calendars</p>
+          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+            When enabled, calendar blocks you create in KyoriaOS will be synced to your team members&apos; external calendars.
+            This allows your team to rely on their external calendar for their complete daily schedule.
+          </p>
+        </div>
+        <button
+          onClick={() => toggleBlockSync(!blockSync)}
+          disabled={saving}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 mt-0.5 ${blockSync ? "bg-[#3486cf]" : "bg-gray-300"} disabled:opacity-50`}>
+          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${blockSync ? "translate-x-6" : "translate-x-1"}`} />
+        </button>
+      </div>
+
+      {/* Info banner */}
+      <div className="text-xs text-gray-600 bg-[#3486cf]/5 border border-[#3486cf]/15 rounded-lg px-4 py-3 mb-5 leading-relaxed">
+        Manage the calendar sync of each team member below. This sync is used by the scheduling system to determine
+        when each user is available. Once a shoot is booked and assigned, KyoriaOS will automatically push that event
+        to the assigned photographer&apos;s calendar.
+        <span className="block mt-1.5 text-gray-400 italic">Admin view — only users with availability management permission can see this.</span>
+      </div>
+
+      {/* Per-member table */}
+      {loading ? (
+        <div className="flex justify-center py-6">
+          <div className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
+        </div>
+      ) : photographersAndAssistants.length === 0 ? (
+        <p className="text-sm text-gray-400">No photographers or assistants on the team yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {photographersAndAssistants.map((m) => {
+            const connected = !!m.googleCalendar?.refreshToken;
+            const lastSync  = m.googleCalendar?.lastSynced;
+            const isSyncing = !!syncing[m.id];
+            const err       = syncErrors[m.id];
+            const count     = syncCounts[m.id];
+            return (
+              <div key={m.id} className="border border-gray-100 rounded-xl p-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold text-white ${connected ? "bg-green-500" : "bg-gray-300"}`}>
+                      {(m.name || m.email || "?")[0].toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[#0F172A] truncate">{m.name || m.email}</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        {m.role} ·{" "}
+                        {connected
+                          ? <span className="text-green-600 font-medium">
+                              Google Calendar connected{lastSync ? ` · synced ${new Date(lastSync).toLocaleDateString()}` : " · not yet synced"}
+                            </span>
+                          : <span className="text-amber-500">Not connected</span>
+                        }
+                      </p>
+                      {count != null && <p className="text-[11px] text-green-600 mt-0.5">{count} busy block{count !== 1 ? "s" : ""} imported</p>}
+                      {err && <p className="text-[11px] text-red-500 mt-0.5">{err}</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {connected && (
+                      <button
+                        onClick={() => syncNow(m.id)}
+                        disabled={isSyncing}
+                        className="text-xs border border-[#3486cf]/30 text-[#3486cf] px-2.5 py-1 rounded-lg hover:bg-[#3486cf]/5 disabled:opacity-50">
+                        {isSyncing ? "Syncing…" : "Sync Now"}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => connectCalendar(m.id)}
+                      className={`text-xs px-3 py-1 rounded-lg border font-medium transition-colors ${
+                        connected
+                          ? "border-gray-200 text-gray-500 hover:border-[#3486cf]/30 hover:text-[#3486cf]"
+                          : "btn-primary"
+                      }`}>
+                      {connected ? "Reconnect" : "Connect"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -2519,6 +2677,7 @@ export default function SettingsPage() {
 
       {/* ─── Staff Access ────────────────────────────────────────────────────── */}
       <StaffAccessSection />
+      <CalendarSyncSection />
 
         </div>
         )}

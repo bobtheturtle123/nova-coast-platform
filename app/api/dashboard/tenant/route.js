@@ -21,7 +21,7 @@ export async function GET(req) {
 }
 
 // Allowed top-level tenant settings fields that can be updated via this route
-const PATCHABLE_FIELDS = new Set(["emailTemplate", "smsSettings"]);
+const PATCHABLE_FIELDS = new Set(["emailTemplate", "smsSettings", "calendarBlockSync"]);
 
 export async function PATCH(req) {
   const ctx = await getCtx(req);
