@@ -67,17 +67,44 @@ export async function POST(req) {
   const APP_URL   = getAppUrl();
   const inviteUrl = `${APP_URL}/staff-invite/${token}`;
 
+  const normalizedEmail = email.trim().toLowerCase();
+
   await adminDb
     .collection("tenants").doc(ctx.tenantId)
     .collection("staffInvites").doc(token)
     .set({
-      email:      email.trim().toLowerCase(),
+      email:      normalizedEmail,
       role:       staffRole,
       tenantId:   ctx.tenantId,
+      inviteToken: token,
       accepted:   false,
       expiresAt,
       createdAt:  new Date(),
     });
+
+  // Also create a minimal team member document so this person appears in the Team page
+  // Check if a team member with this email already exists
+  const existingSnap = await adminDb
+    .collection("tenants").doc(ctx.tenantId)
+    .collection("team")
+    .where("email", "==", normalizedEmail)
+    .limit(1)
+    .get();
+
+  if (existingSnap.empty) {
+    await adminDb
+      .collection("tenants").doc(ctx.tenantId)
+      .collection("team").doc(token)
+      .set({
+        id:          token,
+        email:       normalizedEmail,
+        role:        staffRole,
+        name:        normalizedEmail.split("@")[0],
+        status:      "invited",
+        inviteToken: token,
+        createdAt:   new Date(),
+      });
+  }
 
   // Send email
   let emailFailed = !resend;
@@ -126,6 +153,15 @@ export async function DELETE(req) {
     .collection("tenants").doc(ctx.tenantId)
     .collection("staffInvites").doc(id)
     .delete();
+
+  // Also remove the mirrored team member doc if it was created from this invite (status: invited)
+  const teamDocRef = adminDb
+    .collection("tenants").doc(ctx.tenantId)
+    .collection("team").doc(id);
+  const teamDoc = await teamDocRef.get();
+  if (teamDoc.exists && teamDoc.data().status === "invited") {
+    await teamDocRef.delete();
+  }
 
   return Response.json({ ok: true });
 }

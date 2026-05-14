@@ -865,127 +865,128 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
         </div>
 
-        <div className="p-6 space-y-5">
-          {/* Google Calendar OAuth */}
-          <div className={`border rounded-lg p-4 ${isGCalConnected ? "border-green-200 bg-green-50" : "border-gray-200 bg-gray-50"}`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <rect width="24" height="24" rx="2" fill="#4285F4"/>
-                  <path d="M18 12c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6 6-2.69 6-6z" fill="white"/>
-                  <path d="M14.5 12c0-1.38-1.12-2.5-2.5-2.5S9.5 10.62 9.5 12s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z" fill="#4285F4"/>
-                </svg>
-                <div>
-                  <p className="text-sm font-medium text-[#0F172A]">Google Calendar Sync</p>
-                  <p className="text-xs text-gray-500">
-                    {isGCalConnected
-                      ? lastSynced
-                        ? `Connected · last synced ${new Date(lastSynced).toLocaleString()}`
-                        : "Connected · never synced"
-                      : "Connect to block unavailable times automatically"}
-                  </p>
-                  {syncResult !== null && (
-                    <p className="text-xs text-green-600 mt-0.5">{syncResult} busy block{syncResult !== 1 ? "s" : ""} imported</p>
-                  )}
+        <div className="p-6 space-y-4">
+
+          {/* ── Hero: Two-way Google Calendar Sync ── */}
+          {!isGCalConnected ? (
+            <div className="border-2 border-dashed border-[#3486cf]/30 rounded-xl p-5 text-center">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="mx-auto mb-3">
+                <rect width="24" height="24" rx="3" fill="#4285F4"/>
+                <path d="M18 12c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6 6-2.69 6-6z" fill="white"/>
+                <path d="M14.5 12c0-1.38-1.12-2.5-2.5-2.5S9.5 10.62 9.5 12s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z" fill="#4285F4"/>
+              </svg>
+              <p className="text-sm font-semibold text-[#0F172A] mb-1">Connect Google Calendar</p>
+              <p className="text-xs text-gray-500 mb-4 leading-relaxed max-w-xs mx-auto">
+                KyoriaOS reads {member.name}&apos;s Google Calendar to block off busy times and prevent double-booking. Confirmed shoots are also written back to their calendar automatically.
+              </p>
+              <button onClick={connectGoogleCalendar} className="btn-primary px-6 py-2 text-sm">
+                Connect Google Calendar
+              </button>
+              {gcalError && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 text-left">
+                  <p className="font-semibold mb-1">Setup required</p>
+                  <p>{gcalError === "GOOGLE_CLIENT_ID not configured"
+                    ? "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your Vercel environment variables."
+                    : gcalError}</p>
                 </div>
-              </div>
-              {isGCalConnected
-                ? (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={syncNow}
-                      disabled={syncing}
-                      className="text-xs text-[#3486cf] border border-[#3486cf]/30 px-2.5 py-1 rounded hover:bg-[#3486cf]/5 disabled:opacity-50">
-                      {syncing ? "Syncing…" : "Sync Now"}
-                    </button>
-                    <span className="tag-green">Connected</span>
-                  </div>
-                )
-                : <button onClick={connectGoogleCalendar} className="btn-primary text-xs px-3 py-1.5">Connect</button>
-              }
+              )}
             </div>
-            {gcalError && (
-              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
-                <p className="font-semibold mb-1">Setup required</p>
-                <p>{gcalError === "GOOGLE_CLIENT_ID not configured"
-                  ? "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your Vercel environment variables. Create OAuth credentials at console.cloud.google.com → APIs & Services → Credentials → OAuth 2.0 Client IDs."
-                  : gcalError}</p>
+          ) : (
+            <div className="border border-green-200 bg-green-50 rounded-xl p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" className="text-green-600">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">Google Calendar connected</p>
+                    <p className="text-xs text-green-700 mt-0.5">
+                      {lastSynced
+                        ? `Last synced ${new Date(lastSynced).toLocaleString()}`
+                        : "Not yet synced — click Sync Now to import busy times"}
+                    </p>
+                    {syncResult !== null && (
+                      <p className="text-xs text-green-600 font-medium mt-1">{syncResult} busy block{syncResult !== 1 ? "s" : ""} imported</p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={syncNow}
+                  disabled={syncing}
+                  className="flex-shrink-0 text-xs bg-white border border-green-300 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-50 disabled:opacity-50 font-medium">
+                  {syncing ? "Syncing…" : "Sync Now"}
+                </button>
               </div>
-            )}
-          </div>
+              {gcalError && (
+                <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+                  {gcalError}
+                </div>
+              )}
+            </div>
+          )}
 
-          <p className="text-sm text-gray-500">
-            When synced, Google Calendar busy times are imported as availability blocks — preventing double-booking.
-            Confirmed shoots are also pushed directly to the photographer&apos;s Google Calendar.
-          </p>
+          {/* How it works — only show when not connected */}
+          {!isGCalConnected && (
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {[
+                { icon: "🔗", label: "Connect once" },
+                { icon: "📅", label: "Reads busy times" },
+                { icon: "✅", label: "Prevents conflicts" },
+              ].map(({ icon, label }) => (
+                <div key={label} className="bg-gray-50 rounded-lg py-3 px-2">
+                  <p className="text-lg mb-1">{icon}</p>
+                  <p className="text-[11px] text-gray-500 font-medium">{label}</p>
+                </div>
+              ))}
+            </div>
+          )}
 
-          {feedUrl ? (
-            <>
-              {/* Feed URL */}
-              <div>
-                <label className="label-field">Subscribe URL</label>
+          {/* ── Optional: ICS subscription (secondary) ── */}
+          {feedUrl && (
+            <details className="group border border-gray-200 rounded-xl">
+              <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
+                <div>
+                  <p className="text-xs font-semibold text-gray-600">Sync shoots to your calendar app</p>
+                  <p className="text-[11px] text-gray-400">Optional — one-way feed to Google, Apple, Outlook</p>
+                </div>
+                <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </summary>
+              <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
                 <div className="flex gap-2 items-center">
-                  <code className="text-xs bg-gray-50 border border-gray-200 rounded px-3 py-2 flex-1 truncate text-gray-700">
+                  <code className="text-[11px] bg-gray-50 border border-gray-200 rounded px-3 py-2 flex-1 truncate text-gray-600">
                     {feedUrl}
                   </code>
                   <button onClick={copyLink}
-                    className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-3 py-2 rounded hover:bg-[#3486cf]/5 flex-shrink-0">
+                    className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2.5 py-2 rounded hover:bg-[#3486cf]/5 flex-shrink-0">
                     {copied ? "Copied!" : "Copy"}
                   </button>
                 </div>
-              </div>
-
-              {/* Quick subscribe buttons */}
-              <div className="space-y-2">
-                <label className="label-field">Quick Subscribe</label>
-                <a href={gcalUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-3 w-full border border-gray-200 rounded px-4 py-3 hover:bg-gray-50 transition-colors text-left">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <rect width="24" height="24" rx="2" fill="#4285F4"/>
-                    <path d="M18 12c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6 6-2.69 6-6z" fill="white"/>
-                    <path d="M14.5 12c0-1.38-1.12-2.5-2.5-2.5S9.5 10.62 9.5 12s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z" fill="#4285F4"/>
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-[#0F172A]">Google Calendar</p>
-                    <p className="text-xs text-gray-400">Opens Google Calendar to add the feed</p>
-                  </div>
-                </a>
-
-                <a href={webcalUrl}
-                  className="flex items-center gap-3 w-full border border-gray-200 rounded px-4 py-3 hover:bg-gray-50 transition-colors text-left">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <rect width="24" height="24" rx="2" fill="#1c1c1e"/>
-                    <rect x="4" y="5" width="16" height="15" rx="1.5" fill="white"/>
-                    <rect x="4" y="5" width="16" height="4" rx="1.5" fill="#F44336"/>
-                    <path d="M8 13h2v2H8v-2zm3 0h2v2h-2v-2zm3 0h2v2h-2v-2zM8 16h2v2H8v-2zm3 0h2v2h-2v-2z" fill="#1c1c1e"/>
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-[#0F172A]">Apple Calendar</p>
-                    <p className="text-xs text-gray-400">Opens Calendar app via webcal:// link</p>
-                  </div>
-                </a>
-
-                <div className="text-xs text-gray-400 bg-gray-50 rounded px-3 py-2">
-                  <strong>Other apps (Outlook, Fantastical, etc.):</strong> Copy the URL above and paste it into &ldquo;Subscribe to calendar&rdquo; in your app.
+                <div className="flex gap-2">
+                  <a href={gcalUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-1.5 border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors text-xs font-medium text-gray-600">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="2" fill="#4285F4"/><path d="M18 12c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6 6-2.69 6-6z" fill="white"/><path d="M14.5 12c0-1.38-1.12-2.5-2.5-2.5S9.5 10.62 9.5 12s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z" fill="#4285F4"/></svg>
+                    Google Calendar
+                  </a>
+                  <a href={webcalUrl}
+                    className="flex-1 flex items-center justify-center gap-1.5 border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors text-xs font-medium text-gray-600">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="2" fill="#1c1c1e"/><rect x="4" y="5" width="16" height="15" rx="1.5" fill="white"/><rect x="4" y="5" width="16" height="4" rx="1.5" fill="#F44336"/><path d="M8 13h2v2H8v-2zm3 0h2v2h-2v-2zm3 0h2v2h-2v-2zM8 16h2v2H8v-2zm3 0h2v2h-2v-2z" fill="#1c1c1e"/></svg>
+                    Apple Calendar
+                  </a>
+                </div>
+                <div className="pt-1 border-t border-gray-100">
+                  <button onClick={onRegenerate}
+                    className="text-xs text-red-400 hover:text-red-600">
+                    Regenerate link
+                  </button>
                 </div>
               </div>
-
-              {/* Regenerate */}
-              <div className="pt-2 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-2">
-                  Regenerating the link will break any existing subscriptions.
-                </p>
-                <button onClick={onRegenerate}
-                  className="text-xs text-red-400 hover:text-red-600 border border-red-200 px-3 py-1.5 rounded">
-                  Regenerate link
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="text-sm text-gray-500 bg-amber-50 border border-amber-200 rounded px-4 py-3">
-              No calendar token found. Edit and save this team member to generate one.
-            </div>
+            </details>
           )}
+
         </div>
 
         <div className="px-6 py-4 flex justify-end sticky bottom-0 bg-white" style={{ borderTop: "1px solid var(--border-subtle)" }}>

@@ -138,6 +138,8 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   const [serviceArea,       setServiceArea]       = useState(null);
   const [showSchedulePopup, setShowSchedulePopup] = useState(false);
   const [confirmedAddress,  setConfirmedAddress]  = useState(init.address || "");
+  const [busySlots,         setBusySlots]         = useState(new Set());
+  const [loadingSlots,      setLoadingSlots]      = useState(false);
 
   const getToken = () => auth.currentUser?.getIdToken();
 
@@ -308,6 +310,37 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
     return () => { if (travelTimerRef.current) clearTimeout(travelTimerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.shootDate, form.lat, form.lng, form.address, form.shootTime]);
+
+  // Fetch busy slots for selected photographer + date
+  useEffect(() => {
+    const pid  = form.photographerId;
+    const date = form.shootDate;
+    if (!pid || pid === "owner" || !date) { setBusySlots(new Set()); return; }
+    let cancelled = false;
+    setLoadingSlots(true);
+    getToken().then((tok) =>
+      fetch(`/api/dashboard/team/${pid}/availability?date=${date}`, {
+        headers: { Authorization: `Bearer ${tok}` },
+      }).then((r) => (r.ok ? r.json() : { busy: [] }))
+    ).then((data) => {
+      if (cancelled) return;
+      const busy = new Set();
+      const ranges = data.busy || [];
+      TIME_SLOTS.forEach(({ value }) => {
+        const [h, m] = value.split(":").map(Number);
+        const slotStart = h * 60 + m;
+        const slotEnd   = slotStart + 30;
+        if (ranges.some(({ start, end }) => {
+          const rs = start.split(":").map(Number); const re = end.split(":").map(Number);
+          return slotStart < re[0] * 60 + re[1] && slotEnd > rs[0] * 60 + rs[1];
+        })) busy.add(value);
+      });
+      setBusySlots(busy);
+    }).catch(() => { if (!cancelled) setBusySlots(new Set()); })
+      .finally(() => { if (!cancelled) setLoadingSlots(false); });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.photographerId, form.shootDate]);
 
   useEffect(() => {
     if (addressTimerRef.current) clearTimeout(addressTimerRef.current);
@@ -979,25 +1012,51 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="label-field">Start Time</label>
-                  {form.shootTime && (
-                    <span className="text-xs font-semibold text-[#3486cf]">
-                      {(() => { const [hh, mm] = form.shootTime.split(":"); const h = Number(hh); const sfx = h >= 12 ? "PM" : "AM"; return `${h % 12 || 12}:${mm} ${sfx}`; })()}
+                  <div className="flex items-center gap-2">
+                    {loadingSlots && (
+                      <span className="text-[11px] text-gray-400">Checking availability…</span>
+                    )}
+                    {form.shootTime && (
+                      <span className="text-xs font-semibold text-[#3486cf]">
+                        {(() => { const [hh, mm] = form.shootTime.split(":"); const h = Number(hh); const sfx = h >= 12 ? "PM" : "AM"; return `${h % 12 || 12}:${mm} ${sfx}`; })()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 mb-2">
+                  {TIME_SLOTS.map((slot) => {
+                    const isBusy     = busySlots.has(slot.value);
+                    const isSelected = form.shootTime === slot.value;
+                    return (
+                      <button key={slot.value} type="button"
+                        onClick={() => { if (!isBusy) setForm((f) => ({ ...f, shootTime: slot.value })); }}
+                        disabled={isBusy}
+                        title={isBusy ? "Photographer unavailable" : slot.label}
+                        className={`py-1.5 text-[13px] rounded-lg border text-center transition-colors font-medium leading-tight ${
+                          isSelected
+                            ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
+                            : isBusy
+                            ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
+                            : "border-gray-200 text-gray-600 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
+                        }`}>
+                        <span className="block">{slot.label}</span>
+                        {isBusy && <span className="block text-[9px] leading-none mt-0.5 text-gray-300">busy</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+                {busySlots.size > 0 && (
+                  <div className="flex items-center gap-3 mb-3 text-[11px] text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2.5 h-2.5 rounded border border-gray-200 bg-white inline-block" />
+                      Available
                     </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 mb-3">
-                  {TIME_SLOTS.map((slot) => (
-                    <button key={slot.value} type="button"
-                      onClick={() => setForm((f) => ({ ...f, shootTime: slot.value }))}
-                      className={`py-2 text-[13px] rounded-lg border text-center transition-colors font-medium ${
-                        form.shootTime === slot.value
-                          ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
-                          : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
-                      }`}>
-                      {slot.label}
-                    </button>
-                  ))}
-                </div>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2.5 h-2.5 rounded border border-gray-100 bg-gray-50 inline-block" />
+                      Busy
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-gray-400">Custom:</span>
                   <input type="time" value={form.shootTime}
