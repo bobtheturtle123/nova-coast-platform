@@ -225,9 +225,12 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
     return `${h12}:${String(endM).padStart(2, "0")} ${suffix}`;
   }, [form.shootTime, effectiveDuration]);
 
+  const durationAwareSlots = catalog?.bookingConfig?.availability?.durationAwareSlots ?? true;
+
   // Expand busy slots to account for full service duration.
   // A slot is unavailable if any slot within [slot, slot + duration) is busy or doesn't exist.
   const unavailableSlots = useMemo(() => {
+    if (!durationAwareSlots) return busySlots;
     const slotsNeeded = effectiveDuration > 0 ? Math.ceil(effectiveDuration / 30) : 1;
     if (slotsNeeded <= 1) return busySlots;
     const result = new Set(busySlots);
@@ -239,7 +242,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
       }
     });
     return result;
-  }, [busySlots, effectiveDuration]);
+  }, [busySlots, effectiveDuration, durationAwareSlots]);
 
   const availability = useMemo(() => {
     if (!form.shootDate) return {};

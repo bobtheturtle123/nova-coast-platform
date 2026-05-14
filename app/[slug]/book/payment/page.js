@@ -203,6 +203,7 @@ export default function TenantPaymentPage() {
   const [tip,          setTip]           = useState(0);
   const [customTip,    setCustomTip]     = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [smsConsent,    setSmsConsent]    = useState(false);
   // Service agreement signing
   const [contractSignerName, setContractSignerName] = useState("");
   const [contractSigned,     setContractSigned]     = useState(false);
@@ -246,9 +247,11 @@ export default function TenantPaymentPage() {
 
   function validate() {
     const errs = {};
-    if (!clientName.trim())                      errs.clientName  = "Name is required";
-    if (!clientEmail.includes("@"))              errs.clientEmail = "Valid email is required";
-    if (clientPhone.replace(/\D/g,"").length < 10) errs.clientPhone = "10-digit phone required";
+    if (!clientName.trim())                                    errs.clientName  = "Name is required";
+    if (!clientEmail.includes("@"))                            errs.clientEmail = "Valid email is required";
+    const phoneDigits = clientPhone.replace(/\D/g, "").length;
+    if (phoneDigits > 0 && phoneDigits < 10)                   errs.clientPhone = "Enter a valid 10-digit phone number";
+    if (phoneDigits >= 10 && !smsConsent)                      errs.smsConsent  = "Please check the SMS consent box to continue.";
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -279,6 +282,7 @@ export default function TenantPaymentPage() {
           travelFee, pricing,
           payFull: effectivePayFull,
           tipAmount: tip,
+          smsConsent,
           customFields: customFields || {},
           photographerId: photographerId || null,
           contractSignerName: contractSigned ? contractSignerName.trim() : null,
@@ -376,7 +380,7 @@ export default function TenantPaymentPage() {
               {/* Phone */}
               <div>
                 <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
-                  Phone <span className="text-red-400">*</span>
+                  Phone <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <input
                   type="tel"
@@ -387,6 +391,31 @@ export default function TenantPaymentPage() {
                   disabled={!!clientSecret}
                 />
                 {fieldErrors.clientPhone && <p className="text-xs text-red-500 mt-1">{fieldErrors.clientPhone}</p>}
+              </div>
+
+              {/* SMS consent — always visible per Twilio compliance */}
+              <div className="space-y-1">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={smsConsent}
+                    onChange={(e) => {
+                      setSmsConsent(e.target.checked);
+                      if (e.target.checked) setFieldErrors((err) => { const n = { ...err }; delete n.smsConsent; return n; });
+                    }}
+                    disabled={!!clientSecret}
+                    className="mt-0.5 flex-shrink-0 w-4 h-4 rounded border-gray-300 text-[#3486cf] focus:ring-navy"
+                  />
+                  <span className="text-sm text-gray-600">
+                    I agree to receive SMS text messages from KyoriaOS related to bookings, appointment reminders, and media delivery notifications.
+                  </span>
+                </label>
+                <p className="text-xs text-gray-400 ml-7">
+                  Message frequency varies. Message and data rates may apply. Reply STOP to opt out or HELP for assistance.
+                </p>
+                {fieldErrors.smsConsent && (
+                  <p className="text-xs text-red-500 ml-7">{fieldErrors.smsConsent}</p>
+                )}
               </div>
 
               {!clientSecret && (

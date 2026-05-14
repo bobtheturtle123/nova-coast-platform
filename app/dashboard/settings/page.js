@@ -603,7 +603,8 @@ export default function SettingsPage() {
   const [availInterval,    setAvailInterval]    = useState(30);
   const [availDuration,    setAvailDuration]    = useState(120);
   const [availBuffer,      setAvailBuffer]      = useState(30);
-  const [availBufferAfter, setAvailBufferAfter] = useState(0);
+  const [availBufferAfter,    setAvailBufferAfter]    = useState(0);
+  const [durationAwareSlots,  setDurationAwareSlots]  = useState(true);
   const [savingAvail,               setSavingAvail]               = useState(false);
   const [showWeather,               setShowWeather]               = useState(true);
   const [twilightOffsetMinutes,     setTwilightOffsetMinutes]     = useState(60);
@@ -735,6 +736,7 @@ export default function SettingsPage() {
             if (av.showWeather !== undefined) setShowWeather(av.showWeather);
             if (av.twilightOffsetMinutes !== undefined) setTwilightOffsetMinutes(av.twilightOffsetMinutes);
             if (av.allowAgentPhotographerSelection !== undefined) setAllowAgentPhotographerSel(av.allowAgentPhotographerSelection);
+            if (av.durationAwareSlots !== undefined) setDurationAwareSlots(av.durationAwareSlots);
             if (av.minNoticeHours    != null) setMinNoticeHours(av.minNoticeHours);
             if (av.maxAdvanceDays    != null) setMaxAdvanceDays(av.maxAdvanceDays);
             if (av.maxBookingsPerDay != null) setMaxBookingsPerDay(av.maxBookingsPerDay);
@@ -952,8 +954,9 @@ export default function SettingsPage() {
         allowAgentPhotographerSelection: allowAgentPhotographerSel,
         minNoticeHours:    Number(minNoticeHours)    || 0,
         maxAdvanceDays:    Number(maxAdvanceDays)    || 0,
-        maxBookingsPerDay: Number(maxBookingsPerDay) || 0,
-        maxWeeklyHours:    Number(maxWeeklyHours)    || 0,
+        maxBookingsPerDay:  Number(maxBookingsPerDay) || 0,
+        maxWeeklyHours:     Number(maxWeeklyHours)    || 0,
+        durationAwareSlots,
       },
       cancellation: {
         feeEnabled:           cancelFeeEnabled,
@@ -1821,6 +1824,20 @@ export default function SettingsPage() {
                 className="input-field w-full text-sm" />
               <p className="text-[10px] text-gray-400 mt-0.5">Wind-down / editing time after each appointment.</p>
             </div>
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-4 border border-gray-100 rounded-xl px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-[#0F172A]">Duration-aware slot blocking</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Hide slots where the full service duration can&apos;t fit — e.g. a 1-hour service blocks 9:30 AM if 10:00 AM is busy.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDurationAwareSlots((v) => !v)}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${durationAwareSlots ? "bg-[#3486cf]" : "bg-gray-200"}`}>
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${durationAwareSlots ? "translate-x-4" : "translate-x-0"}`} />
+            </button>
           </div>
         </div>
 
