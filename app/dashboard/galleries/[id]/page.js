@@ -1570,6 +1570,28 @@ export default function GalleryDetailPage() {
                 onChange={(e) => { if (e.target.files?.[0]) uploadFiles(Array.from(e.target.files)); e.target.value = ""; }} />
               <span className="text-xs text-gray-400">MP4, MOV, or WebM · max 200 MB</span>
             </div>
+            {videos.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {videos.map((v) => (
+                  <div key={v.key} className={`rounded-xl overflow-hidden border border-gray-100 ${v.hidden ? "opacity-50" : ""}`}>
+                    <video src={v.url} controls className="w-full max-h-48 object-contain bg-black" />
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50">
+                      <p className="text-[11px] text-gray-500 truncate flex-1">{v.fileName}</p>
+                      <div className="flex gap-3">
+                        <button onClick={() => v.key && toggleHideMedia(v.key)}
+                          className="text-[11px] text-gray-400 hover:text-[#3486cf]">
+                          {v.hidden ? "Show" : "Hide"}
+                        </button>
+                        <button onClick={() => v.key && deleteMedia([v.key])} disabled={deleting}
+                          className="text-[11px] text-red-400 hover:text-red-600 disabled:opacity-50">
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </details>
 
           {/* Floor Plans */}

@@ -66,5 +66,18 @@ export async function POST(req, { params }) {
     console.error("[confirm-schedule] email failed:", e.message);
   }
 
+  // Push to photographer's Google Calendar if connected (fire-and-forget)
+  if (action === "confirm" && booking.photographerId && finalDate) {
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.kyoriaos.com";
+      const token  = req.headers.get("Authorization")?.replace("Bearer ", "");
+      fetch(`${appUrl}/api/dashboard/bookings/${params.id}/push-gcal`, {
+        method:  "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body:    JSON.stringify({}),
+      }).catch((e) => console.error("[confirm-schedule] gcal push failed:", e.message));
+    } catch {}
+  }
+
   return Response.json({ ok: true, shootDate: finalDate, shootTime: finalTime });
 }

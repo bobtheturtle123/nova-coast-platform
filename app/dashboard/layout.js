@@ -120,6 +120,7 @@ export default function DashboardLayout({ children }) {
   const [tenantName,      setTenantName]      = useState("");
   const [sidebarOpen,     setSidebarOpen]     = useState(false);
   const [pendingRevCount, setPendingRevCount] = useState(0);
+  const [tenantPlan,      setTenantPlan]      = useState("starter");
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -151,6 +152,7 @@ export default function DashboardLayout({ children }) {
         headers: { Authorization: `Bearer ${tok}` },
       }).then((r) => r.json()).then((d) => {
         if (d.tenant?.businessName) setTenantName(d.tenant.businessName);
+        setTenantPlan(d.tenant?.permanentPlan || d.tenant?.subscriptionPlan || "starter");
       }).catch(() => {});
     });
     return unsub;
@@ -225,14 +227,25 @@ export default function DashboardLayout({ children }) {
         })}
       </nav>
 
-      {/* Upgrade CTA */}
-      <div className="ky-upgrade-card">
-        <p className="text-[11.5px] font-semibold text-[#1E5A8A]">Upgrade to Pro</p>
-        <p className="text-[11px] mt-1 leading-relaxed text-gray-500">
-          Unlock advanced analytics, custom branding, and priority support.
-        </p>
-        <Link href="/dashboard/billing" className="ky-upgrade-btn">View Plans →</Link>
-      </div>
+      {/* Upgrade CTA — hidden on top-tier plan */}
+      {(() => {
+        const NEXT = { starter: "Studio", solo: "Studio", studio: "Pro Team", pro: "Scale" };
+        const DESC = {
+          starter: "More listings, custom branding, and team seats.",
+          solo:    "More listings, custom branding, and team seats.",
+          studio:  "Multi-photographer ops with up to 12 seats.",
+          pro:     "Unlimited seats and 1,200 listing credits.",
+        };
+        const next = NEXT[tenantPlan];
+        if (!next) return null;
+        return (
+          <div className="ky-upgrade-card">
+            <p className="text-[11.5px] font-semibold text-[#1E5A8A]">Upgrade to {next}</p>
+            <p className="text-[11px] mt-1 leading-relaxed text-gray-500">{DESC[tenantPlan]}</p>
+            <Link href="/dashboard/billing" className="ky-upgrade-btn">View Plans →</Link>
+          </div>
+        );
+      })()}
 
       {/* User area */}
       <div className="ky-user-card">

@@ -793,7 +793,33 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
   const APP_URL = getAppUrl();
   const isGCalConnected = !!member.googleCalendar?.refreshToken;
 
-  const [gcalError, setGcalError] = useState("");
+  const [gcalError,   setGcalError]   = useState("");
+  const [syncing,     setSyncing]     = useState(false);
+  const [syncResult,  setSyncResult]  = useState(null);
+  const [lastSynced,  setLastSynced]  = useState(member.googleCalendar?.lastSynced || null);
+
+  async function syncNow() {
+    setSyncing(true);
+    setSyncResult(null);
+    setGcalError("");
+    try {
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const token = await firebaseAuth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/team/google-sync", {
+        method:  "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body:    JSON.stringify({ memberId: member.id }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setGcalError(d.error || "Sync failed"); return; }
+      setSyncResult(d.synced);
+      setLastSynced(new Date().toISOString());
+    } catch (e) {
+      setGcalError(e.message);
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   async function connectGoogleCalendar() {
     setGcalError("");
@@ -853,29 +879,44 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
                   <p className="text-sm font-medium text-[#0F172A]">Google Calendar Sync</p>
                   <p className="text-xs text-gray-500">
                     {isGCalConnected
-                      ? `Connected · last synced ${member.googleCalendar?.connectedAt ? new Date(member.googleCalendar.connectedAt).toLocaleDateString() : "recently"}`
+                      ? lastSynced
+                        ? `Connected · last synced ${new Date(lastSynced).toLocaleString()}`
+                        : "Connected · never synced"
                       : "Connect to block unavailable times automatically"}
                   </p>
+                  {syncResult !== null && (
+                    <p className="text-xs text-green-600 mt-0.5">{syncResult} busy block{syncResult !== 1 ? "s" : ""} imported</p>
+                  )}
                 </div>
               </div>
               {isGCalConnected
-                ? <span className="tag-green">Connected</span>
+                ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={syncNow}
+                      disabled={syncing}
+                      className="text-xs text-[#3486cf] border border-[#3486cf]/30 px-2.5 py-1 rounded hover:bg-[#3486cf]/5 disabled:opacity-50">
+                      {syncing ? "Syncing…" : "Sync Now"}
+                    </button>
+                    <span className="tag-green">Connected</span>
+                  </div>
+                )
                 : <button onClick={connectGoogleCalendar} className="btn-primary text-xs px-3 py-1.5">Connect</button>
               }
-              {gcalError && (
-                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
-                  <p className="font-semibold mb-1">Setup required</p>
-                  <p>{gcalError === "GOOGLE_CLIENT_ID not configured"
-                    ? "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your Vercel environment variables. Create OAuth credentials at console.cloud.google.com → APIs & Services → Credentials → OAuth 2.0 Client IDs."
-                    : gcalError}</p>
-                </div>
-              )}
             </div>
+            {gcalError && (
+              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+                <p className="font-semibold mb-1">Setup required</p>
+                <p>{gcalError === "GOOGLE_CLIENT_ID not configured"
+                  ? "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your Vercel environment variables. Create OAuth credentials at console.cloud.google.com → APIs & Services → Credentials → OAuth 2.0 Client IDs."
+                  : gcalError}</p>
+              </div>
+            )}
           </div>
 
           <p className="text-sm text-gray-500">
-            Subscribe to this calendar feed to see {member.name}&apos;s shoots in any calendar app.
-            The feed updates automatically as new bookings are confirmed.
+            When synced, Google Calendar busy times are imported as availability blocks — preventing double-booking.
+            Confirmed shoots are also pushed directly to the photographer&apos;s Google Calendar.
           </p>
 
           {feedUrl ? (
