@@ -1,5 +1,53 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 
+async function pushBlockToGCal(tenantId, memberId, block) {
+  try {
+    const memberDoc = await adminDb
+      .collection("tenants").doc(tenantId)
+      .collection("team").doc(memberId)
+      .get();
+    if (!memberDoc.exists) return;
+    const data = memberDoc.data();
+    if (!data.calendarPrefs?.syncBlocks) return;
+    const gcal = data.googleCalendar;
+    if (!gcal?.refreshToken) return;
+
+    let accessToken = gcal.accessToken;
+    if (!accessToken || (gcal.expiresAt && Date.now() > gcal.expiresAt - 60000)) {
+      const r = await fetch("https://oauth2.googleapis.com/token", {
+        method:  "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id:     process.env.GOOGLE_CLIENT_ID,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET,
+          refresh_token: gcal.refreshToken,
+          grant_type:    "refresh_token",
+        }),
+      });
+      const d = await r.json();
+      if (d.error) return;
+      accessToken = d.access_token;
+      await adminDb.collection("tenants").doc(tenantId).collection("team").doc(memberId)
+        .update({ "googleCalendar.accessToken": d.access_token, "googleCalendar.expiresAt": Date.now() + d.expires_in * 1000 });
+    }
+
+    const start = block.startTime
+      ? { dateTime: block.startTime, timeZone: "UTC" }
+      : { date: typeof block.startDate === "string" ? block.startDate : block.startDate.toISOString().slice(0, 10) };
+    const end = block.endTime
+      ? { dateTime: block.endTime, timeZone: "UTC" }
+      : { date: typeof block.endDate === "string" ? block.endDate : block.endDate.toISOString().slice(0, 10) };
+
+    await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+      method:  "POST",
+      headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body:    JSON.stringify({ summary: block.reason || "Busy", description: block.note || "", start, end }),
+    });
+  } catch (e) {
+    console.error("pushBlockToGCal failed:", e);
+  }
+}
+
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
   if (!auth) return null;
@@ -61,6 +109,10 @@ export async function POST(req) {
   };
 
   await ref.set(block);
+
+  // Push to member's Google Calendar if they have syncBlocks enabled
+  if (memberId) pushBlockToGCal(ctx.tenantId, memberId, block);
+
   return Response.json({ block: { ...block, startDate, endDate, createdAt: block.createdAt.toISOString() } });
 }
 

@@ -81,7 +81,7 @@ export default function PhotographerProfilePage() {
     setCalError("");
     auth.currentUser?.getIdToken().then((token) => {
       if (!member?.id) { setCalError("Profile not loaded. Please refresh."); return; }
-      const url    = `/api/calendar/oauth/start?token=${token}&memberId=${member.id}`;
+      const url    = `/api/calendar/oauth/start?token=${token}`;
       const popup  = window.open(url, "gcal-oauth", "width=600,height=700,noopener");
       const handler = (e) => {
         if (e.data?.type === "gcal-connected") {

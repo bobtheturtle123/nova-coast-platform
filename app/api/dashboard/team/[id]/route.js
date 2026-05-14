@@ -42,10 +42,12 @@ export async function PATCH(req, { params }) {
       : {},
     bufferMinutes: body.bufferMinutes != null ? Number(body.bufferMinutes) || 0 : 0,
     workingHours:  body.workingHours && typeof body.workingHours === "object" ? body.workingHours : {},
-    permissions:   body.permissions && typeof body.permissions === "object"
-      ? Object.fromEntries(VALID_PERM_KEYS.map((k) => [k, !!body.permissions[k]]))
-      : Object.fromEntries(VALID_PERM_KEYS.map((k) => [k, false])),
   };
+
+  // Only overwrite permissions when the caller explicitly sends them
+  if (body.permissions && typeof body.permissions === "object") {
+    update.permissions = Object.fromEntries(VALID_PERM_KEYS.map((k) => [k, !!body.permissions[k]]));
+  }
 
   const memberRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(params.id);
   const memberDoc = await memberRef.get();

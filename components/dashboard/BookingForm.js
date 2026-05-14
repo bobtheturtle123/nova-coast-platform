@@ -225,6 +225,22 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
     return `${h12}:${String(endM).padStart(2, "0")} ${suffix}`;
   }, [form.shootTime, effectiveDuration]);
 
+  // Expand busy slots to account for full service duration.
+  // A slot is unavailable if any slot within [slot, slot + duration) is busy or doesn't exist.
+  const unavailableSlots = useMemo(() => {
+    const slotsNeeded = effectiveDuration > 0 ? Math.ceil(effectiveDuration / 30) : 1;
+    if (slotsNeeded <= 1) return busySlots;
+    const result = new Set(busySlots);
+    TIME_SLOTS.forEach((slot, idx) => {
+      if (result.has(slot.value)) return;
+      for (let i = 1; i < slotsNeeded; i++) {
+        const next = TIME_SLOTS[idx + i];
+        if (!next || busySlots.has(next.value)) { result.add(slot.value); break; }
+      }
+    });
+    return result;
+  }, [busySlots, effectiveDuration]);
+
   const availability = useMemo(() => {
     if (!form.shootDate) return {};
     const dayStr = form.shootDate;
@@ -1025,27 +1041,28 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 mb-2">
                   {TIME_SLOTS.map((slot) => {
-                    const isBusy     = busySlots.has(slot.value);
+                    const isUnavail  = unavailableSlots.has(slot.value);
+                    const isDirectly = busySlots.has(slot.value);
                     const isSelected = form.shootTime === slot.value;
                     return (
                       <button key={slot.value} type="button"
-                        onClick={() => { if (!isBusy) setForm((f) => ({ ...f, shootTime: slot.value })); }}
-                        disabled={isBusy}
-                        title={isBusy ? "Photographer unavailable" : slot.label}
+                        onClick={() => { if (!isUnavail) setForm((f) => ({ ...f, shootTime: slot.value })); }}
+                        disabled={isUnavail}
+                        title={isDirectly ? "Photographer unavailable" : isUnavail ? `Not enough time for ${effectiveDuration} min service` : slot.label}
                         className={`py-1.5 text-[13px] rounded-lg border text-center transition-colors font-medium leading-tight ${
                           isSelected
                             ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
-                            : isBusy
+                            : isUnavail
                             ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
                             : "border-gray-200 text-gray-600 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
                         }`}>
                         <span className="block">{slot.label}</span>
-                        {isBusy && <span className="block text-[9px] leading-none mt-0.5 text-gray-300">busy</span>}
+                        {isUnavail && <span className="block text-[9px] leading-none mt-0.5 text-gray-300">{isDirectly ? "busy" : "no time"}</span>}
                       </button>
                     );
                   })}
                 </div>
-                {busySlots.size > 0 && (
+                {unavailableSlots.size > 0 && (
                   <div className="flex items-center gap-3 mb-3 text-[11px] text-gray-400">
                     <span className="flex items-center gap-1">
                       <span className="w-2.5 h-2.5 rounded border border-gray-200 bg-white inline-block" />
