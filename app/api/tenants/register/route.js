@@ -12,7 +12,7 @@ export async function POST(req) {
   }
 
   try {
-    const { uid, email, businessName, accessCode = "" } = await req.json();
+    const { uid, email, businessName, phone = "", accessCode = "" } = await req.json();
 
     if (!uid || !email || !businessName) {
       return Response.json({ error: "Missing required fields" }, { status: 400 });
@@ -57,7 +57,7 @@ export async function POST(req) {
     const referralCode = generateReferralCode(businessName);
 
     // Create tenant + seed subcollections + set custom claims
-    const tenantId = await createTenant({ uid, email, businessName, slug, referralCode, referredBy, trialDays });
+    const tenantId = await createTenant({ uid, email, businessName, slug, phone, referralCode, referredBy, trialDays });
 
     // Record referral relationship (status: pending until first payment)
     if (referredBy && referredBy !== tenantId) {

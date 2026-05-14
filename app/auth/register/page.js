@@ -11,10 +11,13 @@ export default function RegisterPage() {
   const [form, setForm] = useState({
     businessName: "",
     email: "",
+    phone: "",
     password: "",
     confirm: "",
     accessCode: "",
   });
+  const [smsConsent,  setSmsConsent]  = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [error,       setError]       = useState("");
   const [loading,     setLoading]     = useState(false);
   const [showCode,    setShowCode]    = useState(false);
@@ -23,9 +26,23 @@ export default function RegisterPage() {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
   }
 
+  function formatPhone(raw) {
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length < 4)  return digits;
+    if (digits.length < 7)  return `(${digits.slice(0,3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6,10)}`;
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+
+    const errs = {};
+    const phoneDigits = form.phone.replace(/\D/g, "").length;
+    if (phoneDigits > 0 && phoneDigits < 10) errs.phone = "Enter a valid 10-digit phone number";
+    if (phoneDigits >= 10 && !smsConsent)    errs.smsConsent = "Please check the SMS consent box to continue.";
+    if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
+    setFieldErrors({});
 
     if (form.password !== form.confirm) {
       setError("Passwords do not match.");
@@ -51,6 +68,7 @@ export default function RegisterPage() {
           uid:          cred.user.uid,
           email:        form.email,
           businessName: form.businessName,
+          phone:        form.phone || undefined,
           accessCode:   form.accessCode.trim() || undefined,
         }),
       });
@@ -122,6 +140,45 @@ export default function RegisterPage() {
                 placeholder="you@yourcompany.com"
               />
             </div>
+            {/* Phone — optional, triggers SMS consent when filled */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">
+                Phone <span className="text-gray-400 font-normal normal-case">(optional)</span>
+              </label>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: formatPhone(e.target.value) }))}
+                className={`input-field w-full ${fieldErrors.phone ? "border-red-300" : ""}`}
+                placeholder="(619) 555-0100"
+              />
+              {fieldErrors.phone && <p className="text-xs text-red-500 mt-1">{fieldErrors.phone}</p>}
+            </div>
+
+            {/* SMS consent — always visible per Twilio compliance */}
+            <div className="space-y-1">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={smsConsent}
+                  onChange={(e) => {
+                    setSmsConsent(e.target.checked);
+                    if (e.target.checked) setFieldErrors((err) => { const n = { ...err }; delete n.smsConsent; return n; });
+                  }}
+                  className="mt-0.5 flex-shrink-0 w-4 h-4 rounded border-gray-300 text-[#3486cf] focus:ring-navy"
+                />
+                <span className="text-sm text-gray-600">
+                  I agree to receive SMS text messages from KyoriaOS related to bookings, appointment reminders, and media delivery notifications.
+                </span>
+              </label>
+              <p className="text-xs text-gray-400 ml-7">
+                Message frequency varies. Message and data rates may apply. Reply STOP to opt out or HELP for assistance.
+              </p>
+              {fieldErrors.smsConsent && (
+                <p className="text-xs text-red-500 ml-7">{fieldErrors.smsConsent}</p>
+              )}
+            </div>
+
             <div>
               <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">
                 Password

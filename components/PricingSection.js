@@ -217,14 +217,14 @@ export default function PricingSection() {
                     ? "bg-gold text-navy hover:bg-gold/90"
                     : "bg-navy text-white hover:bg-navy/90"
                 }`}>
-                Start free trial
+                Get started
               </Link>
             </div>
           ))}
         </div>
 
         <p className="text-center text-gray-400 text-xs mb-16">
-          All plans include a 14-day free trial. No credit card required to start.
+          No credit card required to get started.
         </p>
 
         {/* Add-ons */}
