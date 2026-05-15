@@ -1164,13 +1164,16 @@ export default function TeamPage() {
         setMembers((m) => [...m, data.member]);
         toast("Team member added.");
       } else {
-        const res = await fetch(`/api/dashboard/team/${editing.id}`, {
+        const res  = await fetch(`/api/dashboard/team/${editing.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify(form),
         });
-        if (!res.ok) { toast("Failed to save.", "error"); return; }
-        setMembers((m) => m.map((x) => x.id === editing.id ? { ...x, ...form } : x));
+        const data = await res.json();
+        if (!res.ok) { toast(data.error || "Failed to save.", "error"); return; }
+        // Use server-confirmed data so the UI always reflects what's in Firestore
+        const saved = data.member || { ...editing, ...form };
+        setMembers((m) => m.map((x) => x.id === editing.id ? saved : x));
         toast("Team member saved.");
       }
     } catch { toast("Something went wrong.", "error"); }

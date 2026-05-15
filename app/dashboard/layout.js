@@ -8,6 +8,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import AiChatButton from "@/components/dashboard/AiChatButton";
 import { ToastProvider } from "@/components/Toast";
 
+// permKey: required permission for non-owners. ownerOnly: only owner/admin sees it.
 const NAV = [
   {
     href: "/dashboard",
@@ -49,6 +50,7 @@ const NAV = [
   {
     href: "/dashboard/team",
     label: "Team & Schedule",
+    permKey: "canManageTeam",
     icon: (
       <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -58,6 +60,7 @@ const NAV = [
   {
     href: "/dashboard/products",
     label: "Products",
+    permKey: "canManageProducts",
     icon: (
       <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
         <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -67,6 +70,7 @@ const NAV = [
   {
     href: "/dashboard/service-areas",
     label: "Service Areas",
+    permKey: "canManageProducts",
     icon: (
       <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
@@ -76,6 +80,7 @@ const NAV = [
   {
     href: "/dashboard/reports",
     label: "Reports",
+    permKey: "canViewReports",
     icon: (
       <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -94,6 +99,7 @@ const NAV = [
   {
     href: "/dashboard/settings",
     label: "Settings",
+    permKey: "canEditSettings",
     icon: (
       <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
         <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -104,6 +110,7 @@ const NAV = [
   {
     href: "/dashboard/billing",
     label: "Billing",
+    ownerOnly: true,
     icon: (
       <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -113,6 +120,7 @@ const NAV = [
   {
     href: "/dashboard/referrals",
     label: "Refer & Earn",
+    ownerOnly: true,
     icon: (
       <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -126,6 +134,7 @@ export default function DashboardLayout({ children }) {
   const pathname = usePathname();
   const [user,            setUser]           = useState(undefined);
   const [userRole,        setUserRole]        = useState("owner");
+  const [permissions,     setPermissions]     = useState(null);
   const [tenantName,      setTenantName]      = useState("");
   const [sidebarOpen,     setSidebarOpen]     = useState(false);
   const [pendingRevCount, setPendingRevCount] = useState(0);
@@ -155,8 +164,16 @@ export default function DashboardLayout({ children }) {
         if (!repaired) { router.push("/onboarding"); return; }
       }
       setUser(u);
-      setUserRole(tokenResult.claims.role || "owner");
+      const role = tokenResult.claims.role || "owner";
+      setUserRole(role);
       const tok = await u.getIdToken();
+      // Fetch permissions for non-owner team members
+      if (role !== "owner") {
+        fetch("/api/dashboard/me", { headers: { Authorization: `Bearer ${tok}` } })
+          .then((r) => r.json())
+          .then((d) => { if (d.member?.permissions) setPermissions(d.member.permissions); })
+          .catch(() => {});
+      }
       fetch("/api/dashboard/tenant", {
         headers: { Authorization: `Bearer ${tok}` },
       }).then((r) => r.json()).then((d) => {
@@ -215,7 +232,9 @@ export default function DashboardLayout({ children }) {
       {/* Nav */}
       <nav className="ky-nav">
         {NAV.map((item) => {
-          if (item.href === "/dashboard/billing" && userRole !== "owner" && userRole !== "admin") return null;
+          const isOwner = userRole === "owner" || userRole === "admin";
+          if (item.ownerOnly && !isOwner) return null;
+          if (item.permKey && !isOwner && !permissions?.[item.permKey]) return null;
           const active = isActive(item);
           return (
             <Link

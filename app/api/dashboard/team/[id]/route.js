@@ -93,7 +93,31 @@ export async function PATCH(req, { params }) {
     } catch { /* user may not exist in auth */ }
   }
 
-  return Response.json({ ok: true });
+  // Return the updated member so the client can refresh state without re-fetching
+  const updatedDoc = await memberRef.get();
+  const updatedData = updatedDoc.data() || {};
+  return Response.json({
+    ok: true,
+    member: {
+      id:           params.id,
+      name:         updatedData.name,
+      email:        updatedData.email,
+      phone:        updatedData.phone,
+      role:         updatedData.role,
+      color:        updatedData.color,
+      active:       updatedData.active,
+      skills:       updatedData.skills        || [],
+      payRate:      updatedData.payRate       ?? null,
+      serviceRates: updatedData.serviceRates  || {},
+      bufferMinutes:updatedData.bufferMinutes ?? 0,
+      workingHours: updatedData.workingHours  || {},
+      homeZip:      updatedData.homeZip       || "",
+      permissions:  updatedData.permissions   || {},
+      calendarToken:updatedData.calendarToken || null,
+      googleCalendar:updatedData.googleCalendar || {},
+      calendarPrefs: updatedData.calendarPrefs  || {},
+    },
+  });
 }
 
 export async function DELETE(req, { params }) {
