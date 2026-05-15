@@ -1,6 +1,10 @@
 import { stripe } from "@/lib/stripe";
 import { adminDb } from "@/lib/firebase-admin";
 import { rateLimit } from "@/lib/rateLimit";
+import { getTenantById } from "@/lib/tenants";
+import { sendBookingCreatedNotifications } from "@/lib/email";
+import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
+import { sendBookingConfirmedSms } from "@/lib/sms";
 
 export async function POST(req) {
   // 20 attempts per IP per hour — prevents payment intent probing
@@ -47,6 +51,9 @@ export async function POST(req) {
         status: "requested",
         stripeDepositIntentId: pi.id,
       });
+      console.log(`[verify-payment] deposit confirmed bookingId=${bookingId}`);
+      // Fire notifications if webhook hasn't already done so
+      _sendNotifications(tenantId, bookingId, { ...booking, depositPaid: true });
       return Response.json({ ok: true, paidInFull: false });
     }
 
@@ -59,13 +66,38 @@ export async function POST(req) {
         status: "requested",
         stripeDepositIntentId: pi.id,
       });
+      console.log(`[verify-payment] full payment confirmed bookingId=${bookingId}`);
+      _sendNotifications(tenantId, bookingId, { ...booking, depositPaid: true, paidInFull: true });
       return Response.json({ ok: true, paidInFull: true });
     }
 
     // Already updated (e.g. webhook already ran)
+    console.log(`[verify-payment] already updated bookingId=${bookingId} depositPaid=${booking.depositPaid}`);
     return Response.json({ ok: true, paidInFull: booking.paidInFull || false });
   } catch (err) {
     console.error("Verify payment error:", err);
     return Response.json({ error: "Verification failed" }, { status: 500 });
+  }
+}
+
+// Fire notifications best-effort. The Stripe webhook may have already sent them;
+// idempotency is handled by checking depositPaid before calling this.
+async function _sendNotifications(tenantId, bookingId, booking) {
+  try {
+    const tenant = await getTenantById(tenantId);
+    if (!tenant) return;
+    console.log(`[verify-payment] sending notifications for bookingId=${bookingId}`);
+    await sendBookingCreatedNotifications({
+      booking,
+      tenant,
+      adminEmail: tenant.email || null,
+    });
+    sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" })
+      .catch((e) => console.error("[verify-payment] agent portal email FAILED:", e?.message || e));
+    sendBookingConfirmedSms({ booking, tenant })
+      .then(() => console.log(`[verify-payment] SMS fired for bookingId=${bookingId}`))
+      .catch((e) => console.error("[verify-payment] SMS FAILED:", e?.message || e));
+  } catch (e) {
+    console.error("[verify-payment] _sendNotifications error (non-fatal):", e?.message || e);
   }
 }

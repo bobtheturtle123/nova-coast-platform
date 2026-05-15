@@ -19,11 +19,24 @@ export async function GET(req) {
   // ── LocationIQ path ───────────────────────────────────────────────────────
   if (LOCATIONIQ_KEY) {
     try {
-      const url = `https://api.locationiq.com/v1/autocomplete?key=${LOCATIONIQ_KEY}&q=${encodeURIComponent(q)}&limit=6&countrycodes=us&dedupe=1&normalizecity=1&addressdetails=1`;
+      // Fetch more than needed so we can sort/filter without losing results
+      const url = `https://api.locationiq.com/v1/autocomplete?key=${LOCATIONIQ_KEY}&q=${encodeURIComponent(q)}&limit=10&countrycodes=us&dedupe=1&normalizecity=1&addressdetails=1`;
       const res  = await fetch(url, { headers: { "Accept": "application/json" } });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) return Response.json(data.slice(0, 6));
+        if (Array.isArray(data) && data.length > 0) {
+          // When query starts with a digit (address with number), bubble up results
+          // that have a house number so the user sees full addresses first.
+          const startsWithNum = /^\d/.test(q);
+          const sorted = startsWithNum
+            ? [...data].sort((a, b) => {
+                const aHas = !!(a.address?.house_number || a.display_name?.match(/^\d/));
+                const bHas = !!(b.address?.house_number || b.display_name?.match(/^\d/));
+                return (bHas ? 1 : 0) - (aHas ? 1 : 0);
+              })
+            : data;
+          return Response.json(sorted.slice(0, 6));
+        }
       }
     } catch { /* fall through to Mapbox */ }
   }

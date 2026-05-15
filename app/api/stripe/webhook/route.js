@@ -50,6 +50,7 @@ export async function POST(req) {
             shouldNotify = true;
           });
           if (shouldNotify) {
+            console.log(`[stripe/webhook] deposit payment_intent.succeeded — notifying bookingId=${bookingId}`);
             try {
               const tenant = await getTenantById(tenantId);
               if (tenant) {
@@ -58,10 +59,13 @@ export async function POST(req) {
                   tenant,
                   adminEmail: tenant.email || null,
                 });
-                sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" }).catch(() => {});
-                sendBookingConfirmedSms({ booking, tenant }).catch(() => {});
+                sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" })
+                  .catch((e) => console.error("[stripe/webhook] agent portal FAILED:", e?.message || e));
+                sendBookingConfirmedSms({ booking, tenant })
+                  .then(() => console.log(`[stripe/webhook] SMS sent for bookingId=${bookingId}`))
+                  .catch((e) => console.error("[stripe/webhook] SMS FAILED:", e?.message || e));
               }
-            } catch (e) { console.error("Confirmation email failed:", e); }
+            } catch (e) { console.error("[stripe/webhook] deposit notification FAILED:", e?.message || e); }
           }
         }
 
@@ -86,6 +90,7 @@ export async function POST(req) {
               .update({ unlocked: true });
           }
           if (shouldNotify) {
+            console.log(`[stripe/webhook] full payment_intent.succeeded — notifying bookingId=${bookingId}`);
             try {
               const tenant = await getTenantById(tenantId);
               if (tenant) {
@@ -94,10 +99,13 @@ export async function POST(req) {
                   tenant,
                   adminEmail: tenant.email || null,
                 });
-                sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" }).catch(() => {});
-                sendBookingConfirmedSms({ booking, tenant }).catch(() => {});
+                sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" })
+                  .catch((e) => console.error("[stripe/webhook] agent portal FAILED:", e?.message || e));
+                sendBookingConfirmedSms({ booking, tenant })
+                  .then(() => console.log(`[stripe/webhook] SMS sent for bookingId=${bookingId}`))
+                  .catch((e) => console.error("[stripe/webhook] SMS FAILED:", e?.message || e));
               }
-            } catch (e) { console.error("Confirmation email failed:", e); }
+            } catch (e) { console.error("[stripe/webhook] full payment notification FAILED:", e?.message || e); }
           }
         }
 

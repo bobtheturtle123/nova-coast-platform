@@ -13,17 +13,22 @@ function parseResult(result) {
   let streetNum  = a.house_number || "";
   const streetName = a.road || a.pedestrian || "";
 
-  // If the API didn't return a house number, try to extract it from display_name.
-  // display_name often looks like "1308 Paseo Redondo, Burbank, ..."
+  // Extract house number from display_name when structured field is absent.
+  // LocationIQ autocomplete often omits house_number even when display_name has it.
   if (!streetNum && result.display_name) {
-    const match = result.display_name.match(/^(\d+[A-Za-z]?[-\d]*)\s/);
+    const match = result.display_name.match(/^(\d+[A-Za-z]?(?:-\d+)?)\s/);
     if (match) streetNum = match[1];
   }
 
-  const address    = [streetNum, streetName].filter(Boolean).join(" ") || result.display_name?.split(",")[0] || "";
-  const city       = a.city || a.town || a.village || a.county || "";
-  const state      = a.state || "";
-  const zip        = a.postcode || "";
+  // When house number is missing, prefer the full first segment of display_name
+  // (e.g. "1234 Main St") over just the road field ("Main St").
+  const address = streetNum
+    ? [streetNum, streetName].filter(Boolean).join(" ")
+    : (result.display_name?.split(",")[0]?.trim() || streetName || "");
+
+  const city  = a.city || a.town || a.village || a.county || "";
+  const state = a.state || "";
+  const zip   = a.postcode || "";
   return {
     address,
     city,
@@ -91,11 +96,13 @@ export default function PlacesAutocomplete({
 
   function handleSelect(result) {
     const parsed = parseResult(result);
-    setInputVal(parsed.fullAddress);
+    // Set input to just the street address ("1234 Main St"), not the full verbose
+    // display_name. City / state / zip fill into their own fields via onSelect.
+    setInputVal(parsed.address);
     setSuggestions([]);
     setOpen(false);
     activeRef.current = false;
-    onChange?.(parsed.fullAddress);
+    onChange?.(parsed.address);
     onSelect?.(parsed);
   }
 
