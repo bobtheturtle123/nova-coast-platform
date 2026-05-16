@@ -62,28 +62,31 @@ export default function PhotographerLayout({ children }) {
         return;
       }
       setUser(u);
-      // Load branding + member name on auth — permissions re-fetched separately on every navigation
+      // Load branding + member name on auth (static — no need to re-fetch on navigation)
       try {
         const token = await u.getIdToken();
         const res  = await fetch("/api/photographer/me", { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
         if (data.member?.name)           setMemberName(data.member.name);
         if (data.branding?.businessName) setBizName(data.branding.businessName);
-        if (data.member?.permissions)    setPermissions(data.member.permissions);
       } catch { /* non-critical */ }
     });
     return unsub;
   }, [router]);
 
-  // Re-fetch permissions on every navigation (and on page refresh) so owner changes are live
+  // Re-fetch permissions on every navigation and on page refresh — sole owner of permission state
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
     user.getIdToken().then((token) =>
       fetch("/api/photographer/me", { headers: { Authorization: `Bearer ${token}` } })
         .then((r) => r.json())
-        .then((data) => { if (data.member?.permissions) setPermissions(data.member.permissions); })
+        .then((data) => {
+          if (!cancelled && data.member?.permissions) setPermissions(data.member.permissions);
+        })
         .catch(() => {})
     );
+    return () => { cancelled = true; };
   }, [user, pathname]);
 
   if (user === undefined) {
