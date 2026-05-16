@@ -45,7 +45,12 @@ export async function GET(req) {
       );
     }
 
-    const data   = await res.json();
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch {
+      console.error("[cubicasa/orders] non-JSON response:", text.slice(0, 300));
+      return Response.json({ error: "CubiCasa returned an unexpected response. Check your API key." }, { status: 502 });
+    }
     const orders = (Array.isArray(data) ? data : data.orders ?? data.data ?? []).map((o) => ({
       id:                         o.id ?? o.order_id ?? String(Math.random()),
       address:                    o.address ?? o.property_address ?? o.location ?? "",
