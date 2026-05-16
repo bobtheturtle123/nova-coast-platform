@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Plugin Name: Nova Coast Media
  * Plugin URI:  https://novacoastmedia.com

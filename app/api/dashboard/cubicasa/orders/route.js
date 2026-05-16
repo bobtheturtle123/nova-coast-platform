@@ -26,10 +26,11 @@ export async function GET(req) {
   }
 
   try {
-    const res = await fetch("https://app.cubicasa.com/api/v1/orders", {
+    const res = await fetch("https://app.cubi.casa/api/integrate/v3/orders", {
       headers: {
-        Authorization: `Bearer ${apiKey}`,
-        Accept:        "application/json",
+        "X-API-KEY":    apiKey,
+        "Content-Type": "application/json",
+        Accept:         "application/json",
       },
     });
 

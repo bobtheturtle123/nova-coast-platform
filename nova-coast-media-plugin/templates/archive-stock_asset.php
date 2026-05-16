@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 defined( 'ABSPATH' ) || exit;
 get_header();
 $parent_locs = get_terms( [ 'taxonomy' => 'asset_location', 'hide_empty' => true, 'parent' => 0 ] ) ?: [];

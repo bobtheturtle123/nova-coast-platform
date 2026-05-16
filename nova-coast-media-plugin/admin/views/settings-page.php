@@ -1,4 +1,4 @@
-﻿<?php defined( 'ABSPATH' ) || exit; ?>
+<?php defined( 'ABSPATH' ) || exit; ?>
 <div class="wrap">
 <h1>Nova Coast Media — Settings</h1>
 

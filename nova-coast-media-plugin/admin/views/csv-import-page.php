@@ -1,4 +1,4 @@
-﻿<?php defined( 'ABSPATH' ) || exit; ?>
+<?php defined( 'ABSPATH' ) || exit; ?>
 <div class="wrap">
 <h1>Nova Coast Media — CSV Bulk Import</h1>
 <?php if ( ! empty( $_GET['ncm_notice'] ) ) : $type = esc_attr( $_GET['ncm_notice_type'] ?? 'success' ); ?>
