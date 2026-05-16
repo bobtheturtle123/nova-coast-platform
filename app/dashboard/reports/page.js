@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { auth } from "@/lib/firebase";
+import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -115,19 +116,19 @@ function exportCSV(bookings, period) {
 }
 
 export default function ReportsPage() {
+  const { permissions, userRole } = useDashboardPermissions();
+  const canViewRevenue = userRole === "owner" || userRole === "admin" || !!permissions?.canViewRevenue;
+
   const [bookings,  setBookings]  = useState([]);
   const [catalog,   setCatalog]   = useState(null);
   const [loading,   setLoading]   = useState(true);
   const [period,    setPeriod]    = useState("12");
-  const [isOwner,   setIsOwner]   = useState(true);
 
   useEffect(() => {
+    if (!canViewRevenue) { setLoading(false); return; }
     const user = auth.currentUser;
     if (!user) { setLoading(false); return; }
-    user.getIdTokenResult(true).then(async (result) => {
-      const role = result?.claims?.role ?? null;
-      if (role !== null && role !== "owner" && role !== "admin") { setIsOwner(false); setLoading(false); return; }
-      const token = result.token;
+    user.getIdToken().then(async (token) => {
 
       const [bookRes, tenantRes] = await Promise.all([
         fetch("/api/dashboard/bookings", { headers: { Authorization: `Bearer ${token}` } }),
@@ -147,7 +148,7 @@ export default function ReportsPage() {
       }
       setLoading(false);
     });
-  }, []);
+  }, [canViewRevenue]);
 
   const cutoff = useMemo(() => {
     const d = new Date();
@@ -317,7 +318,7 @@ export default function ReportsPage() {
     </div>
   );
 
-  if (!isOwner) return (
+  if (!canViewRevenue) return (
     <div className="p-8 flex flex-col items-center justify-center h-64 text-center gap-3">
       <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
         <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400">
@@ -325,7 +326,7 @@ export default function ReportsPage() {
         </svg>
       </div>
       <p className="font-semibold text-gray-700">Revenue reports are restricted to account owners</p>
-      <p className="text-sm text-gray-400">Contact the account owner for financial data.</p>
+      <p className="text-sm text-gray-400">Contact the account owner to enable access.</p>
     </div>
   );
 
