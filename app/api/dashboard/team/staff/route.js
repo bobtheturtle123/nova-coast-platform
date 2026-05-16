@@ -52,11 +52,15 @@ export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { email, role } = await req.json();
+  const { email, role, permissions } = await req.json();
   if (!email?.trim()) return Response.json({ error: "Email is required" }, { status: 400 });
 
   const validRoles = ["admin", "manager", "photographer", "assistant"];
   const staffRole = validRoles.includes(role) ? role : "manager";
+  const VALID_PERM_KEYS = ["canViewRevenue","canViewReports","canManageTeam","canManageProducts","canEditSettings","canCreateBookings"];
+  const savedPerms = permissions && typeof permissions === "object"
+    ? Object.fromEntries(VALID_PERM_KEYS.map((k) => [k, !!permissions[k]]))
+    : {};
 
   // Get tenant info for email
   const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
@@ -102,8 +106,12 @@ export async function POST(req) {
         name:        normalizedEmail.split("@")[0],
         status:      "invited",
         inviteToken: token,
+        permissions: savedPerms,
         createdAt:   new Date(),
       });
+  } else {
+    // Update permissions on existing team doc
+    await existingSnap.docs[0].ref.update({ permissions: savedPerms });
   }
 
   // Send email

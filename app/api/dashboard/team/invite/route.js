@@ -17,13 +17,18 @@ export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { email, role } = await req.json();
+  const { email, role, permissions } = await req.json();
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!email || !emailRegex.test(email.trim())) {
     return Response.json({ error: "Valid email required." }, { status: 400 });
   }
-  const validRoles = ["photographer", "editor", "manager", "admin"];
+  const validRoles = ["photographer", "editor", "manager", "admin", "assistant"];
   const inviteRole = validRoles.includes(role) ? role : "photographer";
+
+  const VALID_PERM_KEYS = ["canViewRevenue","canViewReports","canManageTeam","canManageProducts","canEditSettings","canCreateBookings"];
+  const savedPerms = permissions && typeof permissions === "object"
+    ? Object.fromEntries(VALID_PERM_KEYS.map((k) => [k, !!permissions[k]]))
+    : {};
 
   const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
   const tenant    = tenantDoc.exists ? tenantDoc.data() : {};
@@ -33,12 +38,13 @@ export async function POST(req) {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   const inviteData = {
-    email:     email.trim().toLowerCase(),
-    tenantId:  ctx.tenantId,
-    role:      inviteRole,
-    createdAt: new Date(),
+    email:       email.trim().toLowerCase(),
+    tenantId:    ctx.tenantId,
+    role:        inviteRole,
+    permissions: savedPerms,
+    createdAt:   new Date(),
     expiresAt,
-    accepted:  false,
+    accepted:    false,
   };
 
   // Store in top-level `photographerInvites` collection keyed by token

@@ -1100,7 +1100,7 @@ export default function TeamPage() {
   const [calModal,      setCalModal]      = useState(null);
   const [calView,       setCalView]       = useState("2wk");  // "2wk" | "week" | "month" | "day"
   const [addMode,       setAddMode]       = useState(null); // null | "choice" | "invite"
-  const [inviteForm,    setInviteForm]    = useState({ email: "", role: "photographer" });
+  const [inviteForm,    setInviteForm]    = useState({ email: "", role: "photographer", permissions: { ...DEFAULT_PERMISSIONS.photographer } });
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteMsg,     setInviteMsg]     = useState("");
   const [inviteUrl,     setInviteUrl]     = useState("");
@@ -1232,7 +1232,7 @@ export default function TeamPage() {
 
   function closeAddModal() {
     setAddMode(null);
-    setInviteForm({ email: "", role: "photographer" });
+    setInviteForm({ email: "", role: "photographer", permissions: { ...DEFAULT_PERMISSIONS.photographer } });
     setInviteMsg("");
     setInviteUrl("");
   }
@@ -1251,7 +1251,7 @@ export default function TeamPage() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ email: inviteForm.email.trim(), role: inviteForm.role }),
+        body: JSON.stringify({ email: inviteForm.email.trim(), role: inviteForm.role, permissions: inviteForm.permissions }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -2127,7 +2127,7 @@ export default function TeamPage() {
                 <div className="grid grid-cols-2 gap-2">
                   {ROLE_OPTIONS.map((r) => (
                     <button key={r.id} type="button"
-                      onClick={() => setInviteForm((f) => ({ ...f, role: r.id }))}
+                      onClick={() => setInviteForm((f) => ({ ...f, role: r.id, permissions: { ...DEFAULT_PERMISSIONS[r.id] } }))}
                       className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
                         inviteForm.role === r.id ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300"
                       }`}>
@@ -2153,6 +2153,26 @@ export default function TeamPage() {
                   onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))}
                   onKeyDown={(e) => e.key === "Enter" && sendInvite()}
                   className="input-field w-full" placeholder="team@example.com" autoFocus />
+              </div>
+
+              {/* Permissions */}
+              <div>
+                <label className="label-field mb-2">Permissions</label>
+                <div className="space-y-1 rounded-xl border border-gray-100 bg-gray-50 px-4 py-2">
+                  {PERMISSION_DEFS.map((perm) => (
+                    <label key={perm.key} className="flex items-center justify-between gap-3 py-1.5 cursor-pointer">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-[#0F172A]">{perm.label}</p>
+                        <p className="text-[11px] text-gray-400 leading-tight">{perm.desc}</p>
+                      </div>
+                      <button type="button"
+                        onClick={() => setInviteForm((f) => ({ ...f, permissions: { ...f.permissions, [perm.key]: !f.permissions[perm.key] } }))}
+                        className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-150 focus:outline-none ${inviteForm.permissions[perm.key] ? "bg-[#3486cf]" : "bg-gray-200"}`}>
+                        <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-150 ${inviteForm.permissions[perm.key] ? "translate-x-4" : "translate-x-0"}`} />
+                      </button>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               {/* Feedback */}

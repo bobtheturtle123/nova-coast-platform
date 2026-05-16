@@ -55,11 +55,13 @@ export async function POST(req, { params }) {
   // Create team member in the `team` subcollection
   const memberId      = uuidv4().replace(/-/g, "").slice(0, 16);
   const calendarToken = uuidv4().replace(/-/g, "");
+  const memberRole    = inviteData.role || "photographer";
   const member = {
     id:              memberId,
     name:            name.trim(),
     email:           email.trim().toLowerCase(),
     phone:           phone?.trim() || "",
+    role:            memberRole,
     skills:          [],
     active:          true,
     color:           "#3486cf",
@@ -69,6 +71,7 @@ export async function POST(req, { params }) {
     uid,
     tenantId,
     payRate:         0,
+    permissions:     inviteData.permissions || {},
   };
 
   const batch = adminDb.batch();
@@ -82,18 +85,18 @@ export async function POST(req, { params }) {
   );
   await batch.commit();
 
-  // Set custom claims: photographer role
+  // Set custom claims with role from invite
   await adminAuth.setCustomUserClaims(uid, {
     tenantId,
     memberId,
-    role: "photographer",
+    role: memberRole,
   });
 
   // Mark invite accepted
   await inviteRef.update({ accepted: true, acceptedAt: new Date(), memberId, uid });
 
   // Generate custom token so the client can sign in immediately
-  const customToken = await adminAuth.createCustomToken(uid, { tenantId, memberId, role: "photographer" });
+  const customToken = await adminAuth.createCustomToken(uid, { tenantId, memberId, role: memberRole });
 
   return Response.json({ ok: true, memberId, customToken });
 }
