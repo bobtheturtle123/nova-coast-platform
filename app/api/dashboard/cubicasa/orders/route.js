@@ -27,9 +27,7 @@ export async function GET(req) {
   }
 
   try {
-    // Per CubiCasa docs: "User resource is requested with the user email instead of user ID"
-    const encodedEmail = encodeURIComponent(creds.email);
-    const url = `https://app.cubi.casa/api/integrate/v3/user/${encodedEmail}/orders`;
+    const url = `https://app.cubi.casa/api/integrate/v3/orders`;
 
     const res = await fetch(url, {
       headers: {
