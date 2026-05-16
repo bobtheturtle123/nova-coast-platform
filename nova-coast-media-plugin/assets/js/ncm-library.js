@@ -6,7 +6,13 @@
             $( document ).on( 'change', '.ncm-filter-location',    e => { this.state.location    = e.target.value; this.reload(); } );
             $( document ).on( 'change', '.ncm-filter-type',        e => { this.state.media_type  = e.target.value; this.reload(); } );
             $( document ).on( 'change', '.ncm-filter-orientation', e => { this.state.orientation = e.target.value; this.reload(); } );
-            $( document ).on( 'click',  '.ncm-filter-clear',       () => { this.state = { ...this.state, location: '', media_type: '', orientation: '', search: '', page: 1 }; $( '.ncm-filter-location,.ncm-filter-type,.ncm-filter-orientation,.ncm-search-input' ).val( '' ); this.fetch( true ); } );
+            $( document ).on( 'click',  '.ncm-filter-clear', () => {
+                this.state = { ...this.state, location: '', media_type: '', orientation: '', search: '', page: 1 };
+                $( 'select.ncm-filter-location, select.ncm-filter-type, select.ncm-filter-orientation' ).val( '' );
+                $( 'input[type="radio"].ncm-filter-location[value=""], input[type="radio"].ncm-filter-type[value=""], input[type="radio"].ncm-filter-orientation[value=""]' ).prop( 'checked', true );
+                $( '.ncm-search-input' ).val( '' );
+                this.fetch( true );
+            } );
             let deb;
             $( document ).on( 'input', '.ncm-search-input', e => { clearTimeout( deb ); deb = setTimeout( () => { this.state.search = e.target.value.trim(); this.reload(); }, 350 ); } );
             $( document ).on( 'submit', '.ncm-search-form', e => e.preventDefault() );
@@ -32,22 +38,12 @@
         bindVideoHover() {
             $( document ).off( 'mouseenter.ncmv mouseleave.ncmv', '.ncm-asset-card' );
             $( document ).on( 'mouseenter.ncmv', '.ncm-asset-card[data-type="video"]', function () {
-                const $c = $( this );
-                const src = $c.data( 'preview' );
-                if ( ! src ) return;
-                let $v = $c.find( '.ncm-hover-video' );
-                if ( ! $v.length ) {
-                    $v = $( `<video class="ncm-hover-video" src="${ src }" muted loop playsinline preload="none"></video>` );
-                    $c.append( $v );
-                }
-                $v[0].play().catch( () => {} );
-                $c.find( '.ncm-thumb' ).addClass( 'ncm-thumb--hidden' );
+                const v = this.querySelector( '.ncm-thumb-video' );
+                if ( v ) v.play().catch( () => {} );
             } );
             $( document ).on( 'mouseleave.ncmv', '.ncm-asset-card[data-type="video"]', function () {
-                const $c = $( this );
-                const $v = $c.find( '.ncm-hover-video' );
-                if ( $v.length ) { $v[0].pause(); $v[0].currentTime = 0; }
-                $c.find( '.ncm-thumb' ).removeClass( 'ncm-thumb--hidden' );
+                const v = this.querySelector( '.ncm-thumb-video' );
+                if ( v ) { v.pause(); v.currentTime = 0; }
             } );
         },
     };

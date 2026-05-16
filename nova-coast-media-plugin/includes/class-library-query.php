@@ -61,15 +61,30 @@ class NCM_Library_Query {
             $loc = esc_html( $terms[0]->name );
         }
 
-        $dur_html  = ( $type === 'video' && $duration ) ? '<span class="ncm-card-duration">' . gmdate( 'i:s', $duration ) . '</span>' : '';
+        $dur_html   = ( $type === 'video' && $duration ) ? '<span class="ncm-card-duration">' . gmdate( 'i:s', $duration ) . '</span>' : '';
         $type_badge = $type === 'video' ? '<span class="ncm-card-badge ncm-card-badge--video">Video</span>' : '';
 
+        // Video: <video> element shows first frame automatically via #t=0.001 + preload=metadata.
+        // CSS watermark overlays on hover — no server-side processing needed.
+        // Photo: standard <img> thumbnail.
+        if ( $type === 'video' && $preview_url ) {
+            $media_inner = <<<HTML
+<video class="ncm-thumb-video" src="{$preview_url}#t=0.001" preload="metadata" muted playsinline loop></video>
+<div class="ncm-card-watermark">Nova Coast Media</div>
+{$dur_html}{$type_badge}
+HTML;
+        } else {
+            $media_inner = <<<HTML
+<img class="ncm-thumb" src="{$thumb_url}" alt="{$title}" loading="lazy">
+{$dur_html}{$type_badge}
+HTML;
+        }
+
         echo <<<HTML
-<article class="ncm-asset-card ncm-asset-card--{$orient}" data-type="{$type}" data-preview="{$preview_url}">
+<article class="ncm-asset-card ncm-asset-card--{$orient}" data-type="{$type}">
   <a href="{$permalink}" class="ncm-card-link">
     <div class="ncm-card-media">
-      <img class="ncm-thumb" src="{$thumb_url}" alt="{$title}" loading="lazy">
-      {$dur_html}{$type_badge}
+      {$media_inner}
     </div>
     <div class="ncm-card-info">
       <h3 class="ncm-card-title">{$title}</h3>

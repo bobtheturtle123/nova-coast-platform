@@ -75,6 +75,8 @@ final class Nova_Coast_Media {
         // Templates + shortcodes
         NCM_Template_Loader::instance()->init();
         NCM_Shortcodes::instance()->init();
+        require_once NCM_PLUGIN_DIR . 'includes/class-landing-shortcodes.php';
+        require_once NCM_PLUGIN_DIR . 'includes/class-account-shortcodes.php';
         NCM_SEO_Automation::instance()->init();
 
         // Elementor widgets (only if Elementor is active)

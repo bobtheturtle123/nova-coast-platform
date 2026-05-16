@@ -20,7 +20,7 @@ class NCM_Admin_Interface {
     }
     public function register_settings(): void {
         register_setting( 'ncm_r2_group',   'ncm_r2_settings',   [ 'sanitize_callback' => [ $this, 'sanitize_r2' ] ] );
-        register_setting( 'ncm_stripe_group', 'ncm_stripe_settings', [ 'sanitize_callback' => [ \, 'sanitize_stripe' ] ] );
+        register_setting( 'ncm_stripe_group', 'ncm_stripe_settings', [ 'sanitize_callback' => [ $this, 'sanitize_stripe' ] ] );
     }
     public function sanitize_stripe( array $i ): array {
         return [

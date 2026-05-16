@@ -167,13 +167,6 @@ export default function DashboardLayout({ children }) {
       const role = tokenResult.claims.role || "owner";
       setUserRole(role);
       const tok = await u.getIdToken();
-      // Fetch permissions for non-owner team members
-      if (role !== "owner") {
-        fetch("/api/dashboard/me", { headers: { Authorization: `Bearer ${tok}` } })
-          .then((r) => r.json())
-          .then((d) => { if (d.member?.permissions) setPermissions(d.member.permissions); })
-          .catch(() => {});
-      }
       fetch("/api/dashboard/tenant", {
         headers: { Authorization: `Bearer ${tok}` },
       }).then((r) => r.json()).then((d) => {
@@ -183,6 +176,20 @@ export default function DashboardLayout({ children }) {
     });
     return unsub;
   }, [router]);
+
+  // Re-fetch permissions on every navigation so owner changes take effect immediately
+  useEffect(() => {
+    if (!user || userRole === "owner" || userRole === "admin") return;
+    user.getIdToken().then((tok) =>
+      fetch("/api/dashboard/me", { headers: { Authorization: `Bearer ${tok}` } })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.member?.permissions) setPermissions(d.member.permissions);
+          else setPermissions({});
+        })
+        .catch(() => {})
+    );
+  }, [user, userRole, pathname]);
 
   // Re-fetch revision badge whenever the user navigates — clears stale counts after viewing
   useEffect(() => {
