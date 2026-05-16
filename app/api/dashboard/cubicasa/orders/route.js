@@ -10,41 +10,49 @@ async function getCtx(req) {
   } catch { return null; }
 }
 
-async function getCredentials(tenantId) {
+async function getCubiCasaEmail(tenantId) {
   const doc   = await adminDb.collection("tenants").doc(tenantId).get();
   const creds = doc.data()?.cubiCasaCredentials;
-  if (!creds?.apiKey) return null;
-  return creds; // { apiKey, email }
+  return creds?.email || null;
 }
 
 export async function GET(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const creds = await getCredentials(ctx.tenantId);
-  if (!creds) {
+  const platformKey = process.env.CUBICASA_API_KEY;
+  if (!platformKey) {
+    return Response.json({ error: "CUBICASA_API_KEY is not configured." }, { status: 500 });
+  }
+
+  const email = await getCubiCasaEmail(ctx.tenantId);
+  if (!email) {
     return Response.json({ error: "not_connected", message: "CubiCasa account not connected." }, { status: 403 });
   }
 
   try {
-    const url = new URL("https://app.cubi.casa/api/integrate/v3/floor-plans");
-    if (creds.email) url.searchParams.set("email", creds.email);
+    // User resource is identified by email per CubiCasa REST convention
+    const encodedEmail = encodeURIComponent(email);
+    const url = `https://app.cubi.casa/api/integrate/v3/user/${encodedEmail}/orders`;
 
-    const res = await fetch(url.toString(), {
+    const res = await fetch(url, {
       headers: {
-        "X-API-KEY":    creds.apiKey,
+        "X-API-KEY":    platformKey,
         "Content-Type": "application/json",
         Accept:         "application/json",
       },
     });
 
     const text = await res.text();
-    console.log(`[cubicasa/orders] status=${res.status} body=${text.slice(0, 1000)}`);
+    console.log(`[cubicasa/orders] GET ${url} → status=${res.status} body=${text.slice(0, 1000)}`);
 
     if (!res.ok) {
       let errMsg = `CubiCasa ${res.status}`;
-      try { const j = JSON.parse(text); errMsg = j.message || j.error || j.detail || JSON.stringify(j); } catch { errMsg = text.slice(0, 300) || errMsg; }
-      return Response.json({ error: errMsg }, { status: res.status === 401 ? 403 : res.status });
+      try {
+        const j = JSON.parse(text);
+        errMsg = j.message || j.error || j.detail || JSON.stringify(j);
+      } catch { errMsg = text.slice(0, 300) || errMsg; }
+      return Response.json({ error: errMsg }, { status: res.status });
     }
 
     let data;
@@ -73,7 +81,7 @@ export async function GET(req) {
   }
 }
 
-// DELETE — disconnect CubiCasa account
+// DELETE — disconnect
 export async function DELETE(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });

@@ -336,7 +336,6 @@ export default function GalleryDetailPage() {
   const [cubiCasaOrders,    setCubiCasaOrders]    = useState(null);
   const [cubiCasaLoading,   setCubiCasaLoading]   = useState(false);
   const [cubiCasaError,     setCubiCasaError]     = useState(null);
-  const [cubiCasaApiKey,    setCubiCasaApiKey]    = useState("");
   const [cubiCasaEmail,     setCubiCasaEmail]     = useState("");
   const [cubiCasaSaving,    setCubiCasaSaving]    = useState(false);
   const [syncingOrder,      setSyncingOrder]      = useState(null);
@@ -850,13 +849,12 @@ export default function GalleryDetailPage() {
     });
     setCubiCasaConnected(false);
     setCubiCasaOrders(null);
-    setCubiCasaApiKey("");
     setCubiCasaEmail("");
   }
 
   async function connectCubiCasa(e) {
     e.preventDefault();
-    if (!cubiCasaApiKey.trim() || !cubiCasaEmail.trim()) return;
+    if (!cubiCasaEmail.trim()) return;
     setCubiCasaSaving(true);
     setCubiCasaError(null);
     try {
@@ -864,12 +862,11 @@ export default function GalleryDetailPage() {
       const res = await fetch("/api/dashboard/cubicasa/connect", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: cubiCasaApiKey.trim(), email: cubiCasaEmail.trim() }),
+        body: JSON.stringify({ email: cubiCasaEmail.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to connect");
       setCubiCasaConnected(true);
-      setCubiCasaApiKey("");
       setCubiCasaEmail("");
     } catch (err) {
       setCubiCasaError(err.message);
@@ -2001,7 +1998,7 @@ export default function GalleryDetailPage() {
               {!cubiCasaConnected ? (
                 <form onSubmit={connectCubiCasa} className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">CubiCasa Email</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">CubiCasa Account Email</label>
                     <input
                       type="email"
                       required
@@ -2010,23 +2007,12 @@ export default function GalleryDetailPage() {
                       placeholder="you@example.com"
                       className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#3486cf]/30"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">CubiCasa API Key</label>
-                    <input
-                      type="password"
-                      required
-                      value={cubiCasaApiKey}
-                      onChange={(e) => setCubiCasaApiKey(e.target.value)}
-                      placeholder="Paste your API key"
-                      className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#3486cf]/30"
-                    />
-                    <p className="text-xs text-gray-400 mt-1">Find your API key in your CubiCasa account settings.</p>
+                    <p className="text-xs text-gray-400 mt-1">The email address you use to log in to CubiCasa.</p>
                   </div>
                   {cubiCasaError && (
                     <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{cubiCasaError}</p>
                   )}
-                  <button type="submit" disabled={cubiCasaSaving || !cubiCasaApiKey || !cubiCasaEmail}
+                  <button type="submit" disabled={cubiCasaSaving || !cubiCasaEmail}
                     className="btn-primary px-6 py-2.5 text-sm w-full disabled:opacity-50">
                     {cubiCasaSaving ? "Connecting…" : "Connect CubiCasa"}
                   </button>
