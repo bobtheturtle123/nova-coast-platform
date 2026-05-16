@@ -6,9 +6,26 @@ async function getCtx(req) {
   if (!auth) return null;
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
-    if (decoded.role !== "photographer" || !decoded.tenantId || !decoded.memberId) return null;
-    return { uid: decoded.uid, tenantId: decoded.tenantId, memberId: decoded.memberId };
+    if (decoded.role !== "photographer" || !decoded.tenantId) return null;
+    return { uid: decoded.uid, tenantId: decoded.tenantId, memberId: decoded.memberId || null, email: decoded.email || null };
   } catch { return null; }
+}
+
+async function findMemberDoc(ctx) {
+  const teamRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("team");
+  if (ctx.memberId) {
+    const doc = await teamRef.doc(ctx.memberId).get();
+    if (doc.exists) return doc;
+  }
+  if (ctx.uid) {
+    const snap = await teamRef.where("uid", "==", ctx.uid).limit(1).get();
+    if (!snap.empty) return snap.docs[0];
+  }
+  if (ctx.email) {
+    const snap = await teamRef.where("email", "==", ctx.email.toLowerCase()).limit(1).get();
+    if (!snap.empty) return snap.docs[0];
+  }
+  return null;
 }
 
 export async function GET(req) {
@@ -16,11 +33,11 @@ export async function GET(req) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const [memberDoc, tenantDoc] = await Promise.all([
-    adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(ctx.memberId).get(),
+    findMemberDoc(ctx),
     adminDb.collection("tenants").doc(ctx.tenantId).get(),
   ]);
 
-  if (!memberDoc.exists) return Response.json({ error: "Member not found" }, { status: 404 });
+  if (!memberDoc || !memberDoc.exists) return Response.json({ error: "Member not found" }, { status: 404 });
 
   const raw = memberDoc.data();
   // Strip sensitive fields before sending to photographer
@@ -71,6 +88,9 @@ export async function PATCH(req) {
   }
 
   if (Object.keys(allowed).length === 0) return Response.json({ error: "No valid fields" }, { status: 400 });
-  await adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(ctx.memberId).update(allowed);
+
+  const memberDoc = await findMemberDoc(ctx);
+  if (!memberDoc) return Response.json({ error: "Member not found" }, { status: 404 });
+  await memberDoc.ref.update(allowed);
   return Response.json({ ok: true });
 }

@@ -40,14 +40,27 @@ export async function POST(req, { params }) {
     return Response.json({ error: "This invite has expired." }, { status: 400 });
   }
 
-  // Set custom claims on the Firebase user
+  const role = inviteData.role || "manager";
+
+  // The team member doc was created with the same ID as the invite token
+  const memberId = token;
+
+  // Set custom claims on the Firebase user (include memberId so permission lookups work)
   await adminAuth.setCustomUserClaims(uid, {
-    role:     inviteData.role || "manager",
+    role,
     tenantId,
+    memberId,
   });
 
-  // Mark invite accepted
-  await inviteRef.update({ accepted: true, acceptedAt: new Date(), uid, email: email || inviteData.email });
+  // Mark invite accepted and record uid on the team member doc
+  await Promise.all([
+    inviteRef.update({ accepted: true, acceptedAt: new Date(), uid, email: email || inviteData.email }),
+    adminDb.collection("tenants").doc(tenantId).collection("team").doc(memberId).update({
+      uid,
+      status: "active",
+      acceptedAt: new Date(),
+    }).catch(() => {}),
+  ]);
 
-  return Response.json({ ok: true, tenantId, role: inviteData.role || "manager" });
+  return Response.json({ ok: true, tenantId, role, memberId });
 }
