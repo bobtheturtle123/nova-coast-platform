@@ -336,6 +336,9 @@ export default function GalleryDetailPage() {
   const [cubiCasaOrders,    setCubiCasaOrders]    = useState(null);
   const [cubiCasaLoading,   setCubiCasaLoading]   = useState(false);
   const [cubiCasaError,     setCubiCasaError]     = useState(null);
+  const [cubiCasaApiKey,    setCubiCasaApiKey]    = useState("");
+  const [cubiCasaEmail,     setCubiCasaEmail]     = useState("");
+  const [cubiCasaSaving,    setCubiCasaSaving]    = useState(false);
   const [syncingOrder,      setSyncingOrder]      = useState(null);
   const [videoUrl,         setVideoUrl]         = useState(""); // YouTube / Vimeo URL
   const [videoUrlHidden,   setVideoUrlHidden]   = useState(false);
@@ -381,7 +384,7 @@ export default function GalleryDetailPage() {
           if (tpl?.body) {
             defaultNote = tpl.body.replace("{{clientName}}", data.gallery.clientName || "");
           }
-          if (tData.tenant?.cubiCasaToken?.accessToken) setCubiCasaConnected(true);
+          if (tData.tenant?.cubiCasaCredentials?.apiKey || tData.tenant?.cubiCasaToken?.accessToken) setCubiCasaConnected(true);
         }
         setEmailSubject(defaultSubject);
         if (defaultNote) setEmailNote(defaultNote);
@@ -844,34 +847,39 @@ export default function GalleryDetailPage() {
 
   async function disconnectCubiCasa() {
     const token = await auth.currentUser.getIdToken();
-    await fetch("/api/dashboard/cubicasa/orders", {
+    await fetch("/api/dashboard/cubicasa/connect", {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
     setCubiCasaConnected(false);
     setCubiCasaOrders(null);
+    setCubiCasaApiKey("");
+    setCubiCasaEmail("");
   }
 
-  function connectCubiCasa() {
-    auth.currentUser.getIdToken().then((token) => {
-      const popup = window.open(
-        `/api/auth/cubicasa/authorize?token=${encodeURIComponent(token)}`,
-        "cubicasa-oauth",
-        "width=520,height=680,scrollbars=yes,resizable=yes"
-      );
-      const listener = (e) => {
-        if (e.data?.type === "cubicasa-connected") {
-          window.removeEventListener("message", listener);
-          popup?.close();
-          setCubiCasaConnected(true);
-          fetchCubiCasaOrders();
-        } else if (e.data?.type === "cubicasa-error") {
-          window.removeEventListener("message", listener);
-          setCubiCasaError(e.data.error || "Connection failed.");
-        }
-      };
-      window.addEventListener("message", listener);
-    });
+  async function connectCubiCasa(e) {
+    e.preventDefault();
+    if (!cubiCasaApiKey.trim() || !cubiCasaEmail.trim()) return;
+    setCubiCasaSaving(true);
+    setCubiCasaError(null);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/cubicasa/connect", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: cubiCasaApiKey.trim(), email: cubiCasaEmail.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to connect");
+      setCubiCasaConnected(true);
+      setCubiCasaApiKey("");
+      setCubiCasaEmail("");
+      fetchCubiCasaOrders();
+    } catch (err) {
+      setCubiCasaError(err.message);
+    } finally {
+      setCubiCasaSaving(false);
+    }
   }
 
   async function syncCubiCasaOrder(order, variant) {
@@ -1995,22 +2003,38 @@ export default function GalleryDetailPage() {
             </div>
             <div className="p-6 space-y-4">
               {!cubiCasaConnected ? (
-                <div className="text-center py-6 space-y-3">
-                  <div className="w-14 h-14 rounded-full bg-[#3486cf]/8 flex items-center justify-center mx-auto">
-                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="1.6">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                    </svg>
+                <form onSubmit={connectCubiCasa} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">CubiCasa Email</label>
+                    <input
+                      type="email"
+                      required
+                      value={cubiCasaEmail}
+                      onChange={(e) => setCubiCasaEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#3486cf]/30"
+                    />
                   </div>
-                  <p className="text-sm font-semibold text-[#0F172A]">Connect your CubiCasa account</p>
-                  <p className="text-xs text-gray-400 max-w-xs mx-auto">Log in with CubiCasa once and your floor plan orders will sync automatically.</p>
-                  <button onClick={connectCubiCasa}
-                    className="btn-primary px-6 py-2.5 text-sm mx-auto block">
-                    Connect CubiCasa Account
-                  </button>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">CubiCasa API Key</label>
+                    <input
+                      type="password"
+                      required
+                      value={cubiCasaApiKey}
+                      onChange={(e) => setCubiCasaApiKey(e.target.value)}
+                      placeholder="Paste your API key"
+                      className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#3486cf]/30"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Find your API key in your CubiCasa account settings.</p>
+                  </div>
                   {cubiCasaError && (
                     <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{cubiCasaError}</p>
                   )}
-                </div>
+                  <button type="submit" disabled={cubiCasaSaving || !cubiCasaApiKey || !cubiCasaEmail}
+                    className="btn-primary px-6 py-2.5 text-sm w-full disabled:opacity-50">
+                    {cubiCasaSaving ? "Connecting…" : "Connect CubiCasa"}
+                  </button>
+                </form>
               ) : (
                 <>
                   <div className="flex items-center justify-between">
