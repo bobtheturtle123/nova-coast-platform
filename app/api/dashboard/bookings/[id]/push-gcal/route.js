@@ -71,9 +71,11 @@ export async function POST(req, { params }) {
     return Response.json({ error: `Token error: ${e.message}` }, { status: 401 });
   }
 
-  // Build event date/time — use shootDate/shootTime or preferredDate/preferredTime
+  // Build event date/time — prefer confirmed shootDate/shootTime over preferred*
   const dateStr = booking.shootDate || booking.preferredDate;
-  const timeStr = booking.shootTime || booking.preferredTime;
+  // Only treat as a specific time if it matches HH:MM format — reject "morning", "afternoon", etc.
+  const rawTime = booking.shootTime || booking.preferredTimeSpecific || "";
+  const timeStr = /^\d{1,2}:\d{2}$/.test(rawTime) ? rawTime : null;
 
   if (!dateStr) {
     return Response.json({ error: "Booking has no scheduled date" }, { status: 400 });
@@ -82,14 +84,26 @@ export async function POST(req, { params }) {
   let startDateTime, endDateTime;
   if (timeStr) {
     const [h, m] = timeStr.split(":").map(Number);
-    const startMs = new Date(`${dateStr}T00:00:00`).setHours(h, m, 0, 0);
-    startDateTime = new Date(startMs).toISOString();
-    endDateTime   = new Date(startMs + 2 * 60 * 60 * 1000).toISOString(); // 2h default duration
+    // Build datetime string then parse — avoids DST edge cases from setHours
+    const paddedH = String(h).padStart(2, "0");
+    const paddedM = String(m).padStart(2, "0");
+    startDateTime = `${dateStr}T${paddedH}:${paddedM}:00`;
+    const durationMin = Number(booking.shootDuration) > 0 ? Number(booking.shootDuration) : 120;
+    const endMs = new Date(startDateTime).getTime() + durationMin * 60 * 1000;
+    endDateTime = new Date(endMs).toISOString().replace(".000Z", "");
+    // Trim to local-style datetime for use with named timezone
+    startDateTime = startDateTime;
   } else {
-    // All-day event
+    // All-day event — GCal requires end = next day (exclusive end)
     startDateTime = null;
     endDateTime   = null;
   }
+
+  // Determine tenant timezone for GCal events — fall back to UTC
+  const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
+  const tenantTimezone = tenantDoc.exists
+    ? (tenantDoc.data().timezone || tenantDoc.data().bookingConfig?.timezone || "America/New_York")
+    : "America/New_York";
 
   const address = booking.fullAddress || booking.bookingAddress || booking.address || "Address TBD";
   const client  = booking.agentName   || booking.clientName     || booking.clientEmail || "Client";
@@ -102,20 +116,27 @@ export async function POST(req, { params }) {
     `Booking ID: ${params.id}`,
   ].filter(Boolean).join("\n");
 
+  // All-day end date must be the NEXT day (GCal uses exclusive end)
+  const allDayEndDate = (() => {
+    const d = new Date(dateStr + "T12:00:00Z");
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  })();
+
   const eventBody = timeStr
     ? {
         summary,
         description,
         location: address,
-        start: { dateTime: startDateTime, timeZone: "UTC" },
-        end:   { dateTime: endDateTime,   timeZone: "UTC" },
+        start: { dateTime: startDateTime, timeZone: tenantTimezone },
+        end:   { dateTime: endDateTime,   timeZone: tenantTimezone },
       }
     : {
         summary,
         description,
         location: address,
         start: { date: dateStr },
-        end:   { date: dateStr },
+        end:   { date: allDayEndDate },
       };
 
   // Check if we already pushed this booking (to avoid duplicates)

@@ -79,6 +79,7 @@ export async function POST(req) {
       photographerId:          photographerId          || null,
       photographerEmail:       photographerEmail       || null,
       photographerName:        photographerName        || null,
+      photographerPhone:       photographerPhone       || null,
       additionalPhotographers: additionalPhotographers || [],
       shootDate:               shootDate               || null,
       shootTime:              shootTime              || null,

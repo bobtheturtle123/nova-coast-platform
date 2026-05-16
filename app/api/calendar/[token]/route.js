@@ -78,30 +78,36 @@ function buildICal(member, bookings, tenantName) {
   for (const b of bookings) {
     const uid = `booking-${b.id}@kyoriaos.com`;
 
+    // Normalize a shootDate value that may be a Firestore Timestamp, JS Date, or string
+    function toDateStr(val) {
+      if (!val) return null;
+      if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) return val.slice(0, 10);
+      if (val.toDate) return val.toDate().toISOString().slice(0, 10); // Firestore Timestamp
+      if (val._seconds) return new Date(val._seconds * 1000).toISOString().slice(0, 10);
+      const d = new Date(val);
+      return isNaN(d) ? null : d.toISOString().slice(0, 10);
+    }
+
     // Build start/end datetimes
     let dtStart, dtEnd;
-    if (b.shootDate) {
-      // Use actual shoot time if available, otherwise noon
-      const dateStr = typeof b.shootDate === "string" && b.shootDate.length === 10
-        ? b.shootDate
-        : new Date(b.shootDate).toISOString().slice(0, 10);
-      // Guard against special presets (sunset/twilight) — fall back to noon
-      const rawTime = b.shootTime || b.preferredTime || "";
-      const timeStr = /^\d{2}:\d{2}$/.test(rawTime) ? rawTime : "12:00";
-      const startISO = `${dateStr}T${timeStr}:00`;
+    const shootDateStr = toDateStr(b.shootDate);
+    if (shootDateStr) {
+      // Guard against non-specific presets (morning/afternoon) — fall back to noon
+      const rawTime = b.shootTime || b.preferredTimeSpecific || "";
+      const timeStr = /^\d{1,2}:\d{2}$/.test(rawTime) ? rawTime.padStart(5, "0") : "12:00";
+      const startISO = `${shootDateStr}T${timeStr}:00`;
       const d = new Date(startISO);
       dtStart = toICalDate(d);
-      // Use shootDuration if stored, else fallback to 2 hours
-      const durationMin = (b.shootDuration && Number(b.shootDuration) > 0)
-        ? Number(b.shootDuration)
-        : 120;
-      const endD = new Date(d.getTime() + durationMin * 60 * 1000);
-      dtEnd = toICalDate(endD);
+      const durationMin = (b.shootDuration && Number(b.shootDuration) > 0) ? Number(b.shootDuration) : 120;
+      dtEnd = toICalDate(new Date(d.getTime() + durationMin * 60 * 1000));
     } else if (b.preferredDate) {
-      // All-day event if no confirmed time
-      const ds = b.preferredDate; // "YYYY-MM-DD"
+      // All-day event if no confirmed time — end must be next day (iCal exclusive end)
+      const ds = toDateStr(b.preferredDate) || b.preferredDate;
+      if (!ds) continue;
+      const startD = new Date(ds + "T12:00:00Z");
+      const endD   = new Date(startD.getTime() + 24 * 60 * 60 * 1000);
       dtStart = ds.replace(/-/g, "") + "T120000Z";
-      dtEnd   = ds.replace(/-/g, "") + "T140000Z";
+      dtEnd   = endD.toISOString().slice(0, 10).replace(/-/g, "") + "T120000Z";
     } else {
       continue; // no date info — skip
     }

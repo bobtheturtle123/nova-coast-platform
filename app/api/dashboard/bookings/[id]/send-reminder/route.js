@@ -57,7 +57,11 @@ export async function POST(req, { params }) {
     return Response.json({ error: "Gallery not found." }, { status: 404 });
   }
 
-  const galleryToken = galleryDoc.data().token || booking.galleryId;
+  // Gallery stores the shareable token as "accessToken", not "token"
+  const galleryToken = galleryDoc.data().accessToken || galleryDoc.data().token;
+  if (!galleryToken) {
+    return Response.json({ error: "Gallery access token missing — cannot generate payment link." }, { status: 500 });
+  }
 
   await sendPaymentReminder({ booking, galleryToken, tenant });
 

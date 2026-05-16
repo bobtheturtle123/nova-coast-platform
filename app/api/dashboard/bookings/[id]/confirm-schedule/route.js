@@ -38,7 +38,9 @@ export async function POST(req, { params }) {
 
   if (action === "confirm") {
     finalDate = booking.preferredDate || booking.shootDate;
-    finalTime = booking.preferredTime || booking.shootTime;
+    // Only use preferredTime if it is a specific HH:MM value — not "morning" / "afternoon" presets
+    const rawPreferred = booking.preferredTimeSpecific || booking.preferredTime || booking.shootTime || "";
+    finalTime = /^\d{1,2}:\d{2}$/.test(rawPreferred) ? rawPreferred : (booking.shootTime || null);
   } else {
     if (!proposedDate || !proposedTime) {
       return Response.json({ error: "shootDate and shootTime required for propose" }, { status: 400 });

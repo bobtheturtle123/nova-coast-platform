@@ -43,7 +43,7 @@ export async function POST(req, { params }) {
       packageIds: rawPkgIds, packageId: rawPkgId, serviceIds, addonIds,
       address, city, state, zip, squareFootage, propertyType, notes,
       preferredDate, preferredTime, preferredTimeSpecific, twilightTime,
-      clientName, clientEmail, clientPhone,
+      clientName, clientEmail, clientPhone, smsConsent,
       travelFee, tipAmount: rawTip, payFull, customFields,
       photographerId: preferredPhotographerId,
       contractSignerName,
@@ -143,6 +143,8 @@ export async function POST(req, { params }) {
         createdAt:     new Date(),
 
         clientName, clientEmail, clientPhone,
+        smsConsent:    !!smsConsent,
+        smsConsentAt:  smsConsent ? new Date() : null,
         address, city, state, zip, fullAddress,
         squareFootage: squareFootage ? Number(squareFootage) : null,
         propertyType:  propertyType || "residential",

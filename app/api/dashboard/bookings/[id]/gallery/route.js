@@ -21,14 +21,21 @@ export async function POST(req, { params }) {
 
   const bookingDoc = await bookingRef.get();
   if (!bookingDoc.exists) return Response.json({ error: "Not found" }, { status: 404 });
-  const booking = bookingDoc.data();
 
-  if (booking.galleryId) {
-    return Response.json({ galleryId: booking.galleryId });
+  // Return existing gallery immediately if already created
+  if (bookingDoc.data().galleryId) {
+    const existing = bookingDoc.data().galleryId;
+    const existingGallery = await adminDb
+      .collection("tenants").doc(ctx.tenantId)
+      .collection("galleries").doc(existing)
+      .get();
+    return Response.json({
+      galleryId:   existing,
+      accessToken: existingGallery.exists ? existingGallery.data().accessToken : null,
+    });
   }
 
   const galleryId   = uuidv4();
-  // Use crypto-strength token (32 bytes = 64 hex chars, not enumerable)
   const { randomBytes } = await import("crypto");
   const accessToken = randomBytes(32).toString("hex");
 
@@ -36,11 +43,18 @@ export async function POST(req, { params }) {
   const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
   const tenantSlug = tenantDoc.exists ? tenantDoc.data().slug : "";
 
-  const batch = adminDb.batch();
+  // Use a transaction to prevent duplicate galleries when concurrent requests race
+  let alreadyExists = false;
+  await adminDb.runTransaction(async (tx) => {
+    const snap = await tx.get(bookingRef);
+    if (!snap.exists) return;
+    if (snap.data().galleryId) { alreadyExists = snap.data().galleryId; return; }
 
-  batch.set(
-    adminDb.collection("tenants").doc(ctx.tenantId).collection("galleries").doc(galleryId),
-    {
+    const booking = snap.data();
+    const galleryRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("galleries").doc(galleryId);
+    const tokenRef   = adminDb.collection("galleryTokens").doc(accessToken);
+
+    tx.set(galleryRef, {
       id:             galleryId,
       bookingId:      params.id,
       bookingAddress: booking.fullAddress || booking.address,
@@ -53,17 +67,21 @@ export async function POST(req, { params }) {
       media:          [],
       categories:     {},
       createdAt:      new Date(),
-    }
-  );
+    });
+    tx.set(tokenRef, { tenantId: ctx.tenantId, galleryId });
+    tx.update(bookingRef, { galleryId, galleryUnlocked: false });
+  });
 
-  // Register token in top-level index for O(1) tenant-safe lookup
-  batch.set(
-    adminDb.collection("galleryTokens").doc(accessToken),
-    { tenantId: ctx.tenantId, galleryId }
-  );
-
-  await batch.commit();
-  await bookingRef.update({ galleryId, galleryUnlocked: false });
+  if (alreadyExists) {
+    const existingGallery = await adminDb
+      .collection("tenants").doc(ctx.tenantId)
+      .collection("galleries").doc(alreadyExists)
+      .get();
+    return Response.json({
+      galleryId:   alreadyExists,
+      accessToken: existingGallery.exists ? existingGallery.data().accessToken : null,
+    });
+  }
 
   return Response.json({ galleryId, accessToken });
 }
