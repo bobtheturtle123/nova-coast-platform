@@ -7,6 +7,7 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import AiChatButton from "@/components/dashboard/AiChatButton";
 import { ToastProvider } from "@/components/Toast";
+import { DashboardPermissionsContext } from "@/lib/dashboardPermissions";
 
 // permKey: required permission for non-owners. ownerOnly: only owner/admin sees it.
 const NAV = [
@@ -352,7 +353,9 @@ export default function DashboardLayout({ children }) {
             <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-6 w-auto object-contain" />
           </div>
 
-          <main className="flex-1 overflow-x-hidden min-w-0">{children}</main>
+          <DashboardPermissionsContext.Provider value={{ permissions: permissions || {}, userRole }}>
+            <main className="flex-1 overflow-x-hidden min-w-0">{children}</main>
+          </DashboardPermissionsContext.Provider>
         </div>
 
         <AiChatButton />

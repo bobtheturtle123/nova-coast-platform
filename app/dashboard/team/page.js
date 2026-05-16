@@ -17,7 +17,7 @@ const ROLE_OPTIONS = [
 ];
 
 const PERMISSION_DEFS = [
-  { key: "canViewRevenue",    label: "View Revenue",     desc: "See revenue stats and the revenue chart" },
+  { key: "canViewRevenue",    label: "View Revenue & Pricing", desc: "See prices on bookings and listings, revenue stats, and the revenue chart" },
   { key: "canViewReports",    label: "View Reports",     desc: "Access the reports page" },
   { key: "canManageTeam",     label: "Manage Team",      desc: "Add, edit, and remove team members" },
   { key: "canManageProducts", label: "Manage Products",  desc: "Create and edit services, packages, and add-ons" },

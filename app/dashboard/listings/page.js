@@ -5,6 +5,7 @@ import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
+import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ACTIVE_STAGES = ["booked","appointment_confirmed","photographer_assigned","shot_completed","editing_complete","qa_review","postponed"];
@@ -24,11 +25,11 @@ const PAY_FILTERS = [
   { id: "unpaid",  label: "Unpaid" },
 ];
 
-const SORT_OPTIONS = [
+const ALL_SORT_OPTIONS = [
   { id: "newest",   label: "Newest first" },
   { id: "oldest",   label: "Oldest first" },
-  { id: "price_hi", label: "Price: high → low" },
-  { id: "price_lo", label: "Price: low → high" },
+  { id: "price_hi", label: "Price: high → low", priceOnly: true },
+  { id: "price_lo", label: "Price: low → high", priceOnly: true },
   { id: "alpha",    label: "A → Z" },
 ];
 
@@ -88,6 +89,8 @@ function DateChip({ d }) {
 
 // ── Grid card ─────────────────────────────────────────────────────────────────
 function ListingCard({ listing, revCount = 0 }) {
+  const { permissions, userRole } = useDashboardPermissions();
+  const canViewPricing = userRole === "owner" || userRole === "admin" || !!permissions?.canViewRevenue;
   const coverUrl    = listing.gallery?.coverUrl;
   const shootDate   = listing.shootDate || listing.preferredDate;
   const fullDate    = formatDate(shootDate);
@@ -190,7 +193,9 @@ function ListingCard({ listing, revCount = 0 }) {
         {/* Footer */}
         <div className="pt-3 flex items-end justify-between gap-2" style={{ borderTop: "1px solid var(--border-subtle)" }}>
           <div>
-            <p className="text-base font-bold text-[#0F172A] leading-none mb-1.5">${listing.totalPrice?.toLocaleString()}</p>
+            {canViewPricing && (
+              <p className="text-base font-bold text-[#0F172A] leading-none mb-1.5">${listing.totalPrice?.toLocaleString()}</p>
+            )}
             <PayBadge listing={listing} />
           </div>
           {fullDate && (
@@ -205,11 +210,12 @@ function ListingCard({ listing, revCount = 0 }) {
   );
 }
 
-// ── List row columns ──────────────────────────────────────────────────────────
-const COLS = "52px 1fr 126px 154px 112px 76px 22px";
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function ListingsPage() {
+  const { permissions, userRole } = useDashboardPermissions();
+  const canViewPricing = userRole === "owner" || userRole === "admin" || !!permissions?.canViewRevenue;
+  const COLS = canViewPricing ? "52px 1fr 126px 154px 112px 76px 22px" : "52px 1fr 126px 154px 112px 22px";
+
   const [listings,         setListings]         = useState([]);
   const [loading,          setLoading]          = useState(true);
   const [hasMore,          setHasMore]          = useState(false);
@@ -400,7 +406,7 @@ export default function ListingsPage() {
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
             className="text-xs bg-white text-gray-500 rounded-xl px-3 py-2 cursor-pointer focus:outline-none"
             style={{ border: "1px solid var(--border)" }}>
-            {SORT_OPTIONS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+            {ALL_SORT_OPTIONS.filter((s) => !s.priceOnly || canViewPricing).map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
 
           {/* View toggle */}
@@ -473,8 +479,8 @@ export default function ListingsPage() {
             {/* Column header */}
             <div className="grid items-center px-5 py-3 gap-4"
               style={{ gridTemplateColumns: COLS, borderBottom: "1px solid var(--border-subtle)", background: "var(--bg-subtle)" }}>
-              {["", "Property & Client", "Date", "Status", "Payment", "Total", ""].map((h, i) => (
-                <div key={i} className={`text-[10.5px] font-semibold text-gray-400 uppercase tracking-[0.07em] ${i >= 5 ? "text-right" : ""}`}>
+              {["", "Property & Client", "Date", "Status", "Payment", ...(canViewPricing ? ["Total"] : []), ""].map((h, i) => (
+                <div key={i} className={`text-[10.5px] font-semibold text-gray-400 uppercase tracking-[0.07em] ${i >= (canViewPricing ? 5 : 4) ? "text-right" : ""}`}>
                   {h}
                 </div>
               ))}
@@ -546,9 +552,11 @@ export default function ListingsPage() {
                   <div><PayBadge listing={listing} /></div>
 
                   {/* Price */}
-                  <div className="text-right">
-                    <p className="text-[13.5px] font-bold text-[#0F172A]">${listing.totalPrice?.toLocaleString()}</p>
-                  </div>
+                  {canViewPricing && (
+                    <div className="text-right">
+                      <p className="text-[13.5px] font-bold text-[#0F172A]">${listing.totalPrice?.toLocaleString()}</p>
+                    </div>
+                  )}
 
                   {/* Chevron */}
                   <div className="flex justify-end">

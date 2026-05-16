@@ -7,6 +7,7 @@ import { getSqftTier, getItemPrice, calculateTenantPrice, getActiveTiers, format
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
+import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 
 const STATUS_LABELS = {
   pending_payment: { label: "Awaiting payment", cls: "bg-gray-50 text-gray-500" },
@@ -242,6 +243,9 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
 }
 
 export default function BookingsPage() {
+  const { permissions, userRole } = useDashboardPermissions();
+  const canViewPricing = userRole === "owner" || userRole === "admin" || !!permissions?.canViewRevenue;
+
   const [bookings,    setBookings]    = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [hasMore,     setHasMore]     = useState(false);
@@ -621,10 +625,12 @@ export default function BookingsPage() {
                   <p className="text-xs text-gray-300">{dateStr}{timeStr}</p>
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-sm font-semibold text-[#0F172A]">${(b.totalPrice || 0).toLocaleString()}</p>
-                    <p className="text-xs text-gray-400">{b.depositPaid ? "Deposit paid" : "No deposit"}</p>
-                  </div>
+                  {canViewPricing && (
+                    <div className="text-right hidden sm:block">
+                      <p className="text-sm font-semibold text-[#0F172A]">${(b.totalPrice || 0).toLocaleString()}</p>
+                      <p className="text-xs text-gray-400">{b.depositPaid ? "Deposit paid" : "No deposit"}</p>
+                    </div>
+                  )}
                   <WorkflowStatusBadge status={wfStatus} size="xs" />
                   <Link href={`/dashboard/bookings/${b.id}`} className="text-xs text-[#3486cf] hover:underline whitespace-nowrap">
                     Open →
@@ -913,38 +919,40 @@ export default function BookingsPage() {
                         </div>
                       )}
 
-                      {/* Custom line items */}
-                      <div>
-                        <p className="text-xs text-gray-400 mb-2">Custom items</p>
-                        {form.customLineItems.map((line, i) => (
-                          <div key={i} className="flex items-center gap-2 mb-1.5 px-3 py-2 bg-gray-50 rounded-xl">
-                            <span className="text-sm text-[#0F172A] flex-1">{line.label}</span>
-                            <span className="text-sm font-semibold text-[#3486cf]">{formatPrice(line.price || 0)}</span>
-                            <button type="button" onClick={() => setForm((p) => ({ ...p, customLineItems: p.customLineItems.filter((_, j) => j !== i) }))}
-                              className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                      {/* Custom line items — hidden from members without pricing access */}
+                      {canViewPricing && (
+                        <div>
+                          <p className="text-xs text-gray-400 mb-2">Custom items</p>
+                          {form.customLineItems.map((line, i) => (
+                            <div key={i} className="flex items-center gap-2 mb-1.5 px-3 py-2 bg-gray-50 rounded-xl">
+                              <span className="text-sm text-[#0F172A] flex-1">{line.label}</span>
+                              <span className="text-sm font-semibold text-[#3486cf]">{formatPrice(line.price || 0)}</span>
+                              <button type="button" onClick={() => setForm((p) => ({ ...p, customLineItems: p.customLineItems.filter((_, j) => j !== i) }))}
+                                className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none">×</button>
+                            </div>
+                          ))}
+                          <div className="flex gap-2 mt-1">
+                            <input
+                              type="text" value={customLabel}
+                              onChange={(e) => setCustomLabel(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustomLine())}
+                              placeholder="e.g. Rush fee"
+                              className="input-field flex-1 text-sm"
+                            />
+                            <input
+                              type="number" value={customPrice}
+                              onChange={(e) => setCustomPrice(e.target.value)}
+                              placeholder="$0"
+                              className="input-field w-24 text-sm"
+                              min="0"
+                            />
+                            <button type="button" onClick={addCustomLine}
+                              className="btn-outline px-3 text-sm">
+                              Add
+                            </button>
                           </div>
-                        ))}
-                        <div className="flex gap-2 mt-1">
-                          <input
-                            type="text" value={customLabel}
-                            onChange={(e) => setCustomLabel(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustomLine())}
-                            placeholder="e.g. Rush fee"
-                            className="input-field flex-1 text-sm"
-                          />
-                          <input
-                            type="number" value={customPrice}
-                            onChange={(e) => setCustomPrice(e.target.value)}
-                            placeholder="$0"
-                            className="input-field w-24 text-sm"
-                            min="0"
-                          />
-                          <button type="button" onClick={addCustomLine}
-                            className="btn-outline px-3 text-sm">
-                            Add
-                          </button>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
 
@@ -996,50 +1004,52 @@ export default function BookingsPage() {
                 {/* ── RIGHT: order summary ──────────────────────────────────── */}
                 <div className="w-full sm:w-72 flex-shrink-0 px-5 sm:px-6 py-6 flex flex-col rounded-b-[18px] sm:rounded-b-none sm:rounded-r-[18px]"
                   style={{ background: "var(--bg-subtle)", borderTop: "1px solid var(--border-subtle)" }}>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Order Summary</p>
+                  {canViewPricing && (
+                    <>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Order Summary</p>
 
-                  {/* Line items */}
-                  <div className="flex-1 space-y-2 mb-5">
-                    {lines.length === 0 ? (
-                      <p className="text-sm text-gray-300 italic">No services selected</p>
-                    ) : (
-                      lines.map((l, i) => (
-                        <div key={i} className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500 flex-1 pr-2">{l.name}</span>
-                          <span className="text-xs font-semibold text-[#0F172A]">{formatPrice(l.price || 0)}</span>
+                      {/* Line items */}
+                      <div className="flex-1 space-y-2 mb-5">
+                        {lines.length === 0 ? (
+                          <p className="text-sm text-gray-300 italic">No services selected</p>
+                        ) : (
+                          lines.map((l, i) => (
+                            <div key={i} className="flex items-center justify-between">
+                              <span className="text-xs text-gray-500 flex-1 pr-2">{l.name}</span>
+                              <span className="text-xs font-semibold text-[#0F172A]">{formatPrice(l.price || 0)}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Tier badge */}
+                      {tierLabel && form.sqft && (
+                        <div className="text-xs px-2.5 py-1.5 bg-white border border-gray-200 rounded-xl text-gray-500 mb-4">
+                          Priced as <span className="font-medium text-[#0F172A]">{tierLabel}</span>
+                          <span className="text-gray-300"> ({Number(form.sqft).toLocaleString()} sqft)</span>
                         </div>
-                      ))
-                    )}
-                  </div>
+                      )}
 
-                  {/* Tier badge */}
-                  {tierLabel && form.sqft && (
-                    <div className="text-xs px-2.5 py-1.5 bg-white border border-gray-200 rounded-xl text-gray-500 mb-4">
-                      Priced as <span className="font-medium text-[#0F172A]">{tierLabel}</span>
-                      <span className="text-gray-300"> ({Number(form.sqft).toLocaleString()} sqft)</span>
-                    </div>
+                      {/* Total */}
+                      <div className="border-t border-gray-200 pt-4 mb-5">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-500">Total</span>
+                          <span className="text-xl font-bold text-[#0F172A] font-display">{formatPrice(total)}</span>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400 mb-1">Override price</p>
+                          <input
+                            type="number"
+                            value={form.totalPrice}
+                            onChange={(e) => setField("totalPrice", e.target.value)}
+                            placeholder={`Auto: ${formatPrice(pricing.subtotal + customTotal)}`}
+                            className="input-field w-full text-sm"
+                            min="0"
+                          />
+                        </div>
+                      </div>
+                    </>
                   )}
-
-                  {/* Total */}
-                  <div className="border-t border-gray-200 pt-4 mb-5">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-gray-500">Total</span>
-                      <span className="text-xl font-bold text-[#0F172A] font-display">{formatPrice(total)}</span>
-                    </div>
-
-                    {/* Override total */}
-                    <div>
-                      <p className="text-xs text-gray-400 mb-1">Override price</p>
-                      <input
-                        type="number"
-                        value={form.totalPrice}
-                        onChange={(e) => setField("totalPrice", e.target.value)}
-                        placeholder={`Auto: ${formatPrice(pricing.subtotal + customTotal)}`}
-                        className="input-field w-full text-sm"
-                        min="0"
-                      />
-                    </div>
-                  </div>
 
                   {/* Status + deposit */}
                   <div className="space-y-3 mb-5">
