@@ -27,7 +27,7 @@ export async function GET(req) {
   }
 
   try {
-    const url = new URL("https://app.cubi.casa/api/integrate/v3/orders");
+    const url = new URL("https://app.cubi.casa/api/integrate/v3/floor-plans");
     if (creds.email) url.searchParams.set("email", creds.email);
 
     const res = await fetch(url.toString(), {
@@ -39,19 +39,17 @@ export async function GET(req) {
     });
 
     const text = await res.text();
-    console.log(`[cubicasa/orders] status=${res.status} body=${text.slice(0, 500)}`);
-
-    if (res.status === 401 || res.status === 403) {
-      return Response.json({ error: "CubiCasa API key is invalid or expired." }, { status: 403 });
-    }
+    console.log(`[cubicasa/orders] status=${res.status} body=${text.slice(0, 1000)}`);
 
     if (!res.ok) {
-      return Response.json({ error: `CubiCasa returned ${res.status}: ${text.slice(0, 200)}` }, { status: res.status });
+      let errMsg = `CubiCasa ${res.status}`;
+      try { const j = JSON.parse(text); errMsg = j.message || j.error || j.detail || JSON.stringify(j); } catch { errMsg = text.slice(0, 300) || errMsg; }
+      return Response.json({ error: errMsg }, { status: res.status === 401 ? 403 : res.status });
     }
 
     let data;
     try { data = JSON.parse(text); } catch {
-      return Response.json({ error: "CubiCasa returned an unexpected response. Check your API key." }, { status: 502 });
+      return Response.json({ error: `CubiCasa returned non-JSON: ${text.slice(0, 200)}` }, { status: 502 });
     }
 
     const raw    = Array.isArray(data) ? data : (data.orders ?? data.data ?? data.results ?? []);
