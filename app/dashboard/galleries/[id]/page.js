@@ -831,12 +831,9 @@ export default function GalleryDetailPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (res.status === 403 && data.error === "not_connected") {
-        setCubiCasaConnected(false);
-        setCubiCasaError(null);
-        return;
+      if (!res.ok) {
+        throw new Error(data.error || `Error ${res.status}`);
       }
-      if (!res.ok) throw new Error(data.error || "Failed to fetch orders");
       setCubiCasaOrders(Array.isArray(data) ? data : (data.orders || data.data || []));
     } catch (e) {
       setCubiCasaError(e.message);
@@ -874,7 +871,6 @@ export default function GalleryDetailPage() {
       setCubiCasaConnected(true);
       setCubiCasaApiKey("");
       setCubiCasaEmail("");
-      fetchCubiCasaOrders();
     } catch (err) {
       setCubiCasaError(err.message);
     } finally {
