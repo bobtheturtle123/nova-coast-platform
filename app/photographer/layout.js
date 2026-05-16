@@ -62,7 +62,7 @@ export default function PhotographerLayout({ children }) {
         return;
       }
       setUser(u);
-      // Load branding + member name + permissions
+      // Load branding + member name on auth — permissions re-fetched separately on every navigation
       try {
         const token = await u.getIdToken();
         const res  = await fetch("/api/photographer/me", { headers: { Authorization: `Bearer ${token}` } });
@@ -74,6 +74,17 @@ export default function PhotographerLayout({ children }) {
     });
     return unsub;
   }, [router]);
+
+  // Re-fetch permissions on every navigation (and on page refresh) so owner changes are live
+  useEffect(() => {
+    if (!user) return;
+    user.getIdToken().then((token) =>
+      fetch("/api/photographer/me", { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.json())
+        .then((data) => { if (data.member?.permissions) setPermissions(data.member.permissions); })
+        .catch(() => {})
+    );
+  }, [user, pathname]);
 
   if (user === undefined) {
     return (
