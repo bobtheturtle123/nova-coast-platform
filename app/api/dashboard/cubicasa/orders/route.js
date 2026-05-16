@@ -20,31 +20,26 @@ export async function GET(req) {
     return Response.json({ error: "not_connected", message: "CubiCasa account not connected." }, { status: 403 });
   }
 
-  // Pull orders from CubiCasa API
-  // Per docs: "User resource is requested with the user email instead of user ID"
-  const encodedEmail = encodeURIComponent(creds.email);
+  const apiKey = creds.apiKey.trim();
+  console.log(`[cubicasa/orders] key length=${apiKey.length} prefix=${apiKey.slice(0, 6)} email=${creds.email}`);
 
-  // Try both path variants CubiCasa may use
-  const endpoints = [
-    `https://app.cubi.casa/api/integrate/v3/users/${encodedEmail}/orders`,
-    `https://app.cubi.casa/api/integrate/v3/user/${encodedEmail}/orders`,
+  // /orders exists (returned auth error before, not 404). Try auth header variants.
+  const attempts = [
+    { url: "https://app.cubi.casa/api/integrate/v3/orders", headers: { "X-API-KEY": apiKey } },
+    { url: "https://app.cubi.casa/api/integrate/v3/orders", headers: { Authorization: `Bearer ${apiKey}` } },
+    { url: `https://app.cubi.casa/api/integrate/v3/orders?email=${encodeURIComponent(creds.email)}`, headers: { "X-API-KEY": apiKey } },
   ];
 
-  let lastError = null;
-  for (const url of endpoints) {
+  for (const attempt of attempts) {
     try {
-      const res = await fetch(url, {
-        headers: {
-          "X-API-KEY":    creds.apiKey,
-          "Content-Type": "application/json",
-          Accept:         "application/json",
-        },
+      const res = await fetch(attempt.url, {
+        headers: { ...attempt.headers, "Content-Type": "application/json", Accept: "application/json" },
       });
 
       const text = await res.text();
-      console.log(`[cubicasa/orders] GET ${url} → status=${res.status} body=${text.slice(0, 500)}`);
+      console.log(`[cubicasa/orders] ${attempt.url} auth=${Object.keys(attempt.headers)[0]} → status=${res.status} body=${text.slice(0, 500)}`);
 
-      if (res.status === 404) { lastError = `404 at ${url}`; continue; } // try next path
+      if (res.status === 401 || res.status === 403) continue; // try next auth format
 
       if (!res.ok) {
         let errMsg = `CubiCasa ${res.status}`;
@@ -73,11 +68,11 @@ export async function GET(req) {
 
       return Response.json(orders);
     } catch (e) {
-      lastError = e.message;
+      console.error(`[cubicasa/orders] attempt failed:`, e?.message);
     }
   }
 
-  return Response.json({ error: lastError || "Could not reach CubiCasa API" }, { status: 502 });
+  return Response.json({ error: "CubiCasa rejected all authentication attempts. Check your API key." }, { status: 401 });
 }
 
 // DELETE — disconnect
