@@ -10,24 +10,19 @@ async function getCtx(req) {
   } catch { return null; }
 }
 
-// POST { email } — save user's CubiCasa email (platform API key lives in env)
+// POST { apiKey, email } — save per-tenant CubiCasa credentials
 export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const platformKey = process.env.CUBICASA_API_KEY;
-  if (!platformKey) {
-    return Response.json({ error: "CUBICASA_API_KEY is not configured on this server." }, { status: 500 });
-  }
-
   try {
-    const { email } = await req.json();
-    if (!email) {
-      return Response.json({ error: "CubiCasa email is required" }, { status: 400 });
+    const { apiKey, email } = await req.json();
+    if (!apiKey || !email) {
+      return Response.json({ error: "API key and email are required" }, { status: 400 });
     }
 
     await adminDb.collection("tenants").doc(ctx.tenantId).update({
-      cubiCasaCredentials: { email, connectedAt: Date.now() },
+      cubiCasaCredentials: { apiKey, email, connectedAt: Date.now() },
       cubiCasaToken: null,
     });
 

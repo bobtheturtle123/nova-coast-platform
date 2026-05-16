@@ -10,34 +10,30 @@ async function getCtx(req) {
   } catch { return null; }
 }
 
-async function getCubiCasaEmail(tenantId) {
+async function getCredentials(tenantId) {
   const doc   = await adminDb.collection("tenants").doc(tenantId).get();
   const creds = doc.data()?.cubiCasaCredentials;
-  return creds?.email || null;
+  if (!creds?.apiKey || !creds?.email) return null;
+  return creds;
 }
 
 export async function GET(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const platformKey = process.env.CUBICASA_API_KEY;
-  if (!platformKey) {
-    return Response.json({ error: "CUBICASA_API_KEY is not configured." }, { status: 500 });
-  }
-
-  const email = await getCubiCasaEmail(ctx.tenantId);
-  if (!email) {
+  const creds = await getCredentials(ctx.tenantId);
+  if (!creds) {
     return Response.json({ error: "not_connected", message: "CubiCasa account not connected." }, { status: 403 });
   }
 
   try {
-    // User resource is identified by email per CubiCasa REST convention
-    const encodedEmail = encodeURIComponent(email);
+    // Per CubiCasa docs: "User resource is requested with the user email instead of user ID"
+    const encodedEmail = encodeURIComponent(creds.email);
     const url = `https://app.cubi.casa/api/integrate/v3/user/${encodedEmail}/orders`;
 
     const res = await fetch(url, {
       headers: {
-        "X-API-KEY":    platformKey,
+        "X-API-KEY":    creds.apiKey,
         "Content-Type": "application/json",
         Accept:         "application/json",
       },
