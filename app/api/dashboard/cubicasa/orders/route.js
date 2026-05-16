@@ -10,69 +10,37 @@ async function getCtx(req) {
   } catch { return null; }
 }
 
-async function getCredentials(tenantId) {
-  const doc   = await adminDb.collection("tenants").doc(tenantId).get();
-  const creds = doc.data()?.cubiCasaCredentials;
-  if (!creds?.apiKey || !creds?.email) return null;
-  return creds;
-}
-
 export async function GET(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const creds = await getCredentials(ctx.tenantId);
-  if (!creds) {
+  const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
+  const creds = tenantDoc.data()?.cubiCasaCredentials;
+  if (!creds?.email) {
     return Response.json({ error: "not_connected", message: "CubiCasa account not connected." }, { status: 403 });
   }
 
-  try {
-    const url = `https://app.cubi.casa/api/integrate/v3/orders`;
+  // Return orders received via CubiCasa webhook (stored locally)
+  const snap = await adminDb
+    .collection("tenants").doc(ctx.tenantId)
+    .collection("cubicasaOrders")
+    .orderBy("receivedAt", "desc")
+    .limit(100)
+    .get();
 
-    const res = await fetch(url, {
-      headers: {
-        "X-API-KEY":    creds.apiKey,
-        "Content-Type": "application/json",
-        Accept:         "application/json",
-      },
-    });
+  const orders = snap.docs.map((d) => {
+    const o = d.data();
+    return {
+      id:                         o.orderId,
+      address:                    o.address || "",
+      createdAt:                  o.receivedAt?.toDate?.()?.toISOString?.() || null,
+      status:                     o.status || null,
+      floorPlanUrl:               o.floorPlanUrl || null,
+      floorPlanWithDimensionsUrl: o.floorPlanWithDimensionsUrl || null,
+    };
+  });
 
-    const text = await res.text();
-    console.log(`[cubicasa/orders] GET ${url} → status=${res.status} body=${text.slice(0, 1000)}`);
-
-    if (!res.ok) {
-      let errMsg = `CubiCasa ${res.status}`;
-      try {
-        const j = JSON.parse(text);
-        errMsg = j.message || j.error || j.detail || JSON.stringify(j);
-      } catch { errMsg = text.slice(0, 300) || errMsg; }
-      return Response.json({ error: errMsg }, { status: res.status });
-    }
-
-    let data;
-    try { data = JSON.parse(text); } catch {
-      return Response.json({ error: `CubiCasa returned non-JSON: ${text.slice(0, 200)}` }, { status: 502 });
-    }
-
-    const raw    = Array.isArray(data) ? data : (data.orders ?? data.data ?? data.results ?? []);
-    const orders = raw.map((o) => ({
-      id:                         o.id ?? o.order_id ?? String(Math.random()),
-      address:                    o.address ?? o.property_address ?? o.location ?? "",
-      createdAt:                  o.created_at ?? o.createdAt ?? null,
-      status:                     o.status ?? null,
-      floorPlanUrl:               o.floor_plan_url ?? o.floorPlanUrl ?? o.image_url
-                                    ?? o.files?.find((f) => f.type === "floor_plan")?.url
-                                    ?? o.deliverables?.find((f) => f.type === "floor_plan")?.url ?? null,
-      floorPlanWithDimensionsUrl: o.floor_plan_with_dimensions_url ?? o.floorPlanWithDimensionsUrl
-                                    ?? o.files?.find((f) => f.type?.includes("dimension"))?.url
-                                    ?? o.deliverables?.find((f) => f.type?.includes("dimension"))?.url ?? null,
-    }));
-
-    return Response.json(orders);
-  } catch (e) {
-    console.error("[cubicasa/orders] error:", e?.message || e);
-    return Response.json({ error: e.message }, { status: 502 });
-  }
+  return Response.json(orders);
 }
 
 // DELETE — disconnect

@@ -2055,12 +2055,12 @@ export default function GalleryDetailPage() {
                   {cubiCasaOrders === null && !cubiCasaLoading && (
                     <button onClick={fetchCubiCasaOrders}
                       className="btn-outline text-xs px-4 py-2 w-full">
-                      Load Orders
+                      Check for Floor Plans
                     </button>
                   )}
                   {cubiCasaOrders !== null && (
                     cubiCasaOrders.length === 0 ? (
-                      <p className="text-sm text-gray-400 italic text-center py-4">No orders found in your CubiCasa account.</p>
+                      <p className="text-sm text-gray-400 italic text-center py-4">No floor plans received yet. They appear here automatically when CubiCasa finishes processing your orders.</p>
                     ) : (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between mb-1">
