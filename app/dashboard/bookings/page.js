@@ -244,7 +244,8 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
 
 export default function BookingsPage() {
   const { permissions, userRole } = useDashboardPermissions();
-  const canViewPricing = userRole === "owner" || userRole === "admin" || !!permissions?.canViewRevenue;
+  const canViewPricing    = userRole === "owner" || userRole === "admin" || !!permissions?.canViewRevenue;
+  const canCreateBookings = userRole === "owner" || userRole === "admin" || !!permissions?.canCreateBookings;
 
   const [bookings,    setBookings]    = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -559,9 +560,11 @@ export default function BookingsPage() {
               Export CSV
             </button>
           )}
-          <Link href="/dashboard/bookings/create" className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5">
-            + New Booking
-          </Link>
+          {canCreateBookings && (
+            <Link href="/dashboard/bookings/create" className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5">
+              + New Booking
+            </Link>
+          )}
         </div>
       </div>
 
