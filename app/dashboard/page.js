@@ -302,9 +302,10 @@ export default function DashboardHome() {
   const [userRole,         setUserRole]         = useState(null); // null = owner
 
   const { permissions, userRole: ctxRole } = useDashboardPermissions();
-  const isOwnerOrAdmin   = ctxRole === "owner" || ctxRole === "admin" || ctxRole === null;
+  const isOwnerOrAdmin    = ctxRole === "owner" || ctxRole === "admin" || ctxRole === null;
   const canCreateBookings = isOwnerOrAdmin || !!permissions?.canCreateBookings;
   const canViewListings   = isOwnerOrAdmin || !!permissions?.canViewListings;
+  const canViewRevenue    = isOwnerOrAdmin || !!permissions?.canViewRevenue;
 
   useEffect(() => {
     auth.currentUser?.getIdTokenResult(true).then(async (result) => {
@@ -405,7 +406,7 @@ export default function DashboardHome() {
       <div className="max-w-[1200px] mx-auto px-6 py-8 space-y-6">
 
         {/* ── Stripe banner ────────────────────────────────────────────── */}
-        {tenant && !tenant.stripeConnectOnboarded && setupComplete && (
+        {isOwnerOrAdmin && tenant && !tenant.stripeConnectOnboarded && setupComplete && (
           <div className="rounded-xl px-5 py-3.5 flex items-center justify-between gap-4 bg-white"
             style={{ border: "1px solid #FDE68A" }}>
             <div className="flex items-center gap-3">
@@ -470,7 +471,7 @@ export default function DashboardHome() {
         </div>
 
         {/* ── Setup checklist ───────────────────────────────────────────── */}
-        {tenant && !setupComplete && (
+        {isOwnerOrAdmin && tenant && !setupComplete && (
           <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
             <div className="px-6 py-4 flex items-center gap-4" style={{ borderBottom: "1px solid #E9ECF0" }}>
               <div className="flex-1 min-w-0">
@@ -535,7 +536,7 @@ export default function DashboardHome() {
             iconBg="#F0F7FD"
             icon={<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#6BAED0" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}
           />
-          {(userRole === null || userRole === "owner" || userRole === "admin") && (
+          {canViewRevenue && (
             <StatCard label="Revenue Collected" value={`$${stats.revenue.toLocaleString()}`} sub="deposits + paid"
               href="/dashboard/reports"
               iconBg="#ECFDF5"
@@ -545,7 +546,7 @@ export default function DashboardHome() {
         </div>
 
         {/* ── Action Required ───────────────────────────────────────────── */}
-        {actionItems.length > 0 && (
+        {actionItems.filter(i => canViewRevenue || i.type !== "balance_due").length > 0 && (
           <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #FEE2E2" }}>
             <div className="px-6 py-3.5 flex items-center gap-3" style={{ borderBottom: "1px solid #FEF2F2", background: "#FFF5F5" }}>
               <div className="w-6 h-6 rounded-md bg-red-100 flex items-center justify-center flex-shrink-0">
@@ -557,7 +558,7 @@ export default function DashboardHome() {
               <span className="text-[11px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">{actionItems.length}</span>
             </div>
             <div>
-              {actionItems.map((item, idx) => {
+              {actionItems.filter(i => canViewRevenue || i.type !== "balance_due").map((item, idx) => {
                 const typeLabel = item.type === "revision_request" ? "Revision request"
                   : item.type === "booking_request" ? "New booking request"
                   : item.type === "balance_due"     ? "Balance due"
@@ -586,7 +587,7 @@ export default function DashboardHome() {
         )}
 
         {/* ── Revenue chart ─────────────────────────────────────────────── */}
-        {(userRole === null || userRole === "owner" || userRole === "admin") && (
+        {canViewRevenue && (
           <RevenueSection listings={listings} />
         )}
 
@@ -687,13 +688,15 @@ export default function DashboardHome() {
                     </div>
 
                     {/* Price + payment */}
-                    <div className="flex-shrink-0 text-right">
-                      <p className="text-[14.5px] font-semibold" style={{ color: "#0F172A" }}>${l.totalPrice?.toLocaleString()}</p>
-                      <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-md"
-                        style={{ color: pay.color, background: pay.bg }}>
-                        {pay.label}
-                      </span>
-                    </div>
+                    {canViewRevenue && (
+                      <div className="flex-shrink-0 text-right">
+                        <p className="text-[14.5px] font-semibold" style={{ color: "#0F172A" }}>${l.totalPrice?.toLocaleString()}</p>
+                        <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-md"
+                          style={{ color: pay.color, background: pay.bg }}>
+                          {pay.label}
+                        </span>
+                      </div>
+                    )}
 
                     <svg width="12" height="12" fill="none" viewBox="0 0 24 24"
                       stroke="#D1D5DB" strokeWidth="2"
@@ -727,10 +730,10 @@ export default function DashboardHome() {
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ background: "#FAFAFA", borderBottom: "1px solid #E9ECF0" }}>
-                  {["Property", "Client", "Shoot Date", "Status", "Payment", "Total"].map((h, i) => (
+                  {["Property", "Client", "Shoot Date", "Status", ...(canViewRevenue ? ["Payment", "Total"] : [])].map((h, i, arr) => (
                     <th key={h}
                       className={`text-[11.5px] font-semibold uppercase tracking-[0.07em] py-3 whitespace-nowrap ${
-                        i === 0 ? "text-left px-6" : i === 5 ? "text-right px-6" : "text-left px-4"
+                        i === 0 ? "text-left px-6" : i === arr.length - 1 && canViewRevenue ? "text-right px-6" : "text-left px-4"
                       }`} style={{ color: "#6B7280" }}>
                       {h}
                     </th>
@@ -739,7 +742,7 @@ export default function DashboardHome() {
               </thead>
               <tbody>
                 {listings.length === 0 && (
-                  <tr><td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-400">No bookings yet. Share your booking link to get started.</td></tr>
+                  <tr><td colSpan={canViewRevenue ? 6 : 4} className="px-6 py-10 text-center text-sm text-gray-400">No bookings yet. Share your booking link to get started.</td></tr>
                 )}
                 {listings.slice(0, 8).map((l, idx) => {
                   const pay = payLabel(l);
@@ -766,15 +769,19 @@ export default function DashboardHome() {
                         {l.shootDate ? new Date(l.shootDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                       </td>
                       <td className="px-4 py-4"><WorkflowStatusBadge status={resolveWorkflowStatus(l)} size="xs" /></td>
-                      <td className="px-4 py-4">
-                        <span className="text-[12px] font-medium px-1.5 py-0.5 rounded-md"
-                          style={{ color: pay.color, background: pay.bg }}>
-                          {pay.label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right font-semibold text-[14px] whitespace-nowrap" style={{ color: "#0F172A" }}>
-                        ${l.totalPrice?.toLocaleString()}
-                      </td>
+                      {canViewRevenue && (
+                        <td className="px-4 py-4">
+                          <span className="text-[12px] font-medium px-1.5 py-0.5 rounded-md"
+                            style={{ color: pay.color, background: pay.bg }}>
+                            {pay.label}
+                          </span>
+                        </td>
+                      )}
+                      {canViewRevenue && (
+                        <td className="px-6 py-4 text-right font-semibold text-[14px] whitespace-nowrap" style={{ color: "#0F172A" }}>
+                          ${l.totalPrice?.toLocaleString()}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
