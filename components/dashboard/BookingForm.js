@@ -136,7 +136,9 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   const addressTimerRef = useRef(null);
   const [travelFee,         setTravelFee]         = useState(null);
   const [serviceArea,       setServiceArea]       = useState(null);
-  const [showSchedulePopup, setShowSchedulePopup] = useState(false);
+  const [showSchedulePopup,  setShowSchedulePopup]  = useState(false);
+  const [showServicesModal,  setShowServicesModal]  = useState(false);
+  const [servicesSearch,     setServicesSearch]     = useState("");
   const [confirmedAddress,  setConfirmedAddress]  = useState(init.address || "");
   const [busySlots,         setBusySlots]         = useState(new Set());
   const [loadingSlots,      setLoadingSlots]      = useState(false);
@@ -642,73 +644,205 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
               )}
             </div>
 
-            {/* Services */}
-            {(catalog.packages.length > 0 || catalog.services.length > 0 || catalog.addons.length > 0) && (
-              <div className="card">
-                <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-3">Services</h2>
-
-                {catalog.packages.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Package</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {catalog.packages.filter((p) => p.active !== false).map((p) => {
-                        const price    = tier ? getItemPrice(p, tier) : getFromPrice(p, catalog.pricingConfig);
-                        const fromLabel = !tier && p.priceTiers ? "From " : "";
-                        return (
-                          <button key={p.id} type="button"
-                            onClick={() => setForm((f) => ({ ...f, packageId: f.packageId === p.id ? "" : p.id, serviceIds: [] }))}
-                            className={`text-left p-3 rounded-lg border text-sm transition-colors ${
-                              form.packageId === p.id ? "border-[#3486cf] bg-[#3486cf]/5 text-[#3486cf]" : "border-gray-200 text-gray-700 hover:border-gray-300"
-                            }`}>
-                            <p className="font-medium">{p.name}</p>
-                            <p className="text-xs text-[#3486cf] font-semibold mt-0.5">{fromLabel}{formatPrice(price)}</p>
-                          </button>
-                        );
-                      })}
-                    </div>
+            {/* Services — compact summary + modal picker */}
+            {(catalog.packages.length > 0 || catalog.services.length > 0 || catalog.addons.length > 0) && (() => {
+              const selectedPkg   = catalog.packages.find((p) => p.id === form.packageId);
+              const selectedSvcs  = catalog.services.filter((s) => form.serviceIds.includes(s.id));
+              const selectedAddns = catalog.addons.filter((a) => form.addonIds.includes(a.id));
+              const hasSelection  = selectedPkg || selectedSvcs.length > 0 || selectedAddns.length > 0;
+              return (
+                <div className="card">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide">Services</h2>
+                    <button type="button" onClick={() => { setServicesSearch(""); setShowServicesModal(true); }}
+                      className="text-xs font-medium text-[#3486cf] hover:text-[#2a6dab] transition-colors flex items-center gap-1">
+                      <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z"/>
+                      </svg>
+                      Browse all
+                    </button>
                   </div>
-                )}
 
-                {catalog.services.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Services</p>
+                  {hasSelection ? (
                     <div className="flex flex-wrap gap-2">
-                      {catalog.services.filter((s) => s.active !== false).map((s) => {
-                        const price = tier ? getItemPrice(s, tier) : getFromPrice(s, catalog.pricingConfig);
-                        return (
-                          <button key={s.id} type="button"
-                            onClick={() => { toggleService(s.id); setForm((f) => ({ ...f, packageId: "" })); }}
-                            className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
-                              form.serviceIds.includes(s.id) ? "border-[#3486cf] bg-[#3486cf] text-white" : "border-gray-200 text-gray-600 hover:border-[#3486cf]/40"
-                            }`}>
-                            {s.name}{price > 0 ? ` · ${!tier && s.priceTiers ? "from " : ""}${formatPrice(price)}` : ""}
-                          </button>
-                        );
-                      })}
+                      {selectedPkg && (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg bg-[#3486cf]/10 text-[#3486cf] border border-[#3486cf]/20">
+                          {selectedPkg.name}
+                          <button type="button" onClick={() => setForm((f) => ({ ...f, packageId: "" }))}
+                            className="hover:text-[#1e5a8a] transition-colors leading-none">×</button>
+                        </span>
+                      )}
+                      {selectedSvcs.map((s) => (
+                        <span key={s.id} className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg bg-[#3486cf] text-white">
+                          {s.name}
+                          <button type="button" onClick={() => toggleService(s.id)}
+                            className="hover:opacity-70 transition-opacity leading-none">×</button>
+                        </span>
+                      ))}
+                      {selectedAddns.map((a) => (
+                        <span key={a.id} className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 border border-amber-200">
+                          {a.name}
+                          <button type="button" onClick={() => toggleAddon(a.id)}
+                            className="hover:opacity-70 transition-opacity leading-none">×</button>
+                        </span>
+                      ))}
+                      <button type="button" onClick={() => { setServicesSearch(""); setShowServicesModal(true); }}
+                        className="text-xs px-2.5 py-1 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-[#3486cf]/50 hover:text-[#3486cf] transition-colors">
+                        + Add more
+                      </button>
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <button type="button" onClick={() => { setServicesSearch(""); setShowServicesModal(true); }}
+                      className="w-full flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-[#3486cf]/40 hover:text-[#3486cf] transition-colors text-sm">
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+                      </svg>
+                      Select package or services
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
-                {catalog.addons.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Add-ons</p>
-                    <div className="flex flex-wrap gap-2">
-                      {catalog.addons.filter((a) => a.active !== false).map((a) => {
-                        const price = tier ? getItemPrice(a, tier) : getFromPrice(a, catalog.pricingConfig);
-                        return (
-                          <button key={a.id} type="button" onClick={() => toggleAddon(a.id)}
-                            className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
-                              form.addonIds.includes(a.id) ? "border-gold bg-gold/10 text-[#0F172A]" : "border-gray-200 text-gray-600 hover:border-gold/40"
-                            }`}>
-                            {a.name}{price > 0 ? ` · ${!tier && a.priceTiers ? "from " : ""}${formatPrice(price)}` : ""}
-                          </button>
-                        );
-                      })}
+            {/* Services picker modal */}
+            {showServicesModal && (() => {
+              const q = servicesSearch.toLowerCase();
+              const activePkgs  = catalog.packages.filter((p) => p.active !== false && (!q || p.name.toLowerCase().includes(q)));
+              const activeSvcs  = catalog.services.filter((s) => s.active !== false && (!q || s.name.toLowerCase().includes(q)));
+              const activeAddns = catalog.addons.filter((a) => a.active !== false  && (!q || a.name.toLowerCase().includes(q)));
+              return (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+                  <div className="absolute inset-0 bg-black/40" onClick={() => setShowServicesModal(false)} />
+                  <div className="relative w-full sm:max-w-xl bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                      <h3 className="font-semibold text-[#0F172A] text-[15px]">Select Services</h3>
+                      <button type="button" onClick={() => setShowServicesModal(false)}
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors text-lg leading-none">×</button>
+                    </div>
+
+                    {/* Search */}
+                    <div className="px-5 py-3 border-b border-gray-100">
+                      <div className="relative">
+                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z"/>
+                        </svg>
+                        <input autoFocus type="text" value={servicesSearch} onChange={(e) => setServicesSearch(e.target.value)}
+                          placeholder="Search packages, services…"
+                          className="w-full pl-8 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3486cf]/30 focus:border-[#3486cf]" />
+                      </div>
+                    </div>
+
+                    {/* List */}
+                    <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+                      {activePkgs.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Packages</p>
+                          <div className="space-y-2">
+                            {activePkgs.map((p) => {
+                              const price    = tier ? getItemPrice(p, tier) : getFromPrice(p, catalog.pricingConfig);
+                              const fromLabel = !tier && p.priceTiers ? "from " : "";
+                              const selected = form.packageId === p.id;
+                              return (
+                                <button key={p.id} type="button"
+                                  onClick={() => setForm((f) => ({ ...f, packageId: f.packageId === p.id ? "" : p.id, serviceIds: [] }))}
+                                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-all ${
+                                    selected ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300 bg-white"
+                                  }`}>
+                                  <div className="text-left">
+                                    <p className={`font-medium ${selected ? "text-[#3486cf]" : "text-[#0F172A]"}`}>{p.name}</p>
+                                    {p.tagline && <p className="text-xs text-gray-400 mt-0.5">{p.tagline}</p>}
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className={`text-sm font-semibold ${selected ? "text-[#3486cf]" : "text-gray-600"}`}>{fromLabel}{formatPrice(price)}</span>
+                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
+                                      selected ? "bg-[#3486cf] border-[#3486cf]" : "border-gray-300"
+                                    }`}>
+                                      {selected && <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {activeSvcs.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Services</p>
+                          <div className="space-y-2">
+                            {activeSvcs.map((s) => {
+                              const price    = tier ? getItemPrice(s, tier) : getFromPrice(s, catalog.pricingConfig);
+                              const fromLabel = !tier && s.priceTiers ? "from " : "";
+                              const selected  = form.serviceIds.includes(s.id);
+                              return (
+                                <button key={s.id} type="button"
+                                  onClick={() => { toggleService(s.id); setForm((f) => ({ ...f, packageId: "" })); }}
+                                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-all ${
+                                    selected ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300 bg-white"
+                                  }`}>
+                                  <p className={`font-medium text-left ${selected ? "text-[#3486cf]" : "text-[#0F172A]"}`}>{s.name}</p>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className={`text-sm font-semibold ${selected ? "text-[#3486cf]" : "text-gray-600"}`}>{price > 0 ? `${fromLabel}${formatPrice(price)}` : ""}</span>
+                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
+                                      selected ? "bg-[#3486cf] border-[#3486cf]" : "border-gray-300"
+                                    }`}>
+                                      {selected && <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {activeAddns.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Add-ons</p>
+                          <div className="space-y-2">
+                            {activeAddns.map((a) => {
+                              const price    = tier ? getItemPrice(a, tier) : getFromPrice(a, catalog.pricingConfig);
+                              const fromLabel = !tier && a.priceTiers ? "from " : "";
+                              const selected  = form.addonIds.includes(a.id);
+                              return (
+                                <button key={a.id} type="button" onClick={() => toggleAddon(a.id)}
+                                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-all ${
+                                    selected ? "border-amber-400 bg-amber-50" : "border-gray-200 hover:border-gray-300 bg-white"
+                                  }`}>
+                                  <p className={`font-medium text-left ${selected ? "text-amber-800" : "text-[#0F172A]"}`}>{a.name}</p>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className={`text-sm font-semibold ${selected ? "text-amber-700" : "text-gray-600"}`}>{price > 0 ? `${fromLabel}${formatPrice(price)}` : ""}</span>
+                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
+                                      selected ? "bg-amber-400 border-amber-400" : "border-gray-300"
+                                    }`}>
+                                      {selected && <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {activePkgs.length === 0 && activeSvcs.length === 0 && activeAddns.length === 0 && (
+                        <p className="text-center text-sm text-gray-400 py-8">No results for "{servicesSearch}"</p>
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-5 py-4 border-t border-gray-100">
+                      <button type="button" onClick={() => setShowServicesModal(false)}
+                        className="w-full py-2.5 rounded-xl bg-[#3486cf] text-white text-sm font-semibold hover:bg-[#2a6dab] transition-colors">
+                        Done
+                      </button>
                     </div>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* ── RIGHT: Schedule, Pricing, Notes, Status, Submit ── */}
