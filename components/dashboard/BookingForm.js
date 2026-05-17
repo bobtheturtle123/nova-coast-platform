@@ -745,7 +745,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                               const selected = form.packageId === p.id;
                               return (
                                 <button key={p.id} type="button"
-                                  onClick={() => setForm((f) => ({ ...f, packageId: f.packageId === p.id ? "" : p.id, serviceIds: [] }))}
+                                  onClick={() => setForm((f) => ({ ...f, packageId: f.packageId === p.id ? "" : p.id }))}
                                   className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-all ${
                                     selected ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300 bg-white"
                                   }`}>
@@ -778,7 +778,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                               const selected  = form.serviceIds.includes(s.id);
                               return (
                                 <button key={s.id} type="button"
-                                  onClick={() => { toggleService(s.id); setForm((f) => ({ ...f, packageId: "" })); }}
+                                  onClick={() => toggleService(s.id)}
                                   className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-all ${
                                     selected ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300 bg-white"
                                   }`}>
