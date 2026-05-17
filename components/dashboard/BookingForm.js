@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
-import { calculateTenantPrice, getSqftTier, getItemPrice, formatPrice } from "@/lib/catalogUtils";
+import { calculateTenantPrice, getSqftTier, getItemPrice, getFromPrice, formatPrice } from "@/lib/catalogUtils";
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 import { getPlan } from "@/lib/plans";
 import { WORKFLOW_STATUSES } from "@/lib/workflowStatus";
@@ -652,7 +652,8 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Package</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {catalog.packages.filter((p) => p.active !== false).map((p) => {
-                        const price = getItemPrice(p, tier);
+                        const price    = tier ? getItemPrice(p, tier) : getFromPrice(p, catalog.pricingConfig);
+                        const fromLabel = !tier && p.priceTiers ? "From " : "";
                         return (
                           <button key={p.id} type="button"
                             onClick={() => setForm((f) => ({ ...f, packageId: f.packageId === p.id ? "" : p.id, serviceIds: [] }))}
@@ -660,7 +661,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                               form.packageId === p.id ? "border-[#3486cf] bg-[#3486cf]/5 text-[#3486cf]" : "border-gray-200 text-gray-700 hover:border-gray-300"
                             }`}>
                             <p className="font-medium">{p.name}</p>
-                            <p className="text-xs text-[#3486cf] font-semibold mt-0.5">{formatPrice(price)}</p>
+                            <p className="text-xs text-[#3486cf] font-semibold mt-0.5">{fromLabel}{formatPrice(price)}</p>
                           </button>
                         );
                       })}
@@ -673,14 +674,14 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Services</p>
                     <div className="flex flex-wrap gap-2">
                       {catalog.services.filter((s) => s.active !== false).map((s) => {
-                        const price = getItemPrice(s, tier);
+                        const price = tier ? getItemPrice(s, tier) : getFromPrice(s, catalog.pricingConfig);
                         return (
                           <button key={s.id} type="button"
                             onClick={() => { toggleService(s.id); setForm((f) => ({ ...f, packageId: "" })); }}
                             className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
                               form.serviceIds.includes(s.id) ? "border-[#3486cf] bg-[#3486cf] text-white" : "border-gray-200 text-gray-600 hover:border-[#3486cf]/40"
                             }`}>
-                            {s.name}{price > 0 ? ` · ${formatPrice(price)}` : ""}
+                            {s.name}{price > 0 ? ` · ${!tier && s.priceTiers ? "from " : ""}${formatPrice(price)}` : ""}
                           </button>
                         );
                       })}
@@ -693,13 +694,13 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Add-ons</p>
                     <div className="flex flex-wrap gap-2">
                       {catalog.addons.filter((a) => a.active !== false).map((a) => {
-                        const price = getItemPrice(a, tier);
+                        const price = tier ? getItemPrice(a, tier) : getFromPrice(a, catalog.pricingConfig);
                         return (
                           <button key={a.id} type="button" onClick={() => toggleAddon(a.id)}
                             className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${
                               form.addonIds.includes(a.id) ? "border-gold bg-gold/10 text-[#0F172A]" : "border-gray-200 text-gray-600 hover:border-gold/40"
                             }`}>
-                            {a.name}{price > 0 ? ` · ${formatPrice(price)}` : ""}
+                            {a.name}{price > 0 ? ` · ${!tier && a.priceTiers ? "from " : ""}${formatPrice(price)}` : ""}
                           </button>
                         );
                       })}
