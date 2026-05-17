@@ -27,17 +27,20 @@ class NCM_SEO_Automation {
         $title = esc_attr( $this->build_title( $id ) );
         $desc  = esc_attr( $this->build_desc( $id ) );
         echo "<title>{$title}</title>\n<meta name=\"description\" content=\"{$desc}\">\n";
-        $thumb = get_field( 'thumbnail_url', $id );
+        $thumb = ncm_get( 'thumbnail_url', $id );
         if ( $thumb ) echo '<meta property="og:image" content="' . esc_url( NCM_R2_Storage::instance()->get_public_url( $thumb ) ) . "\">\n";
     }
     public function append_related( string $content ): string {
         if ( ! is_singular( 'stock_asset' ) || ! in_the_loop() ) return $content;
+        static $done = false;
+        if ( $done ) return $content;
+        $done = true;
         $ids = $this->related_ids( get_the_ID() );
         if ( empty( $ids ) ) return $content;
         $r2   = NCM_R2_Storage::instance();
         $html = '<div class="ncm-related-assets"><h3 class="ncm-related-title">More from this location</h3><div class="ncm-related-grid">';
         foreach ( $ids as $rid ) {
-            $thumb = get_field( 'thumbnail_url', $rid );
+            $thumb = ncm_get( 'thumbnail_url', $rid );
             $turl  = $thumb ? esc_url( $r2->get_public_url( $thumb ) ) : '';
             $link  = esc_url( get_permalink( $rid ) );
             $name  = esc_html( get_the_title( $rid ) );
@@ -48,12 +51,12 @@ class NCM_SEO_Automation {
     }
     private function build_title( int $id ): string {
         $loc  = $this->primary_location( $id );
-        $type = get_field( 'media_type', $id ) === 'video' ? 'Stock Footage' : 'Stock Photo';
+        $type = ncm_get( 'media_type', $id ) === 'video' ? 'Stock Footage' : 'Stock Photo';
         return ( $loc ? "{$loc} " : '' ) . get_the_title( $id ) . " | San Diego {$type}";
     }
     private function build_desc( int $id ): string {
         $loc  = $this->primary_location( $id );
-        $type = get_field( 'media_type', $id ) === 'video' ? 'cinematic footage' : 'professional photography';
+        $type = ncm_get( 'media_type', $id ) === 'video' ? 'cinematic footage' : 'professional photography';
         $at   = $loc ? " in {$loc}, San Diego" : ' in San Diego';
         return "Premium {$type} of " . get_the_title( $id ) . "{$at}. Ideal for luxury real estate marketing and MLS listings.";
     }

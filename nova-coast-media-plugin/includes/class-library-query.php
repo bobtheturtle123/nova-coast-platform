@@ -22,9 +22,9 @@ class NCM_Library_Query {
         $args = [ 'post_type' => 'stock_asset', 'post_status' => 'publish', 'posts_per_page' => 24, 'paged' => $page ];
         if ( $search ) $args['s'] = $search;
         if ( in_array( $media_type, [ 'photo', 'video' ], true ) )
-            $args['meta_query'][] = [ 'key' => 'media_type', 'value' => $media_type ];
+            $args['meta_query'][] = [ 'key' => 'ncm_media_type', 'value' => $media_type ];
         if ( in_array( $orientation, [ 'horizontal', 'vertical' ], true ) )
-            $args['meta_query'][] = [ 'key' => 'orientation', 'value' => $orientation ];
+            $args['meta_query'][] = [ 'key' => 'ncm_orientation', 'value' => $orientation ];
         if ( $location ) {
             $term = get_term_by( 'slug', $location, 'asset_location' ) ?: get_term_by( 'name', $location, 'asset_location' );
             if ( $term ) {
@@ -46,13 +46,13 @@ class NCM_Library_Query {
 
     private function render_card( int $post_id ): void {
         $r2          = NCM_R2_Storage::instance();
-        $type        = get_field( 'media_type', $post_id );
-        $thumb_url   = esc_url( $r2->get_public_url( get_field( 'thumbnail_url', $post_id ) ?: '' ) );
-        $preview_url = esc_url( $r2->get_public_url( get_field( 'preview_url',   $post_id ) ?: '' ) );
+        $type        = ncm_get( 'media_type',    $post_id );
+        $thumb_url   = esc_url( $r2->get_public_url( ncm_get( 'thumbnail_url', $post_id ) ?: '' ) );
+        $preview_url = esc_url( $r2->get_public_url( ncm_get( 'preview_url',   $post_id ) ?: '' ) );
         $permalink   = esc_url( get_permalink( $post_id ) );
         $title       = esc_html( get_the_title( $post_id ) );
-        $orient      = esc_attr( get_field( 'orientation', $post_id ) );
-        $duration    = (int) get_field( 'duration', $post_id );
+        $orient      = esc_attr( ncm_get( 'orientation', $post_id ) );
+        $duration    = (int) ncm_get( 'duration', $post_id );
 
         $terms = get_the_terms( $post_id, 'asset_location' );
         $loc   = '';

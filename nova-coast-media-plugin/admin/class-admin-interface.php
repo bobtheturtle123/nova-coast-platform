@@ -53,13 +53,12 @@ class NCM_Admin_Interface {
         return $new;
     }
     public function render_column( string $col, int $id ): void {
-        match ( $col ) {
-            'media_type'   => print( ucfirst( get_field( 'media_type',  $id ) ?: '—' ) ),
-            'orientation'  => print( ucfirst( get_field( 'orientation', $id ) ?: '—' ) ),
-            'dl_count'     => print( (int) get_field( 'download_count', $id ) ),
-            'location_col' => $this->col_location( $id ),
-            default        => null,
-        };
+        switch ( $col ) {
+            case 'media_type':   print( ucfirst( ncm_get( 'media_type',     $id ) ?: '—' ) ); break;
+            case 'orientation':  print( ucfirst( ncm_get( 'orientation',   $id ) ?: '—' ) ); break;
+            case 'dl_count':     print( (int)    ncm_get( 'download_count', $id ) );           break;
+            case 'location_col': $this->col_location( $id );                                   break;
+        }
     }
     private function col_location( int $id ): void {
         $t = get_the_terms( $id, 'asset_location' );

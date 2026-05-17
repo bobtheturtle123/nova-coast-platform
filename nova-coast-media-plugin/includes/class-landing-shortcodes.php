@@ -55,7 +55,7 @@ add_shortcode( 'ncm_hero', function( $atts ) {
 // ── Stats bar ─────────────────────────────────────────────────────────────────
 add_shortcode( 'ncm_stats', function() {
     $total    = wp_count_posts( 'stock_asset' )->publish ?? 0;
-    $videos   = (new WP_Query(['post_type'=>'stock_asset','posts_per_page'=>-1,'meta_query'=>[['key'=>'media_type','value'=>'video']],'no_found_rows'=>false]))->found_posts;
+    $videos   = (new WP_Query(['post_type'=>'stock_asset','posts_per_page'=>-1,'meta_query'=>[['key'=>'ncm_media_type','value'=>'video']],'no_found_rows'=>false]))->found_posts;
     $photos   = $total - $videos;
     $locs     = wp_count_terms( ['taxonomy'=>'asset_location'] );
 
@@ -103,12 +103,12 @@ add_shortcode( 'ncm_featured_grid', function( $atts ) {
         'post_type'      => 'stock_asset',
         'post_status'    => 'publish',
         'posts_per_page' => (int) $a['limit'],
-        'meta_query'     => [ [ 'key' => 'featured', 'value' => '1' ] ],
+        'meta_query'     => [ [ 'key' => 'ncm_featured', 'value' => '1' ] ],
         'no_found_rows'  => true,
     ] );
     if ( ! $q->have_posts() ) {
         // Fall back to most downloaded if no featured are set
-        $q = new WP_Query( [ 'post_type' => 'stock_asset', 'post_status' => 'publish', 'posts_per_page' => (int) $a['limit'], 'meta_key' => 'download_count', 'orderby' => 'meta_value_num', 'order' => 'DESC', 'no_found_rows' => true ] );
+        $q = new WP_Query( [ 'post_type' => 'stock_asset', 'post_status' => 'publish', 'posts_per_page' => (int) $a['limit'], 'meta_key' => 'ncm_download_count', 'orderby' => 'meta_value_num', 'order' => 'DESC', 'no_found_rows' => true ] );
     }
     ob_start(); ?>
     <section class="ncm-featured-section">

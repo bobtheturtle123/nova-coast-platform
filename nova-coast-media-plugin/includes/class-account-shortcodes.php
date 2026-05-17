@@ -81,7 +81,7 @@ add_shortcode( 'ncm_my_downloads', function() {
                 <?php foreach ( $rows as $i => $row ) :
                     $permalink = get_permalink( $row->asset_id );
                     $thumb_url = esc_url( NCM_R2_Storage::instance()->get_public_url(
-                        get_field( 'thumbnail_url', $row->asset_id ) ?: ''
+                        ncm_get( 'thumbnail_url', $row->asset_id ) ?: ''
                     ) );
                 ?>
                 <tr>

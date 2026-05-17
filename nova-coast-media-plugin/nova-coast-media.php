@@ -19,10 +19,18 @@ define( 'NCM_PLUGIN_FILE', __FILE__ );
 define( 'NCM_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'NCM_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
 
+// Thin wrappers around post_meta — replaces get_field() / update_field() from ACF.
+function ncm_get( string $field, int $post_id ) {
+    return get_post_meta( $post_id, 'ncm_' . $field, true );
+}
+function ncm_update( string $field, $value, int $post_id ): bool {
+    return (bool) update_post_meta( $post_id, 'ncm_' . $field, $value );
+}
+
 spl_autoload_register( function ( $class ) {
     $map = [
         'NCM_CPT_Registration'       => 'includes/class-cpt-registration.php',
-        'NCM_ACF_Fields'             => 'includes/class-acf-fields.php',
+        'NCM_Meta_Boxes'             => 'includes/class-meta-boxes.php',
         'NCM_Taxonomy_Setup'         => 'includes/class-taxonomy-setup.php',
         'NCM_Stripe_Handler'         => 'includes/class-stripe-handler.php',
         'NCM_Subscription_Validator' => 'includes/class-subscription-validator.php',
@@ -61,7 +69,7 @@ final class Nova_Coast_Media {
         // Content
         NCM_CPT_Registration::instance()->init();
         NCM_Taxonomy_Setup::instance()->init();
-        NCM_ACF_Fields::instance()->init();
+        NCM_Meta_Boxes::instance()->init();
 
         // Billing + access
         NCM_Stripe_Handler::instance()->init();

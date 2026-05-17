@@ -24,7 +24,7 @@ class NCM_R2_Storage {
         $this->bucket     = $o['bucket']     ?? '';
     }
 
-    public function generate_signed_url( string $key, int $expiry = 300 ): string|false {
+    public function generate_signed_url( string $key, int $expiry = 300 ) {
         if ( ! $this->is_configured() ) return false;
         $key         = ltrim( $key, '/' );
         $now         = time();

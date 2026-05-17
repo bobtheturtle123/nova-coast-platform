@@ -42,11 +42,11 @@ class NCM_CSV_Importer {
         $args   = [ 'post_title' => $title, 'post_name' => $slug, 'post_type' => 'stock_asset', 'post_status' => 'publish', 'post_content' => '' ];
         if ( $exist ) { $args['ID'] = $exist->ID; wp_update_post( $args ); $pid = $exist->ID; $action = 'updated'; }
         else { $pid = wp_insert_post( $args ); if ( is_wp_error( $pid ) ) return 'skipped'; $action = 'created'; }
-        update_field( 'media_type',    $media,                                      $pid );
-        update_field( 'orientation',   $orient,                                     $pid );
-        update_field( 'thumbnail_url', sanitize_text_field( $d['thumbnail_url'] ?? '' ), $pid );
-        update_field( 'preview_url',   sanitize_text_field( $d['preview_url']   ?? '' ), $pid );
-        update_field( 'full_res_url',  sanitize_text_field( $d['full_res_url']  ?? '' ), $pid );
+        ncm_update( 'media_type',    $media,                                           $pid );
+        ncm_update( 'orientation',   $orient,                                          $pid );
+        ncm_update( 'thumbnail_url', sanitize_text_field( $d['thumbnail_url'] ?? '' ), $pid );
+        ncm_update( 'preview_url',   sanitize_text_field( $d['preview_url']   ?? '' ), $pid );
+        ncm_update( 'full_res_url',  sanitize_text_field( $d['full_res_url']  ?? '' ), $pid );
         $this->assign_location( $pid, $d['location'] ?? '', $d['sub_location'] ?? '' );
         $this->assign_tags( $pid, $d['tags'] ?? '' );
         return $action;

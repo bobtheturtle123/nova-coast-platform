@@ -57,7 +57,7 @@ class NCM_Download_Handler {
             ], 402 );
         }
 
-        $key = get_field( 'full_res_url', $asset_id );
+        $key = ncm_get( 'full_res_url', $asset_id );
         if ( ! $key ) {
             wp_send_json_error( [ 'code' => 'missing_asset', 'message' => 'Asset file not configured.' ], 500 );
         }
@@ -110,13 +110,13 @@ class NCM_Download_Handler {
     }
 
     private function bump_count( int $asset_id ): void {
-        $c = (int) get_field( 'download_count', $asset_id );
-        update_field( 'download_count', $c + 1, $asset_id );
+        $c = (int) ncm_get( 'download_count', $asset_id );
+        ncm_update( 'download_count', $c + 1, $asset_id );
     }
 
     private function filename( int $asset_id ): string {
         $slug = sanitize_title( get_the_title( $asset_id ) );
-        $ext  = get_field( 'media_type', $asset_id ) === 'video' ? 'mp4' : 'jpg';
+        $ext  = ncm_get( 'media_type', $asset_id ) === 'video' ? 'mp4' : 'jpg';
         return "nova-coast-{$slug}.{$ext}";
     }
 }

@@ -74,7 +74,7 @@ class NCM_Shortcodes {
         $post_id = (int) $atts['id'];
         if ( ! $post_id || get_post_type( $post_id ) !== 'stock_asset' ) return '';
 
-        $type  = get_field( 'media_type', $post_id );
+        $type  = ncm_get( 'media_type', $post_id );
         $label = $atts['label'] ?: ( $type === 'video' ? 'Download Full Video' : 'Download Full Photo' );
 
         ob_start();

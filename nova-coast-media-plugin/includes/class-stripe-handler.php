@@ -33,7 +33,7 @@ class NCM_Stripe_Handler {
 
     // ── Stripe API wrapper ────────────────────────────────────────────────────
 
-    public function api( string $method, string $endpoint, array $data = [] ): array|false {
+    public function api( string $method, string $endpoint, array $data = [] ) {
         $secret = $this->secret_key();
         if ( ! $secret ) return false;
 
@@ -164,14 +164,15 @@ class NCM_Stripe_Handler {
         $type = $event['type'] ?? '';
         $obj  = $event['data']['object'] ?? [];
 
-        match ( $type ) {
-            'customer.subscription.created',
-            'customer.subscription.updated'  => $this->sync_subscription( $obj ),
-            'customer.subscription.deleted'  => $this->cancel_subscription( $obj ),
-            'invoice.payment_succeeded'      => $this->on_renewal( $obj ),
-            'invoice.payment_failed'         => $this->on_payment_failed( $obj ),
-            default                          => null,
-        };
+        if ( $type === 'customer.subscription.created' || $type === 'customer.subscription.updated' ) {
+            $this->sync_subscription( $obj );
+        } elseif ( $type === 'customer.subscription.deleted' ) {
+            $this->cancel_subscription( $obj );
+        } elseif ( $type === 'invoice.payment_succeeded' ) {
+            $this->on_renewal( $obj );
+        } elseif ( $type === 'invoice.payment_failed' ) {
+            $this->on_payment_failed( $obj );
+        }
 
         return new WP_REST_Response( [ 'received' => true ], 200 );
     }
@@ -274,7 +275,7 @@ class NCM_Stripe_Handler {
         return $opts["{$plan}_price_id"] ?? '';
     }
 
-    private function verify_signature( string $payload, string $sig_header, string $secret ): array|false {
+    private function verify_signature( string $payload, string $sig_header, string $secret ) {
         // Stripe signature verification (HMAC-SHA256)
         $parts = [];
         foreach ( explode( ',', $sig_header ) as $part ) {

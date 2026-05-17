@@ -5,11 +5,11 @@ while ( have_posts() ) :
     the_post();
     $id          = get_the_ID();
     $r2          = NCM_R2_Storage::instance();
-    $type        = get_field( 'media_type', $id );
-    $preview_url = esc_url( $r2->get_public_url( get_field( 'preview_url', $id ) ?: '' ) );
-    $thumb_url   = esc_url( $r2->get_public_url( get_field( 'thumbnail_url', $id ) ?: '' ) );
-    $orient      = get_field( 'orientation', $id ) ?: 'horizontal';
-    $duration    = (int) get_field( 'duration', $id );
+    $type        = ncm_get( 'media_type',    $id );
+    $preview_url = esc_url( $r2->get_public_url( ncm_get( 'preview_url',   $id ) ?: '' ) );
+    $thumb_url   = esc_url( $r2->get_public_url( ncm_get( 'thumbnail_url', $id ) ?: '' ) );
+    $orient      = ncm_get( 'orientation', $id ) ?: 'horizontal';
+    $duration    = (int) ncm_get( 'duration', $id );
     $loc_terms   = get_the_terms( $id, 'asset_location' ) ?: [];
     usort( $loc_terms, fn($a,$b) => $a->parent <=> $b->parent );
     $loc_parts  = array_map( fn($t) => '<a href="'.esc_url(get_term_link($t)).'" class="ncm-breadcrumb-link">'.esc_html($t->name).'</a>', $loc_terms );
@@ -59,10 +59,6 @@ while ( have_posts() ) :
             </div>
             <?php endif; ?>
 
-            <!-- Description -->
-            <?php if ( get_the_content() ) : ?>
-            <div class="ncm-single-description"><?php the_content(); ?></div>
-            <?php endif; ?>
 
             <!-- Details grid -->
             <div class="ncm-single-details">
@@ -112,8 +108,9 @@ while ( have_posts() ) :
         </aside>
     </div>
 
-    <!-- Related assets (appended by SEO class) -->
-    <?php the_content(); ?>
+    <div class="ncm-single-footer">
+        <?php the_content(); ?>
+    </div>
 
 </div>
 <?php endwhile; get_footer(); ?>
