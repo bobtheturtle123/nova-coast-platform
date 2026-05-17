@@ -52,7 +52,8 @@ export async function GET(req) {
             try {
               await sendShootReminderSms({ booking, tenant });
               sent++;
-            } catch {
+            } catch (err) {
+              console.error(`[cron/shoot-reminders] SMS failed for bookingId=${bDoc.id}:`, err?.message || err);
               errors++;
             }
           })

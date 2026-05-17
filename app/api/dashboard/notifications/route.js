@@ -20,14 +20,39 @@ export async function GET(req) {
   return Response.json({ prefs });
 }
 
+const BOOL_KEYS = [
+  "newBookingEmail", "newBookingPhone", "confirmedEmail", "confirmedPhone",
+  "reminderEmail", "reminderPhone", "balancePaidEmail", "balancePaidPhone",
+  "clientNewBookingEmail", "clientConfirmedEmail", "clientReminderEmail",
+];
+
+function sanitizePrefs(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out = {};
+  for (const key of BOOL_KEYS) {
+    if (key in raw) out[key] = !!raw[key];
+  }
+  // Allow nested shootReminder object
+  if (raw.shootReminder && typeof raw.shootReminder === "object") {
+    out.shootReminder = {
+      client:           !!raw.shootReminder.client,
+      photographer:     !!raw.shootReminder.photographer,
+      hoursBeforeShoot: Number(raw.shootReminder.hoursBeforeShoot) || 24,
+    };
+  }
+  return out;
+}
+
 // PATCH — save notification prefs
 export async function PATCH(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
+  const prefs = sanitizePrefs(body.prefs);
+
   await adminDb.collection("tenants").doc(ctx.tenantId).update({
-    notificationPrefs: body.prefs,
+    notificationPrefs: prefs,
     updatedAt: new Date(),
   });
   return Response.json({ ok: true });

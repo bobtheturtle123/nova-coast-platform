@@ -37,8 +37,11 @@ export async function POST(req, { params }) {
   const tenant = await getTenantById(ctx.tenantId);
 
   await sendBookingApproved({ booking, tenant });
+
+  const TERMINAL_STATUSES = ["completed", "cancelled", "refunded"];
+  const statusUpdate = TERMINAL_STATUSES.includes(booking.status) ? {} : { status: "confirmed" };
   await bookingRef.update({
-    status: "confirmed",
+    ...statusUpdate,
     "emailCooldowns.confirmation": new Date(),
   });
 

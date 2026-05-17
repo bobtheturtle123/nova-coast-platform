@@ -31,21 +31,23 @@ export async function GET(req) {
   if (!memberDoc.exists) return Response.json({ error: "Unauthorized" }, { status: 403 });
   const memberEmail = memberDoc.data().email || "";
 
-  // Query bookings assigned to this photographer
-  const snap = await adminDb
-    .collection("tenants").doc(ctx.tenantId)
-    .collection("bookings")
-    .where("photographerId", "==", ctx.memberId)
-    .get();
-
-  // Also grab by email match for legacy bookings assigned by email
-  const emailSnap = memberEmail
-    ? await adminDb
-        .collection("tenants").doc(ctx.tenantId)
-        .collection("bookings")
-        .where("photographerEmail", "==", memberEmail)
-        .get()
-    : { docs: [] };
+  // Query bookings assigned to this photographer by ID (primary) and email (legacy fallback)
+  const [snap, emailSnap] = await Promise.all([
+    adminDb
+      .collection("tenants").doc(ctx.tenantId)
+      .collection("bookings")
+      .where("photographerId", "==", ctx.memberId)
+      .limit(200)
+      .get(),
+    memberEmail
+      ? adminDb
+          .collection("tenants").doc(ctx.tenantId)
+          .collection("bookings")
+          .where("photographerEmail", "==", memberEmail)
+          .limit(200)
+          .get()
+      : Promise.resolve({ docs: [] }),
+  ]);
 
   const seen = new Set();
   const bookings = [];

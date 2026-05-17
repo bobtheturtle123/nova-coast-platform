@@ -18,6 +18,7 @@ export async function GET(req) {
     .collection("tenants").doc(ctx.tenantId)
     .collection("galleries")
     .orderBy("createdAt", "desc")
+    .limit(200)
     .get();
 
   const galleries = snap.docs.map((d) => ({

@@ -29,6 +29,7 @@ export async function GET(req) {
     // Aggregate active tenant counts by plan
     const tenantsSnap2 = await adminDb.collection("tenants")
       .where("subscriptionStatus", "in", ["active", "trialing"])
+      .limit(500)
       .get();
 
     const planBreakdown = {};

@@ -25,7 +25,9 @@ export async function GET(req) {
 
   const snap = await adminDb
     .collection("tenants").doc(ctx.tenantId)
-    .collection("team").get();
+    .collection("team")
+    .limit(200)
+    .get();
 
   const members = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   return Response.json({ members });

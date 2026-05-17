@@ -4,7 +4,7 @@ import { isSuperAdmin } from "@/lib/superadmin";
 export async function GET(req) {
   if (!await isSuperAdmin(req)) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const snap = await adminDb.collection("tenants").orderBy("createdAt", "desc").get();
+  const snap = await adminDb.collection("tenants").orderBy("createdAt", "desc").limit(500).get();
 
   // Return only fields needed for the admin panel — never return stripe keys, OAuth tokens, etc.
   const tenants = snap.docs.map((d) => {

@@ -31,16 +31,13 @@ export async function POST(req, { params }) {
       getEffectivePlan(tenant),
       tenant.addonListings || 0
     );
-    // Count all non-cancelled bookings that are active listing workspaces
-    // (isListing: true, or isListing undefined = legacy bookings created before this feature)
-    const allActiveSnap = await adminDb
+    const listingCountSnap = await adminDb
       .collection("tenants").doc(ctx.tenantId)
       .collection("bookings")
-      .where("status", "!=", "cancelled")
+      .where("isListing", "==", true)
+      .count()
       .get();
-    const listingCount = allActiveSnap.docs.filter(
-      (d) => d.data().isListing !== false
-    ).length;
+    const listingCount = listingCountSnap.data().count;
 
     if (listingCount >= limit) {
       return Response.json(
