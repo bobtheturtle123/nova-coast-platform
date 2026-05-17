@@ -117,7 +117,7 @@ function exportCSV(bookings, period) {
 
 export default function ReportsPage() {
   const { permissions, userRole } = useDashboardPermissions();
-  const canViewRevenue = userRole === "owner" || userRole === "admin" || !!permissions?.canViewRevenue;
+  const canViewReports = userRole === "owner" || userRole === "admin" || !!permissions?.canViewReports;
 
   const [bookings,  setBookings]  = useState([]);
   const [catalog,   setCatalog]   = useState(null);
@@ -125,7 +125,7 @@ export default function ReportsPage() {
   const [period,    setPeriod]    = useState("12");
 
   useEffect(() => {
-    if (!canViewRevenue) { setLoading(false); return; }
+    if (!canViewReports) { setLoading(false); return; }
     const user = auth.currentUser;
     if (!user) { setLoading(false); return; }
     user.getIdToken().then(async (token) => {
@@ -148,7 +148,7 @@ export default function ReportsPage() {
       }
       setLoading(false);
     });
-  }, [canViewRevenue]);
+  }, [canViewReports]);
 
   const cutoff = useMemo(() => {
     const d = new Date();
@@ -318,7 +318,7 @@ export default function ReportsPage() {
     </div>
   );
 
-  if (!canViewRevenue) return (
+  if (!canViewReports) return (
     <div className="p-8 flex flex-col items-center justify-center h-64 text-center gap-3">
       <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
         <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400">

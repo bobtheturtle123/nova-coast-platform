@@ -25,7 +25,7 @@ export async function POST(req) {
   const validRoles = ["photographer", "editor", "manager", "admin", "assistant"];
   const inviteRole = validRoles.includes(role) ? role : "photographer";
 
-  const VALID_PERM_KEYS = ["canViewRevenue","canViewReports","canManageTeam","canManageProducts","canEditSettings","canCreateBookings"];
+  const VALID_PERM_KEYS = ["canViewListings","canCreateBookings","canViewRevenue","canViewReports","canManageTeam","canManageProducts","canEditSettings"];
   const savedPerms = permissions && typeof permissions === "object"
     ? Object.fromEntries(VALID_PERM_KEYS.map((k) => [k, !!permissions[k]]))
     : {};

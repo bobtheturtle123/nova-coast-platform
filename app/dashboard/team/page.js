@@ -17,19 +17,20 @@ const ROLE_OPTIONS = [
 ];
 
 const PERMISSION_DEFS = [
+  { key: "canViewListings",   label: "Access Listings",        desc: "View and manage property listings" },
+  { key: "canCreateBookings", label: "Access Bookings",        desc: "View and create bookings from the dashboard" },
   { key: "canViewRevenue",    label: "View Revenue & Pricing", desc: "See prices on bookings and listings, revenue stats, and the revenue chart" },
-  { key: "canViewReports",    label: "View Reports",     desc: "Access the reports page" },
-  { key: "canManageTeam",     label: "Manage Team",      desc: "Add, edit, and remove team members" },
-  { key: "canManageProducts", label: "Manage Products",  desc: "Create and edit services, packages, and add-ons" },
-  { key: "canEditSettings",   label: "Edit Settings",    desc: "Change branding, availability, and booking settings" },
-  { key: "canCreateBookings", label: "Create Bookings",  desc: "Manually create new bookings from the dashboard" },
+  { key: "canViewReports",    label: "View Reports",           desc: "Access the revenue reports page" },
+  { key: "canManageTeam",     label: "Manage Team",            desc: "Add, edit, and remove team members" },
+  { key: "canManageProducts", label: "Manage Products",        desc: "Create and edit services, packages, and add-ons" },
+  { key: "canEditSettings",   label: "Edit Settings",          desc: "Change branding, availability, and booking settings" },
 ];
 
 const DEFAULT_PERMISSIONS = {
-  admin:        { canViewRevenue: true,  canViewReports: true,  canManageTeam: true,  canManageProducts: true,  canEditSettings: true,  canCreateBookings: true  },
-  manager:      { canViewRevenue: false, canViewReports: false, canManageTeam: false, canManageProducts: true,  canEditSettings: false, canCreateBookings: true  },
-  photographer: { canViewRevenue: false, canViewReports: false, canManageTeam: false, canManageProducts: false, canEditSettings: false, canCreateBookings: false },
-  assistant:    { canViewRevenue: false, canViewReports: false, canManageTeam: false, canManageProducts: false, canEditSettings: false, canCreateBookings: false },
+  admin:        { canViewListings: true,  canCreateBookings: true,  canViewRevenue: true,  canViewReports: true,  canManageTeam: true,  canManageProducts: true,  canEditSettings: true  },
+  manager:      { canViewListings: true,  canCreateBookings: true,  canViewRevenue: false, canViewReports: false, canManageTeam: false, canManageProducts: true,  canEditSettings: false },
+  photographer: { canViewListings: false, canCreateBookings: false, canViewRevenue: false, canViewReports: false, canManageTeam: false, canManageProducts: false, canEditSettings: false },
+  assistant:    { canViewListings: false, canCreateBookings: false, canViewRevenue: false, canViewReports: false, canManageTeam: false, canManageProducts: false, canEditSettings: false },
 };
 
 // Roles that get dashboard (staff) access vs. photographer portal access
