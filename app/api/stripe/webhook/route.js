@@ -109,13 +109,31 @@ export async function POST(req) {
           }
         }
 
-        if (type === "balance" && !booking.balancePaid) {
-          await bookingRef.update({ balancePaid: true, remainingBalance: 0, status: "completed" });
-          if (booking.galleryId) {
+        if (type === "balance") {
+          let balanceShouldNotify = false;
+          let balanceGalleryId    = null;
+          await adminDb.runTransaction(async (tx) => {
+            const snap = await tx.get(bookingRef);
+            if (!snap.exists || snap.data().balancePaid) return;
+            balanceGalleryId = snap.data().galleryId || null;
+            tx.update(bookingRef, { balancePaid: true, remainingBalance: 0, status: "completed" });
+            balanceShouldNotify = true;
+          });
+          if (balanceGalleryId) {
             await adminDb
               .collection("tenants").doc(tenantId)
-              .collection("galleries").doc(booking.galleryId)
+              .collection("galleries").doc(balanceGalleryId)
               .update({ unlocked: true });
+          }
+          if (balanceShouldNotify) {
+            console.log(`[stripe/webhook] balance payment_intent.succeeded — bookingId=${bookingId}`);
+            try {
+              const tenant = await getTenantById(tenantId);
+              if (tenant) {
+                sendBookingConfirmedSms({ booking: { ...booking, balancePaid: true }, tenant })
+                  .catch((e) => console.error("[stripe/webhook] balance SMS FAILED:", e?.message || e));
+              }
+            } catch (e) { console.error("[stripe/webhook] balance notification FAILED:", e?.message || e); }
           }
         }
         break;

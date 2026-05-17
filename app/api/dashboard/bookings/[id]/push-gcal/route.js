@@ -59,7 +59,13 @@ export async function POST(req, { params }) {
   const memberDoc = await memberRef.get();
   if (!memberDoc.exists) return Response.json({ error: "Photographer not found" }, { status: 404 });
 
-  const gcal = memberDoc.data().googleCalendar;
+  const memberData = memberDoc.data();
+  const calendarPrefs = memberData.calendarPrefs || {};
+  if (calendarPrefs.writeBookings === false) {
+    return Response.json({ error: "Photographer has disabled calendar write access" }, { status: 403 });
+  }
+
+  const gcal = memberData.googleCalendar;
   if (!gcal?.refreshToken) {
     return Response.json({ error: "Photographer has not connected Google Calendar" }, { status: 400 });
   }

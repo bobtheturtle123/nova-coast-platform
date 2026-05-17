@@ -45,34 +45,44 @@ export async function POST(req) {
 
     const booking = bookingDoc.data();
 
-    if (type === "deposit" && !booking.depositPaid) {
-      await bookingRef.update({
-        depositPaid: true,
-        status: "requested",
-        stripeDepositIntentId: pi.id,
+    if (type === "deposit") {
+      let shouldNotify = false;
+      await adminDb.runTransaction(async (tx) => {
+        const snap = await tx.get(bookingRef);
+        if (!snap.exists || snap.data().depositPaid) return;
+        tx.update(bookingRef, { depositPaid: true, status: "requested", stripeDepositIntentId: pi.id });
+        shouldNotify = true;
       });
-      console.log(`[verify-payment] deposit confirmed bookingId=${bookingId}`);
-      // Fire notifications if webhook hasn't already done so
-      _sendNotifications(tenantId, bookingId, { ...booking, depositPaid: true });
+      if (shouldNotify) {
+        console.log(`[verify-payment] deposit confirmed bookingId=${bookingId}`);
+        _sendNotifications(tenantId, bookingId, { ...booking, depositPaid: true });
+      } else {
+        console.log(`[verify-payment] deposit already recorded bookingId=${bookingId}`);
+      }
       return Response.json({ ok: true, paidInFull: false });
     }
 
-    if (type === "full" && !booking.paidInFull) {
-      await bookingRef.update({
-        depositPaid:  true,
-        balancePaid:  true,
-        paidInFull:   true,
-        remainingBalance: 0,
-        status: "requested",
-        stripeDepositIntentId: pi.id,
+    if (type === "full") {
+      let shouldNotify = false;
+      await adminDb.runTransaction(async (tx) => {
+        const snap = await tx.get(bookingRef);
+        if (!snap.exists || snap.data().paidInFull) return;
+        tx.update(bookingRef, {
+          depositPaid: true, balancePaid: true, paidInFull: true,
+          remainingBalance: 0, status: "requested", stripeDepositIntentId: pi.id,
+        });
+        shouldNotify = true;
       });
-      console.log(`[verify-payment] full payment confirmed bookingId=${bookingId}`);
-      _sendNotifications(tenantId, bookingId, { ...booking, depositPaid: true, paidInFull: true });
+      if (shouldNotify) {
+        console.log(`[verify-payment] full payment confirmed bookingId=${bookingId}`);
+        _sendNotifications(tenantId, bookingId, { ...booking, depositPaid: true, paidInFull: true });
+      } else {
+        console.log(`[verify-payment] full payment already recorded bookingId=${bookingId}`);
+      }
       return Response.json({ ok: true, paidInFull: true });
     }
 
-    // Already updated (e.g. webhook already ran)
-    console.log(`[verify-payment] already updated bookingId=${bookingId} depositPaid=${booking.depositPaid}`);
+    console.log(`[verify-payment] no update needed bookingId=${bookingId} type=${type}`);
     return Response.json({ ok: true, paidInFull: booking.paidInFull || false });
   } catch (err) {
     console.error("Verify payment error:", err);

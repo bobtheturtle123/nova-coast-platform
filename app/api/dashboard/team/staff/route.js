@@ -86,6 +86,9 @@ export async function POST(req) {
       createdAt:  new Date(),
     });
 
+  // Top-level token index — enables O(1) lookup at accept time without a full collectionGroup scan
+  await adminDb.collection("staffInviteTokens").doc(token).set({ tenantId: ctx.tenantId, createdAt: new Date() });
+
   // Also create a minimal team member document so this person appears in the Team page
   // Check if a team member with this email already exists
   const existingSnap = await adminDb
@@ -157,10 +160,10 @@ export async function DELETE(req) {
     } catch { /* user may not exist */ }
   }
 
-  await adminDb
-    .collection("tenants").doc(ctx.tenantId)
-    .collection("staffInvites").doc(id)
-    .delete();
+  await Promise.all([
+    adminDb.collection("tenants").doc(ctx.tenantId).collection("staffInvites").doc(id).delete(),
+    adminDb.collection("staffInviteTokens").doc(id).delete().catch(() => {}),
+  ]);
 
   // Also remove the mirrored team member doc if it was created from this invite (status: invited)
   const teamDocRef = adminDb

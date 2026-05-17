@@ -10,28 +10,26 @@ export async function POST(req, { params }) {
   const { uid, email } = body;
   if (!uid) return Response.json({ error: "uid required" }, { status: 400 });
 
-  // Find the invite across all tenants
-  let inviteRef  = null;
-  let tenantId   = null;
-  let inviteData = null;
-
+  // O(1) lookup via top-level token index (written at invite creation time)
+  let tenantId;
   try {
-    const snap = await adminDb.collectionGroup("staffInvites").get();
-    for (const doc of snap.docs) {
-      if (doc.id === token) {
-        inviteRef  = doc.ref;
-        tenantId   = doc.ref.parent.parent.id;
-        inviteData = doc.data();
-        break;
-      }
-    }
+    const tokenDoc = await adminDb.collection("staffInviteTokens").doc(token).get();
+    if (!tokenDoc.exists) return Response.json({ error: "Invite not found." }, { status: 404 });
+    tenantId = tokenDoc.data().tenantId;
   } catch {
     return Response.json({ error: "Could not verify invite." }, { status: 500 });
   }
 
-  if (!inviteRef || !tenantId || !inviteData) {
-    return Response.json({ error: "Invite not found." }, { status: 404 });
+  const inviteRef  = adminDb.collection("tenants").doc(tenantId).collection("staffInvites").doc(token);
+  let inviteData;
+  try {
+    const inviteDoc = await inviteRef.get();
+    if (!inviteDoc.exists) return Response.json({ error: "Invite not found." }, { status: 404 });
+    inviteData = inviteDoc.data();
+  } catch {
+    return Response.json({ error: "Could not verify invite." }, { status: 500 });
   }
+
   if (inviteData.accepted) {
     return Response.json({ error: "This invite has already been used." }, { status: 400 });
   }
@@ -45,14 +43,12 @@ export async function POST(req, { params }) {
   // The team member doc was created with the same ID as the invite token
   const memberId = token;
 
-  // Set custom claims on the Firebase user (include memberId so permission lookups work)
   await adminAuth.setCustomUserClaims(uid, {
     role,
     tenantId,
     memberId,
   });
 
-  // Mark invite accepted and record uid on the team member doc
   await Promise.all([
     inviteRef.update({ accepted: true, acceptedAt: new Date(), uid, email: email || inviteData.email }),
     adminDb.collection("tenants").doc(tenantId).collection("team").doc(memberId).update({
