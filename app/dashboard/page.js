@@ -7,6 +7,7 @@ import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 import { getAppUrl } from "@/lib/appUrl";
 import TimeRangePicker from "@/components/TimeRangePicker";
+import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function avatarColor(str) {
@@ -300,6 +301,11 @@ export default function DashboardHome() {
   const [linkCopied,       setLinkCopied]       = useState(false);
   const [userRole,         setUserRole]         = useState(null); // null = owner
 
+  const { permissions, userRole: ctxRole } = useDashboardPermissions();
+  const isOwnerOrAdmin   = ctxRole === "owner" || ctxRole === "admin" || ctxRole === null;
+  const canCreateBookings = isOwnerOrAdmin || !!permissions?.canCreateBookings;
+  const canViewListings   = isOwnerOrAdmin || !!permissions?.canViewListings;
+
   useEffect(() => {
     auth.currentUser?.getIdTokenResult(true).then(async (result) => {
       const role = result.claims.role || null;
@@ -430,7 +436,7 @@ export default function DashboardHome() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {bookingUrl && (
+            {canCreateBookings && bookingUrl && (
               <button onClick={copyLink}
                 className="inline-flex items-center gap-1.5 text-[13px] font-medium px-3.5 py-2 rounded-lg transition-colors"
                 style={{ border: "1px solid #E9ECF0", background: "#fff", color: "#475569" }}
@@ -439,7 +445,7 @@ export default function DashboardHome() {
                 {linkCopied ? "✓ Copied" : "Copy Booking Link"}
               </button>
             )}
-            {bookingUrl && (
+            {canCreateBookings && bookingUrl && (
               <a href={bookingUrl} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-[13px] font-medium px-3.5 py-2 rounded-lg transition-colors"
                 style={{ border: "1px solid #E9ECF0", background: "#fff", color: "#475569" }}
@@ -448,16 +454,18 @@ export default function DashboardHome() {
                 Booking Page ↗
               </a>
             )}
-            <Link href="/dashboard/bookings/create"
-              className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white px-4 py-2 rounded-lg transition-colors"
-              style={{ background: "#3486cf" }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#2a6dab"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "#3486cf"}>
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              New Listing
-            </Link>
+            {canViewListings && (
+              <Link href="/dashboard/bookings/create"
+                className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white px-4 py-2 rounded-lg transition-colors"
+                style={{ background: "#3486cf" }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "#2a6dab"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "#3486cf"}>
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                New Listing
+              </Link>
+            )}
           </div>
         </div>
 

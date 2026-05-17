@@ -213,7 +213,8 @@ function ListingCard({ listing, revCount = 0 }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function ListingsPage() {
   const { permissions, userRole } = useDashboardPermissions();
-  const canViewPricing = userRole === "owner" || userRole === "admin" || !!permissions?.canViewRevenue;
+  const canViewPricing    = userRole === "owner" || userRole === "admin" || !!permissions?.canViewRevenue;
+  const canCreateListings = userRole === "owner" || userRole === "admin" || !!permissions?.canViewListings;
   const COLS = canViewPricing ? "52px 1fr 126px 154px 112px 76px 22px" : "52px 1fr 126px 154px 112px 22px";
 
   const [listings,         setListings]         = useState([]);
@@ -348,14 +349,16 @@ export default function ListingsPage() {
               </p>
             )}
           </div>
-          <Link href="/dashboard/bookings/create"
-            className="flex-shrink-0 inline-flex items-center gap-2 text-xs font-semibold text-white px-4 py-2.5 rounded-xl"
-            style={{ background: "linear-gradient(135deg, #3486cf 0%, #2a6dab 100%)", boxShadow: "0 2px 8px rgba(52,134,207,0.28)" }}>
-            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            New Listing
-          </Link>
+          {canCreateListings && (
+            <Link href="/dashboard/bookings/create"
+              className="flex-shrink-0 inline-flex items-center gap-2 text-xs font-semibold text-white px-4 py-2.5 rounded-xl"
+              style={{ background: "linear-gradient(135deg, #3486cf 0%, #2a6dab 100%)", boxShadow: "0 2px 8px rgba(52,134,207,0.28)" }}>
+              <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              New Listing
+            </Link>
+          )}
         </div>
 
         {/* ── Toolbar ─────────────────────────────────────────────────────── */}
