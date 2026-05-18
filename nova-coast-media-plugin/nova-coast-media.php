@@ -52,7 +52,7 @@ spl_autoload_register( function ( $class ) {
 
 final class Nova_Coast_Media {
 
-    private static ?self $instance = null;
+    private static $instance = null;
 
     public static function instance(): self {
         if ( null === self::$instance ) self::$instance = new self();

@@ -11,8 +11,8 @@ while ( have_posts() ) :
     $orient      = ncm_get( 'orientation', $id ) ?: 'horizontal';
     $duration    = (int) ncm_get( 'duration', $id );
     $loc_terms   = get_the_terms( $id, 'asset_location' ) ?: [];
-    usort( $loc_terms, fn($a,$b) => $a->parent <=> $b->parent );
-    $loc_parts  = array_map( fn($t) => '<a href="'.esc_url(get_term_link($t)).'" class="ncm-breadcrumb-link">'.esc_html($t->name).'</a>', $loc_terms );
+    usort( $loc_terms, function($a,$b) { return $a->parent <=> $b->parent; } );
+    $loc_parts  = array_map( function($t) { return '<a href="'.esc_url(get_term_link($t)).'" class="ncm-breadcrumb-link">'.esc_html($t->name).'</a>'; }, $loc_terms );
     $loc_html   = implode( '<span class="ncm-breadcrumb-sep">/</span>', $loc_parts );
     $tags       = get_the_terms( $id, 'asset_tag' ) ?: [];
     $label      = $type === 'video' ? 'Download Full Video' : 'Download Full Photo';

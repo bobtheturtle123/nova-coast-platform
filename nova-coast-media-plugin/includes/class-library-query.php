@@ -2,7 +2,7 @@
 defined( 'ABSPATH' ) || exit;
 
 class NCM_Library_Query {
-    private static ?self $instance = null;
+    private static $instance = null;
     public static function instance(): self {
         if ( null === self::$instance ) self::$instance = new self();
         return self::$instance;
@@ -57,7 +57,7 @@ class NCM_Library_Query {
         $terms = get_the_terms( $post_id, 'asset_location' );
         $loc   = '';
         if ( $terms && ! is_wp_error( $terms ) ) {
-            usort( $terms, fn( $a, $b ) => $b->parent <=> $a->parent );
+            usort( $terms, function( $a, $b ) { return $b->parent <=> $a->parent; } );
             $loc = esc_html( $terms[0]->name );
         }
 

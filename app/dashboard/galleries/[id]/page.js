@@ -9,6 +9,20 @@ import { getAppUrl } from "@/lib/appUrl";
 
 const APP_URL = getAppUrl();
 
+function sanitizeHtml(html) {
+  if (typeof window === "undefined") return "";
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  doc.querySelectorAll("script,iframe,object,embed,form").forEach((el) => el.remove());
+  doc.querySelectorAll("*").forEach((el) => {
+    for (const attr of [...el.attributes]) {
+      if (/^on/i.test(attr.name) || (attr.name === "href" && /^javascript:/i.test(attr.value))) {
+        el.removeAttribute(attr.name);
+      }
+    }
+  });
+  return doc.body.innerHTML;
+}
+
 // ─── Floor plan image with loading skeleton + error fallback ─────────────────
 function FloorPlanThumb({ src, alt }) {
   const [loaded,  setLoaded]  = useState(false);
@@ -1952,7 +1966,7 @@ export default function GalleryDetailPage() {
                   <p className="font-medium text-xs text-gray-400 uppercase tracking-wide mb-3">Email preview</p>
                   <p>Hi <strong>{gallery.clientName || "there"}</strong>,</p>
                   {emailNote && (
-                    <div className="text-gray-600" dangerouslySetInnerHTML={{ __html: emailNote }} />
+                    <div className="text-gray-600" dangerouslySetInnerHTML={{ __html: sanitizeHtml(emailNote) }} />
                   )}
                   <p>Your media for <strong>{gallery.bookingAddress}</strong> is ready to view and download.</p>
                   {galleryUrl ? (

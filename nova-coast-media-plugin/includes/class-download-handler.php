@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
  * 6. JS triggers invisible <a download> click — file downloads directly from R2
  */
 class NCM_Download_Handler {
-    private static ?self $instance = null;
+    private static $instance = null;
     public static function instance(): self {
         if ( null === self::$instance ) self::$instance = new self();
         return self::$instance;

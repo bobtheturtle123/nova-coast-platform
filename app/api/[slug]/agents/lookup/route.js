@@ -24,8 +24,8 @@ export async function GET(req, { params }) {
 
     if (!doc.exists) return Response.json({ agent: null });
     const data = doc.data();
-    // Only return the fields needed to prefill — not order history
-    return Response.json({ agent: { name: data.name, phone: data.phone, email: data.email } });
+    // Only return name for prefill — do not expose phone over a public endpoint
+    return Response.json({ agent: { name: data.name, email: data.email } });
   } catch {
     return Response.json({ agent: null });
   }

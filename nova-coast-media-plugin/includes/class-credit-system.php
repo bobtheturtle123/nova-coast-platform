@@ -7,7 +7,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class NCM_Credit_System {
 
-    private static ?self $instance = null;
+    private static $instance = null;
 
     const META_CREDITS    = 'ncm_credits_remaining';
     const META_PLAN       = 'ncm_plan_type';

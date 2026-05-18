@@ -8,9 +8,9 @@ defined( 'ABSPATH' ) || exit;
  */
 class NCM_Subscription_Validator {
 
-    private static ?self $instance = null;
+    private static $instance = null;
 
-    private array $limits = [
+    private $limits = [
         'starter'   => 5,
         'growth'    => 10,
         'pro'       => 15,

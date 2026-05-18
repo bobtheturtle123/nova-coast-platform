@@ -5,12 +5,12 @@ defined( 'ABSPATH' ) || exit;
  * Cloudflare R2 — AWS Signature V4 signed URLs. No external SDK needed.
  */
 class NCM_R2_Storage {
-    private static ?self $instance = null;
-    private string $account_id;
-    private string $access_key;
-    private string $secret_key;
-    private string $bucket;
-    private string $region = 'auto';
+    private static $instance = null;
+    private $account_id;
+    private $access_key;
+    private $secret_key;
+    private $bucket;
+    private $region = 'auto';
 
     public static function instance(): self {
         if ( null === self::$instance ) self::$instance = new self();

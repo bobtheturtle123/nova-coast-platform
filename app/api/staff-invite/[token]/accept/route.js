@@ -1,14 +1,23 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+
 import { safeDate } from "@/lib/dateUtils";
 
 export async function POST(req, { params }) {
   const { token } = params;
 
-  let body;
-  try { body = await req.json(); } catch { return Response.json({ error: "Invalid request" }, { status: 400 }); }
+  // Extract the caller's UID from their Firebase ID token — never trust client-supplied UID
+  const authHeader = req.headers.get("authorization") || "";
+  const rawToken = authHeader.replace("Bearer ", "").trim();
+  if (!rawToken) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { uid, email } = body;
-  if (!uid) return Response.json({ error: "uid required" }, { status: 400 });
+  let uid, email;
+  try {
+    const decoded = await adminAuth.verifyIdToken(rawToken);
+    uid   = decoded.uid;
+    email = decoded.email || "";
+  } catch {
+    return Response.json({ error: "Invalid token" }, { status: 401 });
+  }
 
   // O(1) lookup via top-level token index (written at invite creation time)
   let tenantId;

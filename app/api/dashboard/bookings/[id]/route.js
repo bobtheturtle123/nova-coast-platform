@@ -10,7 +10,7 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId };
+    return { tenantId: decoded.tenantId, role: decoded.role || "member" };
   } catch { return null; }
 }
 
@@ -37,6 +37,20 @@ export async function PATCH(req, { params }) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
+
+  const isPrivileged = ctx.role === "owner" || ctx.role === "admin";
+
+  // Financial overrides are restricted to owners and admins only
+  const FINANCIAL_FIELDS = new Set([
+    "depositPaid", "depositAmount", "balancePaid", "remainingBalance",
+    "offlinePaymentAmount", "offlinePaymentMethod", "offlinePaymentNote", "totalPrice",
+  ]);
+  for (const key of FINANCIAL_FIELDS) {
+    if (body[key] !== undefined && !isPrivileged) {
+      return Response.json({ error: "Insufficient permissions to modify payment fields" }, { status: 403 });
+    }
+  }
+
   const allowed = [
     // Scheduling & status
     "status", "workflowStatus", "shootDate", "shootTime", "shootDuration", "preferredTime",
@@ -52,7 +66,7 @@ export async function PATCH(req, { params }) {
     "address", "unit", "addressLine", "city", "state", "zip", "fullAddress", "squareFootage", "propertyType",
     // Services
     "packageId", "serviceIds", "addonIds", "totalPrice",
-    // Payment overrides
+    // Payment overrides (privileged only — enforced above)
     "depositPaid", "depositAmount", "balancePaid", "remainingBalance",
     "offlinePaymentAmount", "offlinePaymentMethod", "offlinePaymentNote",
   ];

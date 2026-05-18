@@ -6,7 +6,7 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId };
+    return { tenantId: decoded.tenantId, role: decoded.role || "member" };
   } catch { return null; }
 }
 
@@ -26,6 +26,10 @@ const PATCHABLE_FIELDS = new Set(["emailTemplate", "smsSettings", "calendarBlock
 export async function PATCH(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (ctx.role !== "owner" && ctx.role !== "admin") {
+    return Response.json({ error: "Insufficient permissions" }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => ({}));
   const update = {};

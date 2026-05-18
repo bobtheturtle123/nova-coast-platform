@@ -7,7 +7,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class NCM_Template_Loader {
 
-    private static ?self $instance = null;
+    private static $instance = null;
 
     public static function instance(): self {
         if ( null === self::$instance ) self::$instance = new self();

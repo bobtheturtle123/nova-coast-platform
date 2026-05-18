@@ -34,8 +34,11 @@ export default function StaffInviteClient({ token, tenantId, companyName, invite
       const idToken = await userCred.user.getIdToken();
       const res = await fetch(`/api/staff-invite/${token}/accept`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: userCred.user.uid, email: userCred.user.email }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Something went wrong."); setSubmitting(false); return; }

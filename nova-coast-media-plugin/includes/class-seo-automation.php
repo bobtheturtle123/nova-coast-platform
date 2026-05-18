@@ -2,7 +2,7 @@
 defined( 'ABSPATH' ) || exit;
 
 class NCM_SEO_Automation {
-    private static ?self $instance = null;
+    private static $instance = null;
     public static function instance(): self {
         if ( null === self::$instance ) self::$instance = new self();
         return self::$instance;
@@ -63,7 +63,7 @@ class NCM_SEO_Automation {
     private function primary_location( int $id ): string {
         $terms = get_the_terms( $id, 'asset_location' );
         if ( ! $terms || is_wp_error( $terms ) ) return '';
-        usort( $terms, fn( $a, $b ) => $b->parent <=> $a->parent );
+        usort( $terms, function( $a, $b ) { return $b->parent <=> $a->parent; } );
         return $terms[0]->name;
     }
     private function related_ids( int $id ): array {

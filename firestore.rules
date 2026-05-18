@@ -21,6 +21,12 @@ service cloud.firestore {
         && request.auth.token.tenantId == tenantId;
     }
 
+    function isTenantAdmin(tenantId) {
+      return isSignedIn()
+        && (request.auth.token.role == 'owner' || request.auth.token.role == 'admin')
+        && request.auth.token.tenantId == tenantId;
+    }
+
     function isTenantMember(tenantId) {
       return isSignedIn()
         && request.auth.token.tenantId == tenantId;
@@ -37,16 +43,18 @@ service cloud.firestore {
 
       // ── Tenant sub-collections ──────────────────────────────────────────
 
-      // Bookings: public create (booking form), tenant members read/update
+      // Bookings: all writes go through authenticated API routes (Admin SDK bypasses rules)
+      // No direct client writes allowed.
       match /bookings/{bookingId} {
-        allow create: if true;
-        allow read, update: if isTenantMember(tenantId) || isSuperAdmin();
+        allow create: if false;
+        allow read:   if isTenantMember(tenantId) || isSuperAdmin();
+        allow update: if isTenantMember(tenantId) || isSuperAdmin();
         allow delete: if isTenantOwner(tenantId) || isSuperAdmin();
       }
 
-      // Galleries: public read (token-based server-side anyway), tenant write
+      // Galleries: only tenant members and superadmin — galleries contain PII and delivery links
       match /galleries/{galleryId} {
-        allow read:  if true;
+        allow read:  if isTenantMember(tenantId) || isSuperAdmin();
         allow write: if isTenantMember(tenantId) || isSuperAdmin();
       }
 
@@ -68,6 +76,16 @@ service cloud.firestore {
         allow read:  if true;
         allow write: if isTenantOwner(tenantId) || isSuperAdmin();
       }
+    }
+
+    // Rate limit docs — server-side only, no client access
+    match /rateLimits/{docId} {
+      allow read, write: if false;
+    }
+
+    // Staff invite tokens — server-side only
+    match /staffInviteTokens/{tokenId} {
+      allow read, write: if false;
     }
   }
 }
