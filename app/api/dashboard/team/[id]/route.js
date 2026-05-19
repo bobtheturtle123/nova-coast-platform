@@ -7,13 +7,17 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId };
+    return { tenantId: decoded.tenantId, role: decoded.role || "member" };
   } catch { return null; }
 }
 
 export async function PATCH(req, { params }) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (ctx.role !== "owner" && ctx.role !== "admin") {
+    return Response.json({ error: "Insufficient permissions to manage team members" }, { status: 403 });
+  }
 
   const body = await req.json();
   const VALID_PERM_KEYS = ["canViewListings","canCreateBookings","canViewRevenue","canViewReports","canManageTeam","canManageProducts","canEditSettings"];
@@ -124,6 +128,10 @@ export async function DELETE(req, { params }) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+  if (ctx.role !== "owner" && ctx.role !== "admin") {
+    return Response.json({ error: "Insufficient permissions to manage team members" }, { status: 403 });
+  }
+
   const memberRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(params.id);
   const memberDoc = await memberRef.get();
 
@@ -138,7 +146,10 @@ export async function DELETE(req, { params }) {
       try {
         await adminAuth.setCustomUserClaims(data.uid, {});
         await adminAuth.revokeRefreshTokens(data.uid);
-      } catch { /* user may not exist */ }
+      } catch (err) {
+        console.error(`[team/delete] Failed to revoke tokens for uid=${data.uid}:`, err?.message);
+        // Non-fatal: claims will expire naturally within 1 hour
+      }
     }
 
     if (data.calendarToken) {

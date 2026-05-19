@@ -43,10 +43,20 @@ export async function POST(req) {
     const bookingRef = tenantRef.collection("bookings").doc(bookingId);
 
     const tenantSnap   = await tenantRef.get();
-    const autoConvert  = tenantSnap.data()?.bookingConfig?.autoConvertToListing === true;
+    const tenantData   = tenantSnap.data() || {};
+    const autoConvert  = tenantData.bookingConfig?.autoConvertToListing === true;
 
     const fullAddress = [address, unit, city, state, zip].filter(Boolean).join(", ");
     const finalPrice  = Number(totalPrice) || 0;
+
+    // Calculate deposit amount from tenant config (default 50%)
+    const depositPct = Math.max(0, Math.min(100, Number(tenantData.bookingConfig?.depositPercent) || 50));
+    const calculatedDeposit = finalPrice > 0 ? Math.round(finalPrice * depositPct) / 100 : 0;
+    const isDepositPaid = Boolean(depositPaid);
+    const remainingBalance = isDepositPaid
+      ? Math.max(0, finalPrice - calculatedDeposit)
+      : finalPrice;
+    const isBalancePaid = isDepositPaid && remainingBalance === 0;
 
     const bookingData = {
       id:              bookingId,
@@ -65,11 +75,11 @@ export async function POST(req) {
       preferredTime,
       notes,
       totalPrice:      finalPrice,
-      depositAmount:   0,
-      depositPaid:     Boolean(depositPaid),
-      balancePaid:     false,
-      paidInFull:      Boolean(depositPaid) && finalPrice === 0,
-      remainingBalance: finalPrice,
+      depositAmount:   calculatedDeposit,
+      depositPaid:     isDepositPaid,
+      balancePaid:     isBalancePaid,
+      paidInFull:      isDepositPaid && isBalancePaid,
+      remainingBalance,
       status,
       source,
       packageId:       packageId || null,

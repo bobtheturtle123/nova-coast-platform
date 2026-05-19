@@ -67,6 +67,19 @@ export async function POST(req, { params }) {
     return Response.json({ ok: true, scheduled: true, scheduledAt: schedTime.toISOString() });
   }
 
+  // ── Guard: no media uploaded yet ─────────────────────────────────────────
+  if (!gallery.media || gallery.media.filter((m) => !m.hidden).length === 0) {
+    return Response.json({ error: "Gallery has no media to deliver" }, { status: 400 });
+  }
+
+  // ── Idempotency: prevent duplicate sends within 60 seconds ────────────────
+  if (gallery.delivered && gallery.deliveredAt) {
+    const lastSentMs = gallery.deliveredAt?.toMillis?.() || new Date(gallery.deliveredAt).getTime();
+    if (Date.now() - lastSentMs < 60_000) {
+      return Response.json({ error: "Gallery was already delivered less than 60 seconds ago" }, { status: 409 });
+    }
+  }
+
   // ── Immediate delivery ────────────────────────────────────────────────────
   const bookingDoc = await adminDb
     .collection("tenants").doc(ctx.tenantId)

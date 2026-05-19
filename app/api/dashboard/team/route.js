@@ -8,7 +8,7 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId };
+    return { tenantId: decoded.tenantId, role: decoded.role || "member" };
   } catch { return null; }
 }
 
@@ -38,6 +38,11 @@ export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+  const isPrivileged = ctx.role === "owner" || ctx.role === "admin";
+  if (!isPrivileged) {
+    return Response.json({ error: "Insufficient permissions to manage team" }, { status: 403 });
+  }
+
   // Seat limit enforcement
   const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
   const tenant    = tenantDoc.data() || {};
@@ -57,7 +62,7 @@ export async function POST(req) {
     }
   }
 
-  const VALID_PERM_KEYS = ["canViewRevenue","canViewReports","canManageTeam","canManageProducts","canEditSettings","canCreateBookings"];
+  const VALID_PERM_KEYS = ["canViewListings","canCreateBookings","canViewRevenue","canViewReports","canManageTeam","canManageProducts","canEditSettings"];
 
   const body  = await req.json();
   const id    = uuidv4().replace(/-/g, "").slice(0, 16);

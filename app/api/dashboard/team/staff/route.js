@@ -18,7 +18,7 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId, uid: decoded.uid };
+    return { tenantId: decoded.tenantId, uid: decoded.uid, role: decoded.role || "member" };
   } catch { return null; }
 }
 
@@ -51,6 +51,10 @@ export async function GET(req) {
 export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (ctx.role !== "owner" && ctx.role !== "admin") {
+    return Response.json({ error: "Insufficient permissions to invite staff" }, { status: 403 });
+  }
 
   const { email, role, permissions } = await req.json();
   if (!email?.trim()) return Response.json({ error: "Email is required" }, { status: 400 });
@@ -143,6 +147,10 @@ export async function POST(req) {
 export async function DELETE(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (ctx.role !== "owner" && ctx.role !== "admin") {
+    return Response.json({ error: "Insufficient permissions to manage staff" }, { status: 403 });
+  }
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");

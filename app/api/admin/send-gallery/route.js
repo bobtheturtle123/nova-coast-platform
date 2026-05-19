@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { sendGalleryDelivery } from "@/lib/email";
+import { getTenantById } from "@/lib/tenants";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -30,8 +31,9 @@ export async function POST(req) {
 
     const booking = bookingSnap.data();
     const gallery = gallerySnap.data();
+    const tenant  = await getTenantById(ctx.tenantId);
 
-    await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken });
+    await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken, tenant });
     return Response.json({ ok: true });
   } catch (err) {
     console.error("Send gallery email error:", err);

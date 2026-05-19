@@ -96,9 +96,8 @@ export async function POST(req, { params }) {
     startDateTime = `${dateStr}T${paddedH}:${paddedM}:00`;
     const durationMin = Number(booking.shootDuration) > 0 ? Number(booking.shootDuration) : 120;
     const endMs = new Date(startDateTime).getTime() + durationMin * 60 * 1000;
-    endDateTime = new Date(endMs).toISOString().replace(".000Z", "");
-    // Trim to local-style datetime for use with named timezone
-    startDateTime = startDateTime;
+    // Use split('.')[0] so any non-zero ms don't leave a dangling "Z"
+    endDateTime = new Date(endMs).toISOString().split(".")[0];
   } else {
     // All-day event — GCal requires end = next day (exclusive end)
     startDateTime = null;

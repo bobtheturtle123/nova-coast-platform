@@ -46,7 +46,14 @@ export async function POST(req) {
           await adminDb.runTransaction(async (tx) => {
             const snap = await tx.get(bookingRef);
             if (!snap.exists || snap.data().depositPaid) return;
-            tx.update(bookingRef, { depositPaid: true, status: "requested", stripeDepositIntentId: pi.id });
+            const data = snap.data();
+            const newRemainingBalance = Math.max(0, (data.totalPrice || 0) - (data.depositAmount || 0));
+            tx.update(bookingRef, {
+              depositPaid: true,
+              remainingBalance: newRemainingBalance,
+              status: "requested",
+              stripeDepositIntentId: pi.id,
+            });
             shouldNotify = true;
           });
           if (shouldNotify) {
@@ -116,7 +123,13 @@ export async function POST(req) {
             const snap = await tx.get(bookingRef);
             if (!snap.exists || snap.data().balancePaid) return;
             balanceGalleryId = snap.data().galleryId || null;
-            tx.update(bookingRef, { balancePaid: true, remainingBalance: 0, status: "completed" });
+            tx.update(bookingRef, {
+              balancePaid: true,
+              paidInFull: true,
+              remainingBalance: 0,
+              status: "completed",
+              stripeBalanceIntentId: pi.id,
+            });
             balanceShouldNotify = true;
           });
           if (balanceGalleryId) {

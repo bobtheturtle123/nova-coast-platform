@@ -8,7 +8,7 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId };
+    return { tenantId: decoded.tenantId, role: decoded.role || "member" };
   } catch { return null; }
 }
 
@@ -33,10 +33,14 @@ export async function GET(req) {
   return Response.json({ items });
 }
 
-// POST /api/dashboard/products?type=packages  — create new item
+// POST /api/dashboard/products?type=packages  — create or update item
 export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (ctx.role !== "owner" && ctx.role !== "admin") {
+    return Response.json({ error: "Insufficient permissions to manage products" }, { status: 403 });
+  }
 
   const type = new URL(req.url).searchParams.get("type");
   if (!ALLOWED_TYPES.includes(type)) {

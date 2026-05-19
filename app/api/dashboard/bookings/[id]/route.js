@@ -67,12 +67,19 @@ export async function PATCH(req, { params }) {
     // Services
     "packageId", "serviceIds", "addonIds", "totalPrice",
     // Payment overrides (privileged only — enforced above)
-    "depositPaid", "depositAmount", "balancePaid", "remainingBalance",
+    "depositPaid", "depositAmount", "balancePaid", "paidInFull", "remainingBalance",
     "offlinePaymentAmount", "offlinePaymentMethod", "offlinePaymentNote",
   ];
   const update = {};
   for (const k of allowed) {
     if (body[k] !== undefined) update[k] = body[k];
+  }
+  // Auto-compute paidInFull when both deposit and balance are marked paid
+  const effectiveDeposit = update.depositPaid ?? prev.depositPaid;
+  const effectiveBalance = update.balancePaid ?? prev.balancePaid;
+  if (update.depositPaid !== undefined || update.balancePaid !== undefined) {
+    if (effectiveDeposit && effectiveBalance) update.paidInFull = true;
+    else if (!effectiveDeposit || !effectiveBalance) update.paidInFull = false;
   }
   update.updatedAt = new Date();
 

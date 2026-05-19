@@ -36,13 +36,18 @@ export async function GET(req) {
         const dayDiff = Math.round(hours / 24);
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + dayDiff);
-        const targetStr  = targetDate.toISOString().slice(0, 10);
+        const targetStr  = targetDate.toISOString().slice(0, 10); // "YYYY-MM-DD"
 
+        // shootDate can be stored as "YYYY-MM-DD" (date only) or "YYYY-MM-DDTHH:MM:SS" (ISO).
+        // Use a half-open interval [targetStr, nextDayStr) to match both forms.
+        const nextDayDate = new Date(targetDate);
+        nextDayDate.setDate(nextDayDate.getDate() + 1);
+        const nextDayStr = nextDayDate.toISOString().slice(0, 10);
         const bookingsSnap = await adminDb
           .collection("tenants").doc(tenant.id)
           .collection("bookings")
-          .where("shootDate", ">=", targetStr + "T00:00:00")
-          .where("shootDate", "<=", targetStr + "T23:59:59")
+          .where("shootDate", ">=", targetStr)
+          .where("shootDate", "<",  nextDayStr)
           .where("status", "in", ["confirmed", "requested"])
           .get();
 
