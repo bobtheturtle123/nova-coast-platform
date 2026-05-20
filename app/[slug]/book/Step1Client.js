@@ -55,7 +55,7 @@ function ProductLightbox({ item, images, price, services, onClose }) {
               <div className="flex gap-2 p-3 overflow-x-auto bg-gray-50">
                 {images.map((img, i) => (
                   <button key={i} onClick={() => setIdx(i)}
-                    className={`w-14 h-10 flex-shrink-0 rounded overflow-hidden border-2 transition-colors ${i === idx ? "border-[#3486cf]" : "border-transparent"}`}>
+                    className={`w-14 h-10 flex-shrink-0 rounded overflow-hidden border-2 transition-colors ${i === idx ? "border-brand" : "border-transparent"}`}>
                     <img src={img} alt="" className="w-full h-full object-cover" />
                   </button>
                 ))}
@@ -67,10 +67,10 @@ function ProductLightbox({ item, images, price, services, onClose }) {
         {/* Content */}
         <div className="p-6">
           <div className="flex items-start justify-between mb-3">
-            <h2 className="font-display text-2xl text-[#3486cf]">{item.name}</h2>
+            <h2 className="font-display text-2xl text-brand">{item.name}</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none ml-4">×</button>
           </div>
-          {price && <p className="font-display text-3xl text-[#3486cf] mb-4">{price}</p>}
+          {price && <p className="font-display text-3xl text-brand mb-4">{price}</p>}
           {item.description && (
             <p className="text-gray-600 leading-relaxed mb-4">{item.description}</p>
           )}
@@ -82,7 +82,7 @@ function ProductLightbox({ item, images, price, services, onClose }) {
                   const svcName = services?.find((sv) => sv.id === s)?.name || s;
                   return (
                     <li key={i} className="flex items-center gap-2 text-sm text-[#0F172A]">
-                      <span className="text-gold font-bold">✓</span>{svcName}
+                      <span className="text-accent-brand font-bold">✓</span>{svcName}
                     </li>
                   );
                 })}
@@ -183,7 +183,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
         <div className="step-container">
           <div className="max-w-md mx-auto text-center">
             <p className="section-label mb-4">Step 1 of 6</p>
-            <h1 className="font-display text-4xl text-[#3486cf] mb-3 leading-tight">{gateQuestion}</h1>
+            <h1 className="font-display text-4xl mb-3 leading-tight" style={{ color: "var(--color-primary)" }}>{gateQuestion}</h1>
             <p className="font-body text-gray-400 mb-10 leading-relaxed">{gateSubtext}</p>
 
             <div className="bg-white border border-gray-100 rounded-xl p-8 shadow-sm">
@@ -196,11 +196,12 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                 value={sqftInput}
                 onChange={(e) => setSqftInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && canConfirm && confirmSqft()}
-                className="w-full bg-transparent border-0 border-b border-gray-200 focus:border-[#3486cf] focus:ring-0 outline-none font-display text-5xl text-[#3486cf] text-center pb-3 mb-2 transition-colors"
+                className="w-full bg-transparent border-0 border-b border-gray-200 focus:ring-0 outline-none font-display text-5xl text-center pb-3 mb-2 transition-colors"
+                style={{ color: "var(--color-primary)", borderBottomColor: "var(--color-primary)" }}
               />
               <p className="text-xs text-gray-400 mb-7 tracking-widest uppercase">
                 {tier && pricingMode !== "photos" && pricingMode !== "custom"
-                  ? <span className="text-gold font-semibold">{TIER_LABELS[tier]}</span>
+                  ? <span className="text-accent-brand font-semibold">{TIER_LABELS[tier]}</span>
                   : sqftInput
                     ? `${Number(sqftInput).toLocaleString()} ${pricingMode === "photos" ? "photos" : pricingMode === "custom" ? customLabel : "sq ft"}`
                     : gateLabel
@@ -224,13 +225,13 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <p className="section-label mb-2">Step 1 of 6</p>
-            <h1 className="font-display text-4xl text-[#3486cf] mb-1">Choose your services.</h1>
+            <h1 className="font-display text-4xl text-brand mb-1">Choose your services.</h1>
             <p className="font-body text-gray-500">Select one or more packages, then add individual services below.</p>
           </div>
           {usesGate && (
             <button
               onClick={() => setConfirmed(false)}
-              className="text-xs text-gray-400 hover:text-[#3486cf] underline underline-offset-2 whitespace-nowrap pb-1"
+              className="text-xs text-gray-400 hover:text-brand underline underline-offset-2 whitespace-nowrap pb-1"
             >
               {sqftInput} {pricingMode === "photos" ? "photos" : pricingMode === "custom" ? customLabel : "sqft"}{tier && pricingMode !== "photos" && pricingMode !== "custom" ? ` · ${TIER_LABELS[tier]}` : ""} ✎
             </button>
@@ -248,13 +249,13 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                 className={clsx(
                   "relative text-left border rounded-xl transition-all duration-200 focus:outline-none overflow-hidden flex flex-col",
                   selected
-                    ? "border-[#3486cf] shadow-lg ring-2 ring-navy/20"
-                    : "border-gray-200 bg-white hover:border-[#3486cf]/40 hover:shadow-sm"
+                    ? "border-brand shadow-lg ring-2 ring-navy/20"
+                    : "border-gray-200 bg-white hover:border-brand/40 hover:shadow-sm"
                 )}>
                 {pkg.featured && (
                   <span className={clsx(
                     "absolute top-3 left-3 z-10 text-xs font-semibold px-3 py-1 rounded-full tracking-wide",
-                    selected ? "bg-gold text-[#3486cf]" : "bg-[#3486cf] text-gold"
+                    selected ? "bg-accent-brand text-brand" : "bg-brand text-accent-brand"
                   )}>Most Popular</span>
                 )}
                 {img && (
@@ -268,14 +269,14 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                     )}
                   </div>
                 )}
-                <div className={clsx("p-5 flex flex-col flex-1", selected ? "bg-[#3486cf]" : "bg-white")}>
+                <div className={clsx("p-5 flex flex-col flex-1", selected ? "bg-brand" : "bg-white")}>
                   {PACKAGE_TIER_TAGS[pkg.id] && (
-                    <p className={clsx("text-xs font-semibold uppercase tracking-wider mb-2", selected ? "text-gold" : "text-gold/80")}>
+                    <p className={clsx("text-xs font-semibold uppercase tracking-wider mb-2", selected ? "text-accent-brand" : "text-accent-brand/80")}>
                       {PACKAGE_TIER_TAGS[pkg.id]}
                     </p>
                   )}
-                  <p className={clsx("font-display text-2xl mb-1", selected ? "text-white" : "text-[#3486cf]")}>{pkg.name}</p>
-                  <p className={clsx("font-display text-3xl mb-3", selected ? "text-gold" : "text-[#3486cf]")}>
+                  <p className={clsx("font-display text-2xl mb-1", selected ? "text-white" : "text-brand")}>{pkg.name}</p>
+                  <p className={clsx("font-display text-3xl mb-3", selected ? "text-accent-brand" : "text-brand")}>
                     {displayPrice(pkg)}
                   </p>
                   <p className={clsx("text-sm mb-4 leading-relaxed flex-1", selected ? "text-white/80" : "text-gray-500")}>{pkg.tagline}</p>
@@ -284,7 +285,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                       const svc = services.find((s) => s.id === sid);
                       return (
                         <li key={sid} className={clsx("text-sm flex items-center gap-2", selected ? "text-white/90" : "text-[#0F172A]")}>
-                          <span className="text-gold font-bold">✓</span>
+                          <span className="text-accent-brand font-bold">✓</span>
                           {svc?.name || sid}
                         </li>
                       );
@@ -299,7 +300,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setLightboxItem({ item: pkg, images, price: displayPrice(pkg) }); }}
-                      className={clsx("text-xs mt-2 underline underline-offset-2 text-left", selected ? "text-white/60 hover:text-white" : "text-[#3486cf]/50 hover:text-[#3486cf]")}
+                      className={clsx("text-xs mt-2 underline underline-offset-2 text-left", selected ? "text-white/60 hover:text-white" : "text-brand/50 hover:text-brand")}
                     >
                       View details {images.length > 1 ? `(${images.length} photos)` : ""}
                     </button>
@@ -317,7 +318,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
               <span className="text-xs text-gray-400 uppercase tracking-widest">Add individual services</span>
               <div className="flex-1 h-px bg-gray-200" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-12">
+            <div className="space-y-3 mb-12">
               {services.map((svc) => {
                 const selected = serviceIds.includes(svc.id);
                 const images   = getImages(svc);
@@ -325,39 +326,66 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                 return (
                   <button key={svc.id} onClick={() => toggleService(svc.id)}
                     className={clsx(
-                      "text-left border rounded-xl transition-all duration-200 overflow-hidden focus:outline-none",
-                      selected ? "border-[#3486cf] shadow-sm ring-1 ring-navy/20" : "border-gray-200 bg-white hover:border-[#3486cf]/30"
-                    )}>
+                      "w-full text-left border rounded-2xl transition-all duration-200 overflow-hidden focus:outline-none flex",
+                      selected ? "border-brand shadow-md ring-2 ring-navy/10" : "border-gray-200 bg-white hover:shadow-sm"
+                    )}
+                    style={selected ? { borderColor: "var(--color-primary)" } : {}}
+                    onMouseEnter={(e) => { if (!selected) e.currentTarget.style.borderColor = `color-mix(in srgb, var(--color-primary) 35%, transparent)`; }}
+                    onMouseLeave={(e) => { if (!selected) e.currentTarget.style.borderColor = "#e5e7eb"; }}>
+
+                    {/* Image */}
                     {img && (
-                      <div className="relative h-36 overflow-hidden">
+                      <div className="relative w-40 sm:w-52 flex-shrink-0 overflow-hidden">
                         <img src={img} alt={svc.name} className="w-full h-full object-cover" />
                         {images.length > 1 && (
-                          <span className="absolute bottom-2 right-2 text-xs bg-black/50 text-white px-1.5 py-0.5 rounded">
+                          <span className="absolute bottom-2 right-2 text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded">
                             {images.length} photos
                           </span>
                         )}
+                        {selected && (
+                          <div className="absolute inset-0 flex items-center justify-center"
+                            style={{ backgroundColor: `color-mix(in srgb, var(--color-primary) 40%, transparent)` }}>
+                            <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow">
+                              <span className="font-bold text-base" style={{ color: "var(--color-primary)" }}>✓</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
-                    <div className={clsx("p-4 flex items-start justify-between gap-4", selected ? "bg-[#3486cf]/5" : "bg-white")}>
+
+                    {/* Content */}
+                    <div className={clsx("flex-1 flex items-center justify-between gap-4 px-6 py-5 min-w-0", selected ? "bg-brand-soft" : "bg-white")}>
                       <div className="flex-1 min-w-0">
-                        <p className={clsx("font-semibold mb-1", selected ? "text-[#3486cf]" : "text-[#0F172A]")}>{svc.name}</p>
-                        <p className="text-sm text-gray-500 line-clamp-2">{svc.description}</p>
-                        {(svc.description?.length > 80 || images.length > 0) && (
+                        <p className={clsx("font-semibold text-base mb-1", selected ? "text-brand" : "text-[#0F172A]")}
+                          style={selected ? { color: "var(--color-primary)" } : {}}>
+                          {svc.name}
+                        </p>
+                        <p className="text-sm text-gray-500 leading-relaxed line-clamp-2">{svc.description}</p>
+                        {(svc.description?.length > 60 || images.length > 0) && (
                           <button type="button"
                             onClick={(e) => { e.stopPropagation(); setLightboxItem({ item: svc, images, price: displayPrice(svc) }); }}
-                            className="text-xs text-[#3486cf]/50 hover:text-[#3486cf] underline underline-offset-2 mt-1">
-                            View details
+                            className="text-xs font-medium mt-2 underline underline-offset-2 transition-colors"
+                            style={{ color: "var(--color-primary)", opacity: 0.6 }}
+                            onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.6"; }}>
+                            View details {images.length > 1 ? `· ${images.length} photos` : ""}
                           </button>
                         )}
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className={clsx("font-display text-xl", selected ? "text-[#3486cf]" : "text-[#0F172A]")}>
+                      <div className="text-right flex-shrink-0 flex flex-col items-end gap-3">
+                        <p className="font-display text-2xl font-semibold"
+                          style={{ color: selected ? "var(--color-primary)" : "#0F172A" }}>
                           {displayPrice(svc)}
                         </p>
-                        <div className={clsx("mt-2 w-5 h-5 rounded border-2 flex items-center justify-center ml-auto",
-                          selected ? "bg-[#3486cf] border-[#3486cf]" : "border-gray-300")}>
-                          {selected && <span className="text-white text-xs">✓</span>}
-                        </div>
+                        {/* No-image cards show a checkbox; image cards show the overlay tick */}
+                        {!img && (
+                          <div className="w-6 h-6 rounded border-2 flex items-center justify-center transition-colors"
+                            style={selected
+                              ? { backgroundColor: "var(--color-primary)", borderColor: "var(--color-primary)" }
+                              : { borderColor: "#d1d5db" }}>
+                            {selected && <span className="text-white text-xs font-bold">✓</span>}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </button>

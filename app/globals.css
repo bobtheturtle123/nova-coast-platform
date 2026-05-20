@@ -344,12 +344,35 @@
 
   .section-label {
     @apply text-[11px] font-semibold tracking-[0.08em] uppercase;
-    color: var(--color-gold);
+    color: var(--color-accent, var(--color-gold));
   }
 
   .accent-bar {
     @apply pl-3;
-    border-left: 2px solid var(--color-gold);
+    border-left: 2px solid var(--color-accent, var(--color-gold));
+  }
+
+  /* ── Brand color utilities — use tenant CSS vars set by [slug]/layout ─ */
+  .text-brand          { color: var(--color-primary); }
+  .bg-brand            { background-color: var(--color-primary); }
+  .border-brand        { border-color: var(--color-primary); }
+  .text-accent-brand   { color: var(--color-accent); }
+  .bg-accent-brand     { background-color: var(--color-accent); }
+  .bg-brand-soft       { background-color: color-mix(in srgb, var(--color-primary) 7%, transparent); }
+  .bg-brand-soft-10    { background-color: color-mix(in srgb, var(--color-primary) 10%, transparent); }
+  .border-brand-soft   { border-color: color-mix(in srgb, var(--color-primary) 30%, transparent); }
+  .ring-brand          { --tw-ring-color: var(--color-primary); }
+
+  /* Booking-step primary button — uses brand color */
+  .btn-book-primary {
+    @apply inline-flex items-center justify-center gap-2 font-semibold
+           px-6 py-3.5 text-sm text-white rounded-xl w-full
+           active:scale-[0.99] transition-all duration-200
+           disabled:opacity-40 disabled:cursor-not-allowed;
+    background-color: var(--color-primary);
+  }
+  .btn-book-primary:hover:not(:disabled) {
+    filter: brightness(1.08);
   }
 
   .price-display {

@@ -28,17 +28,14 @@ function formatTime12(t) {
   return `${h}:${m} ${ampm}`;
 }
 
-function timeToMinutes(t) {
-  if (!t) return 0;
-  const [h, m] = t.split(":").map(Number);
-  return (h || 0) * 60 + (m || 0);
-}
-
 function minutesToTime(min) {
   const h = Math.floor(min / 60);
   const m = min % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
+
+const P = "var(--color-primary, #3486cf)";
+const A = "var(--color-accent, #c9a96e)";
 
 export default function TenantSchedulePage() {
   const params = useParams();
@@ -52,14 +49,14 @@ export default function TenantSchedulePage() {
     setSchedule,
   } = useBookingStore();
 
-  const [slots,                  setSlots]                  = useState(null);
-  const [slotsLoading,           setSlotsLoading]           = useState(false);
-  const [availMode,              setAvailMode]              = useState("slots");
-  const [workingDays,            setWorkingDays]            = useState(["mon","tue","wed","thu","fri"]);
-  const [catalog,                setCatalog]                = useState(null);
-  const [sunsetTime,             setSunsetTime]             = useState(null);
-  const [sunsetLoading,          setSunsetLoading]          = useState(false);
-  const [requireScheduleApproval,setRequireScheduleApproval]= useState(false);
+  const [slots,                   setSlots]                   = useState(null);
+  const [slotsLoading,            setSlotsLoading]            = useState(false);
+  const [availMode,               setAvailMode]               = useState("slots");
+  const [workingDays,             setWorkingDays]             = useState(["mon","tue","wed","thu","fri"]);
+  const [catalog,                 setCatalog]                 = useState(null);
+  const [sunsetTime,              setSunsetTime]              = useState(null);
+  const [sunsetLoading,           setSunsetLoading]           = useState(false);
+  const [requireScheduleApproval, setRequireScheduleApproval] = useState(false);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -67,7 +64,6 @@ export default function TenantSchedulePage() {
   const [calYear,  setCalYear]  = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
 
-  // Load catalog — availability config, photographer list, services
   useEffect(() => {
     fetch(`/api/tenant-public/${slug}/catalog`)
       .then((r) => r.json())
@@ -81,7 +77,6 @@ export default function TenantSchedulePage() {
       .catch(() => {});
   }, [slug]);
 
-  // Is this a twilight booking?
   const isTwilightBooking = useMemo(() => {
     if (!catalog) return false;
     const selServices = (catalog.services || []).filter((s) => serviceIds.includes(s.id));
@@ -93,13 +88,9 @@ export default function TenantSchedulePage() {
     return all.some((s) => s.isTwilight || s.name?.toLowerCase().includes("twilight"));
   }, [catalog, serviceIds, packageIds]);
 
-  // Fetch sunset time when date changes (only for twilight bookings with coordinates)
   useEffect(() => {
-    if (!isTwilightBooking || !preferredDate) return;
-    if (!lat || !lng) return;
-
+    if (!isTwilightBooking || !preferredDate || !lat || !lng) return;
     const offset = catalog?.bookingConfig?.availability?.twilightOffsetMinutes ?? 60;
-
     setSunsetLoading(true);
     setSunsetTime(null);
     fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&date=${preferredDate}&formatted=0`)
@@ -107,15 +98,10 @@ export default function TenantSchedulePage() {
       .then((data) => {
         if (data.status === "OK") {
           const sunsetDt = new Date(data.results.sunset);
-          const h = sunsetDt.getHours();
-          const m = sunsetDt.getMinutes();
-          const sunsetMin = h * 60 + m;
+          const sunsetMin = sunsetDt.getHours() * 60 + sunsetDt.getMinutes();
           const suggested = minutesToTime(sunsetMin - offset);
           setSunsetTime(suggested);
-          // Only auto-set if user hasn't manually chosen
-          if (!twilightTime) {
-            setSchedule({ twilightTime: suggested });
-          }
+          if (!twilightTime) setSchedule({ twilightTime: suggested });
         }
       })
       .catch(() => {})
@@ -123,7 +109,6 @@ export default function TenantSchedulePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTwilightBooking, preferredDate, lat, lng]);
 
-  // Reload slots when date changes
   useEffect(() => {
     if (!preferredDate) { setSlots(null); return; }
     setSlotsLoading(true);
@@ -167,49 +152,65 @@ export default function TenantSchedulePage() {
     ? new Date(preferredDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
     : null;
 
-  const canContinue = preferredDate && preferredTime &&
-    (!isTwilightBooking || twilightTime);
-
+  const canContinue = preferredDate && preferredTime && (!isTwilightBooking || twilightTime);
   const photographers = catalog?.photographers || [];
 
+  // Progressive right-panel step
+  const rightStep = !preferredDate ? "idle"
+    : !preferredTime ? "time"
+    : isTwilightBooking && !twilightTime ? "twilight"
+    : "confirm";
+
   return (
-    <>
+    <div className="min-h-screen">
       <StepProgress current={5} />
-      <div className="step-container">
-        <div className="mb-8">
+
+      <div className="max-w-5xl mx-auto px-4 pb-16">
+        {/* Page header */}
+        <div className="pt-4 pb-8">
           <p className="section-label mb-2">Step 5 of 6</p>
-          <h1 className="font-display text-4xl text-[#3486cf] mb-3">When works for you?</h1>
-          <p className="font-body text-gray-500">
+          <h1 className="font-display text-3xl font-semibold" style={{ color: P }}>
+            When works for you?
+          </h1>
+          <p className="text-sm text-gray-500 mt-1 font-body">
             {isTwilightBooking
-              ? "Select a date and two times — one for the daytime shoot and one for the twilight shoot."
+              ? "Select a date, daytime, and twilight time below."
               : "Select a date and available time below."}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-3xl">
-          {/* Calendar */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
+        {/* Two-panel */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 items-start">
+
+          {/* ── Left: Calendar ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            {/* Month navigation */}
+            <div className="flex items-center justify-between mb-6">
               <button onClick={prevMonth} disabled={isPrevDisabled}
-                className={`p-1.5 rounded-xl transition-colors ${isPrevDisabled ? "text-gray-200 cursor-not-allowed" : "text-[#3486cf] hover:bg-[#3486cf]/5"}`}>
+                className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50"
+                style={isPrevDisabled ? {} : { color: P }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-              <p className="font-semibold text-[#0F172A] text-sm">{MONTHS[calMonth]} {calYear}</p>
-              <button onClick={nextMonth} className="p-1.5 rounded-xl text-[#3486cf] hover:bg-[#3486cf]/5 transition-colors">
+              <p className="text-base font-semibold text-[#0F172A]">{MONTHS[calMonth]} {calYear}</p>
+              <button onClick={nextMonth}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors"
+                style={{ color: P }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </button>
             </div>
 
-            <div className="grid grid-cols-7 mb-1">
+            {/* Day-of-week labels */}
+            <div className="grid grid-cols-7 mb-2">
               {DAYS.map((d) => (
-                <div key={d} className="text-center text-xs font-semibold text-gray-400 py-1">{d}</div>
+                <div key={d} className="text-center text-[11px] font-semibold text-gray-300 py-1 tracking-wide">{d}</div>
               ))}
             </div>
 
+            {/* Day cells */}
             <div className="grid grid-cols-7 gap-y-1">
               {cells.map((day, i) => {
                 if (!day) return <div key={`e-${i}`} />;
@@ -217,21 +218,31 @@ export default function TenantSchedulePage() {
                 cellDate.setHours(0, 0, 0, 0);
                 const DAY_KEYS  = ["sun","mon","tue","wed","thu","fri","sat"];
                 const dayKey    = DAY_KEYS[cellDate.getDay()];
-                const isPast     = cellDate < today;
-                const isOffDay   = !workingDays.includes(dayKey);
+                const isPast    = cellDate < today;
+                const isOffDay  = !workingDays.includes(dayKey);
                 const isDisabled = isPast || isOffDay;
-                const isToday    = cellDate.getTime() === today.getTime();
+                const isToday   = cellDate.getTime() === today.getTime();
                 const isSelected = selectedYear === calYear && selectedMonth === calMonth && selectedDay === day;
+
                 return (
-                  <button key={day} onClick={() => selectDay(day)} disabled={isDisabled}
-                    className={`relative mx-auto w-9 h-9 rounded-full text-sm transition-all duration-100 font-medium
-                      ${isDisabled ? "text-gray-200 cursor-not-allowed" : "cursor-pointer"}
-                      ${isSelected ? "bg-[#3486cf] text-white shadow-sm"
-                        : isToday  ? "border border-[#3486cf]/30 text-[#3486cf] hover:bg-[#3486cf]/5"
-                        : !isDisabled ? "text-[#0F172A] hover:bg-[#3486cf]/8" : ""}`}>
+                  <button key={day} onClick={() => !isDisabled && selectDay(day)} disabled={isDisabled}
+                    className={`relative mx-auto w-10 h-10 rounded-full text-sm transition-all duration-150 font-medium flex items-center justify-center
+                      ${isDisabled ? "text-gray-200 cursor-not-allowed" : "cursor-pointer"}`}
+                    style={
+                      isSelected
+                        ? { backgroundColor: P, color: "white" }
+                        : isToday
+                        ? { border: `1.5px solid color-mix(in srgb, ${P} 40%, transparent)`, color: P }
+                        : !isDisabled
+                        ? {}
+                        : {}
+                    }
+                    onMouseEnter={(e) => { if (!isDisabled && !isSelected) e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${P} 8%, transparent)`; }}
+                    onMouseLeave={(e) => { if (!isDisabled && !isSelected) e.currentTarget.style.backgroundColor = "transparent"; }}
+                  >
                     {day}
                     {isToday && !isSelected && (
-                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#3486cf]/40" />
+                      <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ backgroundColor: P, opacity: 0.5 }} />
                     )}
                   </button>
                 );
@@ -239,160 +250,230 @@ export default function TenantSchedulePage() {
             </div>
 
             {formattedDate && (
-              <p className="mt-4 text-xs text-center text-[#3486cf] font-medium border-t border-gray-100 pt-3">
+              <p className="mt-5 text-xs text-center font-medium border-t border-gray-100 pt-4" style={{ color: P }}>
                 {formattedDate}
               </p>
             )}
           </div>
 
-          {/* Time slots */}
-          <div className="space-y-5">
-            {/* Daytime slot */}
-            <div>
-              <p className="font-semibold text-[#0F172A] text-sm uppercase tracking-wider mb-3">
-                {isTwilightBooking ? "Daytime Shoot Time" : "Available Times"}
-              </p>
+          {/* ── Right: Progressive step panel ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div key={rightStep} className="animate-fade-up">
 
-              {!preferredDate ? (
-                <p className="text-sm text-gray-400">Select a date to see available times.</p>
-              ) : slotsLoading ? (
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <span className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
-                  Checking availability…
-                </div>
-              ) : slots && slots.length === 0 ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
-                  No available times on this date. Please choose another day.
-                </div>
-              ) : slots ? (
-                <div className="grid grid-cols-3 gap-2">
-                  {slots.map((t) => (
-                    <button key={t} type="button"
-                      onClick={() => setSchedule({ preferredTime: t })}
-                      className={`py-2.5 px-2 border rounded-xl text-sm font-medium text-center transition-all duration-150
-                        ${preferredTime === t
-                          ? "border-[#3486cf] bg-[#3486cf] text-white shadow-sm"
-                          : "border-gray-200 text-[#0F172A] hover:border-[#3486cf]/30 hover:bg-gray-50"
-                        }`}>
-                      {formatTime12(t)}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
-            {/* Twilight time picker */}
-            {isTwilightBooking && preferredDate && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <p className="font-semibold text-[#0F172A] text-sm uppercase tracking-wider">Twilight Shoot Time</p>
-                  <span className="text-xs text-amber-600 font-medium">🌅 Sunset-based</span>
-                </div>
-
-                {sunsetLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                    <span className="w-3 h-3 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
-                    Calculating sunset time…
+              {/* STEP: idle — no date picked */}
+              {rightStep === "idle" && (
+                <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 bg-gray-50">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-300">
+                      <rect x="3" y="4" width="18" height="18" rx="3"/>
+                      <path d="M8 2v4M16 2v4M3 10h18"/>
+                    </svg>
                   </div>
-                ) : sunsetTime ? (
-                  <p className="text-xs text-gray-500 mb-2">
-                    Sunset for this location: ~{formatTime12(sunsetTime)}
-                    {catalog?.bookingConfig?.availability?.twilightOffsetMinutes
-                      ? ` (default is ${catalog.bookingConfig.availability.twilightOffsetMinutes} min before sunset)`
-                      : ""}
-                  </p>
-                ) : !lat || !lng ? (
-                  <p className="text-xs text-amber-600 mb-2">
-                    Use address autocomplete on the property step to auto-calculate sunset time.
-                  </p>
-                ) : null}
+                  <p className="text-sm font-semibold text-[#0F172A] mb-1">Pick a date</p>
+                  <p className="text-xs text-gray-400 leading-relaxed">Select a date on the calendar to see available times.</p>
+                </div>
+              )}
 
-                <div className="flex items-center gap-3">
-                  <input
-                    type="time"
+              {/* STEP: time — pick a time slot */}
+              {rightStep === "time" && (
+                <div className="p-6">
+                  <div className="mb-5">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-gray-400 mb-1">
+                      {isTwilightBooking ? "Daytime" : "Available Times"}
+                    </p>
+                    <p className="text-base font-semibold text-[#0F172A]">{formattedDate}</p>
+                  </div>
+
+                  {slotsLoading ? (
+                    <div className="flex items-center gap-2.5 py-8 justify-center">
+                      <span className="w-4 h-4 border-2 rounded-full animate-spin border-gray-200" style={{ borderTopColor: P }} />
+                      <span className="text-sm text-gray-400">Checking availability…</span>
+                    </div>
+                  ) : slots && slots.length === 0 ? (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
+                      No available times on this date. Please choose another day.
+                    </div>
+                  ) : slots ? (
+                    <div className="space-y-2">
+                      {slots.map((t) => (
+                        <button key={t} type="button"
+                          onClick={() => setSchedule({ preferredTime: t })}
+                          className="w-full py-3.5 px-5 rounded-xl text-sm font-medium border text-center transition-all duration-150"
+                          style={preferredTime === t
+                            ? { borderColor: P, backgroundColor: P, color: "white" }
+                            : { borderColor: "#e5e7eb", color: "#374151" }}
+                          onMouseEnter={(e) => { if (preferredTime !== t) { e.currentTarget.style.borderColor = P; e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${P} 6%, transparent)`; } }}
+                          onMouseLeave={(e) => { if (preferredTime !== t) { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.backgroundColor = "transparent"; } }}>
+                          {formatTime12(t)}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {availMode !== "real" && slots?.length > 0 && (
+                    <p className="text-[11px] text-gray-400 mt-4 leading-relaxed">
+                      Select your preferred time. We&apos;ll confirm via email within 24 hours.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* STEP: twilight — pick twilight time after daytime */}
+              {rightStep === "twilight" && (
+                <div className="p-6">
+                  <button onClick={() => setSchedule({ preferredTime: "" })}
+                    className="text-xs text-gray-400 hover:text-gray-600 mb-5 flex items-center gap-1 transition-colors">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Change daytime
+                  </button>
+
+                  <div className="mb-5">
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-gray-400 mb-1">🌅 Twilight Shoot</p>
+                    <p className="text-base font-semibold text-[#0F172A]">{formattedDate}</p>
+                    <p className="text-sm text-gray-500 mt-0.5">Daytime: {formatTime12(preferredTime)}</p>
+                  </div>
+
+                  {sunsetLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
+                      <span className="w-3 h-3 border-2 rounded-full animate-spin border-gray-200" style={{ borderTopColor: P }} />
+                      Calculating sunset…
+                    </div>
+                  ) : sunsetTime ? (
+                    <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-4 text-xs text-amber-700">
+                      Suggested twilight time: <strong>{formatTime12(sunsetTime)}</strong>
+                      {catalog?.bookingConfig?.availability?.twilightOffsetMinutes
+                        ? ` (${catalog.bookingConfig.availability.twilightOffsetMinutes} min before sunset)`
+                        : ""}
+                    </div>
+                  ) : (!lat || !lng) ? (
+                    <p className="text-xs text-amber-600 mb-4">Use address autocomplete to auto-calculate sunset time.</p>
+                  ) : null}
+
+                  <label className="label-field">Twilight Start Time</label>
+                  <input type="time"
                     value={twilightTime || sunsetTime || ""}
                     onChange={(e) => setSchedule({ twilightTime: e.target.value })}
-                    className="input-field text-sm w-36"
-                  />
+                    className="input-field w-full mb-3" />
+
                   {sunsetTime && (
                     <button type="button"
                       onClick={() => setSchedule({ twilightTime: sunsetTime })}
-                      className="text-xs text-[#3486cf] hover:underline">
+                      className="text-xs font-medium hover:underline" style={{ color: P }}>
                       Reset to sunset default
                     </button>
                   )}
                 </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  Twilight shoots often run past normal business hours — this is expected.
-                </p>
-                {twilightTime && (
-                  <p className="text-xs text-[#3486cf] font-medium mt-2">
-                    Twilight: {formatTime12(twilightTime)}
-                  </p>
-                )}
-              </div>
-            )}
+              )}
 
-            {preferredTime && !isTwilightBooking && (
-              <p className="text-xs text-[#3486cf] font-medium">
-                Selected: {formatTime12(preferredTime)} on {formattedDate}
-              </p>
-            )}
-            {preferredTime && isTwilightBooking && twilightTime && (
-              <div className="bg-[#3486cf]/5 rounded-xl px-3 py-2 text-xs text-[#3486cf] font-medium space-y-0.5">
-                <p>Daytime: {formatTime12(preferredTime)}</p>
-                <p>Twilight: {formatTime12(twilightTime)}</p>
-                <p className="text-[#3486cf]/50 font-normal">{formattedDate}</p>
-              </div>
-            )}
+              {/* STEP: confirm */}
+              {rightStep === "confirm" && (
+                <div className="p-6">
+                  <button onClick={() => setSchedule({ preferredTime: "" })}
+                    className="text-xs text-gray-400 hover:text-gray-600 mb-6 flex items-center gap-1 transition-colors">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Change time
+                  </button>
 
-            <p className="text-xs text-gray-400">
-              {availMode === "real"
-                ? "Times shown reflect real availability. Your booking will be confirmed within 24 hours."
-                : "Select your preferred time. We'll confirm via email within 24 hours."}
-            </p>
+                  {/* Summary */}
+                  <div className="rounded-xl border border-gray-100 p-5 mb-6"
+                    style={{ backgroundColor: `color-mix(in srgb, ${P} 4%, transparent)`, borderColor: `color-mix(in srgb, ${P} 20%, transparent)` }}>
+                    <div className="space-y-2.5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `color-mix(in srgb, ${P} 12%, transparent)` }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: P }}>
+                            <rect x="3" y="4" width="18" height="18" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Date</p>
+                          <p className="text-sm font-semibold text-[#0F172A]">{formattedDate}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `color-mix(in srgb, ${P} 12%, transparent)` }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: P }}>
+                            <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l4 2"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">
+                            {isTwilightBooking ? "Daytime" : "Time"}
+                          </p>
+                          <p className="text-sm font-semibold text-[#0F172A]">{formatTime12(preferredTime)}</p>
+                        </div>
+                      </div>
+                      {isTwilightBooking && twilightTime && (
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-amber-50">
+                            <span className="text-sm">🌅</span>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Twilight</p>
+                            <p className="text-sm font-semibold text-[#0F172A]">{formatTime12(twilightTime)}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-            {requireScheduleApproval && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
-                <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-amber-500 flex-shrink-0 mt-0.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                </svg>
-                <p className="text-xs text-amber-700 leading-relaxed">
-                  <strong>Time not guaranteed.</strong> Your selected time is a preference. Our team will review availability and confirm your exact shoot time by email within 24 hours.
-                </p>
-              </div>
-            )}
+                  {requireScheduleApproval && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 flex items-start gap-2.5">
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-amber-500 flex-shrink-0 mt-0.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                      </svg>
+                      <p className="text-xs text-amber-700 leading-relaxed">
+                        <strong>Time not guaranteed.</strong> Our team will confirm your exact time within 24 hours.
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => router.push(`/${slug}/book/payment`)}
+                    disabled={!canContinue}
+                    className="btn-book-primary">
+                    Continue to Payment →
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Photographer selection */}
         {photographers.length > 0 && (
-          <div className="max-w-3xl mt-8">
-            <p className="font-semibold text-[#0F172A] text-sm uppercase tracking-wider mb-3">
-              Preferred Photographer <span className="font-normal text-gray-400 normal-case text-xs">(optional)</span>
+          <div className="mt-8">
+            <p className="text-[11px] font-semibold tracking-widest uppercase text-gray-400 mb-4">
+              Preferred Photographer <span className="font-normal normal-case text-gray-300">(optional)</span>
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
               <button type="button"
                 onClick={() => setSchedule({ photographerId: null })}
-                className={`p-3 border rounded-xl text-center transition-colors ${
-                  !photographerId ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300"
-                }`}>
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2 text-gray-400 text-lg">
-                  ?
-                </div>
-                <p className="text-xs font-medium text-gray-600">No preference</p>
+                className="p-4 border rounded-2xl text-center transition-all"
+                style={!photographerId
+                  ? { borderColor: P, backgroundColor: `color-mix(in srgb, ${P} 5%, transparent)` }
+                  : { borderColor: "#e5e7eb" }}
+                onMouseEnter={(e) => { if (photographerId) e.currentTarget.style.borderColor = "#d1d5db"; }}
+                onMouseLeave={(e) => { if (photographerId) e.currentTarget.style.borderColor = "#e5e7eb"; }}>
+                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2 text-gray-400 text-lg">?</div>
+                <p className="text-xs font-medium text-gray-500">No preference</p>
               </button>
               {photographers.map((p) => (
                 <button key={p.id} type="button"
                   onClick={() => setSchedule({ photographerId: p.id })}
-                  className={`p-3 border rounded-xl text-center transition-colors ${
-                    photographerId === p.id ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300"
-                  }`}>
+                  className="p-4 border rounded-2xl text-center transition-all"
+                  style={photographerId === p.id
+                    ? { borderColor: P, backgroundColor: `color-mix(in srgb, ${P} 5%, transparent)` }
+                    : { borderColor: "#e5e7eb" }}
+                  onMouseEnter={(e) => { if (photographerId !== p.id) e.currentTarget.style.borderColor = "#d1d5db"; }}
+                  onMouseLeave={(e) => { if (photographerId !== p.id) e.currentTarget.style.borderColor = "#e5e7eb"; }}>
                   {p.photoUrl ? (
-                    <img src={p.photoUrl} alt={p.name}
-                      className="w-10 h-10 rounded-full object-cover mx-auto mb-2" />
+                    <img src={p.photoUrl} alt={p.name} className="w-12 h-12 rounded-full object-cover mx-auto mb-2" />
                   ) : (
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 text-white text-sm font-bold"
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 text-white text-sm font-bold"
                       style={{ background: p.color || "#6B7280" }}>
                       {p.name?.[0]?.toUpperCase()}
                     </div>
@@ -404,14 +485,11 @@ export default function TenantSchedulePage() {
           </div>
         )}
 
-        <div className="flex justify-between mt-8 max-w-3xl">
+        {/* Back button */}
+        <div className="mt-8">
           <button onClick={() => router.push(`/${slug}/book/review`)} className="btn-outline">← Back</button>
-          <button onClick={() => router.push(`/${slug}/book/payment`)} disabled={!canContinue}
-            className="btn-primary px-12">
-            Continue →
-          </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }
