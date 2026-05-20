@@ -55,7 +55,7 @@ export async function POST(req, { params }) {
       : (rawPkgId ? [rawPkgId] : []);
     const packageId = packageIds[0] ?? null; // backward-compat field
 
-    if (!clientName || !clientEmail || !clientPhone) {
+    if (!clientName || !clientEmail) {
       return Response.json({ error: "Missing client information" }, { status: 400 });
     }
 

@@ -1301,7 +1301,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
           : "confirm";
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ maxHeight: "min(90vh, 620px)" }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ height: "min(90vh, 600px)" }}>
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
                 <h3 className="font-semibold text-[#0F172A]">Date &amp; Time</h3>
                 <button type="button" onClick={() => setShowSchedulePopup(false)}
@@ -1369,7 +1369,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                       </p>
                       <p className="text-sm font-semibold text-gray-800 mb-3">Choose a start time</p>
                       {loadingSlots && <p className="text-[11px] text-gray-400 mb-2 italic">Checking availability…</p>}
-                      <div className="space-y-1.5">
+                      <div className="grid grid-cols-3 gap-1.5 mb-3">
                         {TIME_SLOTS.map((slot) => {
                           const isUnavail  = unavailableSlots.has(slot.value);
                           const isDirectly = busySlots.has(slot.value);
@@ -1378,23 +1378,18 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                             <button key={slot.value} type="button"
                               onClick={() => { if (!isUnavail) setForm(f => ({ ...f, shootTime: slot.value })); }}
                               disabled={isUnavail}
-                              className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-all flex items-center justify-between ${
+                              className={`py-2 px-1 rounded-lg border text-[12px] font-medium text-center transition-all leading-tight ${
                                 isSelected ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
                                 : isUnavail ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
-                                : "border-gray-200 text-gray-700 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
+                                : "border-gray-200 text-gray-600 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
                               }`}>
-                              <span>{slot.label}</span>
-                              {isUnavail && <span className="text-[10px]">{isDirectly ? "busy" : "unavailable"}</span>}
-                              {isSelected && (
-                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
-                                </svg>
-                              )}
+                              <span className="block">{slot.label}</span>
+                              {isUnavail && <span className="block text-[9px] leading-none mt-0.5 text-gray-300">{isDirectly ? "busy" : "—"}</span>}
                             </button>
                           );
                         })}
                       </div>
-                      <div className="mt-3 flex items-center gap-2 pt-3 border-t border-gray-100">
+                      <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                         <span className="text-[11px] text-gray-400">Custom:</span>
                         <input type="time" value={form.shootTime}
                           onChange={(e) => setForm(f => ({ ...f, shootTime: e.target.value }))}
