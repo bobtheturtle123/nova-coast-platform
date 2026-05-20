@@ -144,6 +144,7 @@ export default function ServiceAreasPage() {
   const [teamMembers,  setTeamMembers]  = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [mapsReady,    setMapsReady]    = useState(false);
+  const [mapError,     setMapError]     = useState(false);
   const [editing,      setEditing]      = useState(null);
   const [drawingMode,  setDrawingMode]  = useState(false);
   const [pendingPaths, setPendingPaths] = useState(null);
@@ -207,12 +208,20 @@ export default function ServiceAreasPage() {
     mapLoadedRef.current = true;
     window.mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    const map = new window.mapboxgl.Map({
-      container: mapContainerRef.current,
-      style:     "mapbox://styles/mapbox/streets-v12",
-      center:    [-118.2437, 34.0522],
-      zoom:      9,
-    });
+    let map;
+    try {
+      map = new window.mapboxgl.Map({
+        container: mapContainerRef.current,
+        style:     "mapbox://styles/mapbox/streets-v12",
+        center:    [-118.2437, 34.0522],
+        zoom:      9,
+      });
+    } catch (err) {
+      console.error("[service-areas] Map init failed:", err?.message);
+      mapLoadedRef.current = false;
+      setMapError(true);
+      return;
+    }
     mapRef.current = map;
 
     const draw = new window.MapboxDraw({
@@ -430,12 +439,17 @@ export default function ServiceAreasPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
           <div className="card-section" style={{ height: 520 }}>
-            {!mapsReady && (
+            {mapError ? (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-center px-6">
+                <p className="text-sm font-medium text-gray-600">Map unavailable</p>
+                <p className="text-xs text-gray-400">Your browser could not initialize WebGL. Try a different browser or device.</p>
+              </div>
+            ) : !mapsReady ? (
               <div className="w-full h-full flex items-center justify-center">
                 <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
               </div>
-            )}
-            <div ref={mapContainerRef} className="w-full h-full" />
+            ) : null}
+            <div ref={mapContainerRef} className={`w-full h-full${mapError ? " hidden" : ""}`} />
           </div>
         </div>
 
