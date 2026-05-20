@@ -391,6 +391,41 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
     }));
   }
 
+  const [savingClient, setSavingClient] = useState(false);
+  const [clientSaved,  setClientSaved]  = useState(false);
+
+  const clientIsKnown = !!agents.find(
+    (a) => a.email?.toLowerCase() === form.clientEmail?.toLowerCase()
+  );
+
+  async function saveNewClient() {
+    if (!form.clientName || !form.clientEmail) return;
+    setSavingClient(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/agents", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: form.clientName, email: form.clientEmail, phone: form.clientPhone }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 409) {
+          setClientSaved(true);
+        } else {
+          alert(data.error || "Failed to save customer.");
+        }
+      } else {
+        setAgents((prev) => [...prev, { id: data.agentId, name: form.clientName, email: form.clientEmail, phone: form.clientPhone }]);
+        setClientSaved(true);
+      }
+    } catch {
+      alert("Failed to save customer.");
+    } finally {
+      setSavingClient(false);
+    }
+  }
+
   function toggleService(id) {
     setForm((f) => ({ ...f, serviceIds: f.serviceIds.includes(id) ? f.serviceIds.filter((x) => x !== id) : [...f.serviceIds, id] }));
   }
@@ -558,10 +593,11 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                 <AutocompleteInput
                   label="Email" type="email" required
                   value={form.clientEmail}
-                  onChange={(v) => setForm((f) => ({ ...f, clientEmail: v }))}
+                  onChange={(v) => { setForm((f) => ({ ...f, clientEmail: v })); setClientSaved(false); }}
                   onSelect={(email) => {
                     const agent = agents.find((a) => a.email === email);
                     if (agent) fillClient(agent); else setForm((f) => ({ ...f, clientEmail: email }));
+                    setClientSaved(false);
                   }}
                   suggestions={agentEmailSuggestions}
                   placeholder="jane@example.com"
@@ -572,6 +608,22 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                     className="input-field w-full" placeholder="(555) 555-5555" />
                 </div>
               </div>
+              {form.clientName && form.clientEmail && !clientIsKnown && (
+                <div className="mt-2 flex items-center gap-2">
+                  {clientSaved ? (
+                    <span className="text-xs text-green-600 font-medium">✓ Saved to customers</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={saveNewClient}
+                      disabled={savingClient}
+                      className="text-xs text-[#3486cf] hover:underline disabled:opacity-50"
+                    >
+                      {savingClient ? "Saving..." : "+ Save as new customer"}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Property */}

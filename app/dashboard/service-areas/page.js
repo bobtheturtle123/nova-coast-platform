@@ -250,16 +250,14 @@ export default function ServiceAreasPage() {
       setDrawingMode(false);
     });
 
-    map.on("load", () => renderZones());
+    map.on("load", () => renderZonesRef.current?.());
     }); // end requestAnimationFrame
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapsReady]);
 
-  // Keep a ref so the map's load callback always reads the latest zones
-  const zonesRef = useRef(zones);
-  useEffect(() => { zonesRef.current = zones; }, [zones]);
+  // renderZonesRef is assigned each render so the map load handler always calls the latest version
+  const renderZonesRef = useRef(null);
 
-  // Re-render zones — reads from zonesRef so the closure never goes stale
   const renderZones = useCallback(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
@@ -272,7 +270,7 @@ export default function ServiceAreasPage() {
         .filter((s) => s.startsWith("zone-"))
         .forEach((s) => { try { if (map.getSource(s)) map.removeSource(s); } catch {} });
 
-      zonesRef.current.forEach((zone) => {
+      zones.forEach((zone) => {
         if (!zone.paths?.length) return;
         const srcId   = `zone-${zone.id}`;
         const fillId  = `zone-fill-${zone.id}`;
@@ -284,34 +282,25 @@ export default function ServiceAreasPage() {
           type: "geojson",
           data: { type: "Feature", geometry: { type: "Polygon", coordinates: [coords] } },
         });
-        map.addLayer({
-          id: fillId, type: "fill", source: srcId,
-          paint: { "fill-color": color, "fill-opacity": 0.2 },
-        });
-        map.addLayer({
-          id: lineId, type: "line", source: srcId,
-          paint: { "line-color": color, "line-width": 2 },
-        });
-        map.on("click", fillId, () => setEditing(zonesRef.current.find((z) => z.id === zone.id) || zone));
+        map.addLayer({ id: fillId, type: "fill",   source: srcId, paint: { "fill-color": color, "fill-opacity": 0.2 } });
+        map.addLayer({ id: lineId, type: "line",   source: srcId, paint: { "line-color": color, "line-width": 2 } });
+        map.on("click",      fillId, () => setEditing(zone));
         map.on("mouseenter", fillId, () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", fillId, () => { map.getCanvas().style.cursor = ""; });
       });
     } catch (err) {
       console.error("[service-areas] renderZones error:", err?.message);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // stable — reads zones via zonesRef, never goes stale
+  }, [zones]);
 
-  // Re-render whenever zones change (works regardless of load order)
+  // Keep ref current every render (synchronous, no effect delay)
+  renderZonesRef.current = renderZones;
+
+  // Re-render whenever zones change; if map isn't loaded yet the load handler above covers it
   useEffect(() => {
-    zonesRef.current = zones;
     const map = mapRef.current;
-    if (!map) return;
-    if (map.isStyleLoaded()) {
-      renderZones();
-    } else {
-      map.once("load", renderZones);
-    }
+    if (!map || !map.isStyleLoaded()) return;
+    renderZones();
   }, [zones, renderZones]);
 
   function startDrawing() {
