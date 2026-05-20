@@ -138,6 +138,8 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   const [serviceArea,       setServiceArea]       = useState(null);
   const [showSchedulePopup,  setShowSchedulePopup]  = useState(false);
   const [apptPopupIdx,       setApptPopupIdx]       = useState(null);
+  const [calYear,            setCalYear]            = useState(() => new Date().getFullYear());
+  const [calMonth,           setCalMonth]           = useState(() => new Date().getMonth());
   const [showServicesModal,  setShowServicesModal]  = useState(false);
   const [servicesSearch,     setServicesSearch]     = useState("");
   const [confirmedAddress,  setConfirmedAddress]  = useState(init.address || "");
@@ -381,6 +383,15 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.address, form.lat, form.lng]);
 
+  useEffect(() => {
+    if (showSchedulePopup) {
+      const d = form.shootDate ? new Date(form.shootDate + "T12:00:00") : new Date();
+      setCalYear(d.getFullYear());
+      setCalMonth(d.getMonth());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSchedulePopup]);
+
   function set(key) { return (e) => setForm((f) => ({ ...f, [key]: e.target.value })); }
 
   function fillClient(agent) {
@@ -559,8 +570,8 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   );
 
   return (
-    <div className="px-6 py-8 xl:px-10">
-      <div className="flex items-center gap-3 mb-8">
+    <div className="p-6 max-w-6xl">
+      <div className="flex items-center gap-3 mb-6">
         <Link href={backHref} className="text-sm text-gray-400 hover:text-[#3486cf]">{backLabel}</Link>
         <span className="text-gray-300">/</span>
         <h1 className="page-title">{pageTitle}</h1>
@@ -571,7 +582,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
       )}
 
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
           {/* ── LEFT: Client, Property, Services ─────────────────── */}
           <div className="space-y-4">
@@ -1274,129 +1285,224 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
       )}
 
       {/* ── Schedule popup ─────────────────────────────────── */}
-      {showSchedulePopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
-              <h3 className="font-semibold text-[#0F172A]">Date &amp; Time</h3>
-              <button type="button" onClick={() => setShowSchedulePopup(false)}
-                className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
-            </div>
-            <div className="px-5 py-4 space-y-5">
-              <div>
-                <label className="label-field">Shoot Date</label>
-                <input type="date" value={form.shootDate} onChange={set("shootDate")} className="input-field w-full" />
+      {showSchedulePopup && (() => {
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+        const firstDay = new Date(calYear, calMonth, 1).getDay();
+        const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+        const cells = [];
+        for (let i = 0; i < firstDay; i++) cells.push(null);
+        for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+        while (cells.length % 7 !== 0) cells.push(null);
+        const monthLabel = new Date(calYear, calMonth, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
+        const rightStep = !form.shootDate ? "idle"
+          : !form.shootTime ? "time"
+          : form.shootDuration === "" && computedDuration === 0 ? "duration"
+          : "confirm";
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ maxHeight: "min(90vh, 620px)" }}>
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
+                <h3 className="font-semibold text-[#0F172A]">Date &amp; Time</h3>
+                <button type="button" onClick={() => setShowSchedulePopup(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
               </div>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="label-field">Start Time</label>
-                  <div className="flex items-center gap-2">
-                    {loadingSlots && (
-                      <span className="text-[11px] text-gray-400">Checking availability…</span>
-                    )}
-                    {form.shootTime && (
-                      <span className="text-xs font-semibold text-[#3486cf]">
-                        {(() => { const [hh, mm] = form.shootTime.split(":"); const h = Number(hh); const sfx = h >= 12 ? "PM" : "AM"; return `${h % 12 || 12}:${mm} ${sfx}`; })()}
-                      </span>
-                    )}
+              <div className="flex flex-1 overflow-hidden min-h-0">
+                {/* Left: visual calendar */}
+                <div className="w-64 flex-shrink-0 border-r border-gray-100 p-4 overflow-y-auto">
+                  <div className="flex items-center justify-between mb-3">
+                    <button type="button"
+                      onClick={() => { if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); } else setCalMonth(m => m - 1); }}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors text-lg">‹</button>
+                    <span className="text-xs font-semibold text-gray-700">{monthLabel}</span>
+                    <button type="button"
+                      onClick={() => { if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0); } else setCalMonth(m => m + 1); }}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors text-lg">›</button>
+                  </div>
+                  <div className="grid grid-cols-7 mb-1">
+                    {["S","M","T","W","T","F","S"].map((d, i) => (
+                      <div key={i} className="text-center text-[9px] font-bold text-gray-400 pb-1">{d}</div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-px">
+                    {cells.map((d, i) => {
+                      if (!d) return <div key={i} className="aspect-square" />;
+                      const ds = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                      const isSel = form.shootDate === ds;
+                      const isPast = ds < todayStr;
+                      const isToday = ds === todayStr;
+                      return (
+                        <button key={i} type="button" disabled={isPast}
+                          onClick={() => !isPast && setForm(f => ({ ...f, shootDate: ds }))}
+                          className={`aspect-square rounded-lg text-[12px] font-medium flex items-center justify-center transition-all leading-none ${
+                            isPast ? "text-gray-300 cursor-not-allowed"
+                            : isSel ? "text-white"
+                            : isToday ? "font-bold"
+                            : "text-gray-700 hover:bg-gray-100"
+                          }`}
+                          style={isSel ? { backgroundColor: "#3486cf" } : isToday && !isSel ? { color: "#3486cf" } : {}}>
+                          {d}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 mb-2">
-                  {TIME_SLOTS.map((slot) => {
-                    const isUnavail  = unavailableSlots.has(slot.value);
-                    const isDirectly = busySlots.has(slot.value);
-                    const isSelected = form.shootTime === slot.value;
-                    return (
-                      <button key={slot.value} type="button"
-                        onClick={() => { if (!isUnavail) setForm((f) => ({ ...f, shootTime: slot.value })); }}
-                        disabled={isUnavail}
-                        title={isDirectly ? "Photographer unavailable" : isUnavail ? `Not enough time for ${effectiveDuration} min service` : slot.label}
-                        className={`py-1.5 text-[13px] rounded-lg border text-center transition-colors font-medium leading-tight ${
-                          isSelected
-                            ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
-                            : isUnavail
-                            ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
-                            : "border-gray-200 text-gray-600 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
-                        }`}>
-                        <span className="block">{slot.label}</span>
-                        {isUnavail && <span className="block text-[9px] leading-none mt-0.5 text-gray-300">{isDirectly ? "busy" : "no time"}</span>}
+                {/* Right: progressive steps */}
+                <div className="flex-1 overflow-y-auto p-5">
+                  {rightStep === "idle" && (
+                    <div className="flex flex-col items-center justify-center h-full text-center gap-3 py-10">
+                      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="1.5">
+                          <rect x="3" y="4" width="18" height="18" rx="2"/><path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Select a date</p>
+                        <p className="text-xs text-gray-400 mt-1">Choose from the calendar</p>
+                      </div>
+                    </div>
+                  )}
+                  {rightStep === "time" && (
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+                        {new Date(form.shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                      </p>
+                      <p className="text-sm font-semibold text-gray-800 mb-3">Choose a start time</p>
+                      {loadingSlots && <p className="text-[11px] text-gray-400 mb-2 italic">Checking availability…</p>}
+                      <div className="space-y-1.5">
+                        {TIME_SLOTS.map((slot) => {
+                          const isUnavail  = unavailableSlots.has(slot.value);
+                          const isDirectly = busySlots.has(slot.value);
+                          const isSelected = form.shootTime === slot.value;
+                          return (
+                            <button key={slot.value} type="button"
+                              onClick={() => { if (!isUnavail) setForm(f => ({ ...f, shootTime: slot.value })); }}
+                              disabled={isUnavail}
+                              className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-all flex items-center justify-between ${
+                                isSelected ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
+                                : isUnavail ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
+                                : "border-gray-200 text-gray-700 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
+                              }`}>
+                              <span>{slot.label}</span>
+                              {isUnavail && <span className="text-[10px]">{isDirectly ? "busy" : "unavailable"}</span>}
+                              {isSelected && (
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-3 flex items-center gap-2 pt-3 border-t border-gray-100">
+                        <span className="text-[11px] text-gray-400">Custom:</span>
+                        <input type="time" value={form.shootTime}
+                          onChange={(e) => setForm(f => ({ ...f, shootTime: e.target.value }))}
+                          className="input-field text-sm py-1" style={{ width: "auto" }} />
+                      </div>
+                    </div>
+                  )}
+                  {rightStep === "duration" && (
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Duration</p>
+                      <p className="text-sm font-semibold text-gray-800 mb-3">How long is the shoot?</p>
+                      <div className="space-y-1.5 mb-3">
+                        {DURATION_PRESETS.map((d) => {
+                          const isSelected = form.shootDuration === String(d.value);
+                          return (
+                            <button key={d.value} type="button"
+                              onClick={() => setForm(f => ({ ...f, shootDuration: String(d.value) }))}
+                              className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-all flex items-center justify-between ${
+                                isSelected ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]" : "border-gray-200 text-gray-700 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
+                              }`}>
+                              {d.label}
+                              {isSelected && (
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                        <span className="text-[11px] text-gray-400">Custom (min):</span>
+                        <input type="number" min="0" max="720" step="15"
+                          value={form.shootDuration} onChange={set("shootDuration")}
+                          className="input-field text-sm py-1 w-20" placeholder="—" />
+                      </div>
+                    </div>
+                  )}
+                  {rightStep === "confirm" && (
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">Booking Schedule</p>
+                      <div className="bg-gray-50 rounded-xl divide-y divide-gray-100 mb-4 overflow-hidden">
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="2" className="flex-shrink-0">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/><path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18"/>
+                          </svg>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Date</p>
+                            <p className="text-sm font-semibold text-gray-800">
+                              {new Date(form.shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                            </p>
+                          </div>
+                          <button type="button" onClick={() => setForm(f => ({ ...f, shootDate: "" }))}
+                            className="text-[11px] text-[#3486cf] hover:underline flex-shrink-0">Change</button>
+                        </div>
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="2" className="flex-shrink-0">
+                            <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l4 2"/>
+                          </svg>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Start Time</p>
+                            <p className="text-sm font-semibold text-gray-800">
+                              {(() => { const [hh, mm] = form.shootTime.split(":"); const h = Number(hh); return `${h % 12 || 12}:${mm} ${h >= 12 ? "PM" : "AM"}`; })()}
+                              {shootEndTime && <span className="text-xs text-gray-400 font-normal ml-1">→ ends {shootEndTime}</span>}
+                            </p>
+                          </div>
+                          <button type="button" onClick={() => setForm(f => ({ ...f, shootTime: "" }))}
+                            className="text-[11px] text-[#3486cf] hover:underline flex-shrink-0">Change</button>
+                        </div>
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="2" className="flex-shrink-0">
+                            <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 8v4h4"/>
+                          </svg>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Duration</p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {DURATION_PRESETS.map((d) => {
+                                const isSelected = form.shootDuration === String(d.value) || (form.shootDuration === "" && computedDuration === d.value);
+                                return (
+                                  <button key={d.value} type="button"
+                                    onClick={() => setForm(f => ({ ...f, shootDuration: f.shootDuration === String(d.value) ? "" : String(d.value) }))}
+                                    className={`py-0.5 px-2 text-[11px] rounded-md border transition-colors font-medium ${
+                                      isSelected ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]" : "border-gray-200 text-gray-500 hover:border-[#3486cf]/40 hover:text-[#3486cf]"
+                                    }`}>
+                                    {d.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {computedDuration > 0 && form.shootDuration === "" && (
+                              <p className="text-[10px] text-gray-400 mt-1">{computedDuration} min · from services</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => setShowSchedulePopup(false)}
+                        className="w-full py-3 rounded-xl text-white text-sm font-semibold transition-colors"
+                        style={{ backgroundColor: "#3486cf" }}>
+                        Confirm Schedule ✓
                       </button>
-                    );
-                  })}
-                </div>
-                {unavailableSlots.size > 0 && (
-                  <div className="flex items-center gap-3 mb-3 text-[11px] text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <span className="w-2.5 h-2.5 rounded border border-gray-200 bg-white inline-block" />
-                      Available
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="w-2.5 h-2.5 rounded border border-gray-100 bg-gray-50 inline-block" />
-                      Busy
-                    </span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-gray-400">Custom:</span>
-                  <input type="time" value={form.shootTime}
-                    onChange={(e) => setForm((f) => ({ ...f, shootTime: e.target.value }))}
-                    className="input-field text-sm py-1" style={{ width: "auto" }} />
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="label-field">Duration</label>
-                  {computedDuration > 0 && form.shootDuration === "" && (
-                    <span className="text-[11px] text-[#3486cf] font-medium">{computedDuration} min from services</span>
+                    </div>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {DURATION_PRESETS.map((d) => {
-                    const isSelected = form.shootDuration === String(d.value)
-                      || (form.shootDuration === "" && computedDuration === d.value);
-                    return (
-                      <button key={d.value} type="button"
-                        onClick={() => setForm((f) => ({ ...f, shootDuration: f.shootDuration === String(d.value) ? "" : String(d.value) }))}
-                        className={`py-1.5 px-3 text-[13px] rounded-lg border transition-colors font-medium ${
-                          isSelected
-                            ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
-                            : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
-                        }`}>
-                        {d.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-gray-400">Custom (min):</span>
-                  <input type="number" min="0" max="720" step="15"
-                    value={form.shootDuration} onChange={set("shootDuration")}
-                    className="input-field text-sm py-1 w-20" placeholder={computedDuration || "—"} />
-                </div>
               </div>
-              {shootEndTime && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl">
-                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
-                    <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l4 2"/>
-                  </svg>
-                  <span className="text-xs text-gray-500">Ends at</span>
-                  <span className="text-sm font-semibold text-gray-800">{shootEndTime}</span>
-                  {effectiveDuration > 0 && (
-                    <span className="text-xs text-gray-400 ml-auto">
-                      {effectiveDuration >= 60 ? `${effectiveDuration / 60}h` : `${effectiveDuration}m`}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="px-5 pb-5">
-              <button type="button" onClick={() => setShowSchedulePopup(false)} className="btn-primary w-full py-2.5 text-sm">
-                Confirm
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
