@@ -91,15 +91,6 @@ const NAV = [
     ),
   },
   {
-    href: "/dashboard/profile",
-    label: "My Profile",
-    icon: (
-      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-      </svg>
-    ),
-  },
-  {
     href: "/dashboard/settings",
     label: "Settings",
     permKey: "canEditSettings",
@@ -285,17 +276,23 @@ export default function DashboardLayout({ children }) {
         );
       })()}
 
-      {/* User area */}
+      {/* User area — avatar+email links to profile, logout button separate */}
       <div className="ky-user-card">
-        <div
-          className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white"
-          style={{ background: "#3486cf" }}
+        <Link
+          href="/dashboard/profile"
+          onClick={() => setSidebarOpen(false)}
+          className="flex items-center gap-2 flex-1 min-w-0 group"
         >
-          {initials}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[11px] text-gray-500 truncate leading-none">{user?.email}</p>
-        </div>
+          <div
+            className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white transition-opacity group-hover:opacity-80"
+            style={{ background: "#3486cf" }}
+          >
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] text-gray-500 truncate leading-none group-hover:text-[#3486cf] transition-colors">{user?.email}</p>
+          </div>
+        </Link>
         <button
           onClick={() => auth.signOut().then(() => router.push("/auth/login"))}
           className="flex-shrink-0 p-1 rounded text-gray-400 hover:text-gray-700 transition-colors"
