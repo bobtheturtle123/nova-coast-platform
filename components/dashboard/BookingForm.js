@@ -137,6 +137,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   const [travelFee,         setTravelFee]         = useState(null);
   const [serviceArea,       setServiceArea]       = useState(null);
   const [showSchedulePopup,  setShowSchedulePopup]  = useState(false);
+  const [apptPopupIdx,       setApptPopupIdx]       = useState(null);
   const [showServicesModal,  setShowServicesModal]  = useState(false);
   const [servicesSearch,     setServicesSearch]     = useState("");
   const [confirmedAddress,  setConfirmedAddress]  = useState(init.address || "");
@@ -558,8 +559,8 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   );
 
   return (
-    <div className="p-6 max-w-6xl">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="px-6 py-8 xl:px-10">
+      <div className="flex items-center gap-3 mb-8">
         <Link href={backHref} className="text-sm text-gray-400 hover:text-[#3486cf]">{backLabel}</Link>
         <span className="text-gray-300">/</span>
         <h1 className="page-title">{pageTitle}</h1>
@@ -570,7 +571,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
       )}
 
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-8 items-start">
 
           {/* ── LEFT: Client, Property, Services ─────────────────── */}
           <div className="space-y-4">
@@ -937,11 +938,6 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
               )}
 
               {form.additionalAppointments.map((appt, i) => {
-                const updateAppt = (patch) => setForm((f) => {
-                  const arr = [...f.additionalAppointments];
-                  arr[i] = { ...arr[i], ...patch };
-                  return { ...f, additionalAppointments: arr };
-                });
                 const displayDate = appt.date
                   ? new Date(appt.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
                   : null;
@@ -949,63 +945,29 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                   ? (() => { const [hh, mm] = appt.time.split(":"); const h = Number(hh); return `${h % 12 || 12}:${mm} ${h >= 12 ? "PM" : "AM"}`; })()
                   : null;
                 return (
-                  <div key={i} className="mb-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
-                    <div className="flex items-center justify-between mb-2.5">
-                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Appointment {i + 2}</span>
-                      <button type="button" onClick={() => setForm((f) => ({
-                        ...f, additionalAppointments: f.additionalAppointments.filter((_, idx) => idx !== i)
-                      }))} className="text-gray-400 hover:text-red-500 text-sm leading-none">✕</button>
+                  <button key={i} type="button" onClick={() => setApptPopupIdx(i)}
+                    className="w-full text-left flex items-center justify-between p-3 rounded-xl border border-gray-200 hover:border-[#3486cf]/50 hover:bg-gray-50 transition-colors mb-2">
+                    <div>
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Appointment {i + 2}</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {displayDate || <span className="text-gray-400 font-normal">No date set</span>}
+                        {displayTime && <span className="text-gray-500 font-normal"> · {displayTime}</span>}
+                      </p>
                     </div>
-
-                    {/* Date selector */}
-                    <div className="relative mb-2.5">
-                      <input type="date" value={appt.date}
-                        onChange={(e) => updateAppt({ date: e.target.value })}
-                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" />
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:border-[#3486cf]/50 transition-colors cursor-pointer">
-                        <span className="text-base">📅</span>
-                        <span className={`text-sm ${displayDate ? "text-[#0F172A] font-medium" : "text-gray-400"}`}>
-                          {displayDate || "Pick a date"}
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                      <span className="text-xs font-medium text-[#3486cf]">Edit</span>
+                      <span onClick={(e) => { e.stopPropagation(); setForm((f) => ({ ...f, additionalAppointments: f.additionalAppointments.filter((_, idx) => idx !== i) })); }}
+                        className="text-gray-300 hover:text-red-400 text-sm leading-none cursor-pointer">✕</span>
                     </div>
-
-                    {/* Time slot grid */}
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {TIME_SLOTS.filter((_, idx) => idx % 2 === 0).map((slot) => (
-                        <button key={slot.value} type="button"
-                          onClick={() => updateAppt({ time: slot.value })}
-                          className={`py-1.5 text-xs rounded-lg border font-medium transition-colors ${
-                            appt.time === slot.value
-                              ? "bg-[#3486cf] text-white border-[#3486cf]"
-                              : "border-gray-200 text-gray-600 hover:border-[#3486cf]/50 hover:bg-[#3486cf]/5"
-                          }`}>
-                          {slot.label}
-                        </button>
-                      ))}
-                    </div>
-                    {/* Half-hour slots toggle */}
-                    <div className="mt-1.5 grid grid-cols-4 gap-1.5">
-                      {TIME_SLOTS.filter((_, idx) => idx % 2 === 1).map((slot) => (
-                        <button key={slot.value} type="button"
-                          onClick={() => updateAppt({ time: slot.value })}
-                          className={`py-1 text-[11px] rounded-lg border font-medium transition-colors ${
-                            appt.time === slot.value
-                              ? "bg-[#3486cf] text-white border-[#3486cf]"
-                              : "border-gray-100 text-gray-400 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
-                          }`}>
-                          {slot.label}
-                        </button>
-                      ))}
-                    </div>
-                    {displayTime && (
-                      <p className="text-xs text-[#3486cf] font-medium mt-2">Selected: {displayTime}</p>
-                    )}
-                  </div>
+                  </button>
                 );
               })}
               <button type="button"
-                onClick={() => setForm((f) => ({ ...f, additionalAppointments: [...f.additionalAppointments, { date: "", time: "" }] }))}
+                onClick={() => {
+                  const newIdx = form.additionalAppointments.length;
+                  setForm((f) => ({ ...f, additionalAppointments: [...f.additionalAppointments, { date: "", time: "" }] }));
+                  setApptPopupIdx(newIdx);
+                }}
                 className="w-full text-sm text-[#3486cf] border border-dashed border-[#3486cf]/30 px-3 py-2.5 rounded-xl hover:bg-[#3486cf]/5 transition-colors mb-4 font-medium">
                 + Add Another Appointment
               </button>
@@ -1250,6 +1212,66 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
           </div>
         </div>
       </form>
+
+      {/* ── Additional appointment popup ────────────────────── */}
+      {apptPopupIdx !== null && form.additionalAppointments[apptPopupIdx] && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+              <h3 className="font-semibold text-[#0F172A]">Appointment {apptPopupIdx + 2}</h3>
+              <button type="button" onClick={() => setApptPopupIdx(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+            </div>
+            <div className="px-5 py-4 space-y-5">
+              <div>
+                <label className="label-field">Date</label>
+                <input type="date"
+                  value={form.additionalAppointments[apptPopupIdx].date}
+                  onChange={(e) => setForm((f) => { const arr = [...f.additionalAppointments]; arr[apptPopupIdx] = { ...arr[apptPopupIdx], date: e.target.value }; return { ...f, additionalAppointments: arr }; })}
+                  className="input-field w-full" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="label-field">Start Time</label>
+                  {form.additionalAppointments[apptPopupIdx].time && (
+                    <span className="text-xs font-semibold text-[#3486cf]">
+                      {(() => { const [hh, mm] = form.additionalAppointments[apptPopupIdx].time.split(":"); const h = Number(hh); return `${h % 12 || 12}:${mm} ${h >= 12 ? "PM" : "AM"}`; })()}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-2">
+                  {TIME_SLOTS.map((slot) => {
+                    const isSelected = form.additionalAppointments[apptPopupIdx].time === slot.value;
+                    return (
+                      <button key={slot.value} type="button"
+                        onClick={() => setForm((f) => { const arr = [...f.additionalAppointments]; arr[apptPopupIdx] = { ...arr[apptPopupIdx], time: slot.value }; return { ...f, additionalAppointments: arr }; })}
+                        className={`py-1.5 text-[13px] rounded-lg border text-center transition-colors font-medium ${
+                          isSelected
+                            ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
+                            : "border-gray-200 text-gray-600 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
+                        }`}>
+                        {slot.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-gray-400">Custom:</span>
+                  <input type="time"
+                    value={form.additionalAppointments[apptPopupIdx].time}
+                    onChange={(e) => setForm((f) => { const arr = [...f.additionalAppointments]; arr[apptPopupIdx] = { ...arr[apptPopupIdx], time: e.target.value }; return { ...f, additionalAppointments: arr }; })}
+                    className="input-field text-sm py-1" style={{ width: "auto" }} />
+                </div>
+              </div>
+            </div>
+            <div className="px-5 pb-5">
+              <button type="button" onClick={() => setApptPopupIdx(null)} className="btn-primary w-full py-2.5 text-sm">
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Schedule popup ─────────────────────────────────── */}
       {showSchedulePopup && (

@@ -293,16 +293,6 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
           {type === "packages" && (
             <>
               <div>
-                <label className="label-field">Tagline</label>
-                <input type="text" value={form.tagline} onChange={field("tagline")}
-                  className="input-field w-full" placeholder="One-line selling point" />
-              </div>
-              <div>
-                <label className="label-field">Deliverables</label>
-                <input type="text" value={form.deliverables} onChange={field("deliverables")}
-                  className="input-field w-full" placeholder="Photos within 24 hrs · Video within 72 hrs" />
-              </div>
-              <div>
                 <label className="label-field">Included Services</label>
                 <div className="border border-gray-200 rounded-xl divide-y divide-gray-100">
                   {allServices.map((svc) => (
@@ -362,10 +352,10 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
           )}
 
           {/* Pricing */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="label-field mb-0">Pricing</label>
-              <label className="flex items-center gap-2 cursor-pointer">
+          <details className="border border-gray-200 rounded-lg" open>
+            <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none hover:bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-[#0F172A]">Pricing</span>
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                 <span className="text-xs text-gray-500">Tier pricing</span>
                 <div
                   onClick={() => setForm((f) => ({ ...f, tiered: !f.tiered }))}
@@ -373,44 +363,45 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                 >
                   <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.tiered ? "translate-x-4" : "translate-x-0.5"}`} />
                 </div>
-              </label>
-            </div>
-
-            {!form.tiered ? (
-              <div className="flex items-center gap-2">
-                <span className="text-gray-400">$</span>
-                <input type="number" value={form.price} onChange={field("price")} min="0" step="1"
-                  className="input-field w-40" />
               </div>
-            ) : (
-              (() => {
-                const tiers = pricingConfig?.tiers?.length ? pricingConfig.tiers : [];
-                if (tiers.length === 0) {
-                  return <p className="text-xs text-amber-600">Configure pricing tiers in Settings → Pricing Tiers first.</p>;
-                }
-                return (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {tiers.map((tier) => (
-                      <div key={tier.name}>
-                        <label className="block text-xs text-gray-500 mb-1">
-                          {tier.label || tier.name}
-                          <span className="text-gray-400 ml-1">
-                            ({tier.max === 999999 ? "unlimited+" : `to ${(tier.max || 0).toLocaleString()}`})
-                          </span>
-                        </label>
-                        <div className="flex items-center gap-1">
-                          <span className="text-gray-400 text-sm">$</span>
-                          <input type="number" value={form.priceTiers[tier.name] || ""}
-                            onChange={(e) => setForm((f) => ({ ...f, priceTiers: { ...f.priceTiers, [tier.name]: Number(e.target.value) || 0 } }))}
-                            min="0" step="1" className="input-field py-1.5 text-sm w-full" placeholder="0" />
+            </summary>
+            <div className="px-4 pb-4 pt-3 border-t border-gray-100">
+              {!form.tiered ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400">$</span>
+                  <input type="number" value={form.price} onChange={field("price")} min="0" step="1"
+                    className="input-field w-40" />
+                </div>
+              ) : (
+                (() => {
+                  const tiers = pricingConfig?.tiers?.length ? pricingConfig.tiers : [];
+                  if (tiers.length === 0) {
+                    return <p className="text-xs text-amber-600">Configure pricing tiers in Settings → Pricing Tiers first.</p>;
+                  }
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {tiers.map((tier) => (
+                        <div key={tier.name}>
+                          <label className="block text-xs text-gray-500 mb-1">
+                            {tier.label || tier.name}
+                            <span className="text-gray-400 ml-1">
+                              ({tier.max === 999999 ? "unlimited+" : `to ${(tier.max || 0).toLocaleString()}`})
+                            </span>
+                          </label>
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-400 text-sm">$</span>
+                            <input type="number" value={form.priceTiers[tier.name] || ""}
+                              onChange={(e) => setForm((f) => ({ ...f, priceTiers: { ...f.priceTiers, [tier.name]: Number(e.target.value) || 0 } }))}
+                              min="0" step="1" className="input-field py-1.5 text-sm w-full" placeholder="0" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()
-            )}
-          </div>
+                      ))}
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          </details>
 
           {/* Photographer pay rate — collapsed by default */}
           <details className="border border-gray-200 rounded-lg">
