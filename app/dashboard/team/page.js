@@ -1348,7 +1348,6 @@ export default function TeamPage() {
 
   const SCHEDULE_TABS = [
     { id: "team",        label: "Team" },
-    { id: "calendar",    label: "Calendar" },
     { id: "unscheduled", label: "Unscheduled" },
   ];
 
@@ -1396,8 +1395,7 @@ export default function TeamPage() {
         ))}
       </div>
 
-      {/* Calendar + Unscheduled tab content */}
-      {activeTab === "calendar" && <BookingCalendarTab listings={bookings} loading={loading} />}
+      {/* Unscheduled tab content */}
       {activeTab === "unscheduled" && <BookingUnscheduledTab listings={bookings} />}
 
       {/* Team tab content */}
@@ -1917,8 +1915,10 @@ export default function TeamPage() {
                       {d.getDate()}
                     </p>
                     {dayBlocks.slice(0, 2).map((bl) => (
-                      <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1 py-0.5 rounded-xl mb-0.5 truncate relative z-10">
-                        <span className="text-red-600 font-medium">{bl.reason || "Blocked"}</span>
+                      <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1 py-0.5 rounded-xl mb-0.5 relative z-10 flex items-center justify-between gap-0.5 group">
+                        <span className="text-red-600 font-medium truncate">{bl.reason || "Blocked"}</span>
+                        <button onClick={(e) => { e.stopPropagation(); deleteBlock(bl.id); }}
+                          className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 flex-shrink-0 leading-none transition-opacity">×</button>
                       </div>
                     ))}
                     {visibleDayEvents.slice(0, 3).map((ev) => {
@@ -2053,9 +2053,14 @@ export default function TeamPage() {
                 <p className="text-xs text-gray-400">{b.clientName} · {b.preferredDate ? new Date(b.preferredDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "No date"} · {b.preferredTime}</p>
               </div>
               <div className="flex flex-wrap gap-1">
-                {(b.serviceIds || []).concat(b.packageId ? [b.packageId] : []).map((s) => (
-                  <span key={s} className="text-xs bg-[#3486cf]/10 text-[#3486cf] px-1.5 py-0.5 rounded-xl capitalize">{s}</span>
-                ))}
+                {b.packageId && (() => {
+                  const pkg = products.packages.find((p) => p.id === b.packageId);
+                  return pkg ? <span key={b.packageId} className="text-xs bg-[#3486cf]/10 text-[#3486cf] px-1.5 py-0.5 rounded-xl">{pkg.name}</span> : null;
+                })()}
+                {(b.serviceIds || []).map((id) => {
+                  const svc = products.services.find((s) => s.id === id);
+                  return svc ? <span key={id} className="text-xs bg-[#3486cf]/10 text-[#3486cf] px-1.5 py-0.5 rounded-xl">{svc.name}</span> : null;
+                })}
               </div>
               <a href={`/dashboard/listings/${b.id}`} className="text-xs text-[#3486cf] hover:underline flex-shrink-0">
                 Assign →
