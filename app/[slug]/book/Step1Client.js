@@ -8,7 +8,7 @@ import { getSqftTier, getItemPrice, SQFT_TIERS, getPricingLabel } from "@/lib/ca
 import clsx from "clsx";
 
 // ─── Product Lightbox ──────────────────────────────────────────────────────────
-function ProductLightbox({ item, images, price, onClose }) {
+function ProductLightbox({ item, images, price, services, onClose }) {
   const [idx, setIdx] = useState(0);
   useEffect(() => {
     function onKey(e) {
@@ -78,11 +78,14 @@ function ProductLightbox({ item, images, price, onClose }) {
             <div className="mb-4">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Includes</p>
               <ul className="space-y-1">
-                {item.includes.map((s, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-[#0F172A]">
-                    <span className="text-gold font-bold">✓</span>{s}
-                  </li>
-                ))}
+                {item.includes.map((s, i) => {
+                  const svcName = services?.find((sv) => sv.id === s)?.name || s;
+                  return (
+                    <li key={i} className="flex items-center gap-2 text-sm text-[#0F172A]">
+                      <span className="text-gold font-bold">✓</span>{svcName}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
@@ -378,6 +381,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
           item={lightboxItem.item}
           images={lightboxItem.images}
           price={lightboxItem.price}
+          services={services}
           onClose={() => setLightboxItem(null)}
         />
       )}

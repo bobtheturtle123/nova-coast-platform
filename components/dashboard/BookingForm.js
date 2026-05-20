@@ -936,30 +936,77 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                 <WeatherWidget address={confirmedAddress} date={form.shootDate} />
               )}
 
-              {form.additionalAppointments.map((appt, i) => (
-                <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200 relative">
-                  <div className="absolute top-2 right-2">
-                    <button type="button" onClick={() => setForm((f) => ({
-                      ...f, additionalAppointments: f.additionalAppointments.filter((_, idx) => idx !== i)
-                    }))} className="text-gray-400 hover:text-red-500 text-sm">✕</button>
+              {form.additionalAppointments.map((appt, i) => {
+                const updateAppt = (patch) => setForm((f) => {
+                  const arr = [...f.additionalAppointments];
+                  arr[i] = { ...arr[i], ...patch };
+                  return { ...f, additionalAppointments: arr };
+                });
+                const displayDate = appt.date
+                  ? new Date(appt.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+                  : null;
+                const displayTime = appt.time
+                  ? (() => { const [hh, mm] = appt.time.split(":"); const h = Number(hh); return `${h % 12 || 12}:${mm} ${h >= 12 ? "PM" : "AM"}`; })()
+                  : null;
+                return (
+                  <div key={i} className="mb-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Appointment {i + 2}</span>
+                      <button type="button" onClick={() => setForm((f) => ({
+                        ...f, additionalAppointments: f.additionalAppointments.filter((_, idx) => idx !== i)
+                      }))} className="text-gray-400 hover:text-red-500 text-sm leading-none">✕</button>
+                    </div>
+
+                    {/* Date selector */}
+                    <div className="relative mb-2.5">
+                      <input type="date" value={appt.date}
+                        onChange={(e) => updateAppt({ date: e.target.value })}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" />
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:border-[#3486cf]/50 transition-colors cursor-pointer">
+                        <span className="text-base">📅</span>
+                        <span className={`text-sm ${displayDate ? "text-[#0F172A] font-medium" : "text-gray-400"}`}>
+                          {displayDate || "Pick a date"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Time slot grid */}
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {TIME_SLOTS.filter((_, idx) => idx % 2 === 0).map((slot) => (
+                        <button key={slot.value} type="button"
+                          onClick={() => updateAppt({ time: slot.value })}
+                          className={`py-1.5 text-xs rounded-lg border font-medium transition-colors ${
+                            appt.time === slot.value
+                              ? "bg-[#3486cf] text-white border-[#3486cf]"
+                              : "border-gray-200 text-gray-600 hover:border-[#3486cf]/50 hover:bg-[#3486cf]/5"
+                          }`}>
+                          {slot.label}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Half-hour slots toggle */}
+                    <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+                      {TIME_SLOTS.filter((_, idx) => idx % 2 === 1).map((slot) => (
+                        <button key={slot.value} type="button"
+                          onClick={() => updateAppt({ time: slot.value })}
+                          className={`py-1 text-[11px] rounded-lg border font-medium transition-colors ${
+                            appt.time === slot.value
+                              ? "bg-[#3486cf] text-white border-[#3486cf]"
+                              : "border-gray-100 text-gray-400 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
+                          }`}>
+                          {slot.label}
+                        </button>
+                      ))}
+                    </div>
+                    {displayTime && (
+                      <p className="text-xs text-[#3486cf] font-medium mt-2">Selected: {displayTime}</p>
+                    )}
                   </div>
-                  <div>
-                    <label className="label-field">Appt {i + 2} Date</label>
-                    <input type="date" value={appt.date}
-                      onChange={(e) => setForm((f) => { const arr = [...f.additionalAppointments]; arr[i] = { ...arr[i], date: e.target.value }; return { ...f, additionalAppointments: arr }; })}
-                      className="input-field w-full" />
-                  </div>
-                  <div>
-                    <label className="label-field">Appt {i + 2} Time</label>
-                    <input type="time" value={appt.time}
-                      onChange={(e) => setForm((f) => { const arr = [...f.additionalAppointments]; arr[i] = { ...arr[i], time: e.target.value }; return { ...f, additionalAppointments: arr }; })}
-                      className="input-field w-full" />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               <button type="button"
                 onClick={() => setForm((f) => ({ ...f, additionalAppointments: [...f.additionalAppointments, { date: "", time: "" }] }))}
-                className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded hover:bg-[#3486cf]/5 transition-colors mb-4">
+                className="w-full text-sm text-[#3486cf] border border-dashed border-[#3486cf]/30 px-3 py-2.5 rounded-xl hover:bg-[#3486cf]/5 transition-colors mb-4 font-medium">
                 + Add Another Appointment
               </button>
 

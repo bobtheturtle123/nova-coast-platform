@@ -60,6 +60,15 @@ function sanitizeItem(body, type) {
     ? Math.max(0, Math.round(Number(body.duration) || 0))
     : null;
 
+  // Per-tier duration map (services only)
+  base.durationTiers = (body.durationTiers && typeof body.durationTiers === "object" && Object.keys(body.durationTiers).length > 0)
+    ? Object.fromEntries(
+        Object.entries(body.durationTiers)
+          .filter(([k]) => typeof k === "string" && k.length <= 50)
+          .map(([k, v]) => [k, Math.max(0, Math.round(Number(v) || 0))])
+      )
+    : null;
+
   // Package-specific
   if (type === "packages") {
     base.tagline      = stripTags(body.tagline     || "").slice(0, 200);
