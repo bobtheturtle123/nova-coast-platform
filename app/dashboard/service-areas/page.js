@@ -205,9 +205,16 @@ export default function ServiceAreasPage() {
     if (!mapsReady || !mapContainerRef.current || mapLoadedRef.current) return;
     if (!window.mapboxgl || !window.MapboxDraw) return;
 
+    if (!window.mapboxgl.supported()) {
+      setMapError(true);
+      return;
+    }
+
     mapLoadedRef.current = true;
     window.mapboxgl.accessToken = MAPBOX_TOKEN;
 
+    // Defer one frame so the container has layout dimensions before Mapbox reads them
+    requestAnimationFrame(() => {
     let map;
     try {
       map = new window.mapboxgl.Map({
@@ -215,6 +222,7 @@ export default function ServiceAreasPage() {
         style:     "mapbox://styles/mapbox/streets-v12",
         center:    [-118.2437, 34.0522],
         zoom:      9,
+        antialias: false,
       });
     } catch (err) {
       console.error("[service-areas] Map init failed:", err?.message);
@@ -244,6 +252,7 @@ export default function ServiceAreasPage() {
     });
 
     map.on("load", () => renderZones());
+    }); // end requestAnimationFrame
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapsReady]);
 
@@ -440,9 +449,19 @@ export default function ServiceAreasPage() {
         <div className="lg:col-span-3">
           <div className="card-section" style={{ height: 520 }}>
             {mapError ? (
-              <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-center px-6">
-                <p className="text-sm font-medium text-gray-600">Map unavailable</p>
-                <p className="text-xs text-gray-400">Your browser could not initialize WebGL. Try a different browser or device.</p>
+              <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-center px-6">
+                <p className="text-sm font-medium text-gray-600">Map failed to load</p>
+                <p className="text-xs text-gray-400 max-w-xs">
+                  WebGL is required for the map. In Chrome, go to{" "}
+                  <span className="font-mono text-gray-500">chrome://settings/system</span> and
+                  enable <em>Use graphics acceleration when available</em>, then reload.
+                </p>
+                <button
+                  onClick={() => { setMapError(false); setMapsReady(false); mapLoadedRef.current = false; setTimeout(() => setMapsReady(true), 50); }}
+                  className="btn-outline px-4 py-1.5 text-xs mt-1"
+                >
+                  Retry
+                </button>
               </div>
             ) : !mapsReady ? (
               <div className="w-full h-full flex items-center justify-center">
