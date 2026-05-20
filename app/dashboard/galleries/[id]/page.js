@@ -1765,64 +1765,81 @@ export default function GalleryDetailPage() {
           </details>
         </div>
 
-        {/* ── Activity Log ──────────────────────────────────────────────── */}
-        <div className="border-t border-gray-100 pt-6 pb-8 max-w-3xl">
-          <h2 className="font-display text-[#3486cf] text-base mb-1">Activity Log</h2>
-          <p className="text-xs text-gray-400 mb-4">Every time someone views this gallery or downloads files — recorded automatically.</p>
+        {/* ── Activity Log (accordion, starts closed) ───────────────────── */}
+        <details className="border-t border-gray-100 pt-5 pb-8 max-w-3xl group">
+          <summary className="flex items-center justify-between cursor-pointer list-none select-none mb-1">
+            <div>
+              <h2 className="font-display text-[#3486cf] text-base">Activity Log</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Views and downloads — recorded automatically.</p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+              {activity.length > 0 && (
+                <span className="text-xs text-gray-400 font-medium">{activity.length} event{activity.length !== 1 ? "s" : ""}</span>
+              )}
+              <svg
+                className="w-4 h-4 text-gray-400 transition-transform duration-200 group-open:rotate-180"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </summary>
 
-          {activity.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No activity yet. Views and downloads will appear here once the gallery is opened.</p>
-          ) : (
-            <div className="space-y-2">
-              {activity.map((e) => {
-                const ts = e.timestamp ? new Date(e.timestamp) : null;
-                const dateStr = ts ? ts.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
-                const timeStr = ts ? ts.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
+          <div className="mt-4">
+            {activity.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">No activity yet. Views and downloads will appear here once the gallery is opened.</p>
+            ) : (
+              <div className="space-y-2">
+                {activity.map((e) => {
+                  const ts = e.timestamp ? new Date(e.timestamp) : null;
+                  const dateStr = ts ? ts.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+                  const timeStr = ts ? ts.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
 
-                let icon = "👁";
-                let label = "Viewed gallery";
-                let detail = "";
+                  let icon = "👁";
+                  let label = "Viewed gallery";
+                  let detail = "";
 
-                if (e.event === "download_zip") {
-                  icon = "📦";
-                  label = `Downloaded all photos (${e.format === "print" ? "print quality" : "web/MLS quality"})`;
-                  if (e.fileCount) detail = `${e.fileCount} files`;
-                } else if (e.event === "download_video") {
-                  icon = "🎬";
-                  label = "Downloaded video";
-                  if (e.fileName) detail = e.fileName;
-                } else if (e.event === "note") {
-                  icon = "📝";
-                  label = e.note || "Admin note";
-                }
+                  if (e.event === "download_zip") {
+                    icon = "📦";
+                    label = `Downloaded all photos (${e.format === "print" ? "print quality" : "web/MLS quality"})`;
+                    if (e.fileCount) detail = `${e.fileCount} files`;
+                  } else if (e.event === "download_video") {
+                    icon = "🎬";
+                    label = "Downloaded video";
+                    if (e.fileName) detail = e.fileName;
+                  } else if (e.event === "note") {
+                    icon = "📝";
+                    label = e.note || "Admin note";
+                  }
 
-                return (
-                  <div key={e.id} className="flex items-start gap-3 px-4 py-3 bg-gray-50 rounded-xl text-sm">
-                    <span className="text-base mt-0.5 flex-shrink-0">{icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-[#0F172A]">{label}</span>
-                        {detail && <span className="text-gray-400 text-xs">· {detail}</span>}
-                      </div>
-                      <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                        {(e.viewerName || e.viewerEmail) && (
-                          <span className="text-xs text-[#3486cf]">
-                            {e.viewerName || e.viewerEmail}
-                            {e.viewerName && e.viewerEmail && ` (${e.viewerEmail})`}
-                          </span>
-                        )}
-                        {e.ip && <span className="text-xs text-gray-400">IP: {e.ip}</span>}
-                        {ts && (
-                          <span className="text-xs text-gray-400">{dateStr} at {timeStr}</span>
-                        )}
+                  return (
+                    <div key={e.id} className="flex items-start gap-3 px-4 py-3 bg-gray-50 rounded-xl text-sm">
+                      <span className="text-base mt-0.5 flex-shrink-0">{icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-[#0F172A]">{label}</span>
+                          {detail && <span className="text-gray-400 text-xs">· {detail}</span>}
+                        </div>
+                        <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                          {(e.viewerName || e.viewerEmail) && (
+                            <span className="text-xs text-[#3486cf]">
+                              {e.viewerName || e.viewerEmail}
+                              {e.viewerName && e.viewerEmail && ` (${e.viewerEmail})`}
+                            </span>
+                          )}
+                          {e.ip && <span className="text-xs text-gray-400">IP: {e.ip}</span>}
+                          {ts && (
+                            <span className="text-xs text-gray-400">{dateStr} at {timeStr}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </details>
       </div>
 
       {/* Category panel */}

@@ -243,13 +243,14 @@ export default function ServiceAreasPage() {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
+    try {
     // Remove existing zone layers + sources
     (map.getStyle()?.layers || [])
       .filter((l) => l.id.startsWith("zone-"))
-      .forEach((l) => { if (map.getLayer(l.id)) map.removeLayer(l.id); });
+      .forEach((l) => { try { if (map.getLayer(l.id)) map.removeLayer(l.id); } catch {} });
     (Object.keys(map.getStyle()?.sources || {}))
       .filter((s) => s.startsWith("zone-"))
-      .forEach((s) => { if (map.getSource(s)) map.removeSource(s); });
+      .forEach((s) => { try { if (map.getSource(s)) map.removeSource(s); } catch {} });
 
     zones.forEach((zone) => {
       if (!zone.paths?.length) return;
@@ -275,6 +276,9 @@ export default function ServiceAreasPage() {
       map.on("mouseenter", fillId, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", fillId, () => { map.getCanvas().style.cursor = ""; });
     });
+    } catch (err) {
+      console.error("[service-areas] renderZones error:", err?.message);
+    }
   }, [zones]);
 
   useEffect(() => {

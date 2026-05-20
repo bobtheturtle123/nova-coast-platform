@@ -74,18 +74,19 @@ export async function PATCH(req, { params }) {
   for (const k of allowed) {
     if (body[k] !== undefined) update[k] = body[k];
   }
-  // Auto-compute paidInFull when both deposit and balance are marked paid
-  const effectiveDeposit = update.depositPaid ?? prev.depositPaid;
-  const effectiveBalance = update.balancePaid ?? prev.balancePaid;
-  if (update.depositPaid !== undefined || update.balancePaid !== undefined) {
-    if (effectiveDeposit && effectiveBalance) update.paidInFull = true;
-    else if (!effectiveDeposit || !effectiveBalance) update.paidInFull = false;
-  }
   update.updatedAt = new Date();
 
   const bookingRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("bookings").doc(params.id);
   const prevSnap = await bookingRef.get();
   const prev = prevSnap.data() || {};
+
+  // Auto-compute paidInFull when both deposit and balance are marked paid
+  if (update.depositPaid !== undefined || update.balancePaid !== undefined) {
+    const effectiveDeposit = update.depositPaid ?? prev.depositPaid;
+    const effectiveBalance = update.balancePaid ?? prev.balancePaid;
+    if (effectiveDeposit && effectiveBalance) update.paidInFull = true;
+    else update.paidInFull = false;
+  }
 
   await bookingRef.update(update);
 
