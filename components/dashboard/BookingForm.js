@@ -742,6 +742,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                             {activePkgs.map((p) => {
                               const price    = tier ? getItemPrice(p, tier) : getFromPrice(p, catalog.pricingConfig);
                               const fromLabel = !tier && p.priceTiers ? "from " : "";
+                              const priceLabel = Number.isFinite(price) && price > 0 ? `${fromLabel}${formatPrice(price)}` : (p.priceTiers ? "–" : "$0");
                               const selected = form.packageId === p.id;
                               return (
                                 <button key={p.id} type="button"
@@ -754,7 +755,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                                     {p.tagline && <p className="text-xs text-gray-400 mt-0.5">{p.tagline}</p>}
                                   </div>
                                   <div className="flex items-center gap-2 flex-shrink-0">
-                                    <span className={`text-sm font-semibold ${selected ? "text-[#3486cf]" : "text-gray-600"}`}>{fromLabel}{formatPrice(price)}</span>
+                                    <span className={`text-sm font-semibold ${selected ? "text-[#3486cf]" : "text-gray-600"}`}>{priceLabel}</span>
                                     <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
                                       selected ? "bg-[#3486cf] border-[#3486cf]" : "border-gray-300"
                                     }`}>
@@ -775,6 +776,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                             {activeSvcs.map((s) => {
                               const price    = tier ? getItemPrice(s, tier) : getFromPrice(s, catalog.pricingConfig);
                               const fromLabel = !tier && s.priceTiers ? "from " : "";
+                              const priceLabel = Number.isFinite(price) && price > 0 ? `${fromLabel}${formatPrice(price)}` : "";
                               const selected  = form.serviceIds.includes(s.id);
                               return (
                                 <button key={s.id} type="button"
@@ -784,7 +786,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                                   }`}>
                                   <p className={`font-medium text-left ${selected ? "text-[#3486cf]" : "text-[#0F172A]"}`}>{s.name}</p>
                                   <div className="flex items-center gap-2 flex-shrink-0">
-                                    <span className={`text-sm font-semibold ${selected ? "text-[#3486cf]" : "text-gray-600"}`}>{price > 0 ? `${fromLabel}${formatPrice(price)}` : ""}</span>
+                                    <span className={`text-sm font-semibold ${selected ? "text-[#3486cf]" : "text-gray-600"}`}>{priceLabel}</span>
                                     <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
                                       selected ? "bg-[#3486cf] border-[#3486cf]" : "border-gray-300"
                                     }`}>
@@ -805,6 +807,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                             {activeAddns.map((a) => {
                               const price    = tier ? getItemPrice(a, tier) : getFromPrice(a, catalog.pricingConfig);
                               const fromLabel = !tier && a.priceTiers ? "from " : "";
+                              const priceLabel = Number.isFinite(price) && price > 0 ? `${fromLabel}${formatPrice(price)}` : "";
                               const selected  = form.addonIds.includes(a.id);
                               return (
                                 <button key={a.id} type="button" onClick={() => toggleAddon(a.id)}
@@ -813,7 +816,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                                   }`}>
                                   <p className={`font-medium text-left ${selected ? "text-amber-800" : "text-[#0F172A]"}`}>{a.name}</p>
                                   <div className="flex items-center gap-2 flex-shrink-0">
-                                    <span className={`text-sm font-semibold ${selected ? "text-amber-700" : "text-gray-600"}`}>{price > 0 ? `${fromLabel}${formatPrice(price)}` : ""}</span>
+                                    <span className={`text-sm font-semibold ${selected ? "text-amber-700" : "text-gray-600"}`}>{priceLabel}</span>
                                     <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
                                       selected ? "bg-amber-400 border-amber-400" : "border-gray-300"
                                     }`}>

@@ -255,50 +255,56 @@ export default function ServiceAreasPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapsReady]);
 
-  // Re-render zones whenever they change
+  // Keep a ref so the map's load callback always reads the latest zones
+  const zonesRef = useRef(zones);
+  useEffect(() => { zonesRef.current = zones; }, [zones]);
+
+  // Re-render zones — reads from zonesRef so the closure never goes stale
   const renderZones = useCallback(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
     try {
-    // Remove existing zone layers + sources
-    (map.getStyle()?.layers || [])
-      .filter((l) => l.id.startsWith("zone-"))
-      .forEach((l) => { try { if (map.getLayer(l.id)) map.removeLayer(l.id); } catch {} });
-    (Object.keys(map.getStyle()?.sources || {}))
-      .filter((s) => s.startsWith("zone-"))
-      .forEach((s) => { try { if (map.getSource(s)) map.removeSource(s); } catch {} });
+      (map.getStyle()?.layers || [])
+        .filter((l) => l.id.startsWith("zone-"))
+        .forEach((l) => { try { if (map.getLayer(l.id)) map.removeLayer(l.id); } catch {} });
+      (Object.keys(map.getStyle()?.sources || {}))
+        .filter((s) => s.startsWith("zone-"))
+        .forEach((s) => { try { if (map.getSource(s)) map.removeSource(s); } catch {} });
 
-    zones.forEach((zone) => {
-      if (!zone.paths?.length) return;
-      const srcId   = `zone-${zone.id}`;
-      const fillId  = `zone-fill-${zone.id}`;
-      const lineId  = `zone-line-${zone.id}`;
-      const color   = zone.type === "exclude" ? "#EF4444" : (zone.color || "#3B82F6");
-      const coords  = [...zone.paths.map((p) => [p.lng, p.lat]), [zone.paths[0].lng, zone.paths[0].lat]];
+      zonesRef.current.forEach((zone) => {
+        if (!zone.paths?.length) return;
+        const srcId   = `zone-${zone.id}`;
+        const fillId  = `zone-fill-${zone.id}`;
+        const lineId  = `zone-line-${zone.id}`;
+        const color   = zone.type === "exclude" ? "#EF4444" : (zone.color || "#3B82F6");
+        const coords  = [...zone.paths.map((p) => [p.lng, p.lat]), [zone.paths[0].lng, zone.paths[0].lat]];
 
-      map.addSource(srcId, {
-        type: "geojson",
-        data: { type: "Feature", geometry: { type: "Polygon", coordinates: [coords] } },
+        map.addSource(srcId, {
+          type: "geojson",
+          data: { type: "Feature", geometry: { type: "Polygon", coordinates: [coords] } },
+        });
+        map.addLayer({
+          id: fillId, type: "fill", source: srcId,
+          paint: { "fill-color": color, "fill-opacity": 0.2 },
+        });
+        map.addLayer({
+          id: lineId, type: "line", source: srcId,
+          paint: { "line-color": color, "line-width": 2 },
+        });
+        map.on("click", fillId, () => setEditing(zonesRef.current.find((z) => z.id === zone.id) || zone));
+        map.on("mouseenter", fillId, () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", fillId, () => { map.getCanvas().style.cursor = ""; });
       });
-      map.addLayer({
-        id: fillId, type: "fill", source: srcId,
-        paint: { "fill-color": color, "fill-opacity": 0.2 },
-      });
-      map.addLayer({
-        id: lineId, type: "line", source: srcId,
-        paint: { "line-color": color, "line-width": 2 },
-      });
-      map.on("click", fillId, () => setEditing(zone));
-      map.on("mouseenter", fillId, () => { map.getCanvas().style.cursor = "pointer"; });
-      map.on("mouseleave", fillId, () => { map.getCanvas().style.cursor = ""; });
-    });
     } catch (err) {
       console.error("[service-areas] renderZones error:", err?.message);
     }
-  }, [zones]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // stable — reads zones via zonesRef, never goes stale
 
+  // Re-render whenever zones change (works regardless of load order)
   useEffect(() => {
+    zonesRef.current = zones;
     const map = mapRef.current;
     if (!map) return;
     if (map.isStyleLoaded()) {
