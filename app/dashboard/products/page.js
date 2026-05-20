@@ -859,11 +859,16 @@ export default function ProductsPage() {
     const type = formType || editingType;
 
     if (item) {
-      await fetch(`/api/dashboard/products/${item.id}?type=${editingType}`, {
+      const res = await fetch(`/api/dashboard/products/${item.id}?type=${editingType}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast(err.error || `Save failed (${res.status}). Please try again.`, "error");
+        return;
+      }
       setItems((prev) => ({
         ...prev,
         [editingType]: prev[editingType].map((i) => (i.id === item.id ? { ...i, ...payload, id: item.id } : i)),
@@ -874,6 +879,11 @@ export default function ProductsPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast(err.error || `Save failed (${res.status}). Please try again.`, "error");
+        return;
+      }
       const data = await res.json();
       setItems((prev) => ({ ...prev, [type]: [...prev[type], data.item] }));
     }

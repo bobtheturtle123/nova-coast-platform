@@ -74,16 +74,12 @@ function sanitizeItem(body, type) {
   };
   if (base.duration === undefined) delete base.duration;
 
-  // Tier pricing — all numeric, no injection risk
-  if (body.priceTiers && typeof body.priceTiers === "object") {
-    base.priceTiers = {
-      Tiny:   Number(body.priceTiers.Tiny)   || 0,
-      Small:  Number(body.priceTiers.Small)  || 0,
-      Medium: Number(body.priceTiers.Medium) || 0,
-      Large:  Number(body.priceTiers.Large)  || 0,
-      XL:     Number(body.priceTiers.XL)     || 0,
-      XXL:    Number(body.priceTiers.XXL)    || 0,
-    };
+  if (body.priceTiers && typeof body.priceTiers === "object" && Object.keys(body.priceTiers).length > 0) {
+    base.priceTiers = Object.fromEntries(
+      Object.entries(body.priceTiers)
+        .filter(([k]) => typeof k === "string" && k.length <= 50)
+        .map(([k, v]) => [k, Math.max(0, Number(v) || 0)])
+    );
   }
 
   // Package-specific

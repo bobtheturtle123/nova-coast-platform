@@ -184,11 +184,11 @@ export default function ServiceAreasPage() {
       document.head.appendChild(l);
     }
 
-    loadLink("https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css", "mapbox-css");
+    loadLink("https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css", "mapbox-css");
     loadLink("https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css", "mapboxdraw-css");
 
     loadScript(
-      "https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js",
+      "https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js",
       "mapbox-js",
       () => {
         loadScript(
@@ -219,10 +219,9 @@ export default function ServiceAreasPage() {
     try {
       map = new window.mapboxgl.Map({
         container: mapContainerRef.current,
-        style:     "mapbox://styles/mapbox/streets-v12",
+        style:     "mapbox://styles/mapbox/streets-v11",
         center:    [-118.2437, 34.0522],
         zoom:      9,
-        antialias: false,
       });
     } catch (err) {
       console.error("[service-areas] Map init failed:", err?.message);

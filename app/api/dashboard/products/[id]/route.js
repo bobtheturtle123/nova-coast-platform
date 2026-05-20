@@ -39,25 +39,19 @@ function sanitizeItem(body, type) {
       ? Math.max(0, Number(body.payRate) || 0)
       : null,
     payRateTiers: (body.payRateTiers && typeof body.payRateTiers === "object" && Object.keys(body.payRateTiers).length > 0)
-      ? {
-          Tiny:   Number(body.payRateTiers.Tiny)   || 0,
-          Small:  Number(body.payRateTiers.Small)  || 0,
-          Medium: Number(body.payRateTiers.Medium) || 0,
-          Large:  Number(body.payRateTiers.Large)  || 0,
-          XL:     Number(body.payRateTiers.XL)     || 0,
-          XXL:    Number(body.payRateTiers.XXL)    || 0,
-        }
+      ? Object.fromEntries(
+          Object.entries(body.payRateTiers)
+            .filter(([k]) => typeof k === "string" && k.length <= 50)
+            .map(([k, v]) => [k, Math.max(0, Number(v) || 0)])
+        )
       : null,
     // Explicitly write null for priceTiers when switching from tiered → flat pricing
-    priceTiers: (body.priceTiers && typeof body.priceTiers === "object")
-      ? {
-          Tiny:   Number(body.priceTiers.Tiny)   || 0,
-          Small:  Number(body.priceTiers.Small)  || 0,
-          Medium: Number(body.priceTiers.Medium) || 0,
-          Large:  Number(body.priceTiers.Large)  || 0,
-          XL:     Number(body.priceTiers.XL)     || 0,
-          XXL:    Number(body.priceTiers.XXL)    || 0,
-        }
+    priceTiers: (body.priceTiers && typeof body.priceTiers === "object" && Object.keys(body.priceTiers).length > 0)
+      ? Object.fromEntries(
+          Object.entries(body.priceTiers)
+            .filter(([k]) => typeof k === "string" && k.length <= 50)
+            .map(([k, v]) => [k, Math.max(0, Number(v) || 0)])
+        )
       : null,
   };
 
