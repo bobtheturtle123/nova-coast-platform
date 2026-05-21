@@ -57,6 +57,10 @@ export default function TenantSchedulePage() {
   const [sunsetTime,              setSunsetTime]              = useState(null);
   const [sunsetLoading,           setSunsetLoading]           = useState(false);
   const [requireScheduleApproval, setRequireScheduleApproval] = useState(false);
+  // Local twilight input — only committed to store on explicit confirm so the panel doesn't
+  // auto-jump while the user is still typing
+  const [twilightInputVal,        setTwilightInputVal]        = useState(twilightTime || "");
+  const [twilightConfirmed,       setTwilightConfirmed]       = useState(!!twilightTime);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -126,7 +130,11 @@ export default function TenantSchedulePage() {
 
         const suggested = minutesToTime(Math.max(0, sunsetMin - offset));
         setSunsetTime(suggested);
-        if (!twilightTime) setSchedule({ twilightTime: suggested });
+        // Pre-fill the local input and auto-confirm so the user proceeds directly
+        // to the confirm step when we can calculate the sunset time for them
+        setTwilightInputVal(suggested);
+        setSchedule({ twilightTime: suggested });
+        setTwilightConfirmed(true);
       } catch {
         // silently fail — user can enter time manually
       } finally {
@@ -165,6 +173,8 @@ export default function TenantSchedulePage() {
     const iso = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     setSchedule({ preferredDate: iso, preferredTime: "", twilightTime: null });
     setSunsetTime(null);
+    setTwilightInputVal("");
+    setTwilightConfirmed(false);
   }
 
   function prevMonth() {
@@ -181,13 +191,13 @@ export default function TenantSchedulePage() {
     ? new Date(preferredDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
     : null;
 
-  const canContinue = preferredDate && preferredTime && (!isTwilightBooking || twilightTime);
+  const canContinue = preferredDate && preferredTime && (!isTwilightBooking || twilightConfirmed);
   const photographers = catalog?.photographers || [];
 
   // Progressive right-panel step
   const rightStep = !preferredDate ? "idle"
     : !preferredTime ? "time"
-    : isTwilightBooking && !twilightTime ? "twilight"
+    : isTwilightBooking && !twilightConfirmed ? "twilight"
     : "confirm";
 
   return (
@@ -350,7 +360,7 @@ export default function TenantSchedulePage() {
               {/* STEP: twilight — pick twilight time after daytime */}
               {rightStep === "twilight" && (
                 <div className="p-6">
-                  <button onClick={() => setSchedule({ preferredTime: "" })}
+                  <button onClick={() => { setSchedule({ preferredTime: "", twilightTime: null }); setTwilightInputVal(""); setTwilightConfirmed(false); }}
                     className="text-xs text-gray-400 hover:text-gray-600 mb-5 flex items-center gap-1 transition-colors">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -367,30 +377,49 @@ export default function TenantSchedulePage() {
                   {sunsetLoading ? (
                     <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
                       <span className="w-3 h-3 border-2 rounded-full animate-spin border-gray-200" style={{ borderTopColor: P }} />
-                      Calculating sunset…
+                      Calculating sunset time for this location…
                     </div>
                   ) : sunsetTime ? (
                     <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mb-4 text-xs text-amber-700">
-                      Suggested twilight time: <strong>{formatTime12(sunsetTime)}</strong>
+                      Sunset at <strong>{formatTime12(sunsetTime)}</strong>
                       {catalog?.bookingConfig?.availability?.twilightOffsetMinutes
-                        ? ` (${catalog.bookingConfig.availability.twilightOffsetMinutes} min before sunset)`
-                        : ""}
+                        ? ` — suggested start ${catalog.bookingConfig.availability.twilightOffsetMinutes} min before`
+                        : " for this location"}
                     </div>
-                  ) : (!lat || !lng) ? (
-                    <p className="text-xs text-amber-600 mb-4">Use address autocomplete to auto-calculate sunset time.</p>
-                  ) : null}
+                  ) : (
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 mb-4 text-xs text-gray-500">
+                      {(!lat || !lng)
+                        ? "Enter the property address with autocomplete on the Property step to auto-calculate sunset."
+                        : "Could not fetch sunset data — enter the twilight start time manually below."}
+                    </div>
+                  )}
 
                   <label className="label-field">Twilight Start Time</label>
-                  <input type="time"
-                    value={twilightTime || sunsetTime || ""}
-                    onChange={(e) => setSchedule({ twilightTime: e.target.value })}
-                    className="input-field w-full mb-3" />
+                  <input
+                    type="time"
+                    value={twilightInputVal}
+                    onChange={(e) => setTwilightInputVal(e.target.value)}
+                    className="input-field w-full mb-4"
+                    autoFocus
+                  />
 
-                  {sunsetTime && (
+                  <button
+                    type="button"
+                    disabled={!twilightInputVal}
+                    onClick={() => {
+                      setSchedule({ twilightTime: twilightInputVal });
+                      setTwilightConfirmed(true);
+                    }}
+                    className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-40"
+                    style={{ backgroundColor: P }}>
+                    Confirm Twilight Time →
+                  </button>
+
+                  {sunsetTime && twilightInputVal !== sunsetTime && (
                     <button type="button"
-                      onClick={() => setSchedule({ twilightTime: sunsetTime })}
-                      className="text-xs font-medium hover:underline" style={{ color: P }}>
-                      Reset to sunset default
+                      onClick={() => setTwilightInputVal(sunsetTime)}
+                      className="text-xs font-medium mt-3 hover:underline block" style={{ color: P }}>
+                      Reset to calculated sunset default
                     </button>
                   )}
                 </div>
@@ -399,12 +428,18 @@ export default function TenantSchedulePage() {
               {/* STEP: confirm */}
               {rightStep === "confirm" && (
                 <div className="p-6">
-                  <button onClick={() => setSchedule({ preferredTime: "" })}
+                  <button onClick={() => {
+                    if (isTwilightBooking) {
+                      setTwilightConfirmed(false);
+                    } else {
+                      setSchedule({ preferredTime: "" });
+                    }
+                  }}
                     className="text-xs text-gray-400 hover:text-gray-600 mb-6 flex items-center gap-1 transition-colors">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                     </svg>
-                    Change time
+                    {isTwilightBooking ? "Change twilight time" : "Change time"}
                   </button>
 
                   {/* Summary */}
