@@ -28,12 +28,13 @@ export async function POST(req, { params }) {
       getEffectivePlan(tenant),
       tenant.addonListings || 0
     );
-    const activeSnap = await adminDb
-      .collection("tenants").doc(tenant.id)
-      .collection("bookings")
-      .where("status", "!=", "cancelled")
-      .count()
-      .get();
+    // Count only completed bookings (not abandoned pending_payment or cancelled)
+    const statusCountPromises = ["requested", "confirmed", "completed", "in_progress", "editing", "delivered"].map((s) =>
+      adminDb.collection("tenants").doc(tenant.id).collection("bookings")
+        .where("status", "==", s).count().get()
+    );
+    const statusCounts = await Promise.all(statusCountPromises);
+    const activeSnap = { data: () => ({ count: statusCounts.reduce((sum, s) => sum + (s.data().count || 0), 0) }) };
     if ((activeSnap.data().count || 0) >= listingLimit) {
       return Response.json({ error: "This booking page is temporarily unavailable." }, { status: 503 });
     }

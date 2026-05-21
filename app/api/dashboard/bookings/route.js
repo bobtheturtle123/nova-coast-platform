@@ -40,14 +40,16 @@ export async function GET(req) {
     ? (lastCreated.toDate ? lastCreated.toDate().toISOString() : new Date(lastCreated).toISOString())
     : null;
 
-  const bookings = docs.map((d) => {
-    const data = d.data();
-    for (const key of ["createdAt", "updatedAt", "preferredDate", "shootDate"]) {
-      if (data[key]?._seconds) data[key] = new Date(data[key]._seconds * 1000).toISOString();
-      else if (data[key]?.toDate) data[key] = data[key].toDate().toISOString();
-    }
-    return { id: d.id, ...data };
-  });
+  const bookings = docs
+    .filter((d) => d.data().status !== "pending_payment")
+    .map((d) => {
+      const data = d.data();
+      for (const key of ["createdAt", "updatedAt", "preferredDate", "shootDate"]) {
+        if (data[key]?._seconds) data[key] = new Date(data[key]._seconds * 1000).toISOString();
+        else if (data[key]?.toDate) data[key] = data[key].toDate().toISOString();
+      }
+      return { id: d.id, ...data };
+    });
 
   return Response.json({ bookings, hasMore, nextCursor });
 }

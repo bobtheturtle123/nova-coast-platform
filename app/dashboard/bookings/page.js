@@ -10,12 +10,11 @@ import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 
 const STATUS_LABELS = {
-  pending_payment: { label: "Awaiting payment", cls: "bg-gray-50 text-gray-500" },
-  requested:       { label: "Pending review",   cls: "bg-amber-50 text-amber-600" },
-  confirmed:       { label: "Confirmed",         cls: "bg-[#EEF5FC] text-[#1E5A8A]" },
-  completed:       { label: "Completed",         cls: "bg-emerald-50 text-emerald-700" },
-  cancelled:       { label: "Cancelled",         cls: "bg-red-50 text-red-500" },
-  payment_failed:  { label: "Payment failed",    cls: "bg-red-50 text-red-500" },
+  requested:      { label: "Pending review",  cls: "bg-amber-50 text-amber-600" },
+  confirmed:      { label: "Confirmed",        cls: "bg-[#EEF5FC] text-[#1E5A8A]" },
+  completed:      { label: "Completed",        cls: "bg-emerald-50 text-emerald-700" },
+  cancelled:      { label: "Cancelled",        cls: "bg-red-50 text-red-500" },
+  payment_failed: { label: "Payment failed",   cls: "bg-red-50 text-red-500" },
 };
 
 const EMPTY_FORM = {
