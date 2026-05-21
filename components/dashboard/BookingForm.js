@@ -145,6 +145,8 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   const [confirmedAddress,  setConfirmedAddress]  = useState(init.address || "");
   const [busySlots,         setBusySlots]         = useState(new Set());
   const [loadingSlots,      setLoadingSlots]      = useState(false);
+  const [contractSignerName, setContractSignerName] = useState(init.contractSignerName || "");
+  const [contractSigned,     setContractSigned]     = useState(!!init.contractSignerName);
 
   const getToken = () => auth.currentUser?.getIdToken();
 
@@ -202,19 +204,32 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   }, [form.packageId, form.serviceIds, form.addonIds, form.sqft, form.customLineItems, catalog]);
 
   const computedDuration = useMemo(() => {
+    const sqftTier = getSqftTier(Number(form.sqft) || 0, catalog.pricingConfig);
+    function itemDuration(item) {
+      if (!item) return 0;
+      if (item.durationTiers && sqftTier && item.durationTiers[sqftTier] != null) return item.durationTiers[sqftTier];
+      return item.duration || 0;
+    }
     if (form.packageId) {
       const pkg = catalog.packages.find((p) => p.id === form.packageId);
-      if (!pkg?.includes?.length) return 0;
-      return pkg.includes.reduce((sum, svcId) => {
-        const svc = catalog.services.find((s) => s.id === svcId);
-        return sum + (svc?.duration || 0);
-      }, 0);
+      if (!pkg) return 0;
+      // Use package's own tiered/flat duration if set
+      const pkgDur = itemDuration(pkg);
+      if (pkgDur > 0) return pkgDur;
+      // Fall back to summing included services
+      if (pkg.includes?.length) {
+        return pkg.includes.reduce((sum, svcId) => {
+          const svc = catalog.services.find((s) => s.id === svcId);
+          return sum + itemDuration(svc);
+        }, 0);
+      }
+      return 0;
     }
     return form.serviceIds.reduce((sum, id) => {
       const svc = catalog.services.find((s) => s.id === id);
-      return sum + (svc?.duration || 0);
+      return sum + itemDuration(svc);
     }, 0);
-  }, [form.packageId, form.serviceIds, catalog]);
+  }, [form.packageId, form.serviceIds, form.sqft, catalog]);
 
   const effectiveDuration = form.shootDuration !== "" ? Number(form.shootDuration) : computedDuration;
 
@@ -537,7 +552,12 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
         res = await fetch("/api/dashboard/bookings/create", {
           method:  "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ ...form, totalPrice: pricing.total, sqft: Number(form.sqft) || "" }),
+          body: JSON.stringify({
+            ...form,
+            totalPrice:         pricing.total,
+            sqft:               Number(form.sqft) || "",
+            contractSignerName: contractSigned ? contractSignerName.trim() : null,
+          }),
         });
         data = await res.json();
         if (res.ok) {
@@ -1193,6 +1213,48 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
               </div>
             )}
 
+            {/* Service Agreement */}
+            {!isEdit && catalog?.bookingConfig?.serviceAgreement?.enabled && catalog.bookingConfig.serviceAgreement.text && (
+              <div className="card">
+                <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-3">Service Agreement</h2>
+                {!contractSigned ? (
+                  <>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto mb-3">
+                      <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">
+                        {catalog.bookingConfig.serviceAgreement.text}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={contractSignerName}
+                        onChange={(e) => setContractSignerName(e.target.value)}
+                        placeholder="Full name to sign"
+                        className="input-field flex-1 text-sm"
+                      />
+                      <button
+                        type="button"
+                        disabled={!contractSignerName.trim()}
+                        onClick={() => contractSignerName.trim() && setContractSigned(true)}
+                        className="btn-primary px-4 py-2 text-sm whitespace-nowrap disabled:opacity-40"
+                      >
+                        Sign
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-emerald-800">Agreement signed</p>
+                      <p className="text-xs text-emerald-700 mt-0.5">Signed as: <strong>{contractSignerName}</strong></p>
+                    </div>
+                    <button type="button" onClick={() => setContractSigned(false)}
+                      className="text-xs text-emerald-600 hover:text-emerald-800 underline">Undo</button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Notifications + Submit */}
             <div className="card">
               <div className="flex items-center gap-2 mb-4">
@@ -1401,9 +1463,26 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                     <div>
                       <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Duration</p>
                       <p className="text-sm font-semibold text-gray-800 mb-3">How long is the shoot?</p>
+                      {computedDuration > 0 && (
+                        <button type="button"
+                          onClick={() => setForm(f => ({ ...f, shootDuration: String(computedDuration) }))}
+                          className={`w-full mb-3 flex items-center justify-between px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                            form.shootDuration === String(computedDuration)
+                              ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
+                              : "border-[#3486cf]/40 bg-[#3486cf]/5 text-[#3486cf] hover:bg-[#3486cf]/10"
+                          }`}>
+                          <span>
+                            Suggested: {computedDuration >= 60
+                              ? `${Math.floor(computedDuration / 60)}h${computedDuration % 60 ? ` ${computedDuration % 60}m` : ""}`
+                              : `${computedDuration} min`}
+                          </span>
+                          <span className="text-[10px] font-normal opacity-70">based on services</span>
+                        </button>
+                      )}
                       <div className="space-y-1.5 mb-3">
                         {DURATION_PRESETS.map((d) => {
-                          const isSelected = form.shootDuration === String(d.value);
+                          const isSelected = form.shootDuration === String(d.value) ||
+                            (form.shootDuration === "" && computedDuration === d.value);
                           return (
                             <button key={d.value} type="button"
                               onClick={() => setForm(f => ({ ...f, shootDuration: String(d.value) }))}

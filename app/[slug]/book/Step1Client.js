@@ -116,11 +116,6 @@ const ITEM_IMAGES = {
   zillow3d:             "https://novacoastmedia.com/wp-content/uploads/2025/06/fg.jpg",
 };
 
-const PACKAGE_TIER_TAGS = {
-  essentials: "Photos · Drone · Digital Twilight",
-  prime:      "Photos · Drone · Twilight · Website",
-  signature:  "Photos · Drone · Twilight · Video · Website",
-};
 
 export default function TenantBookStep1Client({ slug, tenantId, tenantName, catalog }) {
   const router = useRouter();
@@ -247,60 +242,81 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
             return (
               <button key={pkg.id} onClick={() => togglePackage(pkg.id)}
                 className={clsx(
-                  "relative text-left border rounded-xl transition-all duration-200 focus:outline-none overflow-hidden flex flex-col",
-                  selected
-                    ? "border-brand shadow-lg ring-2 ring-navy/20"
-                    : "border-gray-200 bg-white hover:border-brand/40 hover:shadow-sm"
-                )}>
-                {pkg.featured && (
-                  <span className={clsx(
-                    "absolute top-3 left-3 z-10 text-xs font-semibold px-3 py-1 rounded-full tracking-wide",
-                    selected ? "bg-accent-brand text-brand" : "bg-brand text-accent-brand"
-                  )}>Most Popular</span>
+                  "relative text-left border-2 rounded-2xl transition-all duration-200 focus:outline-none overflow-hidden flex flex-col bg-white",
+                  selected ? "shadow-lg" : "border-gray-100 hover:border-gray-200 hover:shadow-md"
                 )}
-                {img && (
-                  <div className="relative h-44 overflow-hidden flex-shrink-0 group">
-                    <img src={img} alt={pkg.name} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                    {images.length > 1 && (
-                      <span className="absolute bottom-2 right-2 text-xs bg-black/50 text-white px-1.5 py-0.5 rounded">
-                        1/{images.length}
-                      </span>
-                    )}
+                style={selected ? { borderColor: "var(--color-primary)", boxShadow: `0 4px 20px color-mix(in srgb, var(--color-primary) 20%, transparent)` } : {}}>
+
+                {/* Selected checkmark */}
+                {selected && (
+                  <div className="absolute top-3 right-3 z-10 w-7 h-7 rounded-full flex items-center justify-center shadow-sm"
+                    style={{ backgroundColor: "var(--color-primary)" }}>
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
                   </div>
                 )}
-                <div className={clsx("p-5 flex flex-col flex-1", selected ? "bg-brand" : "bg-white")}>
-                  {PACKAGE_TIER_TAGS[pkg.id] && (
-                    <p className={clsx("text-xs font-semibold uppercase tracking-wider mb-2", selected ? "text-accent-brand" : "text-accent-brand/80")}>
-                      {PACKAGE_TIER_TAGS[pkg.id]}
-                    </p>
-                  )}
-                  <p className={clsx("font-display text-2xl mb-1", selected ? "text-white" : "text-brand")}>{pkg.name}</p>
-                  <p className={clsx("font-display text-3xl mb-3", selected ? "text-accent-brand" : "text-brand")}>
+
+                {/* Most popular badge */}
+                {pkg.featured && (
+                  <div className="absolute top-3 left-3 z-10">
+                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full tracking-wide"
+                      style={{ backgroundColor: "var(--color-accent)", color: "var(--color-primary)" }}>
+                      Most Popular
+                    </span>
+                  </div>
+                )}
+
+                {/* Hero image */}
+                {img && (
+                  <div className="relative h-40 overflow-hidden flex-shrink-0">
+                    <img src={img} alt={pkg.name} className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.02]" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
+                  </div>
+                )}
+
+                {/* Card body */}
+                <div className="p-5 flex flex-col flex-1 transition-colors"
+                  style={selected ? { backgroundColor: `color-mix(in srgb, var(--color-primary) 5%, white)` } : {}}>
+
+                  <p className="font-display text-xl mb-0.5" style={{ color: "var(--color-primary)" }}>{pkg.name}</p>
+                  <p className="font-display text-2xl font-semibold mb-2" style={{ color: "var(--color-primary)" }}>
                     {displayPrice(pkg)}
                   </p>
-                  <p className={clsx("text-sm mb-4 leading-relaxed flex-1", selected ? "text-white/80" : "text-gray-500")}>{pkg.tagline}</p>
-                  <ul className="space-y-1.5 mb-4">
-                    {(pkg.includes || []).map((sid) => {
-                      const svc = services.find((s) => s.id === sid);
-                      return (
-                        <li key={sid} className={clsx("text-sm flex items-center gap-2", selected ? "text-white/90" : "text-[#0F172A]")}>
-                          <span className="text-accent-brand font-bold">✓</span>
-                          {svc?.name || sid}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  {pkg.deliverables && (
-                    <p className={clsx("text-xs border-t pt-3", selected ? "text-white/50 border-white/20" : "text-gray-400 border-gray-100")}>
-                      {pkg.deliverables}
-                    </p>
+
+                  {pkg.tagline && (
+                    <p className="text-sm text-gray-500 mb-3 leading-relaxed">{pkg.tagline}</p>
                   )}
+
+                  {pkg.includes?.length > 0 && (
+                    <ul className="space-y-1.5 mb-3 flex-1">
+                      {pkg.includes.map((sid) => {
+                        const svc = services.find((s) => s.id === sid);
+                        return (
+                          <li key={sid} className="flex items-center gap-2 text-sm text-gray-700">
+                            <span className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center"
+                              style={{ backgroundColor: `color-mix(in srgb, var(--color-primary) 12%, transparent)` }}>
+                              <svg width="8" height="8" fill="none" viewBox="0 0 24 24" strokeWidth="3.5" style={{ color: "var(--color-primary)" }} stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </span>
+                            {svc?.name || sid}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+
+                  {pkg.deliverables && (
+                    <p className="text-xs text-gray-400 border-t border-gray-100 pt-3 mb-2">{pkg.deliverables}</p>
+                  )}
+
                   {(pkg.description || images.length > 0) && (
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setLightboxItem({ item: pkg, images, price: displayPrice(pkg) }); }}
-                      className={clsx("text-xs mt-2 underline underline-offset-2 text-left", selected ? "text-white/60 hover:text-white" : "text-brand/50 hover:text-brand")}
+                      className="text-xs mt-1 underline underline-offset-2 text-left transition-opacity opacity-50 hover:opacity-100"
+                      style={{ color: "var(--color-primary)" }}
                     >
                       View details {images.length > 1 ? `(${images.length} photos)` : ""}
                     </button>
