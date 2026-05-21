@@ -130,6 +130,7 @@ export default function DashboardLayout({ children }) {
   const [userRole,        setUserRole]        = useState("owner");
   const [permissions,     setPermissions]     = useState(null);
   const [tenantName,      setTenantName]      = useState("");
+  const [tenantLogo,      setTenantLogo]      = useState("");
   const [sidebarOpen,     setSidebarOpen]     = useState(false);
   const [pendingRevCount, setPendingRevCount] = useState(0);
   const [tenantPlan,      setTenantPlan]      = useState("starter");
@@ -165,6 +166,7 @@ export default function DashboardLayout({ children }) {
         headers: { Authorization: `Bearer ${tok}` },
       }).then((r) => r.json()).then((d) => {
         if (d.tenant?.businessName) setTenantName(d.tenant.businessName);
+        if (d.tenant?.branding?.logoUrl) setTenantLogo(d.tenant.branding.logoUrl);
         setTenantPlan(d.tenant?.permanentPlan || d.tenant?.subscriptionPlan || "starter");
       }).catch(() => {});
     });
@@ -283,12 +285,20 @@ export default function DashboardLayout({ children }) {
           onClick={() => setSidebarOpen(false)}
           className="flex items-center gap-2 flex-1 min-w-0 group"
         >
-          <div
-            className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white transition-opacity group-hover:opacity-80"
-            style={{ background: "#3486cf" }}
-          >
-            {initials}
-          </div>
+          {tenantLogo ? (
+            <img
+              src={tenantLogo}
+              alt={tenantName || "Company logo"}
+              className="w-6 h-6 rounded-full object-cover flex-shrink-0 transition-opacity group-hover:opacity-80"
+            />
+          ) : (
+            <div
+              className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white transition-opacity group-hover:opacity-80"
+              style={{ background: "#3486cf" }}
+            >
+              {initials}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-[11px] text-gray-500 truncate leading-none group-hover:text-[#3486cf] transition-colors">{user?.email}</p>
           </div>

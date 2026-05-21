@@ -140,6 +140,8 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   const [apptPopupIdx,       setApptPopupIdx]       = useState(null);
   const [calYear,            setCalYear]            = useState(() => new Date().getFullYear());
   const [calMonth,           setCalMonth]           = useState(() => new Date().getMonth());
+  const [aCalYear,           setACalYear]           = useState(() => new Date().getFullYear());
+  const [aCalMonth,          setACalMonth]          = useState(() => new Date().getMonth());
   const [showServicesModal,  setShowServicesModal]  = useState(false);
   const [servicesSearch,     setServicesSearch]     = useState("");
   const [confirmedAddress,  setConfirmedAddress]  = useState(init.address || "");
@@ -149,6 +151,21 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   const [contractSigned,     setContractSigned]     = useState(!!init.contractSignerName);
 
   const getToken = () => auth.currentUser?.getIdToken();
+
+  useEffect(() => {
+    if (apptPopupIdx !== null) {
+      const appt = form.additionalAppointments?.[apptPopupIdx];
+      if (appt?.date) {
+        const d = new Date(appt.date + "T12:00:00");
+        setACalYear(d.getFullYear());
+        setACalMonth(d.getMonth());
+      } else {
+        const today = new Date();
+        setACalYear(today.getFullYear());
+        setACalMonth(today.getMonth());
+      }
+    }
+  }, [apptPopupIdx]);
 
   useEffect(() => {
     async function load() {
@@ -1307,8 +1324,6 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
           setForm((f) => { const arr = [...f.additionalAppointments]; arr[apptPopupIdx] = { ...arr[apptPopupIdx], [field]: value }; return { ...f, additionalAppointments: arr }; });
         const apptToday = new Date();
         const apptTodayStr = `${apptToday.getFullYear()}-${String(apptToday.getMonth()+1).padStart(2,"0")}-${String(apptToday.getDate()).padStart(2,"0")}`;
-        const [aCalYear,  setACalYear]  = useState(appt.date ? new Date(appt.date+"T12:00:00").getFullYear() : apptToday.getFullYear());
-        const [aCalMonth, setACalMonth] = useState(appt.date ? new Date(appt.date+"T12:00:00").getMonth() : apptToday.getMonth());
         const aFirstDay = new Date(aCalYear, aCalMonth, 1).getDay();
         const aDaysInMonth = new Date(aCalYear, aCalMonth + 1, 0).getDate();
         const aCells = [];
