@@ -580,7 +580,7 @@ if (loading) return (
           <div className="flex gap-0">
             {[
               { id: "overview",   label: "Overview" },
-              { id: "orders",     label: "Booking Details" },
+              { id: "orders",     label: "Payments" },
               { id: "gallery",    label: "Gallery" },
               { id: "property",   label: "Property Site" },
               { id: "marketing",  label: "Marketing" },
@@ -1260,12 +1260,12 @@ if (loading) return (
             )}
 
             {/* Send Payment Reminder button — only when gallery delivered and balance outstanding */}
-            {userRole !== "manager" && booking.depositPaid && !booking.paidInFull && !booking.balancePaid && booking.galleryId && (
+            {userRole !== "manager" && !booking.paidInFull && !booking.balancePaid && (
               <div className="card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Payment Reminder</p>
                 <p className="text-sm text-gray-500 mb-4">
-                  Send the client a reminder to pay their remaining balance of <strong>${booking.remainingBalance}</strong>.
-                  Includes a link to their gallery where they can pay.
+                  Send the client a reminder about their outstanding {booking.depositPaid ? "balance" : "deposit"} of{" "}
+                  <strong>${(booking.depositPaid ? booking.remainingBalance : booking.depositAmount) || 0}</strong>.
                 </p>
                 <button
                   disabled={sendingReminder}
@@ -1527,7 +1527,7 @@ if (loading) return (
 
         {/* ── PROPERTY SITE TAB ────────────────────────────────────────────── */}
         {tab === "property" && (
-          <div className="max-w-2xl space-y-6">
+          <div className="max-w-5xl space-y-4">
             {/* Publish status */}
             <div className="flex items-center justify-between card p-4">
               <div>
@@ -1584,6 +1584,9 @@ if (loading) return (
                   : "bg-red-50 border border-red-200 text-red-700"
               }`}>{propSiteMsg.text}</div>
             )}
+
+            {/* 2-column grid for the main settings */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
 
             {/* Template + Color Scheme */}
             <div className="card">
@@ -2033,6 +2036,8 @@ if (loading) return (
               </div>
               <p className="text-xs text-gray-400 mt-2">Save the property website above to apply the domain change.</p>
             </div>
+
+            </div>{/* end 2-col grid */}
 
             <div className="flex items-center gap-4">
               <button onClick={savePropSite} disabled={savingPropSite} className="btn-primary px-8 py-3">

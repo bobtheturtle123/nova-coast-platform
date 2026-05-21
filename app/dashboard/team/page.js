@@ -603,14 +603,17 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
               {allProducts.length === 0 ? (
                 <p className="text-sm text-gray-400 py-4 text-center">Add products first in the Products page.</p>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
                   {allProducts.map((p) => (
-                    <button key={p.id} type="button" onClick={() => toggleSkill(p.id)}
-                      className={`text-xs px-3 py-2 rounded-lg border font-medium transition-colors ${
-                        form.skills.includes(p.id) ? "bg-[#3486cf] text-white border-[#3486cf]" : "border-gray-200 text-gray-600 hover:border-gray-300"
-                      }`}>
-                      {p.name}
-                    </button>
+                    <label key={p.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.skills.includes(p.id)}
+                        onChange={() => toggleSkill(p.id)}
+                        className="rounded border-gray-300 text-[#3486cf]"
+                      />
+                      <span className="text-sm text-[#0F172A] flex-1">{p.name}</span>
+                    </label>
                   ))}
                 </div>
               )}

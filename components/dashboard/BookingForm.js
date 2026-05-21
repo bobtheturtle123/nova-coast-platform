@@ -1331,10 +1331,10 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
         for (let d = 1; d <= aDaysInMonth; d++) aCells.push(d);
         while (aCells.length % 7 !== 0) aCells.push(null);
         const aMonthLabel = new Date(aCalYear, aCalMonth, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
-        const aRightStep = !appt.date ? "idle" : !appt.time ? "time" : "confirm";
+        const aRightStep = !appt.date ? "idle" : !appt.time ? "time" : !appt.duration ? "duration" : "confirm";
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ height: "min(90vh, 540px)" }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ height: "min(90vh, 580px)" }}>
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
                 <h3 className="font-semibold text-[#0F172A]">Appointment {apptPopupIdx + 2}</h3>
                 <button type="button" onClick={() => setApptPopupIdx(null)}
@@ -1414,6 +1414,38 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                       </div>
                     </div>
                   )}
+                  {aRightStep === "duration" && (
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Duration</p>
+                      <p className="text-sm font-semibold text-gray-800 mb-3">How long is this appointment?</p>
+                      <div className="space-y-1.5 mb-3">
+                        {DURATION_PRESETS.map((dp) => {
+                          const isSelected = appt.duration === String(dp.value);
+                          return (
+                            <button key={dp.value} type="button"
+                              onClick={() => setApptField("duration", String(dp.value))}
+                              className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-all flex items-center justify-between ${
+                                isSelected ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]" : "border-gray-200 text-gray-700 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
+                              }`}>
+                              {dp.label}
+                              {isSelected && <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                        <span className="text-[11px] text-gray-400">Custom (min):</span>
+                        <input type="number" min="0" max="720" step="15"
+                          value={appt.duration || ""}
+                          onChange={(e) => setApptField("duration", e.target.value)}
+                          className="input-field text-sm py-1 w-24" placeholder="90" />
+                      </div>
+                      <button type="button" onClick={() => setApptField("duration", "skip")}
+                        className="mt-3 text-xs text-gray-400 hover:text-gray-600 hover:underline">
+                        Skip duration
+                      </button>
+                    </div>
+                  )}
                   {aRightStep === "confirm" && (
                     <div>
                       <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">Appointment {apptPopupIdx+2}</p>
@@ -1434,6 +1466,16 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                           </div>
                           <button type="button" onClick={()=>setApptField("time","")} className="text-[11px] text-[#3486cf] hover:underline flex-shrink-0">Change</button>
                         </div>
+                        {appt.duration && appt.duration !== "skip" && (
+                          <div className="flex items-center gap-3 px-4 py-3">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="2" className="flex-shrink-0"><circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 8v4l3 3"/></svg>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Duration</p>
+                              <p className="text-sm font-semibold text-gray-800">{(() => { const m=Number(appt.duration); return m>=60?`${Math.floor(m/60)}h${m%60?` ${m%60}m`:""}`:`${m} min`; })()}</p>
+                            </div>
+                            <button type="button" onClick={()=>setApptField("duration","")} className="text-[11px] text-[#3486cf] hover:underline flex-shrink-0">Change</button>
+                          </div>
+                        )}
                       </div>
                       <button type="button" onClick={()=>setApptPopupIdx(null)}
                         className="w-full py-3 rounded-xl text-white text-sm font-semibold transition-colors"

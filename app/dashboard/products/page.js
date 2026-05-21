@@ -457,20 +457,21 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
             <div>
               <label className="label-field">Assigned Photographers</label>
               <p className="text-xs text-gray-400 mb-2">Only these photographers will be assigned to this service. Leave blank for all.</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
                 {teamMembers.map((m) => (
-                  <button key={m.id} type="button" onClick={() => togglePhotographer(m.id)}
-                    className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors ${
-                      form.assignedPhotographers.includes(m.id)
-                        ? "bg-[#3486cf] text-white border-[#3486cf]"
-                        : "border-gray-200 text-gray-600 hover:border-gray-300"
-                    }`}>
-                    <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
+                  <label key={m.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.assignedPhotographers.includes(m.id)}
+                      onChange={() => togglePhotographer(m.id)}
+                      className="rounded border-gray-300 text-[#3486cf]"
+                    />
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
                       style={{ background: m.color || "#6B7280" }}>
                       {m.name?.[0]?.toUpperCase()}
                     </div>
-                    {m.name}
-                  </button>
+                    <span className="text-sm text-[#0F172A]">{m.name}</span>
+                  </label>
                 ))}
               </div>
             </div>

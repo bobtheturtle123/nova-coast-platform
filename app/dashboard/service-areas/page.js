@@ -139,6 +139,7 @@ export default function ServiceAreasPage() {
   const mapRef          = useRef(null);
   const drawRef         = useRef(null);
   const mapLoadedRef    = useRef(false);
+  const zonesRef        = useRef([]);
 
   const [zones,          setZones]          = useState([]);
   const [teamMembers,    setTeamMembers]    = useState([]);
@@ -251,18 +252,25 @@ export default function ServiceAreasPage() {
       setDrawingMode(false);
     });
 
-    map.on("load", () => { setMapInitialized(true); renderZonesRef.current?.(); });
+    map.on("load", () => { setMapInitialized(true); renderZones(); });
     }); // end requestAnimationFrame
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapsReady]);
 
-  // renderZonesRef is assigned each render so the map load handler always calls the latest version
-  const renderZonesRef = useRef(null);
+  // Always keep zonesRef current — read from this inside renderZones to avoid stale closures
+  zonesRef.current = zones;
 
+  // renderZones is stable (no deps) — reads latest zones from zonesRef.current
   const renderZones = useCallback(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map) return;
+    if (!map.isStyleLoaded()) {
+      // Style not ready yet — retry once it becomes idle
+      map.once("idle", () => renderZones());
+      return;
+    }
 
+    const currentZones = zonesRef.current;
     try {
       (map.getStyle()?.layers || [])
         .filter((l) => l.id.startsWith("zone-"))
@@ -271,7 +279,7 @@ export default function ServiceAreasPage() {
         .filter((s) => s.startsWith("zone-"))
         .forEach((s) => { try { if (map.getSource(s)) map.removeSource(s); } catch {} });
 
-      zones.forEach((zone) => {
+      currentZones.forEach((zone) => {
         if (!zone.paths?.length) return;
         const srcId   = `zone-${zone.id}`;
         const fillId  = `zone-fill-${zone.id}`;
@@ -292,19 +300,14 @@ export default function ServiceAreasPage() {
     } catch (err) {
       console.error("[service-areas] renderZones error:", err?.message);
     }
-  }, [zones]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // stable — reads zones via zonesRef.current
 
-  // Keep ref current every render (synchronous, no effect delay)
-  renderZonesRef.current = renderZones;
-
-  // Re-render whenever zones change AND the map style is ready.
-  // mapInitialized is set true inside the map "load" event, so this effect
-  // fires both when zones arrive after the map is ready, and when the map
-  // becomes ready after zones have already loaded.
+  // Re-render whenever zones data changes OR map becomes ready
   useEffect(() => {
     if (!mapInitialized) return;
     renderZones();
-  }, [zones, renderZones, mapInitialized]);
+  }, [zones, mapInitialized, renderZones]);
 
   function startDrawing() {
     if (!drawRef.current) return;
