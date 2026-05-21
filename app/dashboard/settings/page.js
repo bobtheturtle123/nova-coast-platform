@@ -651,6 +651,16 @@ export default function SettingsPage() {
   const [savingTemplate,  setSavingTemplate]  = useState(false);
   const [emailTab,        setEmailTab]        = useState("gallery");
 
+  // SMS template state
+  const [smsTab,                       setSmsTab]                       = useState("bookingConfirmedClient");
+  const [smsBookingConfirmedClient,    setSmsBookingConfirmedClient]    = useState("");
+  const [smsBookingConfirmedPhotog,    setSmsBookingConfirmedPhotog]    = useState("");
+  const [smsMediaDeliveredClient,      setSmsMediaDeliveredClient]      = useState("");
+  const [smsMediaDeliveredPhotog,      setSmsMediaDeliveredPhotog]      = useState("");
+  const [smsShootReminderClient,       setSmsShootReminderClient]       = useState("");
+  const [smsShootReminderPhotog,       setSmsShootReminderPhotog]       = useState("");
+  const [savingSmsTemplate,            setSavingSmsTemplate]            = useState(false);
+
   // Gallery settings
   const [viewerTracking,     setViewerTracking]     = useState(true);
   const [savingGalleryPrefs, setSavingGalleryPrefs] = useState(false);
@@ -771,6 +781,15 @@ export default function SettingsPage() {
           if (t.bookingApproved?.body)    setBookingApprovedBody(t.bookingApproved.body);
           if (t.paymentReminder?.subject) setPaymentReminderSubject(t.paymentReminder.subject);
           if (t.paymentReminder?.body)    setPaymentReminderBody(t.paymentReminder.body);
+        }
+        if (data.tenant.smsTemplates) {
+          const s = data.tenant.smsTemplates;
+          if (s.bookingConfirmedClient)       setSmsBookingConfirmedClient(s.bookingConfirmedClient);
+          if (s.bookingConfirmedPhotographer) setSmsBookingConfirmedPhotog(s.bookingConfirmedPhotographer);
+          if (s.mediaDeliveredClient)         setSmsMediaDeliveredClient(s.mediaDeliveredClient);
+          if (s.mediaDeliveredPhotographer)   setSmsMediaDeliveredPhotog(s.mediaDeliveredPhotographer);
+          if (s.shootReminderClient)          setSmsShootReminderClient(s.shootReminderClient);
+          if (s.shootReminderPhotographer)    setSmsShootReminderPhotog(s.shootReminderPhotographer);
         }
         // Load cost rates
         if (data.tenant.costRates) {
@@ -1157,6 +1176,30 @@ export default function SettingsPage() {
       else showMsg("Failed to save.", "error");
     } catch { showMsg("Something went wrong.", "error"); }
     setSavingTemplate(false);
+  }
+
+  async function saveSmsTemplates() {
+    setSavingSmsTemplate(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/tenants/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          smsTemplates: {
+            bookingConfirmedClient:       smsBookingConfirmedClient,
+            bookingConfirmedPhotographer: smsBookingConfirmedPhotog,
+            mediaDeliveredClient:         smsMediaDeliveredClient,
+            mediaDeliveredPhotographer:   smsMediaDeliveredPhotog,
+            shootReminderClient:          smsShootReminderClient,
+            shootReminderPhotographer:    smsShootReminderPhotog,
+          },
+        }),
+      });
+      if (res.ok) showMsg("SMS templates saved.");
+      else showMsg("Failed to save.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    setSavingSmsTemplate(false);
   }
 
   async function createPromoCode(e) {
@@ -2552,10 +2595,6 @@ export default function SettingsPage() {
           Customize what each email says. Click any <span className="font-medium text-[#3486cf]">insert field</span> button to add dynamic content like the client name or property address.
         </p>
 
-        <div className="bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-5 text-xs text-amber-700">
-          <strong>Email setup required:</strong> Emails are sent via Resend. Add <code className="font-mono bg-amber-100 px-1 rounded">RESEND_API_KEY</code> in your Vercel environment variables and verify your sending domain.
-        </div>
-
         {/* Email type tabs */}
         <div className="flex gap-1 mb-6 border-b border-gray-100 overflow-x-auto">
           {[
@@ -2709,6 +2748,136 @@ export default function SettingsPage() {
         <div className="mt-6 flex justify-end">
           <button onClick={saveEmailTemplate} disabled={savingTemplate} className="btn-primary px-8 py-3">
             {savingTemplate ? "Saving…" : "Save Email Templates"}
+          </button>
+        </div>
+      </div>
+
+      {/* ─── SMS Templates ───────────────────────────────────────────────────── */}
+      <div id="settings-sms" className="card mt-6 scroll-mt-24">
+        <h2 className="font-semibold text-[#0F172A] text-base mb-1">SMS Templates</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Customize the text messages sent to clients and photographers. Leave blank to use the default message. Use <span className="font-medium text-[#3486cf]">insert field</span> buttons to add dynamic content.
+        </p>
+
+        {/* SMS type tabs */}
+        <div className="flex gap-1 mb-6 border-b border-gray-100 overflow-x-auto">
+          {[
+            { id: "bookingConfirmedClient",    label: "Booking → Client",   hint: "Sent to client on booking confirmation" },
+            { id: "bookingConfirmedPhotog",    label: "Booking → Photog",   hint: "Sent to photographer on new assignment" },
+            { id: "mediaDeliveredClient",      label: "Media → Client",     hint: "Sent to client when gallery is delivered" },
+            { id: "mediaDeliveredPhotog",      label: "Media → Photog",     hint: "Sent to photographer when gallery delivered" },
+            { id: "shootReminderClient",       label: "Reminder → Client",  hint: "Day-before shoot reminder to client" },
+            { id: "shootReminderPhotog",       label: "Reminder → Photog",  hint: "Day-before shoot reminder to photographer" },
+          ].map((t) => (
+            <button key={t.id} onClick={() => setSmsTab(t.id)}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
+                smsTab === t.id
+                  ? "border-[#3486cf] text-[#3486cf]"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
+              }`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Variable chips */}
+        {(() => {
+          const SMS_TAB_VARS = {
+            bookingConfirmedClient:  [["Business Name","{{bizName}}"],["Property Address","{{address}}"],["Client Name","{{clientName}}"],["Shoot Info (auto)","{{shootInfo}}"]],
+            bookingConfirmedPhotog:  [["Business Name","{{bizName}}"],["Property Address","{{address}}"],["Client Name","{{clientName}}"],["Shoot Info (auto)","{{shootInfo}}"]],
+            mediaDeliveredClient:    [["Business Name","{{bizName}}"],["Property Address","{{address}}"],["Gallery Link (auto)","{{galleryLink}}"]],
+            mediaDeliveredPhotog:    [["Business Name","{{bizName}}"],["Property Address","{{address}}"],["Client Name","{{clientName}}"]],
+            shootReminderClient:     [["Business Name","{{bizName}}"],["Property Address","{{address}}"],["Shoot Time (auto)","{{timeStr}}"]],
+            shootReminderPhotog:     [["Business Name","{{bizName}}"],["Property Address","{{address}}"],["Client Name","{{clientName}}"],["Client Phone","{{clientPhone}}"],["Shoot Time (auto)","{{timeStr}}"]],
+          };
+          const smsSetter = {
+            bookingConfirmedClient: setSmsBookingConfirmedClient,
+            bookingConfirmedPhotog: setSmsBookingConfirmedPhotog,
+            mediaDeliveredClient:   setSmsMediaDeliveredClient,
+            mediaDeliveredPhotog:   setSmsMediaDeliveredPhotog,
+            shootReminderClient:    setSmsShootReminderClient,
+            shootReminderPhotog:    setSmsShootReminderPhotog,
+          };
+          const vars = SMS_TAB_VARS[smsTab] || [];
+          const setter = smsSetter[smsTab];
+
+          function insertSms(value) {
+            const el = document.activeElement;
+            if (el && el.tagName === "TEXTAREA") {
+              const start = el.selectionStart ?? el.value.length;
+              const end   = el.selectionEnd   ?? el.value.length;
+              const next  = el.value.slice(0, start) + value + el.value.slice(end);
+              setter(next);
+              requestAnimationFrame(() => {
+                el.focus();
+                el.setSelectionRange(start + value.length, start + value.length);
+              });
+            } else {
+              setter((v) => v + value);
+            }
+          }
+
+          return (
+            <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-xs text-gray-500 font-medium mb-2">Insert field — click while cursor is in the message box:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {vars.map(([label, token]) => (
+                  <button key={token} type="button"
+                    onMouseDown={(e) => { e.preventDefault(); insertSms(token); }}
+                    className="text-xs border px-2.5 py-1 rounded-full font-medium transition-colors bg-white border-[#3486cf]/20 text-[#3486cf] hover:bg-[#3486cf]/5">
+                    + {label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-2">
+                <span className="font-semibold text-gray-500">(auto)</span> fields are omitted automatically when data isn&apos;t available for that booking.
+              </p>
+            </div>
+          );
+        })()}
+
+        {/* SMS message textarea per tab */}
+        {[
+          { id: "bookingConfirmedClient", val: smsBookingConfirmedClient, set: setSmsBookingConfirmedClient,
+            desc: "Sent to the client when their booking is confirmed.",
+            placeholder: "{{bizName}}: Your booking for {{address}} is confirmed!{{shootInfo}} Reply STOP to unsubscribe." },
+          { id: "bookingConfirmedPhotog", val: smsBookingConfirmedPhotog, set: setSmsBookingConfirmedPhotog,
+            desc: "Sent to the photographer when a new shoot is assigned.",
+            placeholder: "{{bizName}}: New shoot assigned — {{address}}. Client: {{clientName}}.{{shootInfo}} Log in to view details." },
+          { id: "mediaDeliveredClient",   val: smsMediaDeliveredClient,   set: setSmsMediaDeliveredClient,
+            desc: "Sent to the client when their gallery is delivered.",
+            placeholder: "{{bizName}}: Your photos for {{address}} are ready!{{galleryLink}} Reply STOP to unsubscribe." },
+          { id: "mediaDeliveredPhotog",   val: smsMediaDeliveredPhotog,   set: setSmsMediaDeliveredPhotog,
+            desc: "Sent to the photographer when gallery is delivered to the client.",
+            placeholder: "{{bizName}}: Media delivered to {{clientName}} for {{address}}." },
+          { id: "shootReminderClient",    val: smsShootReminderClient,    set: setSmsShootReminderClient,
+            desc: "Sent the day before the shoot to the client.",
+            placeholder: "{{bizName}} reminder: Your photo shoot for {{address}} is tomorrow{{timeStr}}. Reply STOP to unsubscribe." },
+          { id: "shootReminderPhotog",    val: smsShootReminderPhotog,    set: setSmsShootReminderPhotog,
+            desc: "Sent the day before the shoot to the photographer.",
+            placeholder: "{{bizName}} reminder: Shoot tomorrow{{timeStr}} — {{address}}. Client: {{clientName}} ({{clientPhone}})." },
+        ].map((tab) => smsTab === tab.id && (
+          <div key={tab.id} className="space-y-3">
+            <p className="text-xs text-gray-400">{tab.desc}</p>
+            <div>
+              <label className="label-field">Message</label>
+              <textarea
+                value={tab.val}
+                onChange={(e) => tab.set(e.target.value)}
+                rows={4}
+                placeholder={tab.placeholder}
+                className="input-field w-full text-sm leading-relaxed resize-y font-mono"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Leave blank to use the default message shown as placeholder text above.
+              </p>
+            </div>
+          </div>
+        ))}
+
+        <div className="mt-6 flex justify-end">
+          <button onClick={saveSmsTemplates} disabled={savingSmsTemplate} className="btn-primary px-8 py-3">
+            {savingSmsTemplate ? "Saving…" : "Save SMS Templates"}
           </button>
         </div>
       </div>
