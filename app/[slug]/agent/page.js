@@ -116,7 +116,9 @@ export default async function AgentPortalPage({ params, searchParams }) {
 
       {bookings.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
-          <p className="text-4xl mb-3">🏡</p>
+          <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+          </div>
           <p className="font-medium text-gray-500">No listings yet</p>
           <p className="text-sm mt-1">Your listings will appear here once the photographer has created them.</p>
         </div>
@@ -168,20 +170,23 @@ export default async function AgentPortalPage({ params, searchParams }) {
                   <div className="flex flex-wrap gap-1.5 px-4 pb-3">
                     {gal?.accessToken && (
                       <a href={`/${slug}/gallery/${gal.accessToken}`} target="_blank" rel="noopener noreferrer"
-                        className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1">
-                        🖼️ Gallery {gal.mediaCount > 0 ? `(${gal.mediaCount})` : ""}
+                        className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path strokeLinecap="round" strokeLinejoin="round" d="M21 15l-5-5L5 21" /></svg>
+                        Gallery {gal.mediaCount > 0 ? `(${gal.mediaCount})` : ""}
                       </a>
                     )}
                     {pw?.published && (
                       <a href={`/${slug}/property/${b.id}`} target="_blank" rel="noopener noreferrer"
-                        className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1">
-                        🏡 Property
+                        className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                        Property
                       </a>
                     )}
                     {pw && (
                       <a href={`/${slug}/property/${b.id}/brochure`} target="_blank" rel="noopener noreferrer"
-                        className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1">
-                        📋 Brochure
+                        className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        Brochure
                       </a>
                     )}
                   </div>
@@ -221,7 +226,9 @@ function ErrorScreen({ message }) {
   return (
     <div className="min-h-screen flex items-center justify-center px-6">
       <div className="text-center max-w-sm">
-        <p className="text-4xl mb-4">🔒</p>
+        <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+          <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" strokeWidth="1.8"><rect x="5" y="11" width="14" height="10" rx="2" /><path strokeLinecap="round" d="M8 11V7a4 4 0 118 0v4" /></svg>
+        </div>
         <p className="text-gray-700 font-medium mb-2">Access Required</p>
         <p className="text-gray-400 text-sm">{message}</p>
       </div>

@@ -129,7 +129,9 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
           {/* Status */}
           {gallery?.delivered ? (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
-              <span className="text-2xl">✅</span>
+              <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#059669" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              </div>
               <div>
                 <p className="font-semibold text-emerald-800">Media Delivered</p>
                 <p className="text-sm text-emerald-600">Your photos and videos are ready.</p>
@@ -137,7 +139,9 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
             </div>
           ) : (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
-              <span className="text-2xl">⏳</span>
+              <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 6v6l4 2" /></svg>
+              </div>
               <div>
                 <p className="font-semibold text-amber-800">Media In Progress</p>
                 <p className="text-sm text-amber-600">Your media is being edited. You'll be notified when it's ready.</p>
@@ -150,7 +154,9 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
             {galleryUrl && (
               <a href={galleryUrl} target="_blank" rel="noopener noreferrer"
                 className="flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all text-center">
-                <span className="text-2xl">🖼️</span>
+                <div className="w-10 h-10 rounded-xl bg-[#3486cf]/8 flex items-center justify-center">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path strokeLinecap="round" strokeLinejoin="round" d="M21 15l-5-5L5 21" /></svg>
+                </div>
                 <p className="text-sm font-medium text-gray-700">View Gallery</p>
                 <p className="text-xs text-gray-400">{gallery.imageCount} photos{gallery.videoCount > 0 ? ` · ${gallery.videoCount} videos` : ""}</p>
               </a>
@@ -159,7 +165,9 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
             {pw?.published && (
               <a href={listingUrl} target="_blank" rel="noopener noreferrer"
                 className="flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all text-center">
-                <span className="text-2xl">🏡</span>
+                <div className="w-10 h-10 rounded-xl bg-[#3486cf]/8 flex items-center justify-center">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                </div>
                 <p className="text-sm font-medium text-gray-700">Property Website</p>
                 <p className="text-xs text-gray-400">Share with buyers</p>
               </a>
@@ -168,7 +176,9 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
             {pw?.published && (
               <a href={brochureUrl} target="_blank" rel="noopener noreferrer"
                 className="flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all text-center">
-                <span className="text-2xl">📋</span>
+                <div className="w-10 h-10 rounded-xl bg-[#3486cf]/8 flex items-center justify-center">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
                 <p className="text-sm font-medium text-gray-700">Print Brochure</p>
                 <p className="text-xs text-gray-400">PDF / print ready</p>
               </a>
@@ -177,7 +187,9 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
             {gallery?.matterportUrl && (
               <a href={gallery.matterportUrl} target="_blank" rel="noopener noreferrer"
                 className="flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all text-center">
-                <span className="text-2xl">🔮</span>
+                <div className="w-10 h-10 rounded-xl bg-[#3486cf]/8 flex items-center justify-center">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" /></svg>
+                </div>
                 <p className="text-sm font-medium text-gray-700">3D Tour</p>
                 <p className="text-xs text-gray-400">Matterport walkthrough</p>
               </a>
@@ -186,7 +198,9 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
             {gallery?.videoUrl && (
               <a href={gallery.videoUrl} target="_blank" rel="noopener noreferrer"
                 className="flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all text-center">
-                <span className="text-2xl">🎥</span>
+                <div className="w-10 h-10 rounded-xl bg-[#3486cf]/8 flex items-center justify-center">
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" /></svg>
+                </div>
                 <p className="text-sm font-medium text-gray-700">Video Tour</p>
                 <p className="text-xs text-gray-400">Watch the walkthrough</p>
               </a>
@@ -516,7 +530,9 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
 
           {revisions.length === 0 && (
             <div className="text-center py-10 text-gray-400">
-              <p className="text-2xl mb-2">📝</p>
+              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-2">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+              </div>
               <p className="text-sm">No revision requests yet.</p>
             </div>
           )}

@@ -147,7 +147,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
       ...(type === "packages" ? { tagline: form.tagline, deliverables: form.deliverables, featured: form.featured, includes: form.includes } : {}),
       ...(type === "addons" ? { showWith: form.showWith } : {}),
       ...((type === "services" || type === "packages") ? { isTwilight: form.isTwilight } : {}),
-      ...(type === "services" ? {
+      ...((type === "services" || type === "packages") ? {
         duration:      !form.tiered && form.duration !== "" ? Number(form.duration) : null,
         durationTiers: form.tiered && Object.keys(form.durationTiers).length > 0 ? form.durationTiers : null,
       } : {}),
@@ -403,8 +403,8 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                         </div>
                       </div>
 
-                      {/* Duration per tier — services only */}
-                      {type === "services" && (
+                      {/* Duration per tier — services and packages */}
+                      {(type === "services" || type === "packages") && (
                         <div className="pt-3 border-t border-gray-100">
                           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Duration (minutes)</p>
                           <p className="text-xs text-gray-400 mb-2">How long this service takes per property size.</p>
@@ -493,8 +493,8 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
             </div>
           )}
 
-          {/* Duration — flat rate (services only, tiered duration lives in Pricing accordion) */}
-          {type === "services" && !form.tiered && (
+          {/* Duration — flat rate (services and packages, tiered duration lives in Pricing accordion) */}
+          {(type === "services" || type === "packages") && !form.tiered && (
             <div>
               <label className="label-field">Duration (minutes)</label>
               <p className="text-xs text-gray-400 mb-2">Estimated time for this service. Used to calculate appointment end times.</p>

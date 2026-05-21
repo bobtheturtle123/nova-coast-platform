@@ -97,7 +97,9 @@ export default async function AgentListingsPage({ params, searchParams }) {
 
       {bookings.length === 0 ? (
         <div className="text-center py-20 text-gray-400">
-          <p className="text-4xl mb-3">🏡</p>
+          <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+          </div>
           <p className="font-medium text-gray-500">No listings yet</p>
           <p className="text-sm mt-1">Your listings will appear here once the photographer has created them.</p>
         </div>
@@ -171,7 +173,9 @@ function ErrorScreen({ message }) {
   return (
     <div className="min-h-screen flex items-center justify-center px-6">
       <div className="text-center max-w-sm">
-        <p className="text-4xl mb-4">🔒</p>
+        <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+          <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" strokeWidth="1.8"><rect x="5" y="11" width="14" height="10" rx="2" /><path strokeLinecap="round" d="M8 11V7a4 4 0 118 0v4" /></svg>
+        </div>
         <p className="text-gray-700 font-medium mb-2">Access Required</p>
         <p className="text-gray-400 text-sm">{message}</p>
       </div>

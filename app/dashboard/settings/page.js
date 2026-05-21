@@ -557,6 +557,7 @@ export default function SettingsPage() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // Pricing config state
+  const [tenantLoaded,    setTenantLoaded]    = useState(false);
   const [pricingMode,     setPricingMode]     = useState("sqft");
   const [tiers,           setTiers]           = useState([]);
   const [customGateLabel, setCustomGateLabel] = useState("Custom value");
@@ -702,6 +703,7 @@ export default function SettingsPage() {
           setPricingMode(pc?.mode || "sqft");
           setTiers(pc?.tiers?.length ? pc.tiers : DEFAULT_TIERS);
           if (pc?.customGateLabel) setCustomGateLabel(pc.customGateLabel);
+          setTenantLoaded(true);
         }
         // Load booking config
         if (data.tenant.bookingConfig) {
@@ -1410,22 +1412,28 @@ export default function SettingsPage() {
         {/* Pricing mode */}
         <div className="mb-5">
           <label className="label-field">Pricing mode</label>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { value: "sqft",   label: "By Square Footage", desc: "Client enters sq ft — pricing adjusts by tier" },
-              { value: "photos", label: "By Photo Count",    desc: "Client enters # of photos — pricing adjusts by tier" },
-              { value: "flat",   label: "Flat Pricing",      desc: "No gate question — every item uses its base price" },
-              { value: "custom", label: "Custom Value",      desc: "Define your own tier labels and gate question" },
-            ].map((m) => (
-              <button key={m.value} type="button" onClick={() => switchPricingMode(m.value)}
-                className={`p-3 border rounded-xl text-left transition-colors ${
-                  pricingMode === m.value ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-[#3486cf]/30"
-                }`}>
-                <p className={`text-sm font-semibold ${pricingMode === m.value ? "text-[#3486cf]" : "text-[#0F172A]"}`}>{m.label}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{m.desc}</p>
-              </button>
-            ))}
-          </div>
+          {!tenantLoaded ? (
+            <div className="grid grid-cols-3 gap-2">
+              {[0,1,2,3].map((i) => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { value: "sqft",   label: "By Square Footage", desc: "Client enters sq ft — pricing adjusts by tier" },
+                { value: "photos", label: "By Photo Count",    desc: "Client enters # of photos — pricing adjusts by tier" },
+                { value: "flat",   label: "Flat Pricing",      desc: "No gate question — every item uses its base price" },
+                { value: "custom", label: "Custom Value",      desc: "Define your own tier labels and gate question" },
+              ].map((m) => (
+                <button key={m.value} type="button" onClick={() => switchPricingMode(m.value)}
+                  className={`p-3 border rounded-xl text-left transition-colors ${
+                    pricingMode === m.value ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-[#3486cf]/30"
+                  }`}>
+                  <p className={`text-sm font-semibold ${pricingMode === m.value ? "text-[#3486cf]" : "text-[#0F172A]"}`}>{m.label}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{m.desc}</p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Tier table — hidden for flat pricing */}
@@ -1541,7 +1549,11 @@ export default function SettingsPage() {
               { value: "fixed",   label: "Fixed amount", desc: "e.g. $200 flat deposit" },
               { value: "none",    label: "No deposit",   desc: "Clients pay in full" },
             ].map((m) => (
-              <button key={m.value} type="button" onClick={() => setDepositType(m.value)}
+              <button key={m.value} type="button" onClick={() => {
+                setDepositType(m.value);
+                if (m.value === "percent") setDepositValue(50);
+                else if (m.value === "fixed") setDepositValue(200);
+              }}
                 className={`p-3 border rounded-xl text-left transition-colors ${
                   depositType === m.value ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-[#3486cf]/30"
                 }`}>
