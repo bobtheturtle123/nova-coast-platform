@@ -7,7 +7,7 @@ async function getCtx(req) {
   if (!auth) return null;
   const decoded = await adminAuth.verifyIdToken(auth);
   if (!decoded.tenantId) return null;
-  if (decoded.role) return null; // staff members cannot make purchases
+  if (decoded.role && decoded.role !== "admin" && decoded.role !== "owner") return null; // staff/photographers cannot make purchases
   return { uid: decoded.uid, tenantId: decoded.tenantId };
 }
 

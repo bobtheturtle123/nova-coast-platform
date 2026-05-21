@@ -274,6 +274,10 @@ export default function BookingsPage() {
   const [zonePhotographers, setZonePhotographers] = useState(null); // null=unchecked []=[ids]
   const [zoneName,          setZoneName]          = useState(null);
   const zoneDebounceRef = useRef(null);
+  const [activeTab,          setActiveTab]          = useState("bookings");
+  const [abandonedBookings,  setAbandonedBookings]  = useState([]);
+  const [abandonedLoading,   setAbandonedLoading]   = useState(false);
+  const [editingBookingId,   setEditingBookingId]   = useState(null);
 
   useEffect(() => {
     loadBookings();
@@ -334,6 +338,27 @@ export default function BookingsPage() {
         setZoneName(null);
       }
     } catch { /* ignore */ }
+  }
+
+  useEffect(() => {
+    if (activeTab === "abandoned") loadAbandonedBookings();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  async function loadAbandonedBookings() {
+    setAbandonedLoading(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return;
+      const res = await fetch("/api/dashboard/bookings?limit=100&abandoned=true", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAbandonedBookings(data.bookings || []);
+      }
+    } catch { /* ignore */ }
+    setAbandonedLoading(false);
   }
 
   async function loadBookings(afterCursor = null, append = false) {
@@ -497,6 +522,45 @@ export default function BookingsPage() {
     setSavingCustomer(false);
   }
 
+  function closeForm() {
+    setShowCreate(false);
+    setEditingBookingId(null);
+    setCreateError("");
+    setForm(EMPTY_FORM);
+    setAgentQuery("");
+    setShowAgentDD(false);
+  }
+
+  function openEditBooking(b) {
+    setForm({
+      clientName:        b.clientName || "",
+      clientEmail:       b.clientEmail || "",
+      clientPhone:       b.clientPhone || "",
+      address:           b.address || "",
+      unit:              b.unit || "",
+      city:              b.city || "",
+      state:             b.state || "CA",
+      zip:               b.zip || "",
+      sqft:              b.squareFootage ? String(b.squareFootage) : "",
+      apn:               "",
+      preferredDate:     b.preferredDate ? b.preferredDate.slice(0, 10) : "",
+      preferredTime:     b.preferredTime || "",
+      photographerEmail: b.photographerEmail || "",
+      photographerName:  b.photographerName || "",
+      notes:             b.notes || "",
+      totalPrice:        b.totalPrice != null ? String(b.totalPrice) : "",
+      depositPaid:       b.depositPaid || false,
+      status:            b.status || "confirmed",
+      selectedPackage:   b.packageId || (b.packageIds?.[0]) || "",
+      selectedServices:  b.serviceIds || [],
+      selectedAddons:    b.addonIds || [],
+      customLineItems:   [],
+    });
+    setEditingBookingId(b.id);
+    setAgentQuery(b.clientName || "");
+    setShowCreate(true);
+  }
+
   async function createBooking(e) {
     e.preventDefault();
     if (!form.clientName || !form.clientEmail || !form.address) {
@@ -507,24 +571,49 @@ export default function BookingsPage() {
     setCreateError("");
     try {
       const token = await auth.currentUser.getIdToken();
-      const res = await fetch("/api/dashboard/bookings/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          ...form,
-          totalPrice:      total,
-          packageId:       form.selectedPackage || null,
-          serviceIds:      form.selectedServices,
-          addonIds:        form.selectedAddons,
-          customLineItems: form.customLineItems,
-          apn:             form.apn || null,
-          source:          "manual",
-        }),
-      });
+      let res;
+      if (editingBookingId) {
+        res = await fetch(`/api/dashboard/bookings/${editingBookingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            clientName: form.clientName, clientEmail: form.clientEmail, clientPhone: form.clientPhone,
+            address: form.address, unit: form.unit || null,
+            city: form.city, state: form.state, zip: form.zip,
+            fullAddress: [form.address, form.city, form.state, form.zip].filter(Boolean).join(", "),
+            squareFootage: form.sqft ? Number(form.sqft) : null,
+            preferredDate: form.preferredDate || null,
+            preferredTime: form.preferredTime || null,
+            photographerName: form.photographerName || null,
+            photographerEmail: form.photographerEmail || null,
+            notes: form.notes || "",
+            packageId: form.selectedPackage || null,
+            serviceIds: form.selectedServices,
+            addonIds: form.selectedAddons,
+            totalPrice: total,
+            depositPaid: form.depositPaid,
+            status: form.status,
+          }),
+        });
+      } else {
+        res = await fetch("/api/dashboard/bookings/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            ...form,
+            totalPrice:      total,
+            packageId:       form.selectedPackage || null,
+            serviceIds:      form.selectedServices,
+            addonIds:        form.selectedAddons,
+            customLineItems: form.customLineItems,
+            apn:             form.apn || null,
+            source:          "manual",
+          }),
+        });
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create booking");
-      setShowCreate(false);
-      setForm(EMPTY_FORM);
+      if (!res.ok) throw new Error(data.error || (editingBookingId ? "Failed to update booking" : "Failed to create booking"));
+      closeForm();
       await loadBookings();
     } catch (err) {
       setCreateError(err.message);
@@ -560,14 +649,34 @@ export default function BookingsPage() {
             </button>
           )}
           {canCreateBookings && (
-            <Link href="/dashboard/bookings/create" className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5">
+            <button onClick={() => { setForm(EMPTY_FORM); setEditingBookingId(null); setShowCreate(true); }}
+              className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5">
               + New Booking
-            </Link>
+            </button>
           )}
         </div>
       </div>
 
-      {/* Filter pills + search */}
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit mb-6">
+        <button
+          onClick={() => setActiveTab("bookings")}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+            activeTab === "bookings" ? "bg-white text-[#0F172A] shadow-sm" : "text-gray-500 hover:text-[#0F172A]"
+          }`}>
+          Bookings
+        </button>
+        <button
+          onClick={() => setActiveTab("abandoned")}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+            activeTab === "abandoned" ? "bg-white text-[#0F172A] shadow-sm" : "text-gray-500 hover:text-[#0F172A]"
+          }`}>
+          Abandoned Checkouts
+        </button>
+      </div>
+
+      {/* Filter pills + search — bookings tab only */}
+      {activeTab === "bookings" && (
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <div className="flex gap-2 flex-wrap">
           {["all", "requested", "confirmed", "completed", "cancelled"].map((s) => (
@@ -591,66 +700,128 @@ export default function BookingsPage() {
           />
         </div>
       </div>
+      )}
 
-      {/* Bookings list */}
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="card p-16 text-center text-gray-400 text-sm">
-          No bookings found.
-        </div>
-      ) : (
-        <div className="card-section overflow-hidden">
-          {filtered.map((b) => {
-            const s           = STATUS_LABELS[b.status] || { label: b.status, cls: "bg-gray-50 text-gray-500" };
-            const wfStatus    = resolveWorkflowStatus(b);
-            const dateStr = b.preferredDate
-              ? new Date(b.preferredDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-              : "No date";
-            const timeStr = b.preferredTime && !["flexible","morning","afternoon"].includes(b.preferredTime)
-              ? ` · ${b.preferredTime}` : "";
-            return (
-              <div key={b.id} className="px-6 py-4 flex items-center gap-4 transition-colors"
-                style={{ borderBottom: "1px solid var(--border-subtle)" }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "rgb(15 23 42 / 0.022)"}
-                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-medium text-[#0F172A] truncate">{b.clientName}</p>
-                    {b.source === "manual" && (
-                      <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded">manual</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-400 truncate">{b.fullAddress || b.address}</p>
-                  <p className="text-xs text-gray-300">{dateStr}{timeStr}</p>
-                </div>
-                <div className="flex items-center gap-4 flex-shrink-0">
-                  {canViewPricing && (
-                    <div className="text-right hidden sm:block">
-                      <p className="text-sm font-semibold text-[#0F172A]">${(b.totalPrice || 0).toLocaleString()}</p>
-                      <p className="text-xs text-gray-400">{b.depositPaid ? "Deposit paid" : "No deposit"}</p>
-                    </div>
-                  )}
-                  <WorkflowStatusBadge status={wfStatus} size="xs" />
-                  <Link href={`/dashboard/bookings/${b.id}`} className="text-xs text-[#3486cf] hover:underline whitespace-nowrap">
-                    Open →
-                  </Link>
-                </div>
-              </div>
-            );
-          })}
-          {hasMore && (
-            <div className="px-6 py-4 flex justify-center" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-              <button onClick={handleLoadMore} disabled={loadingMore}
-                className="px-6 py-2 text-sm font-semibold rounded-xl border transition-colors"
-                style={{ background: "#fff", border: "1px solid var(--border)", color: loadingMore ? "#94A3B8" : "#0F172A" }}>
-                {loadingMore ? "Loading…" : "Load more bookings"}
-              </button>
+      {/* Content — bookings list or abandoned tab */}
+      {activeTab === "abandoned" ? (
+        abandonedLoading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
+          </div>
+        ) : abandonedBookings.length === 0 ? (
+          <div className="card p-16 text-center">
+            <p className="text-gray-400 text-sm">No abandoned checkouts found.</p>
+            <p className="text-xs text-gray-300 mt-1">Clients who start but don't complete payment appear here.</p>
+          </div>
+        ) : (
+          <div className="card-section overflow-hidden">
+            <div className="px-6 py-3" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              <p className="text-xs text-gray-400">
+                <span className="font-semibold text-[#0F172A]">{abandonedBookings.length}</span> potential client{abandonedBookings.length !== 1 ? "s" : ""} started checkout but didn't complete payment.
+                Use this to identify pricing or flow friction.
+              </p>
             </div>
-          )}
-        </div>
+            {abandonedBookings.map((b) => {
+              const dateStr = b.createdAt
+                ? new Date(b.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                : "Unknown date";
+              return (
+                <div key={b.id} className="px-6 py-4 flex items-center gap-4"
+                  style={{ borderBottom: "1px solid var(--border-subtle)" }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "rgb(15 23 42 / 0.022)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#0F172A] truncate">{b.clientName || "Unknown"}</p>
+                    <p className="text-xs text-gray-400 truncate">{b.fullAddress || b.address || "No address"}</p>
+                    <p className="text-xs text-gray-300">{dateStr}</p>
+                  </div>
+                  <div className="flex items-center gap-4 flex-shrink-0">
+                    <div className="text-right hidden sm:block">
+                      {b.clientEmail && <p className="text-xs font-medium text-[#0F172A]">{b.clientEmail}</p>}
+                      {b.clientPhone && <p className="text-xs text-gray-400">{b.clientPhone}</p>}
+                    </div>
+                    {canViewPricing && b.totalPrice > 0 && (
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-gray-400">${(b.totalPrice || 0).toLocaleString()}</p>
+                        <p className="text-xs text-gray-300">attempted</p>
+                      </div>
+                    )}
+                    <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 font-medium whitespace-nowrap border border-amber-100">
+                      Abandoned
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : (
+        loading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="card p-16 text-center text-gray-400 text-sm">
+            No bookings found.
+          </div>
+        ) : (
+          <div className="card-section overflow-hidden">
+            {filtered.map((b) => {
+              const wfStatus    = resolveWorkflowStatus(b);
+              const dateStr = b.preferredDate
+                ? new Date(b.preferredDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                : "No date";
+              const timeStr = b.preferredTime && !["flexible","morning","afternoon"].includes(b.preferredTime)
+                ? ` · ${b.preferredTime}` : "";
+              return (
+                <div key={b.id} className="px-6 py-4 flex items-center gap-4 transition-colors"
+                  style={{ borderBottom: "1px solid var(--border-subtle)" }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "rgb(15 23 42 / 0.022)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-sm font-medium text-[#0F172A] truncate">{b.clientName}</p>
+                      {b.source === "manual" && (
+                        <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded">manual</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 truncate">{b.fullAddress || b.address}</p>
+                    <p className="text-xs text-gray-300">{dateStr}{timeStr}</p>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {canViewPricing && (
+                      <div className="text-right hidden sm:block">
+                        <p className="text-sm font-semibold text-[#0F172A]">${(b.totalPrice || 0).toLocaleString()}</p>
+                        <p className="text-xs text-gray-400">{b.depositPaid ? "Deposit paid" : "No deposit"}</p>
+                      </div>
+                    )}
+                    <WorkflowStatusBadge status={wfStatus} size="xs" />
+                    {canCreateBookings && (
+                      <button
+                        onClick={() => openEditBooking(b)}
+                        className="text-sm font-medium text-[#3486cf] border border-[#3486cf]/25 hover:bg-[#3486cf]/5 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">
+                        Edit Booking
+                      </button>
+                    )}
+                    <Link href={`/dashboard/bookings/${b.id}`}
+                      className="text-sm font-medium text-white bg-[#3486cf] hover:bg-[#2a72b8] px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">
+                      Open Listing
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+            {hasMore && (
+              <div className="px-6 py-4 flex justify-center" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+                <button onClick={handleLoadMore} disabled={loadingMore}
+                  className="px-6 py-2 text-sm font-semibold rounded-xl border transition-colors"
+                  style={{ background: "#fff", border: "1px solid var(--border)", color: loadingMore ? "#94A3B8" : "#0F172A" }}>
+                  {loadingMore ? "Loading…" : "Load more bookings"}
+                </button>
+              </div>
+            )}
+          </div>
+        )
       )}
 
       {/* ── Create booking modal ──────────────────────────────────────────────── */}
@@ -662,11 +833,13 @@ export default function BookingsPage() {
             {/* Modal header */}
             <div className="flex items-center justify-between px-8 py-5" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
               <div>
-                <h2 className="font-semibold text-[#0F172A] text-base">New Booking</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Manually create a confirmed booking for a phone or in-person client.</p>
+                <h2 className="font-semibold text-[#0F172A] text-base">{editingBookingId ? "Edit Booking" : "New Booking"}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {editingBookingId ? "Update booking details." : "Manually create a confirmed booking for a phone or in-person client."}
+                </p>
               </div>
               <button
-                onClick={() => { setShowCreate(false); setCreateError(""); setForm(EMPTY_FORM); setAgentQuery(""); setShowAgentDD(false); }}
+                onClick={closeForm}
                 className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">
                 ×
               </button>
@@ -1090,10 +1263,12 @@ export default function BookingsPage() {
                   <div className="space-y-2">
                     <button type="submit" disabled={saving}
                       className="w-full btn-primary py-3 text-sm font-semibold">
-                      {saving ? "Creating…" : "Create Booking →"}
+                      {saving
+                        ? (editingBookingId ? "Saving…" : "Creating…")
+                        : (editingBookingId ? "Save Changes →" : "Create Booking →")}
                     </button>
                     <button type="button"
-                      onClick={() => { setShowCreate(false); setCreateError(""); setForm(EMPTY_FORM); setAgentQuery(""); setShowAgentDD(false); }}
+                      onClick={closeForm}
                       className="w-full text-center text-xs text-gray-400 hover:text-gray-600 py-2 transition-colors">
                       Cancel
                     </button>

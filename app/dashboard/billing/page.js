@@ -389,8 +389,11 @@ export default function BillingPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
-            {TOPUP_PACKS.map((t) => {
+          (() => {
+            const availablePacks = plan === "scale" ? TOPUP_PACKS.filter((t) => t.credits >= 50) : TOPUP_PACKS;
+            return (
+          <div className={`grid gap-3 ${availablePacks.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+            {availablePacks.map((t) => {
               const wouldExceed = topupCap !== null && (addonListings + t.credits) > topupCap;
               const disabled    = working || wouldExceed;
               return (
@@ -407,6 +410,8 @@ export default function BillingPage() {
               );
             })}
           </div>
+            );
+          })()
         )}
 
         {!topupAtCap && topupRemaining !== null && topupRemaining <= 50 && nextPlanName && (

@@ -17,6 +17,7 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const PAGE_SIZE  = Math.min(parseInt(searchParams.get("limit") || "50", 10), 200);
   const afterParam = searchParams.get("after");
+  const abandoned  = searchParams.get("abandoned") === "true";
 
   const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
 
@@ -41,7 +42,9 @@ export async function GET(req) {
     : null;
 
   const bookings = docs
-    .filter((d) => d.data().status !== "pending_payment")
+    .filter((d) => abandoned
+      ? d.data().status === "pending_payment"
+      : d.data().status !== "pending_payment")
     .map((d) => {
       const data = d.data();
       for (const key of ["createdAt", "updatedAt", "preferredDate", "shootDate"]) {

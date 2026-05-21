@@ -10,7 +10,7 @@ async function getCtx(req) {
   if (!auth) return null;
   const decoded = await adminAuth.verifyIdToken(auth);
   if (!decoded.tenantId) return null;
-  if (decoded.role) return null; // staff members cannot make purchases
+  if (decoded.role && decoded.role !== "admin" && decoded.role !== "owner") return null; // staff/photographers cannot make purchases
   return { uid: decoded.uid, tenantId: decoded.tenantId };
 }
 
@@ -31,6 +31,11 @@ export async function POST(req) {
     const planId      = tenant.subscriptionPlan || "solo";
     const caps        = getAddonCaps(planId);
     const currentTopup = tenant.addonListings || 0;
+
+    // Scale plan only allows larger packs (50+)
+    if (planId === "scale" && credits < 50) {
+      return Response.json({ error: "Scale plan only supports 50+ credit packs." }, { status: 400 });
+    }
 
     if (caps.topupListings !== null) {
       if (currentTopup >= caps.topupListings) {
