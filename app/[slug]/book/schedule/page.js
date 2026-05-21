@@ -93,19 +93,48 @@ export default function TenantSchedulePage() {
     const offset = catalog?.bookingConfig?.availability?.twilightOffsetMinutes ?? 60;
     setSunsetLoading(true);
     setSunsetTime(null);
-    fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&date=${preferredDate}&formatted=0`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.status === "OK") {
-          const sunsetDt = new Date(data.results.sunset);
-          const sunsetMin = sunsetDt.getHours() * 60 + sunsetDt.getMinutes();
-          const suggested = minutesToTime(sunsetMin - offset);
-          setSunsetTime(suggested);
-          if (!twilightTime) setSchedule({ twilightTime: suggested });
+
+    async function fetchSunset() {
+      try {
+        // Get sunset time in UTC, then resolve the property's IANA timezone
+        // so the displayed time is correct for the shoot location, not the user's browser
+        const [sunRes, tzRes] = await Promise.all([
+          fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&date=${preferredDate}&formatted=0`).then((r) => r.json()),
+          fetch(`https://timeapi.io/api/TimeZone/coordinate?latitude=${lat}&longitude=${lng}`).then((r) => r.json()).catch(() => null),
+        ]);
+
+        if (sunRes.status !== "OK") return;
+
+        const sunsetUtc = new Date(sunRes.results.sunset); // UTC timestamp
+        let sunsetMin;
+
+        if (tzRes?.timeZone) {
+          // Format sunset in the property's local timezone
+          const parts = new Intl.DateTimeFormat("en-US", {
+            timeZone: tzRes.timeZone,
+            hour: "numeric",
+            minute: "numeric",
+            hour12: false,
+          }).formatToParts(sunsetUtc);
+          const h = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+          const m = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+          sunsetMin = h * 60 + m;
+        } else {
+          // Fallback: use browser timezone (less accurate but better than nothing)
+          sunsetMin = sunsetUtc.getHours() * 60 + sunsetUtc.getMinutes();
         }
-      })
-      .catch(() => {})
-      .finally(() => setSunsetLoading(false));
+
+        const suggested = minutesToTime(Math.max(0, sunsetMin - offset));
+        setSunsetTime(suggested);
+        if (!twilightTime) setSchedule({ twilightTime: suggested });
+      } catch {
+        // silently fail — user can enter time manually
+      } finally {
+        setSunsetLoading(false);
+      }
+    }
+
+    fetchSunset();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTwilightBooking, preferredDate, lat, lng]);
 
@@ -330,7 +359,7 @@ export default function TenantSchedulePage() {
                   </button>
 
                   <div className="mb-5">
-                    <p className="text-[11px] font-semibold tracking-widest uppercase text-gray-400 mb-1">🌅 Twilight Shoot</p>
+                    <p className="text-[11px] font-semibold tracking-widest uppercase text-gray-400 mb-1">Twilight Shoot</p>
                     <p className="text-base font-semibold text-[#0F172A]">{formattedDate}</p>
                     <p className="text-sm text-gray-500 mt-0.5">Daytime: {formatTime12(preferredTime)}</p>
                   </div>
@@ -409,7 +438,9 @@ export default function TenantSchedulePage() {
                       {isTwilightBooking && twilightTime && (
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-amber-50">
-                            <span className="text-sm">🌅</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="1.8">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1M12 20v1M4.22 4.22l.71.71M19.07 19.07l.71.71M1 12h1M22 12h1M4.22 19.78l.71-.71M19.07 4.93l.71-.71M17 12a5 5 0 11-10 0 5 5 0 0110 0z" />
+                            </svg>
                           </div>
                           <div>
                             <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">Twilight</p>
@@ -419,6 +450,49 @@ export default function TenantSchedulePage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Photographer preference — shown inline when feature is enabled */}
+                  {photographers.length > 0 && (
+                    <div className="mb-6">
+                      <p className="text-[11px] font-semibold tracking-widest uppercase text-gray-400 mb-3">
+                        Preferred Photographer <span className="font-normal normal-case">(optional)</span>
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {/* No preference */}
+                        <button type="button"
+                          onClick={() => setSchedule({ photographerId: null })}
+                          className="p-3 border rounded-xl text-center transition-all"
+                          style={!photographerId
+                            ? { borderColor: P, backgroundColor: `color-mix(in srgb, ${P} 5%, transparent)` }
+                            : { borderColor: "#e5e7eb" }}>
+                          <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-1.5">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" strokeWidth="1.8">
+                              <circle cx="12" cy="8" r="4"/><path strokeLinecap="round" d="M4 20c0-4 3.582-7 8-7s8 3 8 7"/>
+                            </svg>
+                          </div>
+                          <p className="text-[10px] font-medium text-gray-400 leading-tight">No preference</p>
+                        </button>
+                        {photographers.map((p) => (
+                          <button key={p.id} type="button"
+                            onClick={() => setSchedule({ photographerId: p.id })}
+                            className="p-3 border rounded-xl text-center transition-all"
+                            style={photographerId === p.id
+                              ? { borderColor: P, backgroundColor: `color-mix(in srgb, ${P} 5%, transparent)` }
+                              : { borderColor: "#e5e7eb" }}>
+                            {p.photoUrl ? (
+                              <img src={p.photoUrl} alt={p.name} className="w-9 h-9 rounded-full object-cover mx-auto mb-1.5" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full flex items-center justify-center mx-auto mb-1.5 text-white text-xs font-bold"
+                                style={{ background: p.color || "#6B7280" }}>
+                                {p.name?.[0]?.toUpperCase()}
+                              </div>
+                            )}
+                            <p className="text-[10px] font-medium text-[#0F172A] truncate">{p.name}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {requireScheduleApproval && (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 flex items-start gap-2.5">
@@ -442,48 +516,6 @@ export default function TenantSchedulePage() {
             </div>
           </div>
         </div>
-
-        {/* Photographer selection */}
-        {photographers.length > 0 && (
-          <div className="mt-8">
-            <p className="text-[11px] font-semibold tracking-widest uppercase text-gray-400 mb-4">
-              Preferred Photographer <span className="font-normal normal-case text-gray-300">(optional)</span>
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-              <button type="button"
-                onClick={() => setSchedule({ photographerId: null })}
-                className="p-4 border rounded-2xl text-center transition-all"
-                style={!photographerId
-                  ? { borderColor: P, backgroundColor: `color-mix(in srgb, ${P} 5%, transparent)` }
-                  : { borderColor: "#e5e7eb" }}
-                onMouseEnter={(e) => { if (photographerId) e.currentTarget.style.borderColor = "#d1d5db"; }}
-                onMouseLeave={(e) => { if (photographerId) e.currentTarget.style.borderColor = "#e5e7eb"; }}>
-                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2 text-gray-400 text-lg">?</div>
-                <p className="text-xs font-medium text-gray-500">No preference</p>
-              </button>
-              {photographers.map((p) => (
-                <button key={p.id} type="button"
-                  onClick={() => setSchedule({ photographerId: p.id })}
-                  className="p-4 border rounded-2xl text-center transition-all"
-                  style={photographerId === p.id
-                    ? { borderColor: P, backgroundColor: `color-mix(in srgb, ${P} 5%, transparent)` }
-                    : { borderColor: "#e5e7eb" }}
-                  onMouseEnter={(e) => { if (photographerId !== p.id) e.currentTarget.style.borderColor = "#d1d5db"; }}
-                  onMouseLeave={(e) => { if (photographerId !== p.id) e.currentTarget.style.borderColor = "#e5e7eb"; }}>
-                  {p.photoUrl ? (
-                    <img src={p.photoUrl} alt={p.name} className="w-12 h-12 rounded-full object-cover mx-auto mb-2" />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 text-white text-sm font-bold"
-                      style={{ background: p.color || "#6B7280" }}>
-                      {p.name?.[0]?.toUpperCase()}
-                    </div>
-                  )}
-                  <p className="text-xs font-medium text-[#0F172A] truncate">{p.name}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Back button */}
         <div className="mt-8">
