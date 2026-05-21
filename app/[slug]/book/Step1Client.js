@@ -234,7 +234,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
         </div>
 
         {/* Packages */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-12">
           {packages.map((pkg) => {
             const selected = packageIds.includes(pkg.id);
             const images   = getImages(pkg);
@@ -242,50 +242,57 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
             return (
               <button key={pkg.id} onClick={() => togglePackage(pkg.id)}
                 className={clsx(
-                  "relative text-left border-2 rounded-2xl transition-all duration-200 focus:outline-none overflow-hidden flex flex-col bg-white",
+                  "relative text-left border-2 rounded-2xl transition-all duration-200 focus:outline-none overflow-hidden flex bg-white",
                   selected ? "shadow-lg" : "border-gray-100 hover:border-gray-200 hover:shadow-md"
                 )}
                 style={selected ? { borderColor: "var(--color-primary)", boxShadow: `0 4px 20px color-mix(in srgb, var(--color-primary) 20%, transparent)` } : {}}>
 
-                {/* Selected checkmark */}
-                {selected && (
-                  <div className="absolute top-3 right-3 z-10 w-7 h-7 rounded-full flex items-center justify-center shadow-sm"
-                    style={{ backgroundColor: "var(--color-primary)" }}>
-                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                )}
-
-                {/* Most popular badge */}
-                {pkg.featured && (
-                  <div className="absolute top-3 left-3 z-10">
-                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full tracking-wide"
-                      style={{ backgroundColor: "var(--color-accent)", color: "var(--color-primary)" }}>
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-
-                {/* Hero image */}
+                {/* Left: image */}
                 {img && (
-                  <div className="relative h-40 overflow-hidden flex-shrink-0">
-                    <img src={img} alt={pkg.name} className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.02]" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
+                  <div className="relative w-36 sm:w-44 flex-shrink-0 overflow-hidden">
+                    <img src={img} alt={pkg.name} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/10" />
+                    {pkg.featured && (
+                      <div className="absolute top-2 left-0 right-0 flex justify-center">
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wide"
+                          style={{ backgroundColor: "var(--color-accent)", color: "var(--color-primary)" }}>
+                          Most Popular
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Card body */}
-                <div className="p-5 flex flex-col flex-1 transition-colors"
+                {/* Right: content */}
+                <div className="p-5 flex flex-col flex-1 min-w-0 transition-colors relative"
                   style={selected ? { backgroundColor: `color-mix(in srgb, var(--color-primary) 5%, white)` } : {}}>
 
-                  <p className="font-display text-xl mb-0.5" style={{ color: "var(--color-primary)" }}>{pkg.name}</p>
-                  <p className="font-display text-2xl font-semibold mb-2" style={{ color: "var(--color-primary)" }}>
+                  {/* Selected checkmark */}
+                  {selected && (
+                    <div className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center shadow-sm flex-shrink-0"
+                      style={{ backgroundColor: "var(--color-primary)" }}>
+                      <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+
+                  {!img && pkg.featured && (
+                    <div className="mb-2">
+                      <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full tracking-wide"
+                        style={{ backgroundColor: "var(--color-accent)", color: "var(--color-primary)" }}>
+                        Most Popular
+                      </span>
+                    </div>
+                  )}
+
+                  <p className="font-display text-xl mb-0.5 pr-8" style={{ color: "var(--color-primary)" }}>{pkg.name}</p>
+                  <p className="font-display text-2xl font-semibold mb-3" style={{ color: "var(--color-primary)" }}>
                     {displayPrice(pkg)}
                   </p>
 
                   {pkg.tagline && (
-                    <p className="text-sm text-gray-500 mb-3 leading-relaxed">{pkg.tagline}</p>
+                    <p className="text-sm text-gray-700 mb-3 leading-relaxed">{pkg.tagline}</p>
                   )}
 
                   {pkg.includes?.length > 0 && (
@@ -308,7 +315,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                   )}
 
                   {pkg.deliverables && (
-                    <p className="text-xs text-gray-400 border-t border-gray-100 pt-3 mb-2">{pkg.deliverables}</p>
+                    <p className="text-xs text-gray-500 border-t border-gray-100 pt-3 mb-2">{pkg.deliverables}</p>
                   )}
 
                   {(pkg.description || images.length > 0) && (

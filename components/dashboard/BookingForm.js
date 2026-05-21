@@ -1577,15 +1577,16 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                       <p className="text-sm font-semibold text-gray-800 mb-3">Choose a start time</p>
                       {loadingSlots && <p className="text-[11px] text-gray-400 mb-2 italic">Checking availability…</p>}
                       <div className="grid grid-cols-3 gap-1.5 mb-3">
-                        {TIME_SLOTS.filter((slot) => {
-                          if (form.shootDate !== todayStr) return true;
-                          const nowMin = today.getHours() * 60 + today.getMinutes();
-                          const [sh, sm] = slot.value.split(":").map(Number);
-                          return (sh * 60 + sm) > nowMin;
-                        }).map((slot) => {
-                          const isUnavail  = unavailableSlots.has(slot.value);
+                        {TIME_SLOTS.map((slot) => {
+                          const isPast = form.shootDate === todayStr && (() => {
+                            const nowMin = today.getHours() * 60 + today.getMinutes();
+                            const [sh, sm] = slot.value.split(":").map(Number);
+                            return (sh * 60 + sm) <= nowMin;
+                          })();
+                          const isUnavail  = unavailableSlots.has(slot.value) || isPast;
                           const isDirectly = busySlots.has(slot.value);
                           const isSelected = form.shootTime === slot.value;
+                          const showAvail  = !loadingSlots && form.photographerId && form.shootDate && !isUnavail;
                           return (
                             <button key={slot.value} type="button"
                               onClick={() => { if (!isUnavail) setForm(f => ({ ...f, shootTime: slot.value })); }}
@@ -1593,10 +1594,12 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                               className={`py-2 px-1 rounded-lg border text-[12px] font-medium text-center transition-all leading-tight ${
                                 isSelected ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
                                 : isUnavail ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
+                                : showAvail  ? "border-green-400 bg-green-50 text-green-700 hover:bg-green-100"
                                 : "border-gray-200 text-gray-600 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
                               }`}>
                               <span className="block">{slot.label}</span>
-                              {isUnavail && <span className="block text-[9px] leading-none mt-0.5 text-gray-300">{isDirectly ? "busy" : "—"}</span>}
+                              {isPast && <span className="block text-[9px] leading-none mt-0.5 text-gray-300">past</span>}
+                              {!isPast && isUnavail && <span className="block text-[9px] leading-none mt-0.5 text-gray-300">{isDirectly ? "busy" : "—"}</span>}
                             </button>
                           );
                         })}

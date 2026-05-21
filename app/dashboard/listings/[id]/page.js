@@ -208,6 +208,7 @@ export default function ListingDetailPage() {
   const [showReschedModal,    setShowReschedModal]    = useState(false);
   const [reschedDate,         setReschedDate]         = useState("");
   const [reschedTime,         setReschedTime]         = useState("");
+  const [reschedApptIdx,      setReschedApptIdx]      = useState(null); // null = main booking, number = additional appt index
   const [showReschedDtPicker, setShowReschedDtPicker] = useState(false);
   const [schedApprovalDate,     setSchedApprovalDate]     = useState("");
   const [schedApprovalTime,     setSchedApprovalTime]     = useState("");
@@ -886,6 +887,7 @@ if (loading) return (
                     {booking.shootDate && (
                       <button type="button"
                         onClick={() => {
+                          setReschedApptIdx(null);
                           setReschedDate(booking.shootDate?.split?.("T")?.[0] || "");
                           setReschedTime(booking.shootTime || "");
                           setShowReschedModal(true);
@@ -907,14 +909,26 @@ if (loading) return (
                   )}
                   {/* Additional appointments */}
                   {(booking.additionalAppointments || []).length > 0 && (
-                    <div className="mt-2 space-y-1">
+                    <div className="mt-2 space-y-1.5">
                       {(booking.additionalAppointments || []).map((appt, i) => (
-                        <p key={i} className="text-xs text-gray-500 flex items-center gap-1.5">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
-                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                          </svg>
-                          Appt {i + 2}: {appt.date ? new Date(appt.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "TBD"}{appt.time ? ` · ${appt.time}` : ""}
-                        </p>
+                        <div key={i} className="flex items-center justify-between">
+                          <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+                              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                            Appt {i + 2}: {appt.date ? new Date(appt.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "TBD"}{appt.time ? ` · ${valToLabel(appt.time)}` : ""}
+                          </p>
+                          <button type="button"
+                            onClick={() => {
+                              setReschedApptIdx(i);
+                              setReschedDate(appt.date || "");
+                              setReschedTime(appt.time || "");
+                              setShowReschedModal(true);
+                            }}
+                            className="text-[11px] text-[#3486cf] hover:underline ml-2 flex-shrink-0">
+                            Reschedule
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -1041,7 +1055,7 @@ if (loading) return (
 
         {/* ── BOOKING DETAILS TAB ─────────────────────────────────────────── */}
         {tab === "orders" && (
-          <div className="space-y-4 max-w-lg">
+          <div className="max-w-5xl space-y-4">
 
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">Booking Details</p>
@@ -1053,6 +1067,11 @@ if (loading) return (
                 Edit Booking
               </Link>
             </div>
+
+            {/* 2-column grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            {/* Left column: Appointment info + Services */}
+            <div className="space-y-4">
 
             {/* Appointment Record */}
             <div className="card p-5">
@@ -1171,6 +1190,11 @@ if (loading) return (
                 })()}
               </div>
             )}
+
+            </div>{/* end left column */}
+
+            {/* Right column: Payment info */}
+            <div className="space-y-4">
 
             {userRole === "manager" ? (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-800">
@@ -1307,6 +1331,8 @@ if (loading) return (
                 )}
               </div>
             )}
+            </div>{/* end right column */}
+            </div>{/* end 2-col grid */}
           </div>
         )}
 
@@ -1585,8 +1611,8 @@ if (loading) return (
               }`}>{propSiteMsg.text}</div>
             )}
 
-            {/* 2-column grid for the main settings */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            {/* 3-column grid for the main settings */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
 
             {/* Template + Color Scheme */}
             <div className="card">
@@ -2459,19 +2485,24 @@ if (loading) return (
       )}
 
       {showReschedModal && (() => {
+        const isAdditional = reschedApptIdx !== null;
         const cancCfg = catalog?.bookingConfig?.cancellation;
         const reschedEnabled  = cancCfg?.rescheduleEnabled;
         const reschedPct      = cancCfg?.reschedulePercent    || 0;
         const reschedWindowHrs = cancCfg?.rescheduleWindowHrs || 0;
         const currentShootDate = booking.shootDate?.split?.("T")?.[0];
         let fee = 0;
-        if (reschedEnabled && reschedPct > 0 && reschedWindowHrs > 0 && currentShootDate) {
+        if (!isAdditional && reschedEnabled && reschedPct > 0 && reschedWindowHrs > 0 && currentShootDate) {
           const shootDt    = new Date(`${currentShootDate}T${booking.shootTime || "12:00:00"}`);
           const hoursUntil = (shootDt - new Date()) / (1000 * 60 * 60);
           if (hoursUntil >= 0 && hoursUntil <= reschedWindowHrs) {
             fee = Math.round((booking.totalPrice || 0) * reschedPct) / 100;
           }
         }
+        const currentAppt = isAdditional ? (booking.additionalAppointments || [])[reschedApptIdx] : null;
+        const currentLabel = isAdditional
+          ? (currentAppt?.date ? new Date(currentAppt.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "TBD") + (currentAppt?.time ? ` · ${valToLabel(currentAppt.time)}` : "")
+          : `${shootDateDisplay}${booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}`;
         const newDateLabel = reschedDate
           ? `${new Date(reschedDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}${reschedTime ? ` · ${valToLabel(reschedTime)}` : ""}`
           : null;
@@ -2480,12 +2511,14 @@ if (loading) return (
             <div className="modal-backdrop" style={{ zIndex: 60 }} onClick={() => { setShowReschedModal(false); setShowReschedDtPicker(false); }}>
               <div className="modal-card w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-base font-semibold text-[#0F172A]">Reschedule Appointment</h3>
+                  <h3 className="text-base font-semibold text-[#0F172A]">
+                    {isAdditional ? `Reschedule Appointment ${reschedApptIdx + 2}` : "Reschedule Appointment"}
+                  </h3>
                   <button type="button" onClick={() => setShowReschedModal(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
                 </div>
                 <div className="mb-3 p-3 bg-gray-50 rounded-xl">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Current Appointment</p>
-                  <p className="text-sm font-medium text-[#0F172A]">{shootDateDisplay}{booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}</p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Current Date & Time</p>
+                  <p className="text-sm font-medium text-[#0F172A]">{currentLabel}</p>
                 </div>
                 <button type="button" onClick={() => setShowReschedDtPicker(true)}
                   className="input-field w-full text-left flex items-center gap-2 mb-3">
@@ -2509,9 +2542,16 @@ if (loading) return (
                   <button type="button"
                     disabled={!reschedDate || saving}
                     onClick={async () => {
-                      const fields = { shootDate: reschedDate, shootTime: reschedTime };
-                      if (fee > 0) fields.rescheduleFee = fee;
-                      await patchBooking(fields);
+                      if (isAdditional) {
+                        const updated = (booking.additionalAppointments || []).map((a, i) =>
+                          i === reschedApptIdx ? { ...a, date: reschedDate, time: reschedTime } : a
+                        );
+                        await patchBooking({ additionalAppointments: updated });
+                      } else {
+                        const fields = { shootDate: reschedDate, shootTime: reschedTime };
+                        if (fee > 0) fields.rescheduleFee = fee;
+                        await patchBooking(fields);
+                      }
                       setShowReschedModal(false);
                     }}
                     className="btn-primary flex-1 py-2 text-sm">
