@@ -105,7 +105,7 @@ function TeamGroupModal({ group, allAgents, onClose, onSaved }) {
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
-function CustomerModal({ agent, onClose, onSaved }) {
+function CustomerModal({ agent, teams, onClose, onSaved }) {
   const isEdit = !!agent;
   const [form, setForm] = useState({
     name:    agent?.name    || "",
@@ -114,6 +114,7 @@ function CustomerModal({ agent, onClose, onSaved }) {
     company: agent?.company || "",
     notes:   agent?.notes   || "",
   });
+  const [teamId,  setTeamId]  = useState("");
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
 
@@ -138,7 +139,21 @@ function CustomerModal({ agent, onClose, onSaved }) {
           });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Failed to save."); setSaving(false); return; }
-      onSaved(isEdit ? { ...agent, ...form } : { ...form, id: data.agentId, totalOrders: 0, totalSpent: 0 });
+
+      const newCustomer = isEdit ? { ...agent, ...form } : { ...form, id: data.agentId, totalOrders: 0, totalSpent: 0 };
+
+      // Add to team if selected (new customers only)
+      if (!isEdit && teamId) {
+        const team = teams.find((t) => t.id === teamId);
+        const updatedMembers = [...(team?.members || []), newCustomer.id];
+        await fetch(`/api/dashboard/customer-teams/${teamId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ members: updatedMembers }),
+        });
+      }
+
+      onSaved(newCustomer, teamId || null);
     } catch { setError("Something went wrong."); setSaving(false); }
   }
 
@@ -171,6 +186,17 @@ function CustomerModal({ agent, onClose, onSaved }) {
               <input type="text" value={form.company} onChange={set("company")} className="input-field" placeholder="Keller Williams" />
             </div>
           </div>
+          {!isEdit && teams.length > 0 && (
+            <div>
+              <label className="label-field">Add to Team (optional)</label>
+              <select value={teamId} onChange={(e) => setTeamId(e.target.value)} className="input-field w-full">
+                <option value="">— No team —</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="label-field">Notes</label>
             <textarea value={form.notes} onChange={set("notes")} rows={2}
@@ -242,11 +268,19 @@ export default function AgentsPage() {
     URL.revokeObjectURL(url);
   }
 
-  function handleSaved(updated) {
+  function handleSaved(updated, addedToTeamId) {
     if (editing) {
       setAgents((prev) => prev.map((a) => a.id === updated.id ? updated : a));
     } else {
       setAgents((prev) => [updated, ...prev]);
+    }
+    // Keep local teams state in sync if customer was added to a team
+    if (addedToTeamId) {
+      setTeams((prev) => prev.map((t) =>
+        t.id === addedToTeamId
+          ? { ...t, members: [...(t.members || []), updated.id] }
+          : t
+      ));
     }
     setShowModal(false);
     setEditing(null);
@@ -543,6 +577,7 @@ export default function AgentsPage() {
       {showModal && (
         <CustomerModal
           agent={editing}
+          teams={teams}
           onClose={() => { setShowModal(false); setEditing(null); }}
           onSaved={handleSaved}
         />

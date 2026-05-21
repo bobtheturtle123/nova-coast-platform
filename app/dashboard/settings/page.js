@@ -551,7 +551,7 @@ export default function SettingsPage() {
   const [form, setForm] = useState({
     businessName: "", phone: "", fromZip: "",
     tagline: "", primaryColor: "#3486cf", accentColor: "#c9a96e",
-    country: "US", tempUnit: "F",
+    country: "US", tempUnit: "F", currency: "USD", locale: "en-US",
   });
   const [logoUrl,       setLogoUrl]       = useState("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -602,7 +602,6 @@ export default function SettingsPage() {
   const [availEnd,         setAvailEnd]         = useState("18:00");
   const [availDays,        setAvailDays]        = useState(["mon","tue","wed","thu","fri"]);
   const [availInterval,    setAvailInterval]    = useState(30);
-  const [availDuration,    setAvailDuration]    = useState(120);
   const [availBuffer,      setAvailBuffer]      = useState(30);
   const [availBufferAfter,    setAvailBufferAfter]    = useState(0);
   const [durationAwareSlots,  setDurationAwareSlots]  = useState(true);
@@ -705,6 +704,8 @@ export default function SettingsPage() {
           accentColor:   data.tenant.branding?.accentColor  || "#c9a96e",
           country:       data.tenant.country  || "US",
           tempUnit:      data.tenant.tempUnit || "F",
+          currency:      data.tenant.currency || "USD",
+          locale:        data.tenant.locale   || "en-US",
         });
         if (data.tenant.branding?.logoUrl) setLogoUrl(data.tenant.branding.logoUrl);
         // Load pricing config — always pre-populate tiers so Pricing Tiers section is ready
@@ -742,7 +743,6 @@ export default function SettingsPage() {
             if (av.businessHours?.end)   setAvailEnd(av.businessHours.end);
             if (av.businessHours?.days?.length) setAvailDays(av.businessHours.days);
             if (av.intervalMinutes)  setAvailInterval(av.intervalMinutes);
-            if (av.defaultDuration)  setAvailDuration(av.defaultDuration);
             if (av.bufferMinutes)      setAvailBuffer(av.bufferMinutes);
             if (av.bufferAfterMinutes) setAvailBufferAfter(av.bufferAfterMinutes);
             if (av.showWeather !== undefined) setShowWeather(av.showWeather);
@@ -833,6 +833,8 @@ export default function SettingsPage() {
           fromZip:      form.fromZip,
           country:      form.country,
           tempUnit:     form.tempUnit,
+          currency:     form.currency,
+          locale:       form.locale,
           branding: {
             ...(tenant?.branding || {}),
             businessName: form.businessName,
@@ -967,7 +969,6 @@ export default function SettingsPage() {
         mode:           availMode,
         businessHours:  { start: availStart, end: availEnd, days: availDays },
         intervalMinutes: Number(availInterval) || 30,
-        defaultDuration: Number(availDuration) || 120,
         bufferMinutes:      Number(availBuffer)      || 30,
         bufferAfterMinutes: Number(availBufferAfter) || 0,
         showWeather,
@@ -1350,6 +1351,39 @@ export default function SettingsPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+              <div>
+                <label className="label-field">Currency</label>
+                <select value={form.currency} onChange={set("currency")} className="input-field w-full">
+                  <option value="USD">USD — US Dollar</option>
+                  <option value="CAD">CAD — Canadian Dollar</option>
+                  <option value="AUD">AUD — Australian Dollar</option>
+                  <option value="NZD">NZD — New Zealand Dollar</option>
+                  <option value="GBP">GBP — British Pound</option>
+                  <option value="EUR">EUR — Euro</option>
+                  <option value="ZAR">ZAR — South African Rand</option>
+                  <option value="MXN">MXN — Mexican Peso</option>
+                  <option value="BRL">BRL — Brazilian Real</option>
+                  <option value="JPY">JPY — Japanese Yen</option>
+                  <option value="SGD">SGD — Singapore Dollar</option>
+                  <option value="HKD">HKD — Hong Kong Dollar</option>
+                  <option value="INR">INR — Indian Rupee</option>
+                </select>
+              </div>
+              <div>
+                <label className="label-field">Number / Language Format</label>
+                <select value={form.locale} onChange={set("locale")} className="input-field w-full">
+                  <option value="en-US">English (US) — 1,234.56</option>
+                  <option value="en-GB">English (UK) — 1,234.56</option>
+                  <option value="en-AU">English (AU) — 1,234.56</option>
+                  <option value="en-CA">English (CA) — 1,234.56</option>
+                  <option value="en-ZA">English (ZA) — 1 234,56</option>
+                  <option value="fr-FR">French — 1 234,56</option>
+                  <option value="de-DE">German — 1.234,56</option>
+                  <option value="es-ES">Spanish — 1.234,56</option>
+                  <option value="pt-BR">Portuguese (BR) — 1.234,56</option>
+                  <option value="ja-JP">Japanese — 1,234.56</option>
+                </select>
               </div>
             </div>
           </div>
@@ -1858,12 +1892,6 @@ export default function SettingsPage() {
                 <option value={30}>30 min</option>
                 <option value={60}>60 min</option>
               </select>
-            </div>
-            <div>
-              <label className="label-field text-[11px]">Shoot duration</label>
-              <input type="number" value={availDuration} min={30} step={15}
-                onChange={(e) => setAvailDuration(e.target.value)}
-                className="input-field w-full text-sm" />
             </div>
             <div>
               <label className="label-field text-[11px]">Buffer before shoot (min)</label>

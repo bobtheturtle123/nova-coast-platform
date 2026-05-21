@@ -12,12 +12,14 @@ export async function GET(req) {
     await adminAuth.verifyIdToken(token); // just auth check
 
     const { searchParams } = new URL(req.url);
-    const address = searchParams.get("address");
-    const date    = searchParams.get("date"); // YYYY-MM-DD
-    const unit    = searchParams.get("unit") === "C" ? "celsius" : "fahrenheit";
+    const address  = searchParams.get("address");
+    const date     = searchParams.get("date"); // YYYY-MM-DD
+    const unit     = searchParams.get("unit") === "C" ? "celsius" : "fahrenheit";
+    const latParam = searchParams.get("lat");
+    const lngParam = searchParams.get("lng");
 
-    if (!address || !date) {
-      return Response.json({ error: "address and date are required" }, { status: 400 });
+    if (!date || (!address && (!latParam || !lngParam))) {
+      return Response.json({ error: "date and either address or lat/lng are required" }, { status: 400 });
     }
 
     // Check if date is within 16-day forecast window
@@ -34,18 +36,21 @@ export async function GET(req) {
       return Response.json({ available: false, reason: "past", daysOut: diffDays });
     }
 
-    // 1. Geocode address via Nominatim
-    const geoUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
-    const geoRes  = await fetch(geoUrl, {
-      headers: { "User-Agent": "KyoriaOS-Platform/1.0" },
-    });
-    const geoData = await geoRes.json();
+    let lat, lon;
 
-    if (!geoData?.length) {
-      return Response.json({ available: false, reason: "geocode_failed" });
+    // Use provided coordinates when available (more accurate; skips geocoding)
+    if (latParam && lngParam) {
+      lat = latParam;
+      lon = lngParam;
+    } else {
+      // Geocode address via Nominatim
+      const geoUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
+      const geoRes  = await fetch(geoUrl, { headers: { "User-Agent": "KyoriaOS-Platform/1.0" } });
+      const geoData = await geoRes.json();
+      if (!geoData?.length) return Response.json({ available: false, reason: "geocode_failed" });
+      lat = geoData[0].lat;
+      lon = geoData[0].lon;
     }
-
-    const { lat, lon } = geoData[0];
 
     // 2. Fetch weather from Open-Meteo (free, no key)
     const weatherUrl = [
@@ -134,26 +139,37 @@ export async function GET(req) {
 
 function wmoToDescription(code) {
   if (code === 0)               return "Clear sky";
-  if (code <= 2)                return "Partly cloudy";
+  if (code === 1)               return "Mainly clear";
+  if (code === 2)               return "Partly cloudy";
   if (code === 3)               return "Overcast";
-  if (code <= 49)               return "Fog";
-  if (code <= 55)               return "Drizzle";
-  if (code <= 67)               return "Rain";
-  if (code <= 77)               return "Snow";
-  if (code <= 82)               return "Rain showers";
-  if (code <= 86)               return "Snow showers";
-  if (code <= 99)               return "Thunderstorm";
-  return "Unknown";
+  if (code === 45 || code === 48) return "Foggy";
+  if (code === 51 || code === 53) return "Light drizzle";
+  if (code === 55)              return "Dense drizzle";
+  if (code === 56 || code === 57) return "Freezing drizzle";
+  if (code === 61 || code === 63) return "Rain";
+  if (code === 65)              return "Heavy rain";
+  if (code === 66 || code === 67) return "Freezing rain";
+  if (code === 71 || code === 73) return "Snowfall";
+  if (code === 75)              return "Heavy snowfall";
+  if (code === 77)              return "Snow grains";
+  if (code === 80 || code === 81) return "Rain showers";
+  if (code === 82)              return "Heavy rain showers";
+  if (code === 85 || code === 86) return "Snow showers";
+  if (code === 95)              return "Thunderstorm";
+  if (code === 96 || code === 99) return "Thunderstorm with hail";
+  return "Variable";
 }
 
 function wmoToIcon(code) {
   if (code === 0)               return "☀️";
   if (code <= 2)                return "⛅";
   if (code === 3)               return "☁️";
-  if (code <= 49)               return "🌫️";
+  if (code === 45 || code === 48) return "🌫️";
+  if (code <= 57)               return "🌦️";
   if (code <= 67)               return "🌧️";
   if (code <= 77)               return "❄️";
   if (code <= 82)               return "🌦️";
+  if (code <= 86)               return "🌨️";
   if (code <= 99)               return "⛈️";
   return "🌡️";
 }

@@ -205,10 +205,10 @@ export default function ListingDetailPage() {
   const [emailNote,    setEmailNote]   = useState("");
   const [deliveryMode, setDeliveryMode] = useState("now"); // "now" | "later"
   const [scheduledAt,  setScheduledAt]  = useState("");
-  const [shootDate, setShootDate] = useState("");
-  const [shootTime, setShootTime] = useState("");
-  const [showDatePicker,        setShowDatePicker]        = useState(false);
-  const [showDtModal,           setShowDtModal]           = useState(false);
+  const [showReschedModal,    setShowReschedModal]    = useState(false);
+  const [reschedDate,         setReschedDate]         = useState("");
+  const [reschedTime,         setReschedTime]         = useState("");
+  const [showReschedDtPicker, setShowReschedDtPicker] = useState(false);
   const [schedApprovalDate,     setSchedApprovalDate]     = useState("");
   const [schedApprovalTime,     setSchedApprovalTime]     = useState("");
   const [schedApprovalSaving,   setSchedApprovalSaving]   = useState(false);
@@ -323,8 +323,6 @@ const [listingUrl,       setListingUrl]        = useState("");
     if (bRes.ok) {
       const { booking: b } = await bRes.json();
       setBooking(b);
-      setShootDate(b.shootDate?.split?.("T")?.[0] || b.preferredDate?.split?.("T")?.[0] || "");
-      setShootTime(b.shootTime || "");
       setEmailSubject(`Your listing media is ready | ${b.fullAddress || b.address || ""}`);
       if (b.propertyWebsite) setPropSite(b.propertyWebsite);
       else setPropSite({ address: b.fullAddress || b.address || "" });
@@ -885,47 +883,27 @@ if (loading) return (
                     <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">
                       Scheduled Shoot
                     </label>
-                    <button type="button" onClick={() => setShowDatePicker((v) => !v)}
-                      className="text-xs text-[#3486cf] hover:underline">
-                      {showDatePicker ? "Cancel" : booking.shootDate ? "Edit" : "Set date"}
-                    </button>
+                    {booking.shootDate && (
+                      <button type="button"
+                        onClick={() => {
+                          setReschedDate(booking.shootDate?.split?.("T")?.[0] || "");
+                          setReschedTime(booking.shootTime || "");
+                          setShowReschedModal(true);
+                        }}
+                        className="text-xs text-[#3486cf] hover:underline">
+                        Reschedule
+                      </button>
+                    )}
                   </div>
-                  {booking.shootDate && !showDatePicker ? (
+                  {booking.shootDate ? (
                     <p className="text-sm font-medium text-[#0F172A] flex items-center gap-1.5">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500 flex-shrink-0">
                         <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                       </svg>
                       {shootDateDisplay}{booking.shootTime ? ` · ${booking.shootTime}` : ""}
                     </p>
-                  ) : !showDatePicker ? (
-                    <p className="text-sm text-gray-400">No shoot date set</p>
-                  ) : null}
-                  {showDatePicker && (
-                    <div className="space-y-2 mt-1">
-                      <button type="button" onClick={() => setShowDtModal(true)}
-                        className="input-field w-full text-left flex items-center gap-2">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
-                          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                        </svg>
-                        <span className={shootDate ? "text-[#0F172A] text-sm" : "text-gray-400 text-sm"}>
-                          {shootDate
-                            ? `${new Date(shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}${shootTime ? ` · ${valToLabel(shootTime)}` : ""}`
-                            : "Pick date & time"}
-                        </span>
-                      </button>
-                      <button type="button" onClick={() => { patchBooking({ shootDate, shootTime }); setShowDatePicker(false); }} disabled={saving || !shootDate}
-                        className="btn-primary w-full py-2 text-xs">
-                        {saving ? "Saving…" : "Save Shoot Date"}
-                      </button>
-                    </div>
-                  )}
-                  {showDtModal && (
-                    <DateTimePicker
-                      date={shootDate}
-                      time={shootTime}
-                      onConfirm={(d, t) => { setShootDate(d); setShootTime(t); setShowDtModal(false); }}
-                      onClose={() => setShowDtModal(false)}
-                    />
+                  ) : (
+                    <p className="text-sm text-gray-400">No shoot date set — manage in Bookings</p>
                   )}
                   {/* Additional appointments */}
                   {(booking.additionalAppointments || []).length > 0 && (
@@ -2475,14 +2453,79 @@ if (loading) return (
         </div>
       )}
 
-      {showDatePicker && (
-        <DateTimePicker
-          date={shootDate}
-          time={shootTime}
-          onConfirm={(d, t) => { setShootDate(d); setShootTime(t); setShowDatePicker(false); }}
-          onClose={() => setShowDatePicker(false)}
-        />
-      )}
+      {showReschedModal && (() => {
+        const cancCfg = catalog?.bookingConfig?.cancellation;
+        const reschedEnabled  = cancCfg?.rescheduleEnabled;
+        const reschedPct      = cancCfg?.reschedulePercent    || 0;
+        const reschedWindowHrs = cancCfg?.rescheduleWindowHrs || 0;
+        const currentShootDate = booking.shootDate?.split?.("T")?.[0];
+        let fee = 0;
+        if (reschedEnabled && reschedPct > 0 && reschedWindowHrs > 0 && currentShootDate) {
+          const shootDt    = new Date(`${currentShootDate}T${booking.shootTime || "12:00:00"}`);
+          const hoursUntil = (shootDt - new Date()) / (1000 * 60 * 60);
+          if (hoursUntil >= 0 && hoursUntil <= reschedWindowHrs) {
+            fee = Math.round((booking.totalPrice || 0) * reschedPct) / 100;
+          }
+        }
+        const newDateLabel = reschedDate
+          ? `${new Date(reschedDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}${reschedTime ? ` · ${valToLabel(reschedTime)}` : ""}`
+          : null;
+        return (
+          <>
+            <div className="modal-backdrop" style={{ zIndex: 60 }} onClick={() => { setShowReschedModal(false); setShowReschedDtPicker(false); }}>
+              <div className="modal-card w-full max-w-sm p-5" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-[#0F172A]">Reschedule Appointment</h3>
+                  <button type="button" onClick={() => setShowReschedModal(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+                </div>
+                <div className="mb-3 p-3 bg-gray-50 rounded-xl">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Current Appointment</p>
+                  <p className="text-sm font-medium text-[#0F172A]">{shootDateDisplay}{booking.shootTime ? ` · ${booking.shootTime}` : ""}</p>
+                </div>
+                <button type="button" onClick={() => setShowReschedDtPicker(true)}
+                  className="input-field w-full text-left flex items-center gap-2 mb-3">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  <span className={newDateLabel ? "text-[#0F172A] text-sm" : "text-gray-400 text-sm"}>
+                    {newDateLabel || "Pick new date & time"}
+                  </span>
+                </button>
+                {fee > 0 && (
+                  <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide mb-0.5">Reschedule Fee</p>
+                    <p className="text-xl font-bold text-amber-700">${fee.toFixed(2)}</p>
+                    <p className="text-[10px] text-amber-600 mt-0.5">{reschedPct}% of booking total — within {reschedWindowHrs}hr window</p>
+                  </div>
+                )}
+                <div className="flex gap-2 mt-1">
+                  <button type="button" onClick={() => setShowReschedModal(false)}
+                    className="btn-outline flex-1 py-2 text-sm">Cancel</button>
+                  <button type="button"
+                    disabled={!reschedDate || saving}
+                    onClick={async () => {
+                      const fields = { shootDate: reschedDate, shootTime: reschedTime };
+                      if (fee > 0) fields.rescheduleFee = fee;
+                      await patchBooking(fields);
+                      setShowReschedModal(false);
+                    }}
+                    className="btn-primary flex-1 py-2 text-sm">
+                    {saving ? "Saving…" : "Confirm Reschedule"}
+                  </button>
+                </div>
+              </div>
+            </div>
+            {showReschedDtPicker && (
+              <DateTimePicker
+                date={reschedDate}
+                time={reschedTime}
+                onConfirm={(d, t) => { setReschedDate(d); setReschedTime(t); setShowReschedDtPicker(false); }}
+                onClose={() => setShowReschedDtPicker(false)}
+              />
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }

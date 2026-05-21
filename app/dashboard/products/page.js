@@ -369,7 +369,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
               {!form.tiered ? (
                 <div className="flex items-center gap-2">
                   <span className="text-gray-400">$</span>
-                  <input type="number" value={form.price} onChange={field("price")} min="0" step="1"
+                  <input type="number" value={form.price} onChange={field("price")} min="0" step="0.01"
                     className="input-field w-40" />
                 </div>
               ) : (
@@ -396,7 +396,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                                 <span className="text-gray-400 text-sm">$</span>
                                 <input type="number" value={form.priceTiers[tier.name] || ""}
                                   onChange={(e) => setForm((f) => ({ ...f, priceTiers: { ...f.priceTiers, [tier.name]: Number(e.target.value) || 0 } }))}
-                                  min="0" step="1" className="input-field py-1.5 text-sm w-full" placeholder="0" />
+                                  min="0" step="0.01" className="input-field py-1.5 text-sm w-full" placeholder="0" />
                               </div>
                             </div>
                           ))}
@@ -423,7 +423,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
               {!form.tiered ? (
                 <div className="flex items-center gap-2">
                   <span className="text-gray-400">$</span>
-                  <input type="number" value={form.payRate} min="0" step="1" placeholder="e.g. 80"
+                  <input type="number" value={form.payRate} min="0" step="0.01" placeholder="e.g. 80"
                     onChange={(e) => setForm((f) => ({ ...f, payRate: e.target.value }))}
                     className="input-field w-40" />
                   <span className="text-xs text-gray-400">per booking</span>
@@ -441,7 +441,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                             <span className="text-gray-400 text-sm">$</span>
                             <input type="number" value={form.payRateTiers[tier.name] || ""}
                               onChange={(e) => setForm((f) => ({ ...f, payRateTiers: { ...f.payRateTiers, [tier.name]: Number(e.target.value) || 0 } }))}
-                              min="0" step="1" className="input-field py-1.5 text-sm w-full" placeholder="0" />
+                              min="0" step="0.01" className="input-field py-1.5 text-sm w-full" placeholder="0" />
                           </div>
                         </div>
                       ))}

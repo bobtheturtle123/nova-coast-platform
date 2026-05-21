@@ -557,6 +557,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
             totalPrice:         pricing.total,
             sqft:               Number(form.sqft) || "",
             contractSignerName: contractSigned ? contractSignerName.trim() : null,
+            sendAgreementEmail: !contractSigned && form.sendAgreementEmail ? true : undefined,
           }),
         });
         data = await res.json();
@@ -965,7 +966,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
               </button>
 
               {catalog.showWeather && form.shootDate && confirmedAddress && (
-                <WeatherWidget address={confirmedAddress} date={form.shootDate} />
+                <WeatherWidget address={confirmedAddress} date={form.shootDate} lat={form.lat} lng={form.lng} />
               )}
 
               {form.additionalAppointments.map((appt, i) => {
@@ -1216,15 +1217,28 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
             {/* Service Agreement */}
             {!isEdit && catalog?.bookingConfig?.serviceAgreement?.enabled && catalog.bookingConfig.serviceAgreement.text && (
               <div className="card">
-                <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-3">Service Agreement</h2>
-                {!contractSigned ? (
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide">Service Agreement</h2>
+                  <span className="text-[10px] text-gray-400 font-medium">Optional — can skip</span>
+                </div>
+                {contractSigned ? (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-emerald-800">Agreement signed</p>
+                      <p className="text-xs text-emerald-700 mt-0.5">Signed as: <strong>{contractSignerName}</strong></p>
+                    </div>
+                    <button type="button" onClick={() => setContractSigned(false)}
+                      className="text-xs text-emerald-600 hover:text-emerald-800 underline">Undo</button>
+                  </div>
+                ) : (
                   <>
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto mb-3">
                       <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">
                         {catalog.bookingConfig.serviceAgreement.text}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    {/* Sign in place */}
+                    <div className="flex gap-2 mb-2">
                       <input
                         type="text"
                         value={contractSignerName}
@@ -1241,16 +1255,16 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                         Sign
                       </button>
                     </div>
-                  </>
-                ) : (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-emerald-800">Agreement signed</p>
-                      <p className="text-xs text-emerald-700 mt-0.5">Signed as: <strong>{contractSignerName}</strong></p>
+                    {/* Send to client email */}
+                    <div className="flex items-center gap-2 mt-1">
+                      <input type="checkbox" id="sendAgreementEmail" checked={form.sendAgreementEmail || false}
+                        onChange={(e) => setForm((f) => ({ ...f, sendAgreementEmail: e.target.checked }))}
+                        className="rounded" />
+                      <label htmlFor="sendAgreementEmail" className="text-xs text-gray-500 cursor-pointer">
+                        Email agreement to {form.clientEmail || "client"} for signing
+                      </label>
                     </div>
-                    <button type="button" onClick={() => setContractSigned(false)}
-                      className="text-xs text-emerald-600 hover:text-emerald-800 underline">Undo</button>
-                  </div>
+                  </>
                 )}
               </div>
             )}
@@ -1286,65 +1300,139 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
         </div>
       </form>
 
-      {/* ── Additional appointment popup ────────────────────── */}
-      {apptPopupIdx !== null && form.additionalAppointments[apptPopupIdx] && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
-              <h3 className="font-semibold text-[#0F172A]">Appointment {apptPopupIdx + 2}</h3>
-              <button type="button" onClick={() => setApptPopupIdx(null)}
-                className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
-            </div>
-            <div className="px-5 py-4 space-y-5">
-              <div>
-                <label className="label-field">Date</label>
-                <input type="date"
-                  value={form.additionalAppointments[apptPopupIdx].date}
-                  onChange={(e) => setForm((f) => { const arr = [...f.additionalAppointments]; arr[apptPopupIdx] = { ...arr[apptPopupIdx], date: e.target.value }; return { ...f, additionalAppointments: arr }; })}
-                  className="input-field w-full" />
+      {/* ── Additional appointment popup (split-panel: calendar + time) ─── */}
+      {apptPopupIdx !== null && form.additionalAppointments[apptPopupIdx] !== undefined && (() => {
+        const appt = form.additionalAppointments[apptPopupIdx];
+        const setApptField = (field, value) =>
+          setForm((f) => { const arr = [...f.additionalAppointments]; arr[apptPopupIdx] = { ...arr[apptPopupIdx], [field]: value }; return { ...f, additionalAppointments: arr }; });
+        const apptToday = new Date();
+        const apptTodayStr = `${apptToday.getFullYear()}-${String(apptToday.getMonth()+1).padStart(2,"0")}-${String(apptToday.getDate()).padStart(2,"0")}`;
+        const [aCalYear,  setACalYear]  = useState(appt.date ? new Date(appt.date+"T12:00:00").getFullYear() : apptToday.getFullYear());
+        const [aCalMonth, setACalMonth] = useState(appt.date ? new Date(appt.date+"T12:00:00").getMonth() : apptToday.getMonth());
+        const aFirstDay = new Date(aCalYear, aCalMonth, 1).getDay();
+        const aDaysInMonth = new Date(aCalYear, aCalMonth + 1, 0).getDate();
+        const aCells = [];
+        for (let i = 0; i < aFirstDay; i++) aCells.push(null);
+        for (let d = 1; d <= aDaysInMonth; d++) aCells.push(d);
+        while (aCells.length % 7 !== 0) aCells.push(null);
+        const aMonthLabel = new Date(aCalYear, aCalMonth, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
+        const aRightStep = !appt.date ? "idle" : !appt.time ? "time" : "confirm";
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ height: "min(90vh, 540px)" }}>
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
+                <h3 className="font-semibold text-[#0F172A]">Appointment {apptPopupIdx + 2}</h3>
+                <button type="button" onClick={() => setApptPopupIdx(null)}
+                  className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
               </div>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="label-field">Start Time</label>
-                  {form.additionalAppointments[apptPopupIdx].time && (
-                    <span className="text-xs font-semibold text-[#3486cf]">
-                      {(() => { const [hh, mm] = form.additionalAppointments[apptPopupIdx].time.split(":"); const h = Number(hh); return `${h % 12 || 12}:${mm} ${h >= 12 ? "PM" : "AM"}`; })()}
-                    </span>
+              <div className="flex flex-1 overflow-hidden min-h-0">
+                {/* Left: calendar */}
+                <div className="w-64 flex-shrink-0 border-r border-gray-100 p-4 overflow-y-auto">
+                  <div className="flex items-center justify-between mb-3">
+                    <button type="button" onClick={() => { if (aCalMonth===0){setACalYear(y=>y-1);setACalMonth(11);}else setACalMonth(m=>m-1); }}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors text-lg">‹</button>
+                    <p className="text-xs font-semibold text-gray-700">{aMonthLabel}</p>
+                    <button type="button" onClick={() => { if (aCalMonth===11){setACalYear(y=>y+1);setACalMonth(0);}else setACalMonth(m=>m+1); }}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors text-lg">›</button>
+                  </div>
+                  <div className="grid grid-cols-7 mb-1">
+                    {["S","M","T","W","T","F","S"].map((d,i)=><div key={i} className="text-center text-[9px] font-bold text-gray-400 pb-1">{d}</div>)}
+                  </div>
+                  <div className="grid grid-cols-7 gap-px">
+                    {aCells.map((d,i) => {
+                      if (!d) return <div key={i} className="aspect-square"/>;
+                      const ds=`${aCalYear}-${String(aCalMonth+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+                      const isSel=appt.date===ds, isPast=ds<apptTodayStr, isToday=ds===apptTodayStr;
+                      return (
+                        <button key={i} type="button" disabled={isPast}
+                          onClick={()=>!isPast&&setApptField("date",ds)}
+                          className={`aspect-square rounded-lg text-[12px] font-medium flex items-center justify-center transition-all leading-none ${
+                            isPast?"text-gray-300 cursor-not-allowed":isSel?"text-white":isToday?"font-bold":"text-gray-700 hover:bg-gray-100"
+                          }`}
+                          style={isSel?{backgroundColor:"#3486cf"}:isToday&&!isSel?{color:"#3486cf"}:{}}>
+                          {d}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                {/* Right: time selection */}
+                <div className="flex-1 overflow-y-auto p-5">
+                  {aRightStep === "idle" && (
+                    <div className="flex flex-col items-center justify-center h-full text-center gap-3 py-10">
+                      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18"/></svg>
+                      </div>
+                      <p className="text-sm font-medium text-gray-500">Select a date</p>
+                    </div>
+                  )}
+                  {aRightStep === "time" && (
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">
+                        {new Date(appt.date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}
+                      </p>
+                      <p className="text-sm font-semibold text-gray-800 mb-3">Choose a start time</p>
+                      <div className="grid grid-cols-3 gap-1.5 mb-3">
+                        {TIME_SLOTS.filter((slot) => {
+                          if (appt.date !== apptTodayStr) return true;
+                          const nowMin = apptToday.getHours()*60+apptToday.getMinutes();
+                          const [sh,sm]=slot.value.split(":").map(Number);
+                          return (sh*60+sm)>nowMin;
+                        }).map((slot) => {
+                          const isSelected = appt.time === slot.value;
+                          return (
+                            <button key={slot.value} type="button"
+                              onClick={() => setApptField("time", slot.value)}
+                              className={`py-2 px-1 rounded-lg border text-[12px] font-medium text-center transition-all leading-tight ${
+                                isSelected?"border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]":"border-gray-200 text-gray-600 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
+                              }`}>
+                              {slot.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                        <span className="text-[11px] text-gray-400">Custom:</span>
+                        <input type="time" value={appt.time}
+                          onChange={(e) => setApptField("time", e.target.value)}
+                          className="input-field text-sm py-1" style={{width:"auto"}} />
+                      </div>
+                    </div>
+                  )}
+                  {aRightStep === "confirm" && (
+                    <div>
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">Appointment {apptPopupIdx+2}</p>
+                      <div className="bg-gray-50 rounded-xl divide-y divide-gray-100 mb-4 overflow-hidden">
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="2" className="flex-shrink-0"><rect x="3" y="4" width="18" height="18" rx="2"/><path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18"/></svg>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Date</p>
+                            <p className="text-sm font-semibold text-gray-800">{new Date(appt.date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"})}</p>
+                          </div>
+                          <button type="button" onClick={()=>setApptField("date","")} className="text-[11px] text-[#3486cf] hover:underline flex-shrink-0">Change</button>
+                        </div>
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="2" className="flex-shrink-0"><circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l4 2"/></svg>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Start Time</p>
+                            <p className="text-sm font-semibold text-gray-800">{(() => { const [hh,mm]=appt.time.split(":");const h=Number(hh);return `${h%12||12}:${mm} ${h>=12?"PM":"AM"}`; })()}</p>
+                          </div>
+                          <button type="button" onClick={()=>setApptField("time","")} className="text-[11px] text-[#3486cf] hover:underline flex-shrink-0">Change</button>
+                        </div>
+                      </div>
+                      <button type="button" onClick={()=>setApptPopupIdx(null)}
+                        className="w-full py-3 rounded-xl text-white text-sm font-semibold transition-colors"
+                        style={{backgroundColor:"#3486cf"}}>
+                        Confirm Appointment ✓
+                      </button>
+                    </div>
                   )}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-2">
-                  {TIME_SLOTS.map((slot) => {
-                    const isSelected = form.additionalAppointments[apptPopupIdx].time === slot.value;
-                    return (
-                      <button key={slot.value} type="button"
-                        onClick={() => setForm((f) => { const arr = [...f.additionalAppointments]; arr[apptPopupIdx] = { ...arr[apptPopupIdx], time: slot.value }; return { ...f, additionalAppointments: arr }; })}
-                        className={`py-1.5 text-[13px] rounded-lg border text-center transition-colors font-medium ${
-                          isSelected
-                            ? "border-[#3486cf] bg-[#3486cf]/10 text-[#3486cf]"
-                            : "border-gray-200 text-gray-600 hover:border-[#3486cf]/40 hover:bg-[#3486cf]/5"
-                        }`}>
-                        {slot.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-gray-400">Custom:</span>
-                  <input type="time"
-                    value={form.additionalAppointments[apptPopupIdx].time}
-                    onChange={(e) => setForm((f) => { const arr = [...f.additionalAppointments]; arr[apptPopupIdx] = { ...arr[apptPopupIdx], time: e.target.value }; return { ...f, additionalAppointments: arr }; })}
-                    className="input-field text-sm py-1" style={{ width: "auto" }} />
-                </div>
               </div>
             </div>
-            <div className="px-5 pb-5">
-              <button type="button" onClick={() => setApptPopupIdx(null)} className="btn-primary w-full py-2.5 text-sm">
-                Confirm
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Schedule popup ─────────────────────────────────── */}
       {showSchedulePopup && (() => {
@@ -1432,7 +1520,12 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                       <p className="text-sm font-semibold text-gray-800 mb-3">Choose a start time</p>
                       {loadingSlots && <p className="text-[11px] text-gray-400 mb-2 italic">Checking availability…</p>}
                       <div className="grid grid-cols-3 gap-1.5 mb-3">
-                        {TIME_SLOTS.map((slot) => {
+                        {TIME_SLOTS.filter((slot) => {
+                          if (form.shootDate !== todayStr) return true;
+                          const nowMin = today.getHours() * 60 + today.getMinutes();
+                          const [sh, sm] = slot.value.split(":").map(Number);
+                          return (sh * 60 + sm) > nowMin;
+                        }).map((slot) => {
                           const isUnavail  = unavailableSlots.has(slot.value);
                           const isDirectly = busySlots.has(slot.value);
                           const isSelected = form.shootTime === slot.value;

@@ -7,6 +7,8 @@ import { rateLimit } from "@/lib/rateLimit";
  *
  * Returns available time slots for a given date based on the tenant's
  * availability config (mode: "slots" | "real").
+ * In "real" mode, considers photographer count: a slot is only blocked when
+ * all active photographers are already booked in that window.
  */
 export async function GET(req, { params }) {
   const rl = await rateLimit(req, `availability:${params.slug}`, 60, 3600);
@@ -27,7 +29,7 @@ export async function GET(req, { params }) {
   const end         = avail.businessHours?.end   || "18:00";
   const workingDays = avail.businessHours?.days  || ["mon","tue","wed","thu","fri"];
   const intervalMin = Number(avail.intervalMinutes) || 30;
-  const durationMin = Number(avail.defaultDuration) || 120;
+  const defaultDurationMin = Number(avail.defaultDuration) || 120;
   const bufferMin   = Number(avail.bufferMinutes)   || 30;
 
   // Check if the requested date falls on a working day
@@ -66,34 +68,51 @@ export async function GET(req, { params }) {
     if (timedBlocks.length === 0) return Response.json({ slots: allSlots });
     const available = allSlots.filter((slot) => {
       const slotMin = timeToMinutes(slot);
-      const slotEnd = slotMin + durationMin;
+      const slotEnd = slotMin + defaultDurationMin;
       return !timedBlocks.some((b) => slotMin < b.end && slotEnd > b.start);
     });
     return Response.json({ slots: available });
   }
 
-  // "real" mode: fetch confirmed/requested bookings on this date and block taken slots
-  const bookingsSnap = await adminDb
-    .collection("tenants")
-    .doc(tenant.id)
-    .collection("bookings")
-    .where("preferredDate", "==", date)
-    .where("status", "in", ["confirmed", "requested", "completed"])
-    .get();
+  // "real" mode: fetch bookings + photographer count for capacity-aware blocking
+  const [bookingsSnap, teamSnap] = await Promise.all([
+    adminDb
+      .collection("tenants")
+      .doc(tenant.id)
+      .collection("bookings")
+      .where("preferredDate", "==", date)
+      .where("status", "in", ["confirmed", "requested", "completed"])
+      .get(),
+    adminDb
+      .collection("tenants")
+      .doc(tenant.id)
+      .collection("team")
+      .where("status", "in", ["active", "approved"])
+      .get(),
+  ]);
 
+  // Capacity = number of active photographers (minimum 1)
+  const photographerCount = Math.max(1, teamSnap.size);
+
+  // Build blocked windows from existing bookings, using per-booking duration
   const blockedByBookings = bookingsSnap.docs.map((d) => {
     const b = d.data();
     const time = parseTime(b.preferredTime || b.shootTime);
     if (time === null) return null;
-    return { start: time, end: time + durationMin + bufferMin };
+    const bookingDuration = Number(b.shootDuration) || defaultDurationMin;
+    return { start: time, end: time + bookingDuration + bufferMin };
   }).filter(Boolean);
 
   const available = allSlots.filter((slot) => {
     const slotMin = timeToMinutes(slot);
-    const slotEnd = slotMin + durationMin;
-    const overlapsBooking = blockedByBookings.some((b) => slotMin < b.end && slotEnd > b.start);
-    const overlapsBlock   = timedBlocks.some((b) => slotMin < b.end && slotEnd > b.start);
-    return !overlapsBooking && !overlapsBlock;
+    const slotEnd = slotMin + defaultDurationMin;
+
+    // Block if any admin time block overlaps
+    if (timedBlocks.some((b) => slotMin < b.end && slotEnd > b.start)) return false;
+
+    // Block only when all photographers are booked (overlap count >= capacity)
+    const overlapCount = blockedByBookings.filter((b) => slotMin < b.end && slotEnd > b.start).length;
+    return overlapCount < photographerCount;
   });
 
   return Response.json({ slots: available });

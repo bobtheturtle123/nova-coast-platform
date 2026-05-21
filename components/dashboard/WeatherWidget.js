@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { auth } from "@/lib/firebase";
 
-// Props: address (string), date (YYYY-MM-DD string)
+// Props: address (string), date (YYYY-MM-DD string), lat (optional number), lng (optional number)
 // Renders nothing if address or date is missing.
 // Fetches /api/dashboard/weather and shows a compact forecast card.
-export default function WeatherWidget({ address, date }) {
+export default function WeatherWidget({ address, date, lat, lng }) {
   const [weather,  setWeather]  = useState(null);   // null = not loaded
   const [loading,  setLoading]  = useState(false);
   const timerRef = useRef(null);
@@ -20,6 +20,7 @@ export default function WeatherWidget({ address, date }) {
       try {
         const token = await auth.currentUser?.getIdToken();
         const params = new URLSearchParams({ address, date });
+        if (lat && lng) { params.set("lat", lat); params.set("lng", lng); }
         const res = await fetch(`/api/dashboard/weather?${params}`, {
           headers: { Authorization: `Bearer ${token}` },
         });

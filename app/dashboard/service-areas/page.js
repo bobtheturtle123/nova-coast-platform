@@ -296,11 +296,18 @@ export default function ServiceAreasPage() {
   // Keep ref current every render (synchronous, no effect delay)
   renderZonesRef.current = renderZones;
 
-  // Re-render whenever zones change; if map isn't loaded yet the load handler above covers it
+  // Re-render whenever zones change; wait for map load if style isn't ready yet
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
-    renderZones();
+    if (!map) return;
+    if (map.isStyleLoaded()) {
+      renderZones();
+      return;
+    }
+    // Style not yet loaded — wait for the load event then render
+    const onLoad = () => renderZones();
+    map.once("load", onLoad);
+    return () => { try { map.off("load", onLoad); } catch {} };
   }, [zones, renderZones]);
 
   function startDrawing() {
