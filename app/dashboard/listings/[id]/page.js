@@ -900,7 +900,7 @@ if (loading) return (
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500 flex-shrink-0">
                         <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                       </svg>
-                      {shootDateDisplay}{booking.shootTime ? ` · ${booking.shootTime}` : ""}
+                      {shootDateDisplay}{booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}
                     </p>
                   ) : (
                     <p className="text-sm text-gray-400">No shoot date set — manage in Bookings</p>
@@ -1083,7 +1083,7 @@ if (loading) return (
                     <span className="text-gray-500">Shoot Date</span>
                     <span className="font-medium text-[#0F172A]">
                       {new Date(booking.shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
-                      {booking.shootTime ? ` · ${booking.shootTime}` : ""}
+                      {booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}
                     </span>
                   </div>
                 )}
@@ -2480,7 +2480,7 @@ if (loading) return (
                 </div>
                 <div className="mb-3 p-3 bg-gray-50 rounded-xl">
                   <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">Current Appointment</p>
-                  <p className="text-sm font-medium text-[#0F172A]">{shootDateDisplay}{booking.shootTime ? ` · ${booking.shootTime}` : ""}</p>
+                  <p className="text-sm font-medium text-[#0F172A]">{shootDateDisplay}{booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}</p>
                 </div>
                 <button type="button" onClick={() => setShowReschedDtPicker(true)}
                   className="input-field w-full text-left flex items-center gap-2 mb-3">

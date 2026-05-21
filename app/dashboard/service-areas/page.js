@@ -140,10 +140,11 @@ export default function ServiceAreasPage() {
   const drawRef         = useRef(null);
   const mapLoadedRef    = useRef(false);
 
-  const [zones,        setZones]        = useState([]);
-  const [teamMembers,  setTeamMembers]  = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [mapsReady,    setMapsReady]    = useState(false);
+  const [zones,          setZones]          = useState([]);
+  const [teamMembers,    setTeamMembers]    = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [mapsReady,      setMapsReady]      = useState(false);
+  const [mapInitialized, setMapInitialized] = useState(false);
   const [mapError,     setMapError]     = useState(false);
   const [editing,      setEditing]      = useState(null);
   const [drawingMode,  setDrawingMode]  = useState(false);
@@ -250,7 +251,7 @@ export default function ServiceAreasPage() {
       setDrawingMode(false);
     });
 
-    map.on("load", () => renderZonesRef.current?.());
+    map.on("load", () => { setMapInitialized(true); renderZonesRef.current?.(); });
     }); // end requestAnimationFrame
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapsReady]);
@@ -296,19 +297,14 @@ export default function ServiceAreasPage() {
   // Keep ref current every render (synchronous, no effect delay)
   renderZonesRef.current = renderZones;
 
-  // Re-render whenever zones change; wait for map load if style isn't ready yet
+  // Re-render whenever zones change AND the map style is ready.
+  // mapInitialized is set true inside the map "load" event, so this effect
+  // fires both when zones arrive after the map is ready, and when the map
+  // becomes ready after zones have already loaded.
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    if (map.isStyleLoaded()) {
-      renderZones();
-      return;
-    }
-    // Style not yet loaded — wait for the load event then render
-    const onLoad = () => renderZones();
-    map.once("load", onLoad);
-    return () => { try { map.off("load", onLoad); } catch {} };
-  }, [zones, renderZones]);
+    if (!mapInitialized) return;
+    renderZones();
+  }, [zones, renderZones, mapInitialized]);
 
   function startDrawing() {
     if (!drawRef.current) return;

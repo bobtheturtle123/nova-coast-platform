@@ -212,8 +212,8 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
               )}
               <p className="text-sm font-semibold text-[#0F172A] mt-1">
                 {form.tiered
-                  ? (() => { const tv = Object.values(form.priceTiers).filter(v => v > 0); return tv.length > 0 ? `From $${Math.min(...tv).toLocaleString()}` : "Set tier prices below"; })()
-                  : `$${Number(form.price).toLocaleString()}`}
+                  ? (() => { const tv = Object.values(form.priceTiers).filter(v => v > 0); return tv.length > 0 ? `From ${fmtMoney(Math.min(...tv))}` : "Set tier prices below"; })()
+                  : fmtMoney(Number(form.price))}
               </p>
             </div>
           </div>
@@ -578,12 +578,21 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
   );
 }
 
+function fmtMoney(v) {
+  const n = Number(v);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency", currency: "USD",
+    minimumFractionDigits: n % 1 !== 0 ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
 // ─── Product row ──────────────────────────────────────────────────────────────
 function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate }) {
   const tierVals = item.priceTiers ? Object.values(item.priceTiers).filter(v => v > 0) : [];
   const fromPrice = item.priceTiers
-    ? tierVals.length > 0 ? `From $${Math.min(...tierVals).toLocaleString()}` : "Tier pricing"
-    : `$${(item.price || 0).toLocaleString()}`;
+    ? tierVals.length > 0 ? `From ${fmtMoney(Math.min(...tierVals))}` : "Tier pricing"
+    : fmtMoney(item.price || 0);
 
   const [hovered, setHovered] = useState(false);
   return (

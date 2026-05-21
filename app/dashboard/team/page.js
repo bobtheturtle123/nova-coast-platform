@@ -441,8 +441,16 @@ function BookingUnscheduledTab({ listings }) {
 }
 
 // ─── Member form modal ────────────────────────────────────────────────────────
+const MEMBER_TABS = [
+  { id: "info",     label: "Info" },
+  { id: "services", label: "Services" },
+  { id: "pay",      label: "Pay & Hours" },
+  { id: "access",   label: "Access" },
+];
+
 function MemberForm({ member, products, onSave, onDelete, onClose }) {
   const initialRole = member?.role || "photographer";
+  const [tab, setTab] = useState("info");
   const [form, setForm] = useState({
     name:          member?.name          || "",
     email:         member?.email         || "",
@@ -458,13 +466,6 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
     workingHours:  member?.workingHours  || DEFAULT_WORKING_HOURS,
     permissions:   member?.permissions   || { ...DEFAULT_PERMISSIONS[initialRole] },
   });
-  const [showPermissions, setShowPermissions] = useState(false);
-  const [showWorkingHours, setShowWorkingHours] = useState(
-    !!member?.workingHours && Object.keys(member.workingHours).length > 0
-  );
-  const [showServiceRates, setShowServiceRates] = useState(
-    Object.keys(member?.serviceRates || {}).length > 0
-  );
   const [saving,   setSaving]   = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -472,7 +473,6 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
     setForm((f) => ({ ...f, skills: f.skills.includes(s) ? f.skills.filter((x) => x !== s) : [...f.skills, s] }));
   }
 
-  // All products flattened for skills selection
   const allProducts = [
     ...(products.services || []),
     ...(products.packages || []),
@@ -495,139 +495,174 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
   return (
     <div className="modal-backdrop">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="modal-card relative w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-          <h2 className="font-semibold text-[#0F172A] text-base">{member ? "Edit Team Member" : "Add Team Member"}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
+      <div className="modal-card relative w-full max-w-lg flex flex-col max-h-[90vh]">
+
+        {/* Header */}
+        <div className="px-6 pt-5 pb-0 flex-shrink-0">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-[#0F172A] text-base">{member ? "Edit Team Member" : "Add Team Member"}</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
+          </div>
+          {/* Tab bar */}
+          <div className="flex border-b border-gray-200 -mx-6 px-6">
+            {MEMBER_TABS.map((t) => (
+              <button key={t.id} type="button" onClick={() => setTab(t.id)}
+                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                  tab === t.id ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="p-6 space-y-4">
-          {/* Role selector */}
-          <div>
-            <label className="label-field">Role</label>
-            <div className="grid grid-cols-2 gap-2">
-              {ROLE_OPTIONS.map((r) => (
-                <button key={r.id} type="button" onClick={() => setForm((f) => ({
-                  ...f,
-                  role: r.id,
-                  permissions: { ...DEFAULT_PERMISSIONS[r.id] },
-                }))}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
-                    form.role === r.id ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300"
-                  }`}>
-                  <span className="text-lg leading-none">{r.icon}</span>
-                  <div>
-                    <p className="text-xs font-semibold text-[#0F172A]">{r.label}</p>
-                    <p className="text-[10px] text-gray-400">{r.desc}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* Tab body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <label className="label-field">Name</label>
-              <input type="text" value={form.name} onChange={(e) => setForm((f) => ({...f, name: e.target.value}))}
-                className="input-field w-full" placeholder="Alex Johnson" />
-            </div>
-            <div>
-              <label className="label-field">Email</label>
-              <input type="email" value={form.email} onChange={(e) => setForm((f) => ({...f, email: e.target.value}))}
-                className="input-field w-full" />
-            </div>
-            <div>
-              <label className="label-field">Phone</label>
-              <input type="tel" value={form.phone} onChange={(e) => setForm((f) => ({...f, phone: e.target.value}))}
-                className="input-field w-full" />
-            </div>
-            <div>
-              <label className="label-field">Home ZIP Code</label>
-              <input type="text" value={form.homeZip} maxLength={5}
-                onChange={(e) => setForm((f) => ({...f, homeZip: e.target.value}))}
-                className="input-field w-full" placeholder="e.g. 92108" />
-              <p className="text-xs text-gray-400 mt-0.5">Used to calculate travel fees from their location.</p>
-            </div>
-          </div>
-
-          <div>
-            <label className="label-field">Calendar Color</label>
-            <div className="flex gap-2 flex-wrap items-center">
-              {COLORS.map((c) => (
-                <button key={c} type="button" onClick={() => setForm((f) => ({...f, color: c}))}
-                  style={{ background: c }}
-                  className={`w-7 h-7 rounded-full transition-all flex-shrink-0 ${form.color === c ? "ring-2 ring-offset-1 ring-gray-400 scale-110" : ""}`} />
-              ))}
-              {/* Custom color — always show the picker; highlight if current color isn't a preset */}
-              <label
-                title="Custom color"
-                className={`w-7 h-7 rounded-full flex-shrink-0 border-2 border-dashed cursor-pointer flex items-center justify-center overflow-hidden transition-all ${
-                  !COLORS.includes(form.color) ? "ring-2 ring-offset-1 ring-gray-400 scale-110" : "border-gray-300 hover:border-gray-500"
-                }`}
-                style={!COLORS.includes(form.color) ? { background: form.color } : {}}>
-                <input type="color" value={form.color}
-                  onChange={(e) => setForm((f) => ({...f, color: e.target.value}))}
-                  className="opacity-0 absolute w-px h-px" />
-                {COLORS.includes(form.color) && <span className="text-gray-400 text-[10px] leading-none select-none">+</span>}
-              </label>
-            </div>
-          </div>
-
-          <div>
-            <label className="label-field">Services They Can Perform</label>
-            {allProducts.length === 0 ? (
-              <p className="text-xs text-gray-400">Add products first to assign services to photographers.</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {allProducts.map((p) => (
-                  <button key={p.id} type="button" onClick={() => toggleSkill(p.id)}
-                    className={`text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors ${
-                      form.skills.includes(p.id) ? "bg-[#3486cf] text-white border-[#3486cf]" : "border-gray-200 text-gray-600 hover:border-gray-300"
-                    }`}>
-                    {p.name}
-                  </button>
-                ))}
+          {/* ── INFO ── */}
+          {tab === "info" && (
+            <>
+              <div>
+                <label className="label-field">Role</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {ROLE_OPTIONS.map((r) => (
+                    <button key={r.id} type="button" onClick={() => setForm((f) => ({
+                      ...f, role: r.id, permissions: { ...DEFAULT_PERMISSIONS[r.id] },
+                    }))}
+                      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
+                        form.role === r.id ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300"
+                      }`}>
+                      <span className="text-lg leading-none">{r.icon}</span>
+                      <div>
+                        <p className="text-xs font-semibold text-[#0F172A]">{r.label}</p>
+                        <p className="text-[10px] text-gray-400 leading-tight">{r.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
 
-          <div>
-            <label className="label-field">Default Pay Rate (per shoot, $)</label>
-            <input type="number" min="0" step="0.01" value={form.payRate}
-              onChange={(e) => setForm((f) => ({...f, payRate: e.target.value === "" ? "" : parseFloat(e.target.value)}))}
-              className="input-field w-full" placeholder="e.g. 150" />
-            <p className="text-xs text-gray-500 mt-0.5">Used when no per-service rate is set. Visible in their photographer portal.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="label-field">Full Name *</label>
+                  <input type="text" value={form.name} onChange={(e) => setForm((f) => ({...f, name: e.target.value}))}
+                    className="input-field w-full" placeholder="Alex Johnson" />
+                </div>
+                <div>
+                  <label className="label-field">Email</label>
+                  <input type="email" value={form.email} onChange={(e) => setForm((f) => ({...f, email: e.target.value}))}
+                    className="input-field w-full" placeholder="alex@example.com" />
+                </div>
+                <div>
+                  <label className="label-field">Phone</label>
+                  <input type="tel" value={form.phone} onChange={(e) => setForm((f) => ({...f, phone: e.target.value}))}
+                    className="input-field w-full" placeholder="(619) 555-0100" />
+                </div>
+                <div>
+                  <label className="label-field">Home ZIP</label>
+                  <input type="text" value={form.homeZip} maxLength={5}
+                    onChange={(e) => setForm((f) => ({...f, homeZip: e.target.value}))}
+                    className="input-field w-full" placeholder="92108" />
+                  <p className="text-[10px] text-gray-400 mt-0.5">Used for travel fee calculations</p>
+                </div>
+              </div>
 
-            {form.skills.length > 0 && (
-              <div className="mt-3">
-                <button type="button" onClick={() => setShowServiceRates((v) => !v)}
-                  className="text-xs text-[#3486cf] underline hover:no-underline">
-                  {showServiceRates ? "Hide per-service rates" : "Set per-service rates (optional)"}
-                </button>
-                {showServiceRates && (
-                  <div className="mt-2 border border-gray-200 rounded-xl divide-y divide-gray-100">
+              <div>
+                <label className="label-field">Calendar Color</label>
+                <div className="flex gap-2 flex-wrap items-center">
+                  {COLORS.map((c) => (
+                    <button key={c} type="button" onClick={() => setForm((f) => ({...f, color: c}))}
+                      style={{ background: c }}
+                      className={`w-7 h-7 rounded-full transition-all flex-shrink-0 ${form.color === c ? "ring-2 ring-offset-1 ring-gray-400 scale-110" : ""}`} />
+                  ))}
+                  <label title="Custom color"
+                    className={`w-7 h-7 rounded-full flex-shrink-0 border-2 border-dashed cursor-pointer flex items-center justify-center overflow-hidden transition-all ${
+                      !COLORS.includes(form.color) ? "ring-2 ring-offset-1 ring-gray-400 scale-110" : "border-gray-300 hover:border-gray-500"
+                    }`}
+                    style={!COLORS.includes(form.color) ? { background: form.color } : {}}>
+                    <input type="color" value={form.color}
+                      onChange={(e) => setForm((f) => ({...f, color: e.target.value}))}
+                      className="opacity-0 absolute w-px h-px" />
+                    {COLORS.includes(form.color) && <span className="text-gray-400 text-[10px] leading-none select-none">+</span>}
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input type="checkbox" id="member-active" checked={form.active}
+                  onChange={(e) => setForm((f) => ({...f, active: e.target.checked}))} />
+                <label htmlFor="member-active" className="text-sm text-[#0F172A] cursor-pointer">Active — visible on schedule</label>
+              </div>
+            </>
+          )}
+
+          {/* ── SERVICES ── */}
+          {tab === "services" && (
+            <>
+              <p className="text-xs text-gray-500">Select which products/services this team member can perform. Leave blank to allow all.</p>
+              {allProducts.length === 0 ? (
+                <p className="text-sm text-gray-400 py-4 text-center">Add products first in the Products page.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {allProducts.map((p) => (
+                    <button key={p.id} type="button" onClick={() => toggleSkill(p.id)}
+                      className={`text-xs px-3 py-2 rounded-lg border font-medium transition-colors ${
+                        form.skills.includes(p.id) ? "bg-[#3486cf] text-white border-[#3486cf]" : "border-gray-200 text-gray-600 hover:border-gray-300"
+                      }`}>
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {form.skills.length > 0 && (
+                <div className="mt-1">
+                  <p className="text-xs font-medium text-gray-500 mb-2">{form.skills.length} service{form.skills.length !== 1 ? "s" : ""} assigned</p>
+                  <button type="button" onClick={() => setForm((f) => ({...f, skills: []}))}
+                    className="text-xs text-gray-400 hover:text-red-500">Clear all</button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── PAY & HOURS ── */}
+          {tab === "pay" && (
+            <>
+              <div>
+                <label className="label-field">Default Pay Rate ($ per shoot)</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400 text-sm">$</span>
+                  <input type="number" min="0" step="0.01" value={form.payRate}
+                    onChange={(e) => setForm((f) => ({...f, payRate: e.target.value === "" ? "" : parseFloat(e.target.value)}))}
+                    className="input-field w-36" placeholder="150" />
+                  <span className="text-xs text-gray-400">per booking</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">Shown in their photographer portal.</p>
+              </div>
+
+              {form.skills.length > 0 && (
+                <div>
+                  <label className="label-field">Per-Service Rates (optional)</label>
+                  <p className="text-xs text-gray-400 mb-2">Override the default rate for specific services.</p>
+                  <div className="border border-gray-200 rounded-xl divide-y divide-gray-100">
                     {form.skills.map((skillId) => {
                       const product = allProducts.find((p) => p.id === skillId);
                       if (!product) return null;
                       const hasTiers = product.priceTiers && Object.values(product.priceTiers).some((v) => v > 0);
                       return (
-                        <div key={skillId} className="px-3 py-2">
+                        <div key={skillId} className="px-3 py-2.5">
                           <p className="text-xs font-semibold text-[#0F172A] mb-1.5">{product.name}</p>
                           {hasTiers ? (
                             <div className="grid grid-cols-3 gap-2">
                               {Object.keys(product.priceTiers).map((tier) => (
                                 <div key={tier}>
-                                  <label className="text-[10px] text-gray-500 uppercase tracking-wide block mb-1">{tier}</label>
+                                  <label className="text-[10px] text-gray-400 uppercase tracking-wide block mb-0.5">{tier}</label>
                                   <input type="number" min="0" step="1" placeholder={String(form.payRate || "")}
                                     value={form.serviceRates?.[skillId]?.[tier] ?? ""}
                                     onChange={(e) => {
                                       const val = e.target.value === "" ? undefined : Number(e.target.value);
                                       setForm((f) => ({
                                         ...f,
-                                        serviceRates: {
-                                          ...f.serviceRates,
-                                          [skillId]: { ...(f.serviceRates?.[skillId] || {}), [tier]: val },
-                                        },
+                                        serviceRates: { ...f.serviceRates, [skillId]: { ...(f.serviceRates?.[skillId] || {}), [tier]: val } },
                                       }));
                                     }}
                                     className="input-field w-full text-xs py-1.5 px-2" />
@@ -635,106 +670,88 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
                               ))}
                             </div>
                           ) : (
-                            <input type="number" min="0" step="1" placeholder={String(form.payRate || "Default")}
-                              value={typeof form.serviceRates?.[skillId] === "number" ? form.serviceRates[skillId] : ""}
-                              onChange={(e) => setForm((f) => ({
-                                ...f,
-                                serviceRates: {
-                                  ...f.serviceRates,
-                                  [skillId]: e.target.value === "" ? undefined : Number(e.target.value),
-                                },
-                              }))}
-                              className="input-field w-full text-xs py-1.5 px-2" />
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 text-sm">$</span>
+                              <input type="number" min="0" step="1" placeholder={String(form.payRate || "Default")}
+                                value={typeof form.serviceRates?.[skillId] === "number" ? form.serviceRates[skillId] : ""}
+                                onChange={(e) => setForm((f) => ({
+                                  ...f,
+                                  serviceRates: { ...f.serviceRates, [skillId]: e.target.value === "" ? undefined : Number(e.target.value) },
+                                }))}
+                                className="input-field w-32 text-xs py-1.5" />
+                            </div>
                           )}
                         </div>
                       );
                     })}
                   </div>
-                )}
+                </div>
+              )}
+
+              <div>
+                <label className="label-field">Booking Buffer <span className="font-normal text-gray-400">(extra time after each shoot)</span></label>
+                <select value={form.bufferMinutes}
+                  onChange={(e) => setForm((f) => ({ ...f, bufferMinutes: e.target.value === "" ? "" : Number(e.target.value) }))}
+                  className="input-field w-full">
+                  <option value="">Default (no extra buffer)</option>
+                  <option value={15}>+15 min</option>
+                  <option value={30}>+30 min</option>
+                  <option value={45}>+45 min</option>
+                  <option value={60}>+60 min</option>
+                  <option value={90}>+90 min</option>
+                </select>
               </div>
-            )}
-          </div>
 
-          <div>
-            <label className="label-field">
-              Booking Buffer
-              <span className="font-normal text-gray-400 ml-1">(extra time after each shoot)</span>
-            </label>
-            <select value={form.bufferMinutes}
-              onChange={(e) => setForm((f) => ({ ...f, bufferMinutes: e.target.value === "" ? "" : Number(e.target.value) }))}
-              className="input-field w-full">
-              <option value="">Default (no extra buffer)</option>
-              <option value={15}>+15 min</option>
-              <option value={30}>+30 min</option>
-              <option value={45}>+45 min</option>
-              <option value={60}>+60 min</option>
-              <option value={90}>+90 min</option>
-            </select>
-            <p className="text-xs text-gray-400 mt-0.5">For photographers who need more time between jobs.</p>
-          </div>
+              <div>
+                <label className="label-field">Working Hours</label>
+                <p className="text-xs text-gray-400 mb-2">Days and times this person is available to be scheduled.</p>
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  {WEEK_DAYS.map(({ key, label }) => {
+                    const day = form.workingHours?.[key] || { enabled: false, start: "09:00", end: "17:00" };
+                    return (
+                      <div key={key} className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 last:border-b-0">
+                        <span className="w-8 text-xs font-medium text-gray-500 flex-shrink-0">{label}</span>
+                        <input type="checkbox" checked={!!day.enabled}
+                          onChange={(e) => setForm((f) => ({
+                            ...f,
+                            workingHours: { ...f.workingHours, [key]: { ...day, enabled: e.target.checked } },
+                          }))} />
+                        {day.enabled ? (
+                          <>
+                            <input type="time" value={day.start || "09:00"}
+                              onChange={(e) => setForm((f) => ({
+                                ...f,
+                                workingHours: { ...f.workingHours, [key]: { ...day, start: e.target.value } },
+                              }))}
+                              className="input-field text-xs py-1 px-2 w-28 flex-shrink-0" />
+                            <span className="text-xs text-gray-400">—</span>
+                            <input type="time" value={day.end || "17:00"}
+                              onChange={(e) => setForm((f) => ({
+                                ...f,
+                                workingHours: { ...f.workingHours, [key]: { ...day, end: e.target.value } },
+                              }))}
+                              className="input-field text-xs py-1 px-2 w-28 flex-shrink-0" />
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-400">Off</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
 
-          {/* Working Hours */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="label-field mb-0">Working Hours</label>
-              <button type="button" onClick={() => setShowWorkingHours((v) => !v)}
-                className="text-xs text-[#3486cf] hover:underline">
-                {showWorkingHours ? "Hide" : "Set hours"}
-              </button>
-            </div>
-            {showWorkingHours && (
+          {/* ── ACCESS ── */}
+          {tab === "access" && (
+            <>
+              <p className="text-xs text-gray-500 mb-1">
+                Control what this team member can see and do in the dashboard. Defaults are set by role.
+              </p>
               <div className="border border-gray-200 rounded-xl overflow-hidden">
-                {WEEK_DAYS.map(({ key, label }) => {
-                  const day = form.workingHours?.[key] || { enabled: false, start: "09:00", end: "17:00" };
-                  return (
-                    <div key={key} className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 last:border-b-0">
-                      <span className="w-8 text-xs font-medium text-gray-500 flex-shrink-0">{label}</span>
-                      <input type="checkbox" checked={!!day.enabled}
-                        onChange={(e) => setForm((f) => ({
-                          ...f,
-                          workingHours: { ...f.workingHours, [key]: { ...day, enabled: e.target.checked } },
-                        }))} />
-                      {day.enabled ? (
-                        <>
-                          <input type="time" value={day.start || "09:00"}
-                            onChange={(e) => setForm((f) => ({
-                              ...f,
-                              workingHours: { ...f.workingHours, [key]: { ...day, start: e.target.value } },
-                            }))}
-                            className="input-field text-xs py-1 px-2 w-28 flex-shrink-0" />
-                          <span className="text-xs text-gray-400">—</span>
-                          <input type="time" value={day.end || "17:00"}
-                            onChange={(e) => setForm((f) => ({
-                              ...f,
-                              workingHours: { ...f.workingHours, [key]: { ...day, end: e.target.value } },
-                            }))}
-                            className="input-field text-xs py-1 px-2 w-28 flex-shrink-0" />
-                        </>
-                      ) : (
-                        <span className="text-xs text-gray-400">Off</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Permissions — available for all roles */}
-          <div>
-            <button type="button" onClick={() => setShowPermissions((v) => !v)}
-              className="flex items-center gap-1.5 text-xs font-medium text-[#3486cf] hover:underline">
-              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"
-                className={`transition-transform ${showPermissions ? "rotate-90" : ""}`}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-              {showPermissions ? "Hide permissions" : "Customize permissions"}
-            </button>
-            {showPermissions && (
-              <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden">
                 <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
-                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Dashboard Access</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">Control what this team member can see and do in the dashboard</p>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Dashboard Permissions</p>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {PERMISSION_DEFS.map(({ key, label, desc }) => (
@@ -759,17 +776,12 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
                   ))}
                 </div>
               </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="active" checked={form.active}
-              onChange={(e) => setForm((f) => ({...f, active: e.target.checked}))} />
-            <label htmlFor="active" className="text-sm text-[#0F172A] cursor-pointer">Active</label>
-          </div>
+            </>
+          )}
         </div>
 
-        <div className="px-6 py-4 flex items-center justify-between sticky bottom-0 bg-white" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+        {/* Footer */}
+        <div className="px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderTop: "1px solid var(--border-subtle)" }}>
           {member
             ? <button onClick={handleDelete} disabled={deleting} className="text-sm text-red-500 hover:text-red-700 disabled:opacity-50">
                 {deleting ? "Removing…" : "Remove member"}

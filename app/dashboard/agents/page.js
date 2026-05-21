@@ -186,15 +186,19 @@ function CustomerModal({ agent, teams, onClose, onSaved }) {
               <input type="text" value={form.company} onChange={set("company")} className="input-field" placeholder="Keller Williams" />
             </div>
           </div>
-          {!isEdit && teams.length > 0 && (
+          {!isEdit && (
             <div>
               <label className="label-field">Add to Team (optional)</label>
-              <select value={teamId} onChange={(e) => setTeamId(e.target.value)} className="input-field w-full">
-                <option value="">— No team —</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
+              {teams.length === 0 ? (
+                <p className="text-xs text-gray-400 mt-0.5">No teams yet — create one in the Teams tab first.</p>
+              ) : (
+                <select value={teamId} onChange={(e) => setTeamId(e.target.value)} className="input-field w-full">
+                  <option value="">— No team —</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
           <div>
