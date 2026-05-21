@@ -921,8 +921,8 @@ if (loading) return (
                           <button type="button"
                             onClick={() => {
                               setReschedApptIdx(i);
-                              setReschedDate(appt.date || "");
-                              setReschedTime(appt.time || "");
+                              setReschedDate("");
+                              setReschedTime("");
                               setShowReschedModal(true);
                             }}
                             className="text-[11px] text-[#3486cf] hover:underline ml-2 flex-shrink-0">
@@ -1055,7 +1055,7 @@ if (loading) return (
 
         {/* ── BOOKING DETAILS TAB ─────────────────────────────────────────── */}
         {tab === "orders" && (
-          <div className="max-w-5xl space-y-4">
+          <div className="space-y-4 max-w-lg">
 
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">Booking Details</p>
@@ -1067,11 +1067,6 @@ if (loading) return (
                 Edit Booking
               </Link>
             </div>
-
-            {/* 2-column grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-            {/* Left column: Appointment info + Services */}
-            <div className="space-y-4">
 
             {/* Appointment Record */}
             <div className="card p-5">
@@ -1190,11 +1185,6 @@ if (loading) return (
                 })()}
               </div>
             )}
-
-            </div>{/* end left column */}
-
-            {/* Right column: Payment info */}
-            <div className="space-y-4">
 
             {userRole === "manager" ? (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-800">
@@ -1331,8 +1321,6 @@ if (loading) return (
                 )}
               </div>
             )}
-            </div>{/* end right column */}
-            </div>{/* end 2-col grid */}
           </div>
         )}
 
@@ -1611,8 +1599,8 @@ if (loading) return (
               }`}>{propSiteMsg.text}</div>
             )}
 
-            {/* 3-column grid for the main settings */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+            {/* 2-column grid for the main settings */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
 
             {/* Template + Color Scheme */}
             <div className="card">
