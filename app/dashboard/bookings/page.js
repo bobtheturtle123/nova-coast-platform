@@ -277,7 +277,6 @@ export default function BookingsPage() {
   const [activeTab,          setActiveTab]          = useState("bookings");
   const [abandonedBookings,  setAbandonedBookings]  = useState([]);
   const [abandonedLoading,   setAbandonedLoading]   = useState(false);
-  const [editingBookingId,   setEditingBookingId]   = useState(null);
 
   useEffect(() => {
     loadBookings();
@@ -524,41 +523,10 @@ export default function BookingsPage() {
 
   function closeForm() {
     setShowCreate(false);
-    setEditingBookingId(null);
     setCreateError("");
     setForm(EMPTY_FORM);
     setAgentQuery("");
     setShowAgentDD(false);
-  }
-
-  function openEditBooking(b) {
-    setForm({
-      clientName:        b.clientName || "",
-      clientEmail:       b.clientEmail || "",
-      clientPhone:       b.clientPhone || "",
-      address:           b.address || "",
-      unit:              b.unit || "",
-      city:              b.city || "",
-      state:             b.state || "CA",
-      zip:               b.zip || "",
-      sqft:              b.squareFootage ? String(b.squareFootage) : "",
-      apn:               "",
-      preferredDate:     b.preferredDate ? b.preferredDate.slice(0, 10) : "",
-      preferredTime:     b.preferredTime || "",
-      photographerEmail: b.photographerEmail || "",
-      photographerName:  b.photographerName || "",
-      notes:             b.notes || "",
-      totalPrice:        b.totalPrice != null ? String(b.totalPrice) : "",
-      depositPaid:       b.depositPaid || false,
-      status:            b.status || "confirmed",
-      selectedPackage:   b.packageId || (b.packageIds?.[0]) || "",
-      selectedServices:  b.serviceIds || [],
-      selectedAddons:    b.addonIds || [],
-      customLineItems:   [],
-    });
-    setEditingBookingId(b.id);
-    setAgentQuery(b.clientName || "");
-    setShowCreate(true);
   }
 
   async function createBooking(e) {
@@ -571,48 +539,22 @@ export default function BookingsPage() {
     setCreateError("");
     try {
       const token = await auth.currentUser.getIdToken();
-      let res;
-      if (editingBookingId) {
-        res = await fetch(`/api/dashboard/bookings/${editingBookingId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            clientName: form.clientName, clientEmail: form.clientEmail, clientPhone: form.clientPhone,
-            address: form.address, unit: form.unit || null,
-            city: form.city, state: form.state, zip: form.zip,
-            fullAddress: [form.address, form.city, form.state, form.zip].filter(Boolean).join(", "),
-            squareFootage: form.sqft ? Number(form.sqft) : null,
-            preferredDate: form.preferredDate || null,
-            preferredTime: form.preferredTime || null,
-            photographerName: form.photographerName || null,
-            photographerEmail: form.photographerEmail || null,
-            notes: form.notes || "",
-            packageId: form.selectedPackage || null,
-            serviceIds: form.selectedServices,
-            addonIds: form.selectedAddons,
-            totalPrice: total,
-            depositPaid: form.depositPaid,
-            status: form.status,
-          }),
-        });
-      } else {
-        res = await fetch("/api/dashboard/bookings/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            ...form,
-            totalPrice:      total,
-            packageId:       form.selectedPackage || null,
-            serviceIds:      form.selectedServices,
-            addonIds:        form.selectedAddons,
-            customLineItems: form.customLineItems,
-            apn:             form.apn || null,
-            source:          "manual",
-          }),
-        });
-      }
+      const res = await fetch("/api/dashboard/bookings/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          ...form,
+          totalPrice:      total,
+          packageId:       form.selectedPackage || null,
+          serviceIds:      form.selectedServices,
+          addonIds:        form.selectedAddons,
+          customLineItems: form.customLineItems,
+          apn:             form.apn || null,
+          source:          "manual",
+        }),
+      });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || (editingBookingId ? "Failed to update booking" : "Failed to create booking"));
+      if (!res.ok) throw new Error(data.error || "Failed to create booking");
       closeForm();
       await loadBookings();
     } catch (err) {
@@ -649,7 +591,7 @@ export default function BookingsPage() {
             </button>
           )}
           {canCreateBookings && (
-            <button onClick={() => { setForm(EMPTY_FORM); setEditingBookingId(null); setShowCreate(true); }}
+            <button onClick={() => { setForm(EMPTY_FORM); setShowCreate(true); }}
               className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5">
               + New Booking
             </button>
@@ -797,11 +739,10 @@ export default function BookingsPage() {
                     )}
                     <WorkflowStatusBadge status={wfStatus} size="xs" />
                     {canCreateBookings && (
-                      <button
-                        onClick={() => openEditBooking(b)}
+                      <Link href={`/dashboard/bookings/${b.id}/edit`}
                         className="text-sm font-medium text-[#3486cf] border border-[#3486cf]/25 hover:bg-[#3486cf]/5 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">
                         Edit Booking
-                      </button>
+                      </Link>
                     )}
                     <Link href={`/dashboard/bookings/${b.id}`}
                       className="text-sm font-medium text-white bg-[#3486cf] hover:bg-[#2a72b8] px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">
@@ -833,10 +774,8 @@ export default function BookingsPage() {
             {/* Modal header */}
             <div className="flex items-center justify-between px-8 py-5" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
               <div>
-                <h2 className="font-semibold text-[#0F172A] text-base">{editingBookingId ? "Edit Booking" : "New Booking"}</h2>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {editingBookingId ? "Update booking details." : "Manually create a confirmed booking for a phone or in-person client."}
-                </p>
+                <h2 className="font-semibold text-[#0F172A] text-base">New Booking</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Manually create a confirmed booking for a phone or in-person client.</p>
               </div>
               <button
                 onClick={closeForm}
@@ -1263,9 +1202,7 @@ export default function BookingsPage() {
                   <div className="space-y-2">
                     <button type="submit" disabled={saving}
                       className="w-full btn-primary py-3 text-sm font-semibold">
-                      {saving
-                        ? (editingBookingId ? "Saving…" : "Creating…")
-                        : (editingBookingId ? "Save Changes →" : "Create Booking →")}
+                      {saving ? "Creating…" : "Create Booking →"}
                     </button>
                     <button type="button"
                       onClick={closeForm}

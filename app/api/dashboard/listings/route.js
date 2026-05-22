@@ -103,6 +103,12 @@ export async function GET(req) {
         createdAt:   b.createdAt  || null,
         galleryId:   b.galleryId  || null,
         gallery:     galleryMap[doc.id] || null,
+        photographerId:    b.photographerId    || null,
+        photographerEmail: b.photographerEmail || null,
+        photographerName:  b.photographerName  || null,
+        preferredTime:     b.preferredTime     || null,
+        shootTime:         b.shootTime         || null,
+        source:            b.source            || null,
       };
     });
 

@@ -1653,11 +1653,13 @@ export default function TeamPage() {
                                     style={{ background: member.color || "#0b2a55" }}>
                                     {count}
                                   </span>
-                                  {dayEvents[0].preferredTime && (
-                                    <span className="text-[10px] text-gray-400 capitalize leading-none">
-                                      {dayEvents[0].preferredTime.slice(0, 3)}
-                                    </span>
-                                  )}
+                                  {(() => {
+                                    const t = dayEvents[0].shootTime || dayEvents[0].preferredTime;
+                                    const valid = t && /^(\d{1,2}:\d{2}|morning|afternoon|evening|flexible|twilight)$/i.test(t.trim());
+                                    return valid ? (
+                                      <span className="text-[10px] text-gray-400 capitalize leading-none">{t.slice(0, 3)}</span>
+                                    ) : null;
+                                  })()}
                                 </a>
                               ) : isPast ? (
                                 <span className="block w-1.5 h-1.5 rounded-full bg-gray-200 mx-auto" />
@@ -1805,13 +1807,19 @@ export default function TeamPage() {
                                 )}
                               </div>
                             ))}
-                            {dayEvents.map((ev) => (
-                              <div key={ev.id} style={{ background: member.color + "22", borderLeftColor: member.color }}
-                                className="text-xs border-l-2 px-1.5 py-1 rounded-xl mb-1 truncate">
-                                <p className="font-medium truncate" style={{ color: member.color }}>{ev.address}</p>
-                                {ev.preferredTime && <p className="text-gray-400 capitalize">{ev.preferredTime}</p>}
-                              </div>
-                            ))}
+                            {dayEvents.map((ev) => {
+                              const displayTime = ev.shootTime || ev.preferredTime;
+                              const validTime = displayTime && /^(\d{1,2}:\d{2}|morning|afternoon|evening|flexible|twilight)$/i.test(displayTime.trim());
+                              return (
+                              <Link key={ev.id} href={`/dashboard/listings/${ev.id}`}
+                                style={{ background: member.color + "22", borderLeftColor: member.color }}
+                                className="block text-xs border-l-2 px-1.5 py-1 rounded-xl mb-1 hover:opacity-80 transition-opacity">
+                                <p className="font-medium truncate" style={{ color: member.color }}>{ev.clientName || ev.address?.split(",")[0] || "Booking"}</p>
+                                {ev.address && <p className="truncate opacity-70" style={{ color: member.color }}>{ev.address?.split(",")[0]}</p>}
+                                {validTime && <p className="text-gray-400 capitalize">{displayTime}</p>}
+                              </Link>
+                              );
+                            })}
                             </div>
                           </div>
                         );

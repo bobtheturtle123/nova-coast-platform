@@ -286,9 +286,11 @@ function CalendarTab({ listings, blocks, loading, onDeleteBlock }) {
                             style={{ background: avatarColor(l.clientName || "") }}
                             title={`${l.clientName} · ${l.address?.split(",")[0]}`}>
                             {l.clientName?.split(" ")[0] || "Booking"}
-                            {(l.shootTime || l.preferredTime) && (
-                              <span className="block font-normal opacity-80">{l.shootTime || l.preferredTime}</span>
-                            )}
+                            {(() => {
+                              const t = l.shootTime || l.preferredTime;
+                              const valid = t && /^(\d{1,2}:\d{2}|morning|afternoon|evening|flexible|twilight)$/i.test(t.trim());
+                              return valid ? <span className="block font-normal opacity-80">{t}</span> : null;
+                            })()}
                           </Link>
                         ))}
                       </div>
