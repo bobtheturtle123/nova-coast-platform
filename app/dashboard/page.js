@@ -84,11 +84,11 @@ function KpiCard({ label, value, sub, dot, href, anchorId }) {
   const inner = (
     <div className="p-4">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-[9.5px] font-bold uppercase tracking-[0.09em]" style={{ color: "#9CA3AF" }}>{label}</p>
+        <p className="text-[14px] font-bold uppercase tracking-[0.09em]" style={{ color: "#9CA3AF" }}>{label}</p>
         {dot && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />}
       </div>
       <p className="text-[26px] font-bold leading-none tracking-tight mb-1.5" style={{ color: "#0F172A" }}>{value}</p>
-      <p className="text-[10.5px]" style={{ color: "#9CA3AF" }}>{sub}</p>
+      <p className="text-[14px]" style={{ color: "#9CA3AF" }}>{sub}</p>
     </div>
   );
   const cls = "block bg-white rounded-xl transition-shadow hover:shadow-md";
@@ -110,36 +110,37 @@ function KpiCard({ label, value, sub, dot, href, anchorId }) {
 function MiniMap({ zones }) {
   const containerRef = useRef(null);
   const mapRef       = useRef(null);
-  const loadedRef    = useRef(false);
 
   useEffect(() => {
-    if (!MAPBOX_TOKEN || !containerRef.current || loadedRef.current) return;
     const hasZonesWithPaths = zones.some(z => z.paths?.length);
-    if (!hasZonesWithPaths) return;
+    if (!MAPBOX_TOKEN || !containerRef.current || !hasZonesWithPaths) return;
+
+    // Destroy previous map if zones updated
+    if (mapRef.current) { try { mapRef.current.remove(); } catch {} mapRef.current = null; }
 
     function loadLink(href, id) {
       if (document.getElementById(id)) return;
-      const l = document.createElement("link");
-      l.id = id; l.rel = "stylesheet"; l.href = href;
+      const l = document.createElement("link"); l.id = id; l.rel = "stylesheet"; l.href = href;
       document.head.appendChild(l);
     }
-    function loadScript(src, id, cb) {
-      if (document.getElementById(id)) { if (window.mapboxgl) cb(); return; }
-      const s = document.createElement("script");
-      s.id = id; s.src = src; s.async = true;
-      s.onload = cb;
+    function injectScript(src, id, windowKey, onReady) {
+      if (window[windowKey]) { onReady(); return; }
+      const existing = document.getElementById(id);
+      if (existing) { existing.addEventListener("load", onReady, { once: true }); return; }
+      const s = document.createElement("script"); s.id = id; s.src = src; s.async = true;
+      s.addEventListener("load", onReady, { once: true });
       document.head.appendChild(s);
     }
 
+    let cancelled = false;
     loadLink("https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css", "mapbox-css");
-    loadScript("https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js", "mapbox-js", () => {
-      if (!containerRef.current || loadedRef.current) return;
+    injectScript("https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js", "mapbox-js", "mapboxgl", () => {
+      if (cancelled || !containerRef.current) return;
       if (!window.mapboxgl?.supported?.()) return;
-      loadedRef.current = true;
       window.mapboxgl.accessToken = MAPBOX_TOKEN;
 
       requestAnimationFrame(() => {
-        if (!containerRef.current) return;
+        if (cancelled || !containerRef.current) return;
         let map;
         try {
           map = new window.mapboxgl.Map({
@@ -152,6 +153,7 @@ function MiniMap({ zones }) {
         mapRef.current = map;
 
         map.on("load", () => {
+          if (cancelled) { try { map.remove(); } catch {} mapRef.current = null; return; }
           const allCoords = [];
           zones.forEach(zone => {
             if (!zone.paths?.length) return;
@@ -162,14 +164,13 @@ function MiniMap({ zones }) {
             const srcId = `zm-${zone.id}`;
             try {
               map.addSource(srcId, { type: "geojson", data: { type: "Feature", geometry: { type: "Polygon", coordinates: [coords] } } });
-              map.addLayer({ id: `${srcId}-fill`, type: "fill",   source: srcId, paint: { "fill-color": zoneColor, "fill-opacity": zone.type === "exclude" ? 0.12 : isActive ? 0.28 : 0.08 } });
-              map.addLayer({ id: `${srcId}-line`, type: "line",   source: srcId, paint: {
+              map.addLayer({ id: `${srcId}-fill`, type: "fill", source: srcId, paint: { "fill-color": zoneColor, "fill-opacity": zone.type === "exclude" ? 0.12 : isActive ? 0.28 : 0.08 } });
+              map.addLayer({ id: `${srcId}-line`, type: "line", source: srcId, paint: {
                 "line-color": zoneColor, "line-width": 1.6,
                 "line-dasharray": (zone.type === "exclude" || !isActive) ? [3, 2] : [1, 0],
               }});
             } catch {}
           });
-
           if (allCoords.length >= 2) {
             try {
               const bounds = allCoords.reduce((b, c) => b.extend(c), new window.mapboxgl.LngLatBounds(allCoords[0], allCoords[0]));
@@ -180,12 +181,13 @@ function MiniMap({ zones }) {
       });
     });
 
-    return () => { if (mapRef.current) { try { mapRef.current.remove(); } catch {} mapRef.current = null; loadedRef.current = false; } };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => { cancelled = true; if (mapRef.current) { try { mapRef.current.remove(); } catch {} mapRef.current = null; } };
+  }, [zones]);
 
   if (!MAPBOX_TOKEN) return null;
-  return <div ref={containerRef} className="h-36 rounded-lg overflow-hidden hidden sm:block" style={{ border: "1px solid #E9ECF0", minHeight: 0 }} />;
+  const hasZonesWithPaths = zones.some(z => z.paths?.length);
+  if (!hasZonesWithPaths) return null;
+  return <div ref={containerRef} className="h-40 rounded-lg overflow-hidden" style={{ border: "1px solid #E9ECF0", minHeight: 0 }} />;
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -476,7 +478,7 @@ export default function DashboardHome() {
             <h1 className="text-[26px] font-bold tracking-tight" style={{ color: "#0F172A" }}>
               {greeting}{firstName ? `, ${firstName}` : ""}
             </h1>
-            <p className="text-[13px] mt-1 flex items-center gap-2 flex-wrap" style={{ color: "#6B7280" }}>
+            <p className="text-[14px] mt-1 flex items-center gap-2 flex-wrap" style={{ color: "#6B7280" }}>
               <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 inline-block" style={{ background: "#9CA3AF" }} />
               {dateLabel}
               {opsParts.length > 0 && <span className="text-gray-300">·</span>}
@@ -486,7 +488,7 @@ export default function DashboardHome() {
           <div className="flex items-center gap-2 flex-shrink-0">
             {canCreateBookings && bookingUrl && (
               <button onClick={copyLink}
-                className="inline-flex items-center gap-1.5 text-[13px] font-medium px-3.5 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center gap-1.5 text-[14px] font-medium px-3.5 py-2 rounded-lg transition-colors"
                 style={{ border: "1px solid #E9ECF0", background: "#fff", color: "#475569" }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = "#C7D2E8"}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "#E9ECF0"}>
@@ -495,7 +497,7 @@ export default function DashboardHome() {
             )}
             {canCreateBookings && bookingUrl && (
               <a href={bookingUrl} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-[13px] font-medium px-3.5 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center gap-1.5 text-[14px] font-medium px-3.5 py-2 rounded-lg transition-colors"
                 style={{ border: "1px solid #E9ECF0", background: "#fff", color: "#475569" }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = "#C7D2E8"}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "#E9ECF0"}>
@@ -504,7 +506,7 @@ export default function DashboardHome() {
             )}
             {canViewListings && (
               <Link href="/dashboard/bookings/create"
-                className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white px-4 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-white px-4 py-2 rounded-lg transition-colors"
                 style={{ background: "#3486cf" }}
                 onMouseEnter={e => e.currentTarget.style.background = "#2a6dab"}
                 onMouseLeave={e => e.currentTarget.style.background = "#3486cf"}>
@@ -519,7 +521,7 @@ export default function DashboardHome() {
 
         {/* ── Sample data notice ───────────────────────────────────────── */}
         {isSample && (
-          <div className="rounded-xl px-4 py-2.5 flex items-center gap-3 text-[12px]"
+          <div className="rounded-xl px-4 py-2.5 flex items-center gap-3 text-[14px]"
             style={{ background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E" }}>
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -558,12 +560,12 @@ export default function DashboardHome() {
               className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-left"
               style={{ borderBottom: isSetupCollapsed ? "none" : "1px solid #E9ECF0" }}>
               <div className="flex-1 min-w-0 flex items-center gap-3">
-                <span className="text-[12.5px] font-semibold whitespace-nowrap" style={{ color: "#0F172A" }}>
+                <span className="text-[14px] font-semibold whitespace-nowrap" style={{ color: "#0F172A" }}>
                   Workspace setup · {starterDone} of {starterSteps.length} complete
                 </span>
                 {nextStep && isSetupCollapsed && (
                   <Link href={nextStep.href} onClick={e => e.stopPropagation()}
-                    className="text-[11px] font-semibold text-[#3486cf] hover:underline whitespace-nowrap hidden sm:block">
+                    className="text-[14px] font-semibold text-[#3486cf] hover:underline whitespace-nowrap hidden sm:block">
                     {nextStep.label} →
                   </Link>
                 )}
@@ -593,14 +595,14 @@ export default function DashboardHome() {
                           style={{ color: step.done ? "#9CA3AF" : "#374151" }}>
                           {step.label}
                         </span>
-                        {!step.done && <span className="text-[12px]" style={{ color: "#9CA3AF" }}>{step.desc}</span>}
+                        {!step.done && <span className="text-[14px]" style={{ color: "#9CA3AF" }}>{step.desc}</span>}
                       </div>
                       {!step.done && step.href && (
                         <Link href={step.href} className="text-xs font-semibold text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap flex-shrink-0">
                           Go to →
                         </Link>
                       )}
-                      {step.done && <span className="text-[11px] text-gray-300 font-medium flex-shrink-0">Done</span>}
+                      {step.done && <span className="text-[14px] text-gray-300 font-medium flex-shrink-0">Done</span>}
                     </div>
                   ))}
                 </div>
@@ -649,7 +651,7 @@ export default function DashboardHome() {
           {/* Header */}
           <div className="px-5 py-3 flex items-center gap-3 flex-wrap" style={{ borderBottom: "1px dashed #E9ECF0" }}>
             <h2 className="text-[15px] font-bold" style={{ color: "#0F172A" }}>Today</h2>
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#EEF5FC", color: "#1E5A8A" }}>
+            <span className="inline-flex items-center gap-1.5 text-[14px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#EEF5FC", color: "#1E5A8A" }}>
               <span className="w-1.5 h-1.5 rounded-full animate-pulse inline-block" style={{ background: "#3486cf" }} />
               Live
             </span>
@@ -657,7 +659,7 @@ export default function DashboardHome() {
             <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
               {[["today","Today"],["tomorrow","Tomorrow"],["week","This week"]].map(([scope, lbl]) => (
                 <button key={scope} onClick={() => setTodayScope(scope)}
-                  className="px-3 py-1.5 text-[11px] font-medium transition-colors"
+                  className="px-3 py-1.5 text-[14px] font-medium transition-colors"
                   style={todayScope === scope ? { background: "#3486cf", color: "#fff" } : { background: "#fff", color: "#6B7280" }}>
                   {lbl}
                 </button>
@@ -672,10 +674,10 @@ export default function DashboardHome() {
             {teamMembers.length > 0 && (
               <div className="p-4 border-b md:border-b-0 md:border-r" style={{ borderColor: "#E9ECF0" }}>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-[9.5px] font-bold uppercase tracking-[0.09em]" style={{ color: "#9CA3AF" }}>
+                  <p className="text-[14px] font-bold uppercase tracking-[0.09em]" style={{ color: "#9CA3AF" }}>
                     Team working · {teamWithStatus.filter(m => m.workingToday).length} of {teamMembers.length}
                   </p>
-                  <Link href="/dashboard/team" className="text-[11px] transition-colors" style={{ color: "#9CA3AF" }}>Manage →</Link>
+                  <Link href="/dashboard/team" className="text-[14px] transition-colors" style={{ color: "#9CA3AF" }}>Manage →</Link>
                 </div>
                 <div className="space-y-1.5">
                   {teamWithStatus.slice(0, 5).map(m => (
@@ -688,16 +690,16 @@ export default function DashboardHome() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[12px] font-semibold truncate" style={{ color: "#0F172A" }}>{m.name}</span>
-                          <span className="text-[10px] flex-shrink-0" style={{ color: "#9CA3AF" }}>· {m.role}</span>
+                          <span className="text-[14px] font-semibold truncate" style={{ color: "#0F172A" }}>{m.name}</span>
+                          <span className="text-[14px] flex-shrink-0" style={{ color: "#9CA3AF" }}>· {m.role}</span>
                         </div>
-                        <p className="text-[10px]" style={{ color: "#9CA3AF" }}>
+                        <p className="text-[14px]" style={{ color: "#9CA3AF" }}>
                           {m.workingToday
                             ? <>{m.hoursToday || "Scheduled"}{m.primaryZone && <> · <span className="inline-flex items-center gap-1"><span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: m.primaryZone.color }} />{m.primaryZone.name}</span></>}</>
                             : "Off today"}
                         </p>
                       </div>
-                      <span className="text-[10.5px] font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0"
+                      <span className="text-[14px] font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0"
                         style={m.workingToday ? { background: "#EEF5FC", color: "#1E5A8A" } : { background: "#F3F4F6", color: "#9CA3AF" }}>
                         {m.workingToday ? m.todayShootCount : "—"}
                       </span>
@@ -710,10 +712,10 @@ export default function DashboardHome() {
             {/* Zones column */}
             <div className={`p-4 ${teamMembers.length === 0 ? "md:col-span-2" : ""}`}>
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[9.5px] font-bold uppercase tracking-[0.09em]" style={{ color: "#9CA3AF" }}>
+                <p className="text-[14px] font-bold uppercase tracking-[0.09em]" style={{ color: "#9CA3AF" }}>
                   Zones · {activeZoneCount} of {totalZoneCount} active
                 </p>
-                <Link href="/dashboard/service-areas" className="text-[11px] transition-colors" style={{ color: "#9CA3AF" }}>Manage →</Link>
+                <Link href="/dashboard/service-areas" className="text-[14px] transition-colors" style={{ color: "#9CA3AF" }}>Manage →</Link>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <MiniMap zones={zonesWithStatus} />
@@ -731,8 +733,8 @@ export default function DashboardHome() {
                           style={{ border: `1px ${isActive ? "solid" : "dashed"} ${isActive ? "#EFE9D6" : "#E9ECF0"}`, background: isActive ? "#FBFAF5" : "transparent", opacity: z.type === "exclude" ? 0.85 : 1 }}>
                           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: zoneColor }} />
                           <div className="min-w-0">
-                            <p className="text-[11px] font-medium truncate" style={{ color: isActive ? "#0F172A" : "#9CA3AF" }}>{z.name}</p>
-                            <p className="text-[10px] whitespace-nowrap" style={{ color: z.type === "exclude" ? "#DC2626" : "#9CA3AF" }}>{meta}</p>
+                            <p className="text-[14px] font-medium truncate" style={{ color: isActive ? "#0F172A" : "#9CA3AF" }}>{z.name}</p>
+                            <p className="text-[14px] whitespace-nowrap" style={{ color: z.type === "exclude" ? "#DC2626" : "#9CA3AF" }}>{meta}</p>
                           </div>
                         </Link>
                       );
@@ -746,13 +748,13 @@ export default function DashboardHome() {
           {/* Photographer-grouped shoots */}
           <div className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[9.5px] font-bold uppercase tracking-[0.09em]" style={{ color: "#9CA3AF" }}>
+              <p className="text-[14px] font-bold uppercase tracking-[0.09em]" style={{ color: "#9CA3AF" }}>
                 Shoots · {scopeListings.length} · {scopeLabel}
               </p>
               <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
                 {[["photographer","By photographer"],["time","By time"]].map(([mode, lbl]) => (
                   <button key={mode} onClick={() => persistGroupMode(mode)}
-                    className="px-2.5 py-1 text-[10px] font-medium transition-colors"
+                    className="px-2.5 py-1 text-[14px] font-medium transition-colors"
                     style={groupMode === mode ? { background: "#3486cf", color: "#fff" } : { background: "#fff", color: "#6B7280" }}>
                     {lbl}
                   </button>
@@ -782,21 +784,21 @@ export default function DashboardHome() {
                         <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-white text-[9px] font-bold" style={{ background: phColor }}>
                           {initials(g.photographerName)}
                         </div>
-                        <span className="text-[12px] font-semibold" style={{ color: "#0F172A" }}>{g.photographerName}</span>
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md" style={{ background: "#F3F4F6", color: "#6B7280" }}>
+                        <span className="text-[14px] font-semibold" style={{ color: "#0F172A" }}>{g.photographerName}</span>
+                        <span className="text-[14px] font-medium px-1.5 py-0.5 rounded-md" style={{ background: "#F3F4F6", color: "#6B7280" }}>
                           {g.shoots.length} shoot{g.shoots.length !== 1 ? "s" : ""}
                         </span>
                         {g.zone && (
                           <div className="flex items-center gap-1 ml-1">
                             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: zoneColor }} />
-                            <span className="text-[10.5px]" style={{ color: "#6B7280" }}>{g.zone.name}</span>
+                            <span className="text-[14px]" style={{ color: "#6B7280" }}>{g.zone.name}</span>
                           </div>
                         )}
                         <div className="flex-1" />
                         {canViewRevenue && (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[10.5px]" style={{ color: "#9CA3AF" }}>day total</span>
-                            <span className="text-[12px] font-bold" style={{ color: "#0F172A" }}>${g.dayTotal.toLocaleString()}</span>
+                            <span className="text-[14px]" style={{ color: "#9CA3AF" }}>day total</span>
+                            <span className="text-[14px] font-bold" style={{ color: "#0F172A" }}>${g.dayTotal.toLocaleString()}</span>
                           </div>
                         )}
                       </div>
@@ -806,27 +808,27 @@ export default function DashboardHome() {
                           <Link key={l.id} href={`/dashboard/listings/${l.id}`}
                             className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors group"
                             style={{ borderTop: "1px solid #F3F4F6" }}>
-                            <span className="text-[10.5px] font-mono w-14 flex-shrink-0" style={{ color: "#374151", fontFamily: "monospace" }}>
+                            <span className="text-[14px] font-mono w-14 flex-shrink-0" style={{ color: "#374151", fontFamily: "monospace" }}>
                               {l.shootTime || "—"}
                             </span>
                             <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: zoneColor, minHeight: 28 }} />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="text-[13px] font-medium truncate" style={{ color: "#0F172A" }}>{l.clientName}</span>
+                                <span className="text-[14px] font-medium truncate" style={{ color: "#0F172A" }}>{l.clientName}</span>
                                 {l.selectedPackageName && (
-                                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md flex-shrink-0" style={{ background: "#FEF9EC", color: "#92400E" }}>
+                                  <span className="text-[14px] font-medium px-1.5 py-0.5 rounded-md flex-shrink-0" style={{ background: "#FEF9EC", color: "#92400E" }}>
                                     {l.selectedPackageName}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[11px] truncate" style={{ color: "#9CA3AF" }}>
+                              <p className="text-[14px] truncate" style={{ color: "#9CA3AF" }}>
                                 {l.address?.split(",")[0]}
                               </p>
                             </div>
                             {canViewRevenue && (
                               <div className="flex-shrink-0 text-right">
-                                <p className="text-[12.5px] font-semibold" style={{ color: "#0F172A" }}>${(l.totalPrice || 0).toLocaleString()}</p>
-                                <span className="text-[10px] font-medium px-1 py-0.5 rounded" style={{ color: pay.color, background: pay.bg }}>
+                                <p className="text-[14px] font-semibold" style={{ color: "#0F172A" }}>${(l.totalPrice || 0).toLocaleString()}</p>
+                                <span className="text-[14px] font-medium px-1 py-0.5 rounded" style={{ color: pay.color, background: pay.bg }}>
                                   {pay.label}
                                 </span>
                               </div>
@@ -854,21 +856,21 @@ export default function DashboardHome() {
                     <Link key={l.id} href={`/dashboard/listings/${l.id}`}
                       className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors group"
                       style={{ borderBottom: idx < arr.length - 1 ? "1px solid #F3F4F6" : "none" }}>
-                      <span className="text-[10.5px] w-14 flex-shrink-0" style={{ color: "#374151", fontFamily: "monospace" }}>
+                      <span className="text-[14px] w-14 flex-shrink-0" style={{ color: "#374151", fontFamily: "monospace" }}>
                         {l.shootTime || "—"}
                       </span>
                       <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: lineColor, minHeight: 28 }} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-[13px] font-medium truncate" style={{ color: "#0F172A" }}>{l.clientName}</span>
-                          {l.photographerName && <span className="text-[10px] text-gray-400 truncate flex-shrink-0">{l.photographerName}</span>}
+                          <span className="text-[14px] font-medium truncate" style={{ color: "#0F172A" }}>{l.clientName}</span>
+                          {l.photographerName && <span className="text-[14px] text-gray-400 truncate flex-shrink-0">{l.photographerName}</span>}
                         </div>
-                        <p className="text-[11px] truncate" style={{ color: "#9CA3AF" }}>{l.address?.split(",")[0]}</p>
+                        <p className="text-[14px] truncate" style={{ color: "#9CA3AF" }}>{l.address?.split(",")[0]}</p>
                       </div>
                       {canViewRevenue && (
                         <div className="flex-shrink-0 text-right">
-                          <p className="text-[12.5px] font-semibold" style={{ color: "#0F172A" }}>${(l.totalPrice || 0).toLocaleString()}</p>
-                          <span className="text-[10px] font-medium" style={{ color: pay.color }}>{pay.label}</span>
+                          <p className="text-[14px] font-semibold" style={{ color: "#0F172A" }}>${(l.totalPrice || 0).toLocaleString()}</p>
+                          <span className="text-[14px] font-medium" style={{ color: pay.color }}>{pay.label}</span>
                         </div>
                       )}
                       <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="#D1D5DB" strokeWidth="2"
@@ -893,7 +895,7 @@ export default function DashboardHome() {
                 </svg>
               </div>
               <h2 className="text-[14px] font-semibold text-red-700">Action Required</h2>
-              <span className="text-[11px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">{visibleActionItems.length}</span>
+              <span className="text-[14px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">{visibleActionItems.length}</span>
             </div>
             <div>
               {visibleActionItems.map((item, idx) => {
@@ -908,10 +910,10 @@ export default function DashboardHome() {
                     style={{ borderBottom: idx < visibleActionItems.length - 1 ? "1px solid #F3F4F6" : "none" }}>
                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dotColor }} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13.5px] font-medium text-gray-800 truncate">{item.label}</p>
-                      <p className="text-[12px] text-gray-400 truncate">{item.detail}</p>
+                      <p className="text-[15px] font-medium text-gray-800 truncate">{item.label}</p>
+                      <p className="text-[14px] text-gray-400 truncate">{item.detail}</p>
                     </div>
-                    <span className="text-[11.5px] font-medium text-gray-400 flex-shrink-0">{typeLabel}</span>
+                    <span className="text-[13px] font-medium text-gray-400 flex-shrink-0">{typeLabel}</span>
                     <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#D1D5DB" strokeWidth="2"
                       className="flex-shrink-0 group-hover:stroke-[#9CA3AF] transition-colors">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
