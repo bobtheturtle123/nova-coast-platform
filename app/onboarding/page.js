@@ -4,114 +4,42 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import Link from "next/link";
 import { getAppUrl } from "@/lib/appUrl";
 
-// ── Inline quick-add package form ────────────────────────────────────────────
-function QuickPackageForm({ user, onDone }) {
-  const [name,    setName]    = useState("");
-  const [price,   setPrice]   = useState("");
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
-  const [error,   setError]   = useState("");
-
-  async function handleAdd() {
-    if (!name.trim() || !price) { setError("Name and price are required."); return; }
-    setSaving(true); setError("");
-    try {
-      const token = await user.getIdToken();
-      const res = await fetch("/api/dashboard/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ type: "packages", name: name.trim(), price: Number(price), active: true }),
-      });
-      if (!res.ok) throw new Error();
-      setSaved(true);
-    } catch { setError("Couldn't save. Please try again."); }
-    finally { setSaving(false); }
-  }
-
-  if (saved) {
-    return (
-      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <div>
-            <p className="font-medium text-emerald-800 text-sm">"{name}" added successfully</p>
-            <p className="text-xs text-emerald-600">Clients can now book this package.</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => { setSaved(false); setName(""); setPrice(""); }}
-            className="text-xs text-emerald-700 border border-emerald-300 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors">
-            + Add another
-          </button>
-          <button onClick={onDone}
-            className="btn-primary text-sm px-5 py-2 flex-1">
-            Continue →
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
-      {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>}
-      <div>
-        <label className="label-field">Package Name</label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-          className="input-field w-full mt-1" placeholder="Standard Real Estate Shoot" />
-      </div>
-      <div>
-        <label className="label-field">Price</label>
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-gray-400 text-sm">$</span>
-          <input type="number" min="0" step="1" value={price} onChange={(e) => setPrice(e.target.value)}
-            className="input-field w-36" placeholder="299" />
-        </div>
-      </div>
-      <button onClick={handleAdd} disabled={saving}
-        className="btn-primary w-full py-3 text-sm">
-        {saving ? "Saving…" : "Add Package →"}
-      </button>
-    </div>
-  );
-}
-
 const STEPS = [
-  { id: "basics",   label: "Basics",    desc: "Your contact info" },
-  { id: "services", label: "Services",  desc: "What you offer" },
-  { id: "stripe",   label: "Payments",  desc: "Get paid" },
-  { id: "areas",    label: "Coverage",  desc: "Where you work" },
-  { id: "team",     label: "Team",      desc: "Invite photographers" },
-  { id: "done",     label: "Done",      desc: "You're live" },
+  { id: "branding",  label: "Business",  desc: "Your identity" },
+  { id: "stripe",    label: "Payments",  desc: "Get paid" },
+  { id: "areas",     label: "Coverage",  desc: "Where you shoot" },
+  { id: "done",      label: "Done",      desc: "All set" },
+];
+
+const BRAND_COLORS = [
+  "#3486cf", "#1e6091", "#6366f1", "#8b5cf6",
+  "#059669", "#0891b2", "#d97706", "#dc2626",
+  "#0f172a", "#374151",
 ];
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [step,         setStep]         = useState(0);
-  const [user,         setUser]         = useState(null);
-  const [tenant,       setTenant]       = useState(null);
-  const [saving,       setSaving]       = useState(false);
-  const [error,        setError]        = useState("");
-  const [copied,       setCopied]       = useState(false);
+  const [step,    setStep]    = useState(0);
+  const [user,    setUser]    = useState(null);
+  const [tenant,  setTenant]  = useState(null);
+  const [saving,  setSaving]  = useState(false);
+  const [error,   setError]   = useState("");
+  const [copied,  setCopied]  = useState(false);
 
-  // Step 1 — basics
-  const [phone,   setPhone]   = useState("");
-  const [fromZip, setFromZip] = useState("");
+  // Step 0 — Business & Branding
+  const [businessName,  setBusinessName]  = useState("");
+  const [phone,         setPhone]         = useState("");
+  const [fromZip,       setFromZip]       = useState("");
+  const [tagline,       setTagline]       = useState("");
+  const [primaryColor,  setPrimaryColor]  = useState("#3486cf");
+  const [logoUrl,       setLogoUrl]       = useState("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
-  // Step 3 — coverage
+  // Step 2 — Service areas
   const [travelRadius, setTravelRadius] = useState("");
   const [travelRate,   setTravelRate]   = useState("");
-
-  // Step 5 — team invites
-  const [invites,    setInvites]    = useState([{ email: "", role: "photographer" }]);
-  const [inviteSent, setInviteSent] = useState(false);
 
   const [slug, setSlug] = useState("");
 
@@ -130,7 +58,6 @@ export default function OnboardingPage() {
       let idToken = await u.getIdToken();
       let t = await loadTenant(idToken);
 
-      // If tenant API failed (claims missing), attempt repair then retry once
       if (!t) {
         try {
           const repairRes = await fetch("/api/auth/repair-claims", {
@@ -148,11 +75,15 @@ export default function OnboardingPage() {
 
       if (t) {
         setTenant(t);
-        if (t.slug)    setSlug(t.slug);
-        if (t.phone)   setPhone(t.phone);
+        if (t.slug) setSlug(t.slug);
+        if (t.phone) setPhone(t.phone);
         if (t.fromZip) setFromZip(t.fromZip);
+        if (t.businessName || t.branding?.businessName) setBusinessName(t.businessName || t.branding?.businessName || "");
+        if (t.branding?.tagline) setTagline(t.branding.tagline);
+        if (t.branding?.primaryColor) setPrimaryColor(t.branding.primaryColor);
+        if (t.branding?.logoUrl) setLogoUrl(t.branding.logoUrl);
         if (t.onboardingCompleted) { router.push("/dashboard"); return; }
-        if (t.onboardingStep)      setStep(t.onboardingStep);
+        if (t.onboardingStep) setStep(Math.min(t.onboardingStep, STEPS.length - 1));
       }
     });
     return unsub;
@@ -168,15 +99,8 @@ export default function OnboardingPage() {
     });
   }
 
-  function next() {
-    setError("");
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
-  }
-
-  function prev() {
-    setError("");
-    setStep((s) => Math.max(s - 1, 0));
-  }
+  function next() { setError(""); setStep((s) => Math.min(s + 1, STEPS.length - 1)); }
+  function prev() { setError(""); setStep((s) => Math.max(s - 1, 0)); }
 
   async function skip() {
     setError("");
@@ -190,11 +114,41 @@ export default function OnboardingPage() {
     next();
   }
 
-  async function saveBasics() {
-    if (!phone.trim() && !fromZip.trim()) { next(); return; }
+  async function uploadLogo(file) {
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/dashboard/upload-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName: file.name, contentType: file.type, folder: "branding" }),
+      });
+      if (!res.ok) throw new Error();
+      const { uploadUrl, publicUrl } = await res.json();
+      await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+      setLogoUrl(publicUrl);
+    } catch { setError("Logo upload failed. Try again."); }
+    setUploadingLogo(false);
+  }
+
+  async function saveBranding() {
+    if (!businessName.trim()) { setError("Business name is required."); return; }
     setSaving(true); setError("");
     try {
-      const res = await patch({ phone: phone.trim(), fromZip: fromZip.trim(), onboardingStep: 1 });
+      const res = await patch({
+        businessName: businessName.trim(),
+        phone: phone.trim(),
+        fromZip: fromZip.trim(),
+        branding: {
+          ...(tenant?.branding || {}),
+          businessName: businessName.trim(),
+          tagline:      tagline.trim(),
+          primaryColor: primaryColor,
+          logoUrl:      logoUrl || null,
+        },
+        onboardingStep: 1,
+      });
       if (!res.ok) throw new Error();
       next();
     } catch { setError("Couldn't save. Please try again."); }
@@ -207,32 +161,17 @@ export default function OnboardingPage() {
       const token = await user.getIdToken();
       const res  = await fetch("/api/connect/onboard", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else throw new Error(data.error || "Could not start Stripe Connect");
+      if (data.url) {
+        await patch({ onboardingStep: 1 }).catch(() => {});
+        window.location.href = data.url;
+      } else throw new Error(data.error || "Could not start Stripe Connect");
     } catch (err) { setError(err.message); setSaving(false); }
-  }
-
-  async function sendInvites() {
-    const valid = invites.filter((i) => i.email.trim() && i.email.includes("@"));
-    if (!valid.length) { next(); return; }
-    setSaving(true);
-    const token = await user.getIdToken();
-    await Promise.all(valid.map((invite) =>
-      fetch("/api/dashboard/team/invite", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ email: invite.email.trim(), role: invite.role }),
-      })
-    ));
-    setInviteSent(true);
-    setSaving(false);
-    setTimeout(() => next(), 1200);
   }
 
   async function saveCoverage() {
     setSaving(true); setError("");
     try {
-      const fields = { onboardingStep: 4 };
+      const fields = { onboardingStep: 3 };
       if (travelRadius) fields.travelRadiusMiles = travelRadius === "unlimited" ? 9999 : Number(travelRadius);
       if (travelRate)   fields.travelRatePerMile = Number(travelRate);
       const res = await patch(fields);
@@ -308,59 +247,125 @@ export default function OnboardingPage() {
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-6">{error}</div>
         )}
 
-        {/* ── STEP 0: Business basics ──────────────────────────────────────── */}
+        {/* ── STEP 0: Business & Branding ──────────────────────────────────── */}
         {step === 0 && (
           <div>
-            <h1 className="font-display text-3xl text-[#3486cf] mb-1">Let's set up your account</h1>
+            <h1 className="font-display text-3xl text-[#3486cf] mb-1">Set up your business</h1>
             <p className="text-gray-500 mb-8 leading-relaxed">
-              Two quick fields so we can calculate travel fees and make sure your clients can reach you.
+              Tell us about your business. This information shows on your booking page, client emails, and invoices.
             </p>
+
             <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5 shadow-sm">
               <div>
-                <label className="label-field">Phone Number</label>
-                <input type="tel" value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="input-field w-full mt-1" placeholder="(555) 555-5555" />
-                <p className="text-xs text-gray-400 mt-1">Shown on client confirmation emails.</p>
+                <label className="label-field">Business Name <span className="text-red-400">*</span></label>
+                <input type="text" value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  className="input-field w-full mt-1" placeholder="Nova Coast Photography" />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label-field">Phone Number</label>
+                  <input type="tel" value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="input-field w-full mt-1" placeholder="(555) 555-5555" />
+                </div>
+                <div>
+                  <label className="label-field">Home Base ZIP</label>
+                  <input type="text" value={fromZip}
+                    onChange={(e) => setFromZip(e.target.value)}
+                    className="input-field w-full mt-1" placeholder="92108" maxLength={5} />
+                </div>
+              </div>
+
               <div>
-                <label className="label-field">Home Base ZIP Code</label>
-                <input type="text" value={fromZip}
-                  onChange={(e) => setFromZip(e.target.value)}
-                  className="input-field w-full mt-1" placeholder="92108" maxLength={5} />
-                <p className="text-xs text-gray-400 mt-1">Used to auto-calculate travel fees when shoots are far away.</p>
+                <label className="label-field">Tagline <span className="text-gray-300 font-normal">(optional)</span></label>
+                <input type="text" value={tagline}
+                  onChange={(e) => setTagline(e.target.value)}
+                  className="input-field w-full mt-1" placeholder="Premium real estate photography & video" />
+              </div>
+
+              {/* Brand color */}
+              <div>
+                <label className="label-field">Brand Color</label>
+                <div className="flex items-center gap-3 mt-2 flex-wrap">
+                  {BRAND_COLORS.map((c) => (
+                    <button key={c} type="button"
+                      onClick={() => setPrimaryColor(c)}
+                      style={{ background: c }}
+                      className={`w-8 h-8 rounded-full transition-all ${primaryColor === c ? "ring-2 ring-offset-2 ring-gray-400 scale-110" : "hover:scale-105"}`} />
+                  ))}
+                  <div className="flex items-center gap-2 ml-1">
+                    <div className="w-8 h-8 rounded-full border border-gray-200 overflow-hidden">
+                      <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)}
+                        className="w-10 h-10 -m-1 cursor-pointer border-0" />
+                    </div>
+                    <span className="text-xs text-gray-400 font-mono">{primaryColor}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Logo upload */}
+              <div>
+                <label className="label-field">Business Logo <span className="text-gray-300 font-normal">(optional)</span></label>
+                <div className="flex items-center gap-4 mt-2">
+                  {logoUrl ? (
+                    <div className="relative w-24 h-16 border border-gray-200 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
+                      <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain p-2" />
+                      <button type="button" onClick={() => setLogoUrl("")}
+                        className="absolute top-1 right-1 w-5 h-5 bg-white rounded-full shadow flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors border border-gray-200">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-24 h-16 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center text-gray-300">
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 3h18M3 21h18" />
+                      </svg>
+                    </div>
+                  )}
+                  <div>
+                    <label className={`inline-flex items-center gap-2 text-sm px-3 py-2 border border-gray-200 rounded-xl cursor-pointer hover:border-[#3486cf]/40 transition-colors ${uploadingLogo ? "opacity-50 pointer-events-none" : ""}`}>
+                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                      {uploadingLogo ? "Uploading…" : logoUrl ? "Replace logo" : "Upload logo"}
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0])} />
+                    </label>
+                    <p className="text-xs text-gray-400 mt-1">PNG or SVG recommended.</p>
+                  </div>
+                </div>
               </div>
             </div>
+
+            {/* Preview chip */}
+            {(businessName || primaryColor !== "#3486cf") && (
+              <div className="mt-4 flex items-center gap-3 px-4 py-2.5 bg-white rounded-xl border border-gray-200 shadow-sm">
+                <div className="w-6 h-6 rounded-full flex-shrink-0" style={{ background: primaryColor }} />
+                <div>
+                  <p className="text-sm font-semibold text-[#0F172A]">{businessName || "Your Business"}</p>
+                  {tagline && <p className="text-xs text-gray-400 mt-0.5">{tagline}</p>}
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-3 mt-6">
-              <button onClick={saveBasics} disabled={saving} className="btn-primary flex-1 py-3">
+              <button onClick={saveBranding} disabled={saving || uploadingLogo} className="btn-primary flex-1 py-3">
                 {saving ? "Saving…" : "Continue →"}
               </button>
-              <button onClick={skip} className="btn-outline px-6 py-3 text-gray-400">Skip</button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 1: Services ─────────────────────────────────────────────── */}
+        {/* ── STEP 1: Stripe ───────────────────────────────────────────────── */}
         {step === 1 && (
-          <div>
-            <h1 className="font-display text-3xl text-[#3486cf] mb-1">Add your first package</h1>
-            <p className="text-gray-500 mb-6 leading-relaxed">
-              A package is what clients select when booking. Add your most common shoot — you can create more from the Services page later.
-            </p>
-            <QuickPackageForm user={user} onDone={next} />
-            <div className="flex gap-3 mt-4">
-              <button onClick={prev} className="btn-outline px-5 py-3">← Back</button>
-              <button onClick={skip} className="text-sm text-gray-400 hover:text-[#3486cf] px-5 py-3 transition-colors">Skip for now →</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 2: Stripe ───────────────────────────────────────────────── */}
-        {step === 2 && (
           <div>
             <h1 className="font-display text-3xl text-[#3486cf] mb-1">Connect Stripe to get paid</h1>
             <p className="text-gray-500 mb-6 leading-relaxed">
-              Deposits are collected when clients book, and balances are collected before they can download their media. Funds go directly to your bank — you never have to ask twice.
+              Deposits are collected when clients book. Balances are collected before they can download their media. Funds go directly to your bank — no manual transfers.
             </p>
             {tenant?.stripeConnectOnboarded ? (
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 flex items-center gap-3 mb-6">
@@ -378,8 +383,8 @@ export default function OnboardingPage() {
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4 mb-6">
                 {[
                   { icon: "⚡", title: "Same-day payouts to your bank", desc: "Stripe deposits funds directly — no waiting, no manual transfers." },
-                  { icon: "🔒", title: "PCI-compliant, fully secure", desc: "Stripe handles all card data. You never see or store sensitive payment info." },
-                  { icon: "📊", title: "Automatic receipts & invoicing", desc: "Clients receive email receipts, and can pay their balance straight from the gallery link." },
+                  { icon: "🔒", title: "PCI-compliant, fully secure",   desc: "Stripe handles all card data. You never see or store sensitive payment info." },
+                  { icon: "📊", title: "Automatic receipts & invoicing", desc: "Clients receive email receipts and can pay their balance straight from the gallery link." },
                 ].map((item) => (
                   <div key={item.title} className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-base flex-shrink-0">{item.icon}</div>
@@ -405,14 +410,15 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── STEP 3: Service areas ─────────────────────────────────────────── */}
-        {step === 3 && (
+        {/* ── STEP 2: Service areas ─────────────────────────────────────────── */}
+        {step === 2 && (
           <div>
             <h1 className="font-display text-3xl text-[#3486cf] mb-1">Where do you shoot?</h1>
             <p className="text-gray-500 mb-6 leading-relaxed">
-              This helps calculate travel fees automatically. You can set up detailed coverage zones from Settings later — for now, just tell us your typical range.
+              Set your travel range and rate so clients are automatically charged for distant shoots. You can draw precise coverage zones from your dashboard after setup.
             </p>
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4 mb-4">
+
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-5 mb-4">
               <div>
                 <label className="label-field">Travel radius from your home base</label>
                 <select value={travelRadius} onChange={(e) => setTravelRadius(e.target.value)} className="input-field w-full mt-1">
@@ -425,22 +431,29 @@ export default function OnboardingPage() {
                 </select>
                 <p className="text-xs text-gray-400 mt-1.5">Shoots beyond this range will have a travel fee added at checkout.</p>
               </div>
+
               <div>
-                <label className="label-field">Travel fee per mile (optional)</label>
+                <label className="label-field">Travel fee per mile <span className="text-gray-300 font-normal">(optional)</span></label>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-gray-400 text-sm">$</span>
-                  <input type="number" min="0" step="0.01" value={travelRate} onChange={(e) => setTravelRate(e.target.value)}
+                  <input type="number" min="0" step="0.01" value={travelRate}
+                    onChange={(e) => setTravelRate(e.target.value)}
                     className="input-field w-32" placeholder="0.67" />
                   <span className="text-xs text-gray-400">per mile (IRS rate is $0.67)</span>
                 </div>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mb-4">
-              Want full zone control?{" "}
-              <Link href="/dashboard/service-areas" className="text-[#3486cf] hover:underline">
-                Set up service areas →
-              </Link>
-            </p>
+
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-5 flex items-start gap-3">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="2" className="flex-shrink-0 mt-0.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-xs text-[#1e5a8a] leading-relaxed">
+                <span className="font-semibold">Want to draw precise zones on a map?</span>{" "}
+                After setup, go to <strong>Dashboard → Service Areas</strong> to draw polygon zones, assign them to specific photographers, and set exclusion zones.
+              </p>
+            </div>
+
             <div className="flex gap-3">
               <button onClick={prev} className="btn-outline px-5 py-3">← Back</button>
               <button onClick={saveCoverage} disabled={saving} className="btn-primary flex-1 py-3">
@@ -451,84 +464,17 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── STEP 4: Team ─────────────────────────────────────────────────── */}
-        {step === 4 && (
-          <div>
-            <h1 className="font-display text-3xl text-[#3486cf] mb-1">Invite your team</h1>
-            <p className="text-gray-500 mb-6 leading-relaxed">
-              Everyone gets their own login and sees only what their role allows. Photographers and editors see assigned shoots; managers see everything except billing; admins have full access.
-            </p>
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3 mb-4">
-              {/* Role legend */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 pb-3 border-b border-gray-100">
-                {[
-                  ["Photographer", "Assigned shoots, calendar, uploads"],
-                  ["Assistant",    "Support role, assigned shoots only"],
-                  ["Manager",      "All bookings + team, no billing"],
-                  ["Admin",        "Full access except owner billing"],
-                ].map(([role, desc]) => (
-                  <div key={role} className="flex items-start gap-1.5">
-                    <span className="text-[11px] font-semibold text-[#3486cf] mt-px w-24 flex-shrink-0">{role}</span>
-                    <span className="text-[11px] text-gray-400 leading-snug">{desc}</span>
-                  </div>
-                ))}
-              </div>
-
-              {invites.map((invite, i) => (
-                <div key={i} className="flex gap-2">
-                  <input type="email" value={invite.email}
-                    onChange={(e) => setInvites((arr) => arr.map((v, j) => j === i ? { ...v, email: e.target.value } : v))}
-                    className="input-field flex-1" placeholder="name@email.com" />
-                  <select
-                    value={invite.role}
-                    onChange={(e) => setInvites((arr) => arr.map((v, j) => j === i ? { ...v, role: e.target.value } : v))}
-                    className="input-field w-36 flex-shrink-0">
-                    <option value="photographer">Photographer</option>
-                    <option value="assistant">Assistant</option>
-                    <option value="manager">Manager</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  {invites.length > 1 && (
-                    <button onClick={() => setInvites((arr) => arr.filter((_, j) => j !== i))}
-                      className="text-gray-300 hover:text-red-400 px-2 text-lg">×</button>
-                  )}
-                </div>
-              ))}
-              {invites.length < 5 && (
-                <button onClick={() => setInvites((arr) => [...arr, { email: "", role: "photographer" }])}
-                  className="text-xs text-[#3486cf] hover:underline">+ Add another</button>
-              )}
-              {inviteSent && (
-                <div className="flex items-center gap-2 text-emerald-600 text-sm font-medium pt-1">
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                  Invites sent!
-                </div>
-              )}
-            </div>
-            <p className="text-xs text-gray-400 mb-4">Add more team members anytime from Dashboard → Team.</p>
-            <div className="flex gap-3">
-              <button onClick={prev} className="btn-outline px-5 py-3">← Back</button>
-              <button onClick={sendInvites} disabled={saving} className="btn-primary flex-1 py-3">
-                {saving ? "Sending…" : invites.some((i) => i.email.trim()) ? "Send Invites →" : "Continue →"}
-              </button>
-              <button onClick={skip} className="btn-outline px-5 py-3 text-gray-400">Skip</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 5: Done ─────────────────────────────────────────────────── */}
-        {step === 5 && (
+        {/* ── STEP 3: Done ─────────────────────────────────────────────────── */}
+        {step === 3 && (
           <div className="text-center">
             <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-emerald-600">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h1 className="font-display text-3xl text-[#3486cf] mb-2">You're ready to go.</h1>
+            <h1 className="font-display text-3xl text-[#3486cf] mb-2">You're set up.</h1>
             <p className="text-gray-500 mb-8 leading-relaxed max-w-sm mx-auto">
-              Your booking page is live. Share the link with clients and start collecting deposits today.
+              Your booking page is live. We'll walk you through pricing, services, and your first booking — step by step in the dashboard.
             </p>
 
             {slug && (
@@ -548,22 +494,11 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            <div className="space-y-3 mb-6 text-left bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">What's next</p>
-              {[
-                { href: "/dashboard/settings", label: "Review booking settings", desc: "Deposit %, cancellation policy, availability windows" },
-                { href: "/dashboard/products",  label: "Fine-tune your services",  desc: "Add photos, adjust descriptions and pricing" },
-                { href: "/dashboard/billing",   label: "Connect Stripe",           desc: "Required to collect payments from clients", skip: !!tenant?.stripeConnectOnboarded },
-              ].filter((i) => !i.skip).map((item) => (
-                <Link key={item.href} href={item.href}
-                  className="flex items-start gap-3 py-2.5 border-b border-gray-50 last:border-0 group">
-                  <div className="w-5 h-5 rounded-full border-2 border-gray-200 group-hover:border-[#3486cf] flex-shrink-0 mt-0.5 transition-colors" />
-                  <div>
-                    <p className="text-sm font-medium text-[#3486cf] group-hover:underline">{item.label}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
-                  </div>
-                </Link>
-              ))}
+            <div className="bg-white border border-gray-200 rounded-xl p-5 text-left shadow-sm mb-6">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Your starter guide awaits</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Once you're in the dashboard, you'll see a step-by-step guide to finish setting up: pricing, booking settings, products and services, and your team — in the right order.
+              </p>
             </div>
 
             <button onClick={finish} disabled={saving} className="btn-primary w-full py-3.5 text-sm">

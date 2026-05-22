@@ -300,6 +300,7 @@ export default function DashboardHome() {
   const [loading,          setLoading]          = useState(true);
   const [linkCopied,       setLinkCopied]       = useState(false);
   const [userRole,         setUserRole]         = useState(null); // null = owner
+  const [dismissingGuide,  setDismissingGuide]  = useState(false);
 
   const { permissions, userRole: ctxRole } = useDashboardPermissions();
   const isOwnerOrAdmin    = ctxRole === "owner" || ctxRole === "admin" || ctxRole === null;
@@ -365,16 +366,57 @@ export default function DashboardHome() {
       .map(l => ({ type: "no_date",         id: l.id, label: l.clientName, detail: l.address?.split(",")[0], href: `/dashboard/listings/${l.id}`, urgency: "medium" })),
   ].slice(0, 8);
 
-  const setupSteps = tenant ? [
-    { done: !!tenant.phone,                                                                label: "Complete your profile",   href: "/onboarding" },
-    { done: !!(tenant.branding?.primaryColor && tenant.branding?.businessName),            label: "Configure branding",      href: "/dashboard/settings#settings-branding" },
-    { done: !!(tenant.bookingConfig || tenant.pricingConfig || tenant.availabilityConfig), label: "Review booking settings", href: "/dashboard/settings" },
-    { done: !!tenant.stripeConnectOnboarded,                                               label: "Connect Stripe",          href: "/dashboard/billing" },
-    { done: hasProducts,                                                                   label: "Add services or packages", href: "/dashboard/products" },
-    { done: listings.length > 0,                                                           label: "Receive your first booking", href: null },
+  async function dismissStarterGuide() {
+    setDismissingGuide(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      await fetch("/api/tenants/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ starterGuideCompleted: true }),
+      });
+      setTenant((t) => ({ ...t, starterGuideCompleted: true }));
+    } catch {}
+    setDismissingGuide(false);
+  }
+
+  const planSupportsTeam = tenant && !["starter", "basic"].includes(tenant.plan);
+
+  const starterSteps = tenant ? [
+    {
+      id: "pricing",
+      done: !!(tenant.pricingConfig?.tiers?.length || tenant.pricingConfig?.mode),
+      label: "Configure pricing",
+      desc: "Set your rates, tiers, and deposit percentage",
+      href: "/dashboard/settings#settings-pricing",
+    },
+    {
+      id: "booking",
+      done: !!(tenant.bookingConfig),
+      label: "Booking settings",
+      desc: "Set availability, time slots, and booking policies",
+      href: "/dashboard/settings#settings-booking",
+    },
+    {
+      id: "products",
+      done: hasProducts,
+      label: "Add products & services",
+      desc: "Create the packages and add-ons clients can book",
+      href: "/dashboard/products",
+    },
+    ...(planSupportsTeam ? [{
+      id: "team",
+      done: false,
+      label: "Add team members",
+      desc: "Invite photographers, editors, and managers",
+      href: "/dashboard/team",
+    }] : []),
   ] : [];
-  const doneCount     = setupSteps.filter(s => s.done).length;
-  const setupComplete = doneCount === setupSteps.length;
+
+  const starterDone    = starterSteps.filter(s => s.done).length;
+  const starterComplete = starterDone === starterSteps.length;
+  const showStarterGuide = isOwnerOrAdmin && tenant?.onboardingCompleted && !tenant?.starterGuideCompleted && !starterComplete;
+  const showSetupBanner  = isOwnerOrAdmin && tenant && !tenant.onboardingCompleted;
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -406,7 +448,7 @@ export default function DashboardHome() {
       <div className="max-w-[1200px] mx-auto px-6 py-8 space-y-6">
 
         {/* ── Stripe banner ────────────────────────────────────────────── */}
-        {isOwnerOrAdmin && tenant && !tenant.stripeConnectOnboarded && setupComplete && (
+        {isOwnerOrAdmin && tenant?.onboardingCompleted && !tenant.stripeConnectOnboarded && (
           <div className="rounded-xl px-5 py-3.5 flex items-center justify-between gap-4 bg-white"
             style={{ border: "1px solid #FDE68A" }}>
             <div className="flex items-center gap-3">
@@ -470,29 +512,53 @@ export default function DashboardHome() {
           </div>
         </div>
 
-        {/* ── Setup checklist ───────────────────────────────────────────── */}
-        {isOwnerOrAdmin && tenant && !setupComplete && (
+        {/* ── Onboarding banner (not yet completed) ────────────────────── */}
+        {showSetupBanner && (
+          <div className="rounded-xl px-5 py-4 flex items-center justify-between gap-4 bg-white"
+            style={{ border: "1px solid #BFDBFE" }}>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#3486cf" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-800">Finish setting up your account</p>
+                <p className="text-xs text-gray-400 mt-0.5">Add your branding, connect Stripe, and configure your service areas.</p>
+              </div>
+            </div>
+            <Link href="/onboarding"
+              className="flex-shrink-0 text-xs font-semibold text-[#3486cf] border border-[#3486cf]/20 bg-blue-50 px-3.5 py-2 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap">
+              Continue Setup →
+            </Link>
+          </div>
+        )}
+
+        {/* ── Starter Guide ─────────────────────────────────────────────── */}
+        {showStarterGuide && (
           <div className="bg-white rounded-xl overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
             <div className="px-6 py-4 flex items-center gap-4" style={{ borderBottom: "1px solid #E9ECF0" }}>
               <div className="flex-1 min-w-0">
-                <h3 className="text-[15px] font-semibold" style={{ color: "#0F172A" }}>Get your workspace ready</h3>
-                <p className="text-[12.5px] mt-0.5" style={{ color: "#6B7280" }}>{doneCount} of {setupSteps.length} steps complete</p>
+                <h3 className="text-[15px] font-semibold" style={{ color: "#0F172A" }}>Starter Guide</h3>
+                <p className="text-[12.5px] mt-0.5" style={{ color: "#6B7280" }}>
+                  {starterDone} of {starterSteps.length} done — finish setting up so clients can start booking
+                </p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-32 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="w-28 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <div className="h-full rounded-full bg-[#93C4E6] transition-all duration-500"
-                    style={{ width: `${Math.round((doneCount / setupSteps.length) * 100)}%` }} />
+                    style={{ width: `${starterSteps.length ? Math.round((starterDone / starterSteps.length) * 100) : 0}%` }} />
                 </div>
-                <Link href="/onboarding"
-                  className="text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors whitespace-nowrap">
-                  Continue setup →
-                </Link>
+                <button onClick={dismissStarterGuide} disabled={dismissingGuide}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors whitespace-nowrap">
+                  {dismissingGuide ? "…" : "Dismiss"}
+                </button>
               </div>
             </div>
             <div>
-              {setupSteps.map((step, i) => (
-                <div key={i} className="flex items-center gap-4 px-6 py-3.5"
-                  style={{ borderBottom: i < setupSteps.length - 1 ? "1px solid #F3F4F6" : "none" }}>
+              {starterSteps.map((step, i) => (
+                <div key={step.id} className="flex items-center gap-4 px-6 py-4"
+                  style={{ borderBottom: i < starterSteps.length - 1 ? "1px solid #F3F4F6" : "none" }}>
                   <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all ${
                     step.done ? "bg-[#93C4E6]" : "border-2 border-gray-200"
                   }`}>
@@ -503,16 +569,22 @@ export default function DashboardHome() {
                       </svg>
                     )}
                   </div>
-                  <span className={`text-[14px] flex-1 ${step.done ? "line-through decoration-gray-300" : ""}`} style={{ color: step.done ? "#9CA3AF" : "#374151" }}>
-                    {step.label}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-[14px] block font-medium ${step.done ? "line-through decoration-gray-300" : ""}`}
+                      style={{ color: step.done ? "#9CA3AF" : "#374151" }}>
+                      {step.label}
+                    </span>
+                    {!step.done && (
+                      <span className="text-[12px]" style={{ color: "#9CA3AF" }}>{step.desc}</span>
+                    )}
+                  </div>
                   {!step.done && step.href && (
                     <Link href={step.href}
-                      className="text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">
-                      Set up →
+                      className="text-xs font-semibold text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap flex-shrink-0">
+                      Go to →
                     </Link>
                   )}
-                  {step.done && <span className="text-[11px] text-gray-300 font-medium">Done</span>}
+                  {step.done && <span className="text-[11px] text-gray-300 font-medium flex-shrink-0">Done</span>}
                 </div>
               ))}
             </div>
