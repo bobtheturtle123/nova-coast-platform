@@ -1769,12 +1769,21 @@ export default function TeamPage() {
                     <div className="flex items-center gap-2 px-3 py-2 bg-gray-50/50">
                       <div className="w-5 h-5 rounded-full flex-shrink-0" style={{ background: member.color || "#0b2a55" }} />
                       <p className="text-xs font-semibold text-[#0F172A]">{member.name}</p>
-                      <div className="flex gap-1 flex-wrap ml-1">
-                        {(member.skills || []).slice(0, 4).map((s) => (
-                          <span key={s} className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-xl">{SKILL_LABELS[s] || s}</span>
-                        ))}
-                        {(member.skills || []).length > 4 && <span className="text-xs text-gray-400">+{member.skills.length - 4} more</span>}
-                      </div>
+                      {(() => {
+                        const allProds = [...(products.services || []), ...(products.packages || []), ...(products.addons || [])];
+                        const skillLabels = (member.skills || [])
+                          .map((s) => SKILL_LABELS[s] || allProds.find((p) => p.id === s)?.name || null)
+                          .filter(Boolean);
+                        if (!skillLabels.length) return null;
+                        return (
+                          <div className="flex gap-1 flex-wrap ml-1">
+                            {skillLabels.slice(0, 4).map((label, i) => (
+                              <span key={i} className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-xl">{label}</span>
+                            ))}
+                            {skillLabels.length > 4 && <span className="text-xs text-gray-400">+{skillLabels.length - 4} more</span>}
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="grid grid-cols-7 min-h-20">
                       {weekDates.map((d) => {
