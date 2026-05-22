@@ -215,6 +215,36 @@
     transform: translateY(-1px);
   }
 
+  /* ── Filter chips ────────────────────────────────────────────────────── */
+  .fchip {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border cursor-pointer transition-all;
+    border-color: var(--border);
+    color: #6B7280;
+    background: white;
+  }
+  .fchip:hover    { border-color: #3486cf; color: #3486cf; background: #EEF4FA; }
+  .fchip-active   { border-color: #3486cf !important; color: #3486cf !important; background: #EEF4FA !important; }
+
+  /* ── Segmented control ───────────────────────────────────────────────── */
+  .seg {
+    @apply inline-flex border rounded-xl overflow-hidden text-xs;
+    border-color: var(--border);
+  }
+  .seg button {
+    @apply px-3 py-1.5 font-medium transition-colors text-gray-500 hover:bg-gray-50;
+  }
+  .seg button.seg-active { @apply bg-[#3486cf] text-white; }
+
+  /* ── Shoot pill ──────────────────────────────────────────────────────── */
+  .shoot-pill {
+    @apply block text-xs border-l-2 px-1.5 py-1 rounded-xl mb-1;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+  }
+  .shoot-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+
   /* ── Sidebar ─────────────────────────────────────────────────────────── */
   .ky-sidebar {
     width: 240px;

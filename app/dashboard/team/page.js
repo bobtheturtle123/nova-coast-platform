@@ -8,6 +8,9 @@ import { useToast } from "@/components/Toast";
 import { getAppUrl } from "@/lib/appUrl";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
+import { avatarColor, initials } from "@/lib/avatar";
+import { ZONE_COLORS } from "@/lib/zoneColors";
+import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 
 const ROLE_OPTIONS = [
   { id: "photographer", label: "Photographer", icon: "📷", desc: "Shows in booking schedule. Gets shoot notifications & their own calendar." },
@@ -115,13 +118,6 @@ function isSameDay(a, b) {
 function toDateKey(dateStr) {
   if (!dateStr) return null;
   return dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
-}
-
-function avatarBgColor(str) {
-  const p = ["#3486cf","#1e6091","#2e7d32","#6a1b9a","#d84315","#00695c","#b5872d","#c0392b"];
-  let h = 0;
-  for (let i = 0; i < (str || "").length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
-  return p[Math.abs(h) % p.length];
 }
 
 // ─── Booking Calendar tab (merged from /dashboard/calendar) ──────────────────
@@ -244,7 +240,7 @@ function BookingCalendarTab({ listings, loading }) {
                         <Link key={l.id} href={`/dashboard/listings/${l.id}`}
                           onClick={(e) => e.stopPropagation()}
                           className="block text-[10px] leading-tight px-1.5 py-0.5 rounded font-medium truncate text-white transition-opacity hover:opacity-80"
-                          style={{ background: avatarBgColor(l.clientName || "") }}
+                          style={{ background: avatarColor(l.clientName || "") }}
                           title={`${l.clientName} · ${l.address?.split(",")[0]}`}>
                           {l.clientName?.split(" ")[0] || "Booking"}
                         </Link>
@@ -290,7 +286,7 @@ function BookingCalendarTab({ listings, loading }) {
                         className="block px-4 py-3 hover:bg-gray-50 transition-colors">
                         <div className="flex items-start gap-2.5">
                           <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1"
-                            style={{ background: avatarBgColor(l.clientName || "") }} />
+                            style={{ background: avatarColor(l.clientName || "") }} />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 truncate">{l.clientName}</p>
                             <p className="text-xs text-gray-400 truncate mt-0.5">{l.address?.split(",")[0]}</p>
@@ -389,7 +385,7 @@ function BookingUnscheduledTab({ listings }) {
     return (
       <Link href={`/dashboard/listings/${l.id}`}
         className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:border-[#3486cf]/40 hover:shadow-sm transition-all">
-        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: avatarBgColor(l.clientName || "") }} />
+        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: avatarColor(l.clientName || "") }} />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 truncate">{l.clientName || "Unnamed"}</p>
           <p className="text-xs text-gray-400 truncate">{l.address?.split(",")[0] || "—"}</p>
@@ -1105,6 +1101,8 @@ export default function TeamPage() {
   const toast = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { permissions, userRole } = useDashboardPermissions();
+  const canViewRevenue = userRole === "owner" || !!permissions?.canViewRevenue;
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "team");
   const [members,       setMembers]       = useState([]);
   const [bookings,      setBookings]      = useState([]);
@@ -1114,7 +1112,10 @@ export default function TeamPage() {
   const [anchor,        setAnchor]        = useState(new Date());
   const [filterMember,  setFilterMember]  = useState("all");
   const [calModal,      setCalModal]      = useState(null);
-  const [calView,       setCalView]       = useState("2wk");  // "2wk" | "week" | "month" | "day"
+  const [calView,       setCalView]       = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("kyoria_schedule_view") || "week";
+    return "week";
+  });  // "2wk" | "week" | "month" | "day"
   const [addMode,       setAddMode]       = useState(null); // null | "choice" | "invite"
   const [inviteForm,    setInviteForm]    = useState({ email: "", role: "photographer", permissions: { ...DEFAULT_PERMISSIONS.photographer } });
   const [inviteSending, setInviteSending] = useState(false);
@@ -1330,6 +1331,11 @@ export default function TeamPage() {
     return cells;
   }, [anchor]);
 
+  // Persist calView to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("kyoria_schedule_view", calView);
+  }, [calView]);
+
   // Map confirmed/completed bookings that have a confirmed shootDate to calendar.
   // Only shootDate (not preferredDate) counts — preferredDate is unconfirmed client preference.
   // Requested bookings are excluded: they haven't been scheduled yet.
@@ -1349,6 +1355,22 @@ export default function TeamPage() {
     (b) => b.status === "requested" || (b.status === "confirmed" && !b.shootDate)
   );
 
+  const weekShootCount = useMemo(() =>
+    calendarEvents.filter(e => weekDates.some(d => isSameDay(e.shootDateObj, d))).length,
+    [calendarEvents, weekDates]
+  );
+
+  const weekRevenue = useMemo(() =>
+    calendarEvents
+      .filter(e => weekDates.some(d => isSameDay(e.shootDateObj, d)))
+      .reduce((sum, e) => {
+        if (e.paidInFull || e.balancePaid) return sum + (e.totalPrice || 0);
+        if (e.depositPaid) return sum + (e.depositAmount || 0);
+        return sum;
+      }, 0),
+    [calendarEvents, weekDates]
+  );
+
   const today = new Date();
   today.setHours(0,0,0,0);
 
@@ -1364,9 +1386,14 @@ export default function TeamPage() {
     ? (calView === "2wk" || calView === "week" ? activeMembers : members)
     : members.filter((m) => m.id === filterMember);
 
+  const feature = { scheduleNewTabs: false };
   const SCHEDULE_TABS = [
-    { id: "team",        label: "Team" },
-    { id: "unscheduled", label: "Unscheduled" },
+    { id: "team",        label: "Calendar" },
+    { id: "unscheduled", label: "Unscheduled", badge: unscheduled.length },
+    ...(feature.scheduleNewTabs ? [
+      { id: "members",      label: "Team" },
+      { id: "availability", label: "Availability" },
+    ] : []),
   ];
 
   return (
@@ -1403,18 +1430,39 @@ export default function TeamPage() {
       <div className="flex gap-0 px-6 pt-4 border-b border-gray-200">
         {SCHEDULE_TABS.map((tab) => (
           <button key={tab.id} onClick={() => switchTab(tab.id)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors inline-flex items-center gap-1.5 ${
               activeTab === tab.id
                 ? "border-[#3486cf] text-[#3486cf]"
                 : "border-transparent text-gray-400 hover:text-gray-700"
             }`}>
             {tab.label}
+            {tab.badge > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 leading-none">{tab.badge}</span>
+            )}
           </button>
         ))}
       </div>
 
       {/* Unscheduled tab content */}
       {activeTab === "unscheduled" && <BookingUnscheduledTab listings={bookings} />}
+
+      {/* Team placeholder tab */}
+      {activeTab === "members" && (
+        <div className="p-10 text-center text-gray-400">
+          <p className="text-2xl mb-2">👥</p>
+          <p className="font-medium text-gray-500">Team management coming soon</p>
+          <p className="text-sm mt-1">Full team profiles, roles, and permissions will live here.</p>
+        </div>
+      )}
+
+      {/* Availability placeholder tab */}
+      {activeTab === "availability" && (
+        <div className="p-10 text-center text-gray-400">
+          <p className="text-2xl mb-2">📅</p>
+          <p className="font-medium text-gray-500">Availability management coming soon</p>
+          <p className="text-sm mt-1">Set recurring availability and time-off windows for your team here.</p>
+        </div>
+      )}
 
       {/* Team tab content */}
       {activeTab === "team" && <div className="p-6">
@@ -1475,57 +1523,69 @@ export default function TeamPage() {
         </div>
       )}
 
-      {/* Calendar section */}
-      <div className="card-section overflow-hidden mb-6">
+      {/* Calendar section + right rail */}
+      <div className="flex items-start gap-4 mb-6">
+      <div className="card-section overflow-hidden flex-1 min-w-0">
         {/* Calendar toolbar */}
-        <div className="flex items-center justify-between px-4 py-3 flex-wrap gap-2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-          <div className="flex items-center gap-3">
-            <button onClick={prevPeriod} className="p-1.5 hover:bg-gray-100 rounded">
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <button onClick={goToday} className="text-xs border border-gray-200 px-2.5 py-1 rounded hover:bg-gray-50">Today</button>
-            <button onClick={nextPeriod} className="p-1.5 hover:bg-gray-100 rounded">
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            <p className="font-semibold text-[#0F172A] text-sm">
-              {calView === "month"
-                ? `${MONTHS[anchor.getMonth()]} ${anchor.getFullYear()}`
-                : calView === "day"
-                ? `${DAYS_SHORT[anchor.getDay()]}, ${MONTHS[anchor.getMonth()]} ${anchor.getDate()}, ${anchor.getFullYear()}`
-                : calView === "2wk"
-                ? `${MONTHS[twoWeekDates[0].getMonth()].slice(0,3)} ${twoWeekDates[0].getDate()} – ${MONTHS[twoWeekDates[13].getMonth()].slice(0,3)} ${twoWeekDates[13].getDate()}, ${twoWeekDates[0].getFullYear()}`
-                : `${MONTHS[weekDates[0].getMonth()]} ${weekDates[0].getDate()} – ${weekDates[6].getDate()}, ${weekDates[0].getFullYear()}`
-              }
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* View selector */}
-            <div className="flex border border-gray-200 rounded-xl overflow-hidden text-xs">
+        <div style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          {/* Row 1: nav + view toggle */}
+          <div className="flex items-center justify-between px-4 py-3 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden">
+                <button onClick={prevPeriod} className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors border-r border-gray-200">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="px-3 py-1.5 text-sm font-semibold text-[#0F172A] text-center" style={{ minWidth: 220 }}>
+                  {calView === "month"
+                    ? `${MONTHS[anchor.getMonth()]} ${anchor.getFullYear()}`
+                    : calView === "day"
+                    ? `${DAYS_SHORT[anchor.getDay()]}, ${MONTHS[anchor.getMonth()]} ${anchor.getDate()}, ${anchor.getFullYear()}`
+                    : calView === "2wk"
+                    ? `${MONTHS[twoWeekDates[0].getMonth()].slice(0,3)} ${twoWeekDates[0].getDate()} – ${MONTHS[twoWeekDates[13].getMonth()].slice(0,3)} ${twoWeekDates[13].getDate()}, ${twoWeekDates[0].getFullYear()}`
+                    : `${MONTHS[weekDates[0].getMonth()]} ${weekDates[0].getDate()} – ${weekDates[6].getDate()}, ${weekDates[0].getFullYear()}`
+                  }
+                </span>
+                <button onClick={nextPeriod} className="px-2.5 py-1.5 hover:bg-gray-50 transition-colors border-l border-gray-200">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+              <button onClick={goToday} className="text-xs border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 font-medium text-gray-600 transition-colors">Today</button>
+            </div>
+            <div className="seg">
               {[
-                { key: "2wk",   label: "2 Weeks" },
+                { key: "2wk",   label: "2 Wk" },
                 { key: "week",  label: "Week" },
                 { key: "month", label: "Month" },
                 { key: "day",   label: "Day" },
               ].map(({ key, label }) => (
-                <button key={key} onClick={() => setCalView(key)}
-                  className={`px-3 py-1.5 font-medium transition-colors ${
-                    calView === key ? "bg-[#3486cf] text-white" : "text-gray-500 hover:bg-gray-50"
-                  }`}>{label}</button>
+                <button key={key} onClick={() => setCalView(key)} className={calView === key ? "seg-active" : ""}>{label}</button>
               ))}
             </div>
-            {/* Filter by photographer */}
-            <select value={filterMember} onChange={(e) => setFilterMember(e.target.value)}
-              className="input-field text-sm py-1.5 w-44">
-              <option value="all">All Photographers</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
+          </div>
+          {/* Row 2: stats + photographer chips */}
+          <div className="flex items-center justify-between px-4 pb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-3 text-xs text-gray-500">
+              <span>{weekShootCount} shoot{weekShootCount !== 1 ? "s" : ""} this week</span>
+              {canViewRevenue && weekRevenue > 0 && (
+                <span className="font-semibold" style={{ color: "#3486cf" }}>· ${weekRevenue.toLocaleString()} booked</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button onClick={() => setFilterMember("all")} className={`fchip${filterMember === "all" ? " fchip-active" : ""}`}>All</button>
+              {members.map((m, i) => (
+                <button key={m.id} onClick={() => setFilterMember(m.id)} className={`fchip${filterMember === m.id ? " fchip-active" : ""}`}>
+                  <span className="w-4 h-4 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                    style={{ fontSize: 8, background: ZONE_COLORS[i % ZONE_COLORS.length] }}>
+                    {initials(m.name).slice(0, 2)}
+                  </span>
+                  {m.name.split(" ")[0]}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
         </div>
 
@@ -1797,7 +1857,8 @@ export default function TeamPage() {
                           return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
                         });
                         return (
-                          <div key={d.toISOString()} className={`p-1.5 border-r last:border-r-0 border-gray-100 min-h-20 relative ${isToday ? "bg-[#3486cf]/2" : ""}`}>
+                          <div key={d.toISOString()} className={`p-1.5 border-r last:border-r-0 border-gray-100 min-h-20 relative`}
+                          style={isToday ? { background: "rgba(52,134,207,0.025)" } : undefined}>
                             {dayBlocks.length > 0 && (
                               <div className="absolute inset-0 pointer-events-none"
                                 style={{ background: `repeating-linear-gradient(-45deg, ${hexWithAlpha(member.color || "#0b2a55", 0.12)}, ${hexWithAlpha(member.color || "#0b2a55", 0.12)} 3px, transparent 3px, transparent 10px)` }} />
@@ -1822,13 +1883,13 @@ export default function TeamPage() {
                             {dayEvents.map((ev) => {
                               const displayTime = ev.shootTime || ev.preferredTime;
                               const validTime = displayTime && /^(\d{1,2}:\d{2}|morning|afternoon|evening|flexible|twilight)$/i.test(displayTime.trim());
+                              const line2 = [validTime ? displayTime : null, ev.address?.split(",")[0]].filter(Boolean).join(" · ");
                               return (
                               <Link key={ev.id} href={`/dashboard/listings/${ev.id}`}
                                 style={{ background: member.color + "22", borderLeftColor: member.color }}
-                                className="block text-xs border-l-2 px-1.5 py-1 rounded-xl mb-1 hover:opacity-80 transition-opacity">
-                                <p className="font-medium truncate" style={{ color: member.color }}>{ev.clientName || ev.address?.split(",")[0] || "Booking"}</p>
-                                {ev.address && <p className="truncate opacity-70" style={{ color: member.color }}>{ev.address?.split(",")[0]}</p>}
-                                {validTime && <p className="text-gray-400 capitalize">{displayTime}</p>}
+                                className="shoot-pill">
+                                <p className="font-semibold truncate" style={{ color: member.color }}>{ev.clientName?.split(" ")[0] || ev.address?.split(",")[0] || "Booking"}</p>
+                                {line2 && <p className="truncate text-[10px] opacity-60" style={{ color: member.color }}>{line2}</p>}
                               </Link>
                               );
                             })}
@@ -1941,7 +2002,7 @@ export default function TeamPage() {
                 });
                 const hasBlocks = dayBlocks.length > 0;
                 return (
-                  <div key={d.toISOString()} className={`border-r last:border-r-0 border-b border-gray-100 min-h-28 p-1.5 relative ${isToday ? "bg-blue-50/30" : ""}`}>
+                  <div key={d.toISOString()} className={`border-r last:border-r-0 border-b border-gray-100 p-1.5 relative ${isToday ? "bg-blue-50/30" : ""}`} style={{ minHeight: 110 }}>
                     {hasBlocks && (
                       <div className="absolute inset-0 pointer-events-none rounded-xl"
                         style={{ background: "repeating-linear-gradient(-45deg, #fee2e2, #fee2e2 3px, transparent 3px, transparent 10px)", opacity: 0.5 }} />
@@ -1958,11 +2019,16 @@ export default function TeamPage() {
                     ))}
                     {visibleDayEvents.slice(0, 3).map((ev) => {
                       const member = members.find((m) => m.id === ev.photographerId);
+                      const t = ev.shootTime || ev.preferredTime;
+                      const validTime = t && /^\d{1,2}:\d{2}/.test(t.trim());
+                      const label = [validTime ? t.slice(0,5) : null, ev.clientName?.split(" ")[0]].filter(Boolean).join(" ");
                       return (
-                        <div key={ev.id} style={{ background: (member?.color || "#0b2a55") + "22", borderLeftColor: member?.color || "#0b2a55" }}
-                          className="text-xs border-l-2 px-1 py-0.5 rounded-xl mb-0.5 truncate relative z-10">
-                          <span style={{ color: member?.color || "#0b2a55" }} className="font-medium">{ev.address?.split(",")[0]}</span>
-                        </div>
+                        <Link key={ev.id} href={`/dashboard/listings/${ev.id}`}
+                          style={{ background: (member?.color || "#0b2a55") + "22", borderLeftColor: member?.color || "#0b2a55" }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="shoot-pill relative z-10 truncate">
+                          <span style={{ color: member?.color || "#0b2a55" }} className="font-medium">{label || ev.address?.split(",")[0]}</span>
+                        </Link>
                       );
                     })}
                     {visibleDayEvents.length > 3 && (
@@ -2072,38 +2138,139 @@ export default function TeamPage() {
         )}
       </div>
 
-      {/* Unscheduled list */}
-      {unscheduled.length > 0 && (
-        <div className="card-section overflow-hidden">
-          <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-            <p className="font-semibold text-[#0F172A] text-sm">Needs Scheduling ({unscheduled.length})</p>
-          </div>
-          {unscheduled.map((b) => (
-            <div key={b.id} className="flex items-center gap-4 px-4 py-3 transition-colors"
-              style={{ borderBottom: "1px solid var(--border-subtle)" }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "rgb(15 23 42 / 0.022)"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[#0F172A] truncate">{b.address}</p>
-                <p className="text-xs text-gray-400">{b.clientName} · {b.preferredDate ? new Date(b.preferredDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "No date"} · {b.preferredTime}</p>
+      {/* ── RIGHT RAIL ──────────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3" style={{ width: 260, flexShrink: 0 }}>
+
+        {/* Mini-month */}
+        {(() => {
+          const mm_y = anchor.getFullYear(), mm_m = anchor.getMonth();
+          const mm_firstDay = new Date(mm_y, mm_m, 1).getDay();
+          const mm_daysInMonth = new Date(mm_y, mm_m + 1, 0).getDate();
+          const mm_cells = [];
+          for (let i = 0; i < mm_firstDay; i++) mm_cells.push(null);
+          for (let d = 1; d <= mm_daysInMonth; d++) mm_cells.push(new Date(mm_y, mm_m, d));
+          while (mm_cells.length % 7 !== 0) mm_cells.push(null);
+          const anchorWeekStart = new Date(anchor);
+          anchorWeekStart.setDate(anchor.getDate() - anchor.getDay());
+          anchorWeekStart.setHours(0, 0, 0, 0);
+          const anchorWeekEnd = new Date(anchorWeekStart);
+          anchorWeekEnd.setDate(anchorWeekStart.getDate() + 6);
+          anchorWeekEnd.setHours(23, 59, 59, 999);
+          const weeks = [];
+          for (let i = 0; i < mm_cells.length; i += 7) weeks.push(mm_cells.slice(i, i + 7));
+          return (
+            <div className="card-section overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                <button onClick={prevPeriod} className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-[#3486cf] rounded transition-colors">
+                  <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <span className="text-xs font-semibold text-[#0F172A]">{MONTHS[mm_m].slice(0, 3)} {mm_y}</span>
+                <button onClick={nextPeriod} className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-[#3486cf] rounded transition-colors">
+                  <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                </button>
               </div>
-              <div className="flex flex-wrap gap-1">
-                {b.packageId && (() => {
-                  const pkg = products.packages.find((p) => p.id === b.packageId);
-                  return pkg ? <span key={b.packageId} className="text-xs bg-[#3486cf]/10 text-[#3486cf] px-1.5 py-0.5 rounded-xl">{pkg.name}</span> : null;
-                })()}
-                {(b.serviceIds || []).map((id) => {
-                  const svc = products.services.find((s) => s.id === id);
-                  return svc ? <span key={id} className="text-xs bg-[#3486cf]/10 text-[#3486cf] px-1.5 py-0.5 rounded-xl">{svc.name}</span> : null;
+              <div className="px-2 pt-2 pb-1">
+                <div className="grid grid-cols-7 mb-1">
+                  {DAYS_SHORT.map((d) => (
+                    <div key={d} className="text-center text-[9px] font-semibold text-gray-300 uppercase">{d[0]}</div>
+                  ))}
+                </div>
+                {weeks.map((week, wi) => {
+                  const weekHighlighted = week.some((d) => d && d >= anchorWeekStart && d <= anchorWeekEnd);
+                  return (
+                    <div key={wi} className={`grid grid-cols-7 rounded-lg ${weekHighlighted ? "bg-[#3486cf]/6" : ""}`}>
+                      {week.map((d, di) => {
+                        if (!d) return <div key={di} className="h-8" />;
+                        const isT = isSameDay(d, today);
+                        const cnt = calendarEvents.filter((e) => isSameDay(e.shootDateObj, d)).length;
+                        const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+                        const blk = timeBlocks.some((b) => {
+                          const s = (b.startDate || "").slice(0, 10), e = (b.endDate || b.startDate || "").slice(0, 10);
+                          return ds >= s && ds <= e;
+                        });
+                        return (
+                          <div key={di} onClick={() => setAnchor(new Date(d))}
+                            className="h-8 flex flex-col items-center justify-center cursor-pointer rounded-lg">
+                            <span className={`text-[11px] font-semibold leading-none ${isT ? "w-5 h-5 rounded-full bg-[#3486cf] text-white flex items-center justify-center" : "text-[#0F172A]"}`}>
+                              {d.getDate()}
+                            </span>
+                            <div className="flex gap-0.5 mt-0.5 h-1.5">
+                              {cnt > 0 && Array.from({ length: Math.min(cnt, 3) }).map((_, i) => (
+                                <span key={i} className="w-1 h-1 rounded-full inline-block" style={{ background: "#3486cf" }} />
+                              ))}
+                              {blk && <span className="w-1 h-1 rounded-full bg-red-400 inline-block" />}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
                 })}
               </div>
-              <a href={`/dashboard/listings/${b.id}`} className="text-xs text-[#3486cf] hover:underline flex-shrink-0">
-                Assign →
-              </a>
+              <div className="flex items-center gap-3 px-3 py-2" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+                <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                  <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: "#3486cf" }} /> Shoot
+                </span>
+                <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" /> Blocked
+                </span>
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })()}
+
+        {/* Roster — sorted by this-week shoot count */}
+        {activeMembers.length > 0 && (() => {
+          const roster = activeMembers.map((m, i) => ({
+            ...m,
+            weekCount: calendarEvents.filter((e) =>
+              (e.photographerId === m.id || e.photographerEmail === m.email) &&
+              weekDates.some((d) => isSameDay(e.shootDateObj, d))
+            ).length,
+            zoneColor: ZONE_COLORS[i % ZONE_COLORS.length],
+          })).sort((a, b) => b.weekCount - a.weekCount);
+          return (
+            <div className="card-section overflow-hidden">
+              <div className="px-3 py-2.5" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                <p className="text-xs font-semibold text-[#0F172A]">Team — This Week</p>
+              </div>
+              <div>
+                {roster.map((m) => (
+                  <div key={m.id} className="flex items-center gap-2.5 px-3 py-2"
+                    style={{ opacity: m.weekCount === 0 ? 0.55 : 1, borderBottom: "1px solid var(--border-subtle)" }}>
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                      style={{ fontSize: 8, background: m.zoneColor }}>
+                      {initials(m.name).slice(0, 2)}
+                    </div>
+                    <p className="text-xs font-medium text-[#0F172A] truncate flex-1">{m.name}</p>
+                    {m.weekCount > 0 && (
+                      <span className="text-[10px] font-semibold flex-shrink-0" style={{ color: "#3486cf" }}>{m.weekCount}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Unscheduled callout — hides when count = 0 */}
+        {unscheduled.length > 0 && (
+          <button onClick={() => switchTab("unscheduled")} className="w-full text-left overflow-hidden rounded-xl border"
+            style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.10) 0%, rgba(217,119,6,0.06) 100%)", borderColor: "#FCD34D" }}>
+            <div className="px-4 py-3.5">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs font-semibold text-amber-800">Needs Scheduling</p>
+                <span className="text-[10px] font-bold text-white bg-amber-500 rounded-full px-1.5 py-0.5 leading-tight">{unscheduled.length}</span>
+              </div>
+              <p className="text-[11px] text-amber-700 leading-relaxed">
+                {unscheduled.length} booking{unscheduled.length !== 1 ? "s" : ""} waiting for a shoot date. Tap to review →
+              </p>
+            </div>
+          </button>
+        )}
+
+      </div>
+      </div>{/* end flex wrapper */}
 
       </div>}
 
