@@ -279,11 +279,11 @@ export default function ListingsPage() {
     if (filter === "active") {
       list = list.filter((l) => ACTIVE_STAGES.includes(resolveWorkflowStatus(l)));
     } else if (filter === "delivered") {
-      list = list.filter((l) => resolveWorkflowStatus(l) === "delivered");
+      list = list.filter((l) => ["delivered", "paid"].includes(resolveWorkflowStatus(l)));
     } else if (filter === "paid") {
-      list = list.filter((l) => resolveWorkflowStatus(l) === "paid");
+      list = list.filter((l) => l.paidInFull || l.balancePaid || resolveWorkflowStatus(l) === "paid");
     } else if (filter === "cancelled") {
-      list = list.filter((l) => resolveWorkflowStatus(l) === "cancelled");
+      list = list.filter((l) => l.status === "cancelled" || resolveWorkflowStatus(l) === "cancelled");
     }
     if (payFilter === "paid")         list = list.filter((l) => l.paidInFull || l.balancePaid);
     else if (payFilter === "deposit") list = list.filter((l) => l.depositPaid && !l.paidInFull && !l.balancePaid);
@@ -306,16 +306,13 @@ export default function ListingsPage() {
     return list;
   }, [listings, filter, payFilter, sortBy, search]);
 
-  const counts = useMemo(() => {
-    const wf = listings.map((l) => resolveWorkflowStatus(l));
-    return {
-      all:       listings.length,
-      active:    wf.filter((s) => ACTIVE_STAGES.includes(s)).length,
-      delivered: wf.filter((s) => s === "delivered").length,
-      paid:      wf.filter((s) => s === "paid").length,
-      cancelled: wf.filter((s) => s === "cancelled").length,
-    };
-  }, [listings]);
+  const counts = useMemo(() => ({
+    all:       listings.length,
+    active:    listings.filter(l => ACTIVE_STAGES.includes(resolveWorkflowStatus(l))).length,
+    delivered: listings.filter(l => ["delivered","paid"].includes(resolveWorkflowStatus(l))).length,
+    paid:      listings.filter(l => l.paidInFull || l.balancePaid || resolveWorkflowStatus(l) === "paid").length,
+    cancelled: listings.filter(l => l.status === "cancelled" || resolveWorkflowStatus(l) === "cancelled").length,
+  }), [listings]);
 
   const pendingCount = useMemo(() => listings.filter(l => l.status === "requested").length, [listings]);
 
