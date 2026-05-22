@@ -30,6 +30,15 @@
   --radius-card:     14px;
   --radius-btn:      10px;
   --radius-input:    10px;
+
+  --zone-blue:   #3B82F6;
+  --zone-green:  #10B981;
+  --zone-amber:  #F59E0B;
+  --zone-red:    #EF4444;
+  --zone-purple: #8B5CF6;
+  --zone-pink:   #EC4899;
+  --zone-teal:   #14B8A6;
+  --zone-orange: #F97316;
 }
 
 .dark {
