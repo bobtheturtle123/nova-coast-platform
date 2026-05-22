@@ -452,7 +452,7 @@ export default function DashboardHome() {
 
   return (
     <div className="min-h-screen" style={{ background: "#F7F8FA" }}>
-      <div className="max-w-[1200px] mx-auto px-6 py-8 space-y-5">
+      <div className="max-w-[1300px] mx-auto px-6 py-8 space-y-5">
 
         {/* ── Stripe banner ─────────────────────────────────────────────── */}
         {isOwnerOrAdmin && tenant?.onboardingCompleted && !tenant.stripeConnectOnboarded && (
