@@ -10,6 +10,8 @@ const ZONE_COLORS = [
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
+// ── Zone modal ────────────────────────────────────────────────────────────────
+
 function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose }) {
   const [form, setForm] = useState({
     name:       zone?.name       || "",
@@ -21,10 +23,10 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose }) {
   const [saving, setSaving] = useState(false);
 
   function toggleMember(id) {
-    setForm((f) => ({
+    setForm(f => ({
       ...f,
       assignedTo: f.assignedTo.includes(id)
-        ? f.assignedTo.filter((x) => x !== id)
+        ? f.assignedTo.filter(x => x !== id)
         : [...f.assignedTo, id],
     }));
   }
@@ -49,7 +51,7 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose }) {
           <div>
             <label className="label-field">Zone Name</label>
             <input type="text" value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               className="input-field w-full" placeholder="e.g. Los Angeles, Miami Beach" />
           </div>
 
@@ -59,9 +61,9 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose }) {
               {[
                 { value: "include", label: "Service Area",  desc: "You work in this zone" },
                 { value: "exclude", label: "Excluded Area", desc: "You don't work here" },
-              ].map((opt) => (
+              ].map(opt => (
                 <button key={opt.value} type="button"
-                  onClick={() => setForm((f) => ({ ...f, type: opt.value }))}
+                  onClick={() => setForm(f => ({ ...f, type: opt.value }))}
                   className={`p-3 border rounded-lg text-left transition-colors ${
                     form.type === opt.value
                       ? opt.value === "include" ? "border-[#3486cf] bg-[#3486cf]/5" : "border-red-300 bg-red-50"
@@ -79,9 +81,9 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose }) {
           <div>
             <label className="label-field">Zone Color</label>
             <div className="flex gap-2 flex-wrap">
-              {ZONE_COLORS.map((c) => (
+              {ZONE_COLORS.map(c => (
                 <button key={c} type="button"
-                  onClick={() => setForm((f) => ({ ...f, color: c }))}
+                  onClick={() => setForm(f => ({ ...f, color: c }))}
                   style={{ background: c }}
                   className={`w-7 h-7 rounded-full transition-all ${form.color === c ? "ring-2 ring-offset-2 ring-gray-400 scale-110" : ""}`} />
               ))}
@@ -93,7 +95,7 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose }) {
               <label className="label-field">Assign Photographers</label>
               <p className="text-xs text-gray-400 mb-2">Only these photographers will be scheduled for jobs in this zone</p>
               <div className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2">
-                {teamMembers.map((m) => (
+                {teamMembers.map(m => (
                   <label key={m.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer">
                     <input type="checkbox"
                       checked={form.assignedTo.includes(m.id)}
@@ -113,7 +115,7 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose }) {
           <div>
             <label className="label-field">Notes (optional)</label>
             <input type="text" value={form.notes}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               className="input-field w-full" placeholder="e.g. Avoid during rush hour" />
           </div>
         </div>
@@ -134,6 +136,101 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose }) {
   );
 }
 
+// ── Address search overlay ────────────────────────────────────────────────────
+
+function AddressSearch({ mapRef, mapReady }) {
+  const [query,       setQuery]       = useState("");
+  const [results,     setResults]     = useState([]);
+  const [open,        setOpen]        = useState(false);
+  const [searching,   setSearching]   = useState(false);
+  const debounceRef = useRef(null);
+  const wrapRef     = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handler(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  function handleChange(e) {
+    const val = e.target.value;
+    setQuery(val);
+    clearTimeout(debounceRef.current);
+    if (!val.trim() || val.length < 3) { setResults([]); setOpen(false); return; }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(val)}.json?access_token=${MAPBOX_TOKEN}&limit=5&types=address,place,neighborhood,locality,postcode,region`;
+        const res  = await fetch(url);
+        const data = await res.json();
+        setResults(data.features || []);
+        setOpen(true);
+      } catch {}
+      setSearching(false);
+    }, 320);
+  }
+
+  function selectResult(feature) {
+    const [lng, lat] = feature.center;
+    const map = mapRef.current;
+    if (map) {
+      map.flyTo({ center: [lng, lat], zoom: 12, speed: 1.4 });
+    }
+    setQuery(feature.place_name || feature.text || "");
+    setOpen(false);
+    setResults([]);
+  }
+
+  if (!mapReady) return null;
+
+  return (
+    <div ref={wrapRef} className="absolute top-3 left-3 z-10" style={{ width: 280 }}>
+      <div className="relative">
+        <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" strokeWidth="2">
+          <circle cx="11" cy="11" r="8"/><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input
+          type="text"
+          value={query}
+          onChange={handleChange}
+          onFocus={() => results.length > 0 && setOpen(true)}
+          placeholder="Search address or city…"
+          className="w-full pl-8 pr-8 py-2 text-[13px] rounded-lg shadow-md bg-white outline-none"
+          style={{ border: "1px solid #E9ECF0" }}
+        />
+        {searching && (
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+            <div className="w-3 h-3 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
+          </div>
+        )}
+        {query && !searching && (
+          <button className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg leading-none"
+            onClick={() => { setQuery(""); setResults([]); setOpen(false); }}>
+            ×
+          </button>
+        )}
+      </div>
+      {open && results.length > 0 && (
+        <div className="mt-1 bg-white rounded-lg shadow-lg overflow-hidden" style={{ border: "1px solid #E9ECF0" }}>
+          {results.map(f => (
+            <button key={f.id} onClick={() => selectResult(f)}
+              className="w-full text-left px-3 py-2.5 hover:bg-gray-50 transition-colors"
+              style={{ borderBottom: "1px solid #F3F4F6" }}>
+              <p className="text-[12.5px] font-medium text-[#0F172A] truncate">{f.text || f.place_name}</p>
+              <p className="text-[11px] text-gray-400 truncate">{f.place_name}</p>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export default function ServiceAreasPage() {
   const mapContainerRef = useRef(null);
   const mapRef          = useRef(null);
@@ -146,20 +243,20 @@ export default function ServiceAreasPage() {
   const [loading,        setLoading]        = useState(true);
   const [mapsReady,      setMapsReady]      = useState(false);
   const [mapInitialized, setMapInitialized] = useState(false);
-  const [mapError,     setMapError]     = useState(false);
-  const [editing,      setEditing]      = useState(null);
-  const [drawingMode,  setDrawingMode]  = useState(false);
-  const [pendingPaths, setPendingPaths] = useState(null);
-  const [pendingDrawId, setPendingDrawId] = useState(null);
-  const [msg,          setMsg]          = useState("");
-  const [filterPhotog, setFilterPhotog] = useState("all");
+  const [mapError,       setMapError]       = useState(false);
+  const [editing,        setEditing]        = useState(null);
+  const [drawingMode,    setDrawingMode]    = useState(false);
+  const [pendingPaths,   setPendingPaths]   = useState(null);
+  const [pendingDrawId,  setPendingDrawId]  = useState(null);
+  const [msg,            setMsg]            = useState("");
+  const [filterPhotog,   setFilterPhotog]   = useState("all");
 
   // Load data
   useEffect(() => {
-    auth.currentUser?.getIdToken().then(async (token) => {
+    auth.currentUser?.getIdToken().then(async token => {
       const [zonesRes, teamRes] = await Promise.all([
-        fetch("/api/dashboard/service-areas",   { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/team",            { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/service-areas", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/team",          { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       if (zonesRes.ok) { const d = await zonesRes.json(); setZones(d.zones || []); }
       if (teamRes.ok)  { const d = await teamRes.json();  setTeamMembers(d.members || []); }
@@ -167,132 +264,132 @@ export default function ServiceAreasPage() {
     });
   }, []);
 
-  // Load Mapbox GL + Draw scripts
+  // Load Mapbox GL + Draw — handles all cases: first load, already in DOM, already on window
   useEffect(() => {
     if (!MAPBOX_TOKEN) return;
-    if (window.mapboxgl) { setMapsReady(true); return; }
 
-    function loadScript(src, id, onLoad) {
-      if (document.getElementById(id)) return;
+    // Fast path: both libs already loaded
+    if (window.mapboxgl && window.MapboxDraw) { setMapsReady(true); return; }
+
+    function injectLink(href, id) {
+      if (!document.getElementById(id)) {
+        const l = document.createElement("link");
+        l.id = id; l.rel = "stylesheet"; l.href = href;
+        document.head.appendChild(l);
+      }
+    }
+
+    function injectScript(src, id, windowKey, onReady) {
+      // Already fully loaded
+      if (window[windowKey]) { onReady(); return; }
+      // Script tag exists but hasn't fired onload yet
+      const existing = document.getElementById(id);
+      if (existing) { existing.addEventListener("load", onReady, { once: true }); return; }
+      // First time — inject
       const s = document.createElement("script");
       s.id = id; s.src = src; s.async = true;
-      s.onload = onLoad;
+      s.onload = onReady;
       document.head.appendChild(s);
     }
-    function loadLink(href, id) {
-      if (document.getElementById(id)) return;
-      const l = document.createElement("link");
-      l.id = id; l.rel = "stylesheet"; l.href = href;
-      document.head.appendChild(l);
-    }
 
-    loadLink("https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css", "mapbox-css");
-    loadLink("https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css", "mapboxdraw-css");
+    injectLink("https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css",               "mapbox-css");
+    injectLink("https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css", "mapboxdraw-css");
 
-    loadScript(
+    injectScript(
       "https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js",
       "mapbox-js",
-      () => {
-        loadScript(
-          "https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js",
-          "mapboxdraw-js",
-          () => setMapsReady(true)
-        );
-      }
+      "mapboxgl",
+      () => injectScript(
+        "https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js",
+        "mapboxdraw-js",
+        "MapboxDraw",
+        () => setMapsReady(true)
+      )
     );
   }, []);
 
-  // Init map
+  // Init map — runs once mapsReady + container is available
   useEffect(() => {
     if (!mapsReady || !mapContainerRef.current || mapLoadedRef.current) return;
     if (!window.mapboxgl || !window.MapboxDraw) return;
-
-    if (!window.mapboxgl.supported()) {
-      setMapError(true);
-      return;
-    }
+    if (!window.mapboxgl.supported()) { setMapError(true); return; }
 
     mapLoadedRef.current = true;
     window.mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    // Defer one frame so the container has layout dimensions before Mapbox reads them
     requestAnimationFrame(() => {
-    let map;
-    try {
-      map = new window.mapboxgl.Map({
-        container: mapContainerRef.current,
-        style:     "mapbox://styles/mapbox/streets-v11",
-        center:    [-118.2437, 34.0522],
-        zoom:      9,
+      if (!mapContainerRef.current) return;
+      let map;
+      try {
+        map = new window.mapboxgl.Map({
+          container: mapContainerRef.current,
+          style:     "mapbox://styles/mapbox/streets-v11",
+          center:    [-118.2437, 34.0522],
+          zoom:      9,
+        });
+      } catch (err) {
+        console.error("[service-areas] Map init failed:", err?.message);
+        mapLoadedRef.current = false;
+        setMapError(true);
+        return;
+      }
+      mapRef.current = map;
+
+      const draw = new window.MapboxDraw({
+        displayControlsDefault: false,
+        controls: {},
+        defaultMode: "simple_select",
       });
-    } catch (err) {
-      console.error("[service-areas] Map init failed:", err?.message);
-      mapLoadedRef.current = false;
-      setMapError(true);
-      return;
-    }
-    mapRef.current = map;
+      map.addControl(draw);
+      drawRef.current = draw;
 
-    const draw = new window.MapboxDraw({
-      displayControlsDefault: false,
-      controls: {},
-      defaultMode: "simple_select",
+      map.on("draw.create", e => {
+        const feature   = e.features[0];
+        const rawCoords = feature.geometry.coordinates[0];
+        // Mapbox returns [lng, lat]; store as {lat, lng}
+        const paths = rawCoords.slice(0, -1).map(([lng, lat]) => ({ lat, lng }));
+        setPendingPaths(paths);
+        setPendingDrawId(feature.id);
+        setEditing({ isNew: true, paths });
+        setDrawingMode(false);
+      });
+
+      map.on("load", () => { setMapInitialized(true); renderZones(); });
     });
-    map.addControl(draw);
-    drawRef.current = draw;
-
-    map.on("draw.create", (e) => {
-      const feature  = e.features[0];
-      const rawCoords = feature.geometry.coordinates[0];
-      // Mapbox returns [lng, lat]; convert to {lat, lng}
-      const paths = rawCoords.slice(0, -1).map(([lng, lat]) => ({ lat, lng }));
-      setPendingPaths(paths);
-      setPendingDrawId(feature.id);
-      setEditing({ isNew: true, paths });
-      setDrawingMode(false);
-    });
-
-    map.on("load", () => { setMapInitialized(true); renderZones(); });
-    }); // end requestAnimationFrame
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapsReady]);
 
-  // Always keep zonesRef current — read from this inside renderZones to avoid stale closures
+  // Keep zonesRef in sync — renderZones reads from this to avoid stale closures
   zonesRef.current = zones;
 
-  // renderZones is stable (no deps) — reads latest zones from zonesRef.current
   const renderZones = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (!map.isStyleLoaded()) {
-      // Style not ready yet — retry once it becomes idle
-      map.once("idle", () => renderZones());
-      return;
-    }
+    if (!map.isStyleLoaded()) { map.once("idle", renderZones); return; }
 
-    const currentZones = zonesRef.current;
+    const cur = zonesRef.current;
     try {
       (map.getStyle()?.layers || [])
-        .filter((l) => l.id.startsWith("zone-"))
-        .forEach((l) => { try { if (map.getLayer(l.id)) map.removeLayer(l.id); } catch {} });
-      (Object.keys(map.getStyle()?.sources || {}))
-        .filter((s) => s.startsWith("zone-"))
-        .forEach((s) => { try { if (map.getSource(s)) map.removeSource(s); } catch {} });
+        .filter(l => l.id.startsWith("zone-"))
+        .forEach(l => { try { map.removeLayer(l.id); } catch {} });
+      Object.keys(map.getStyle()?.sources || {})
+        .filter(s => s.startsWith("zone-"))
+        .forEach(s => { try { map.removeSource(s); } catch {} });
 
-      currentZones.forEach((zone) => {
+      cur.forEach(zone => {
         if (!zone.paths?.length) return;
-        const srcId   = `zone-${zone.id}`;
-        const fillId  = `zone-fill-${zone.id}`;
-        const lineId  = `zone-line-${zone.id}`;
-        const color   = zone.type === "exclude" ? "#EF4444" : (zone.color || "#3B82F6");
-        const coords  = [...zone.paths.map((p) => [p.lng, p.lat]), [zone.paths[0].lng, zone.paths[0].lat]];
+        const srcId  = `zone-${zone.id}`;
+        const fillId = `zone-fill-${zone.id}`;
+        const lineId = `zone-line-${zone.id}`;
+        const color  = zone.type === "exclude" ? "#EF4444" : (zone.color || "#3B82F6");
+        const coords = [...zone.paths.map(p => [p.lng, p.lat]), [zone.paths[0].lng, zone.paths[0].lat]];
 
         map.addSource(srcId, {
           type: "geojson",
           data: { type: "Feature", geometry: { type: "Polygon", coordinates: [coords] } },
         });
-        map.addLayer({ id: fillId, type: "fill",   source: srcId, paint: { "fill-color": color, "fill-opacity": 0.2 } });
-        map.addLayer({ id: lineId, type: "line",   source: srcId, paint: { "line-color": color, "line-width": 2 } });
+        map.addLayer({ id: fillId, type: "fill", source: srcId, paint: { "fill-color": color, "fill-opacity": 0.2 } });
+        map.addLayer({ id: lineId, type: "line", source: srcId, paint: { "line-color": color, "line-width": 2 } });
         map.on("click",      fillId, () => setEditing(zone));
         map.on("mouseenter", fillId, () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", fillId, () => { map.getCanvas().style.cursor = ""; });
@@ -301,24 +398,22 @@ export default function ServiceAreasPage() {
       console.error("[service-areas] renderZones error:", err?.message);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // stable — reads zones via zonesRef.current
+  }, []);
 
-  // Re-render whenever zones data changes OR map becomes ready
   useEffect(() => {
     if (!mapInitialized) return;
     renderZones();
   }, [zones, mapInitialized, renderZones]);
 
   function startDrawing() {
-    if (!drawRef.current) return;
-    drawRef.current.changeMode("draw_polygon");
+    const draw = drawRef.current;
+    if (!draw) return;
+    draw.changeMode("draw_polygon");
     setDrawingMode(true);
   }
 
   function cancelDrawing() {
-    if (drawRef.current && pendingDrawId) {
-      drawRef.current.delete(pendingDrawId);
-    }
+    if (drawRef.current && pendingDrawId) drawRef.current.delete(pendingDrawId);
     setPendingPaths(null);
     setPendingDrawId(null);
     setDrawingMode(false);
@@ -338,7 +433,7 @@ export default function ServiceAreasPage() {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      setZones((prev) => [...prev, data.zone]);
+      setZones(prev => [...prev, data.zone]);
       if (pendingDrawId) drawRef.current?.delete(pendingDrawId);
     } else {
       await fetch(`/api/dashboard/service-areas/${editing.id}`, {
@@ -346,7 +441,7 @@ export default function ServiceAreasPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       });
-      setZones((prev) => prev.map((z) => z.id === editing.id ? { ...z, ...payload } : z));
+      setZones(prev => prev.map(z => z.id === editing.id ? { ...z, ...payload } : z));
     }
 
     setPendingPaths(null);
@@ -362,7 +457,7 @@ export default function ServiceAreasPage() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
-    setZones((prev) => prev.filter((z) => z.id !== editing.id));
+    setZones(prev => prev.filter(z => z.id !== editing.id));
     setEditing(null);
     showMsg("Zone deleted.");
   }
@@ -372,9 +467,17 @@ export default function ServiceAreasPage() {
     setTimeout(() => setMsg(""), 3000);
   }
 
+  function retryMap() {
+    setMapError(false);
+    mapLoadedRef.current = false;
+    // Re-trigger init by briefly toggling mapsReady
+    setMapsReady(false);
+    setTimeout(() => setMapsReady(true), 80);
+  }
+
   const visibleZones = filterPhotog === "all"
     ? zones
-    : zones.filter((z) => z.assignedTo?.includes(filterPhotog));
+    : zones.filter(z => z.assignedTo?.includes(filterPhotog));
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -397,13 +500,13 @@ export default function ServiceAreasPage() {
           <h1 className="page-title">Service Areas</h1>
           <p className="text-gray-400 text-sm mt-0.5">Draw zones where you work and assign photographers to each area</p>
         </div>
-        {!drawingMode && (
-          <button onClick={startDrawing} className="btn-primary text-sm px-5 py-2 flex items-center gap-2">
+        {!drawingMode ? (
+          <button onClick={startDrawing} disabled={!mapInitialized}
+            className="btn-primary text-sm px-5 py-2 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
             <span className="text-base leading-none">+</span>
             Draw New Zone
           </button>
-        )}
-        {drawingMode && (
+        ) : (
           <button onClick={cancelDrawing} className="btn-outline text-sm px-5 py-2">
             Cancel Drawing
           </button>
@@ -417,7 +520,7 @@ export default function ServiceAreasPage() {
             className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${filterPhotog === "all" ? "bg-[#3486cf] text-white border-[#3486cf]" : "text-gray-500 border-gray-200 hover:border-[#3486cf]/40"}`}>
             All Zones
           </button>
-          {teamMembers.map((m) => (
+          {teamMembers.map(m => (
             <button key={m.id} onClick={() => setFilterPhotog(m.id)}
               className={`px-3 py-1.5 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${filterPhotog === m.id ? "bg-[#3486cf] text-white border-[#3486cf]" : "text-gray-500 border-gray-200 hover:border-[#3486cf]/40"}`}>
               <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-bold"
@@ -441,37 +544,37 @@ export default function ServiceAreasPage() {
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Click on the map to place points. Click the first point to close the shape.
+          Click on the map to place points. Click the first point again to close the shape.
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Map */}
         <div className="lg:col-span-3">
-          <div className="card-section" style={{ height: 520 }}>
+          <div className="card-section relative" style={{ height: 520 }}>
             {mapError ? (
               <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-center px-6">
                 <p className="text-sm font-medium text-gray-600">Map failed to load</p>
                 <p className="text-xs text-gray-400 max-w-xs">
-                  WebGL is required for the map. In Chrome, go to{" "}
-                  <span className="font-mono text-gray-500">chrome://settings/system</span> and
-                  enable <em>Use graphics acceleration when available</em>, then reload.
+                  WebGL is required. In Chrome, enable <em>Use graphics acceleration</em> in{" "}
+                  <span className="font-mono text-gray-500">chrome://settings/system</span> then reload.
                 </p>
-                <button
-                  onClick={() => { setMapError(false); setMapsReady(false); mapLoadedRef.current = false; setTimeout(() => setMapsReady(true), 50); }}
-                  className="btn-outline px-4 py-1.5 text-xs mt-1"
-                >
-                  Retry
-                </button>
+                <button onClick={retryMap} className="btn-outline px-4 py-1.5 text-xs mt-1">Retry</button>
               </div>
             ) : !mapsReady ? (
               <div className="w-full h-full flex items-center justify-center">
                 <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
               </div>
             ) : null}
+
+            {/* Address search overlay */}
+            <AddressSearch mapRef={mapRef} mapReady={mapInitialized} />
+
             <div ref={mapContainerRef} className={`w-full h-full${mapError ? " hidden" : ""}`} />
           </div>
         </div>
 
+        {/* Zone list */}
         <div className="lg:col-span-1 space-y-3">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Zones ({visibleZones.length})</p>
 
@@ -488,9 +591,8 @@ export default function ServiceAreasPage() {
             </div>
           )}
 
-          {visibleZones.map((zone) => (
-            <div key={zone.id} onClick={() => setEditing(zone)}
-              className="card-hover p-4">
+          {visibleZones.map(zone => (
+            <div key={zone.id} onClick={() => setEditing(zone)} className="card-hover p-4">
               <div className="flex items-center gap-2.5 mb-1">
                 <div className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ background: zone.type === "exclude" ? "#EF4444" : (zone.color || "#3B82F6") }} />
@@ -501,8 +603,8 @@ export default function ServiceAreasPage() {
               </p>
               {zone.assignedTo?.length > 0 && (
                 <div className="flex items-center gap-1 flex-wrap">
-                  {zone.assignedTo.map((uid) => {
-                    const m = teamMembers.find((x) => x.id === uid);
+                  {zone.assignedTo.map(uid => {
+                    const m = teamMembers.find(x => x.id === uid);
                     if (!m) return null;
                     return (
                       <div key={uid} title={m.name}

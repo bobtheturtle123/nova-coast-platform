@@ -591,10 +591,10 @@ export default function BookingsPage() {
             </button>
           )}
           {canCreateBookings && (
-            <button onClick={() => { setForm(EMPTY_FORM); setShowCreate(true); }}
+            <Link href="/dashboard/bookings/create"
               className="btn-primary px-4 py-2 text-sm flex items-center gap-1.5">
               + New Booking
-            </button>
+            </Link>
           )}
         </div>
       </div>
