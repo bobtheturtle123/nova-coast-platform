@@ -13,6 +13,63 @@ import { avatarColor, initials } from "@/lib/avatar";
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const ACTIVE_STAGES = ["booked","appointment_confirmed","photographer_assigned","shot_completed","editing_complete","qa_review","postponed"];
 
+// ── Sample data (shown when tenant has no real listings/team/zones yet) ───────
+
+function buildSampleData() {
+  const d = (offset = 0) => {
+    const dt = new Date(Date.now() + offset * 86400000);
+    return dt.toISOString().slice(0, 10);
+  };
+  const prevWeekD = (offset = 0) => {
+    const dt = new Date(Date.now() + (offset - 7) * 86400000);
+    return dt.toISOString().slice(0, 10);
+  };
+  const delivered1 = new Date(Date.now() - 5 * 86400000).toISOString();
+  const editStart1 = new Date(Date.now() - 5 * 86400000 - 22 * 3600000).toISOString();
+  const delivered2 = new Date(Date.now() - 2 * 86400000).toISOString();
+  const editStart2 = new Date(Date.now() - 2 * 86400000 - 28 * 3600000).toISOString();
+
+  const team = [
+    { id: "sph1", name: "Eliot Voss",  role: "photographer", color: "#3B82F6", active: true, skills: [] },
+    { id: "sph2", name: "Anya Park",   role: "photographer", color: "#10B981", active: true, skills: [] },
+    { id: "sph3", name: "Mira Reyes",  role: "editor",       color: "#F59E0B", active: true, skills: [] },
+  ];
+
+  const zones = [
+    { id: "sz1", name: "Westside",      type: "include", color: "#3B82F6", paths: [], todayShootCount: 0, todayPhotographerNames: [] },
+    { id: "sz2", name: "South Bay",     type: "include", color: "#10B981", paths: [], todayShootCount: 0, todayPhotographerNames: [] },
+    { id: "sz3", name: "Hillside",      type: "include", color: "#8B5CF6", paths: [], todayShootCount: 0, todayPhotographerNames: [] },
+    { id: "sz4", name: "Harbor Blvd",   type: "exclude", color: "#EF4444", paths: [], todayShootCount: 0, todayPhotographerNames: [] },
+  ];
+
+  const listings = [
+    // Today
+    { id: "sl1", clientName: "Bowen Estates",   address: "412 Sunset Pl, Brentwood, CA",    shootDate: d(0),  shootTime: "09:30", photographerId: "sph1", photographerName: "Eliot Voss",  zoneId: "sz1", status: "confirmed",  workflowStatus: "appointment_confirmed", totalPrice: 1840, depositPaid: true,  selectedPackageName: "Premium Package" },
+    { id: "sl2", clientName: "Coastal Homes",   address: "88 Ocean Ave, Santa Monica, CA",  shootDate: d(0),  shootTime: "13:00", photographerId: "sph1", photographerName: "Eliot Voss",  zoneId: "sz1", status: "confirmed",  workflowStatus: "appointment_confirmed", totalPrice: 1420, paidInFull: true,   selectedPackageName: "Standard Package" },
+    { id: "sl3", clientName: "Skyline Group",   address: "504 Vista Ave, Manhattan Beach",  shootDate: d(0),  shootTime: "11:00", photographerId: "sph2", photographerName: "Anya Park",   zoneId: "sz2", status: "confirmed",  workflowStatus: "photographer_assigned", totalPrice: 2200, paidInFull: true,   selectedPackageName: "Listing + Drone" },
+    // Tomorrow
+    { id: "sl4", clientName: "Pacific Realty",  address: "200 Harbor Dr, Redondo Beach",    shootDate: d(1),  shootTime: "10:00", photographerId: "sph2", photographerName: "Anya Park",   zoneId: "sz2", status: "confirmed",  workflowStatus: "appointment_confirmed", totalPrice: 950,  depositPaid: true,  selectedPackageName: "Starter Package" },
+    { id: "sl5", clientName: "Oak Street Props",address: "77 Oak St, Los Angeles, CA",      shootDate: d(1),  shootTime: "14:30", photographerId: "sph1", photographerName: "Eliot Voss",  zoneId: "sz3", status: "confirmed",  workflowStatus: "photographer_assigned", totalPrice: 1650, depositPaid: true,  selectedPackageName: "Premium Package" },
+    // This week (other days)
+    { id: "sl6", clientName: "Mesa Group",      address: "1200 Mesa Rd, Culver City, CA",   shootDate: d(3),  shootTime: "09:00", photographerId: "sph1", photographerName: "Eliot Voss",  zoneId: "sz1", status: "confirmed",  workflowStatus: "booked",                totalPrice: 1280, depositPaid: true  },
+    { id: "sl7", clientName: "Arcadia Homes",   address: "340 Arcadia Blvd, Pasadena, CA",  shootDate: d(4),  shootTime: "11:30", photographerId: "sph2", photographerName: "Anya Park",   zoneId: "sz2", status: "confirmed",  workflowStatus: "appointment_confirmed", totalPrice: 2100, paidInFull: true   },
+    // Active (no shoot date yet) — will appear in Needs Action
+    { id: "sl8", clientName: "Harbor Estates",  address: "910 Harbor Blvd, Long Beach, CA", shootDate: null,  shootTime: null,    photographerId: null,   photographerName: null,          zoneId: null,  status: "requested", workflowStatus: "booked",                totalPrice: 1500, depositPaid: false },
+    // Previous week (for week delta)
+    { id: "sl9",  clientName: "Cliffside Prop", address: "55 Cliffside Dr, Malibu, CA",     shootDate: prevWeekD(0), status: "confirmed", workflowStatus: "delivered", totalPrice: 1800, paidInFull: true,  photographerId: "sph1", photographerName: "Eliot Voss",  zoneId: "sz1" },
+    { id: "sl10", clientName: "Bay View RE",    address: "12 Bay View Ln, Marina Del Rey",  shootDate: prevWeekD(2), status: "confirmed", workflowStatus: "delivered", totalPrice: 2400, depositPaid: true, photographerId: "sph2", photographerName: "Anya Park",   zoneId: "sz2" },
+    // Delivered with turnaround times
+    { id: "sl11", clientName: "Crestview Group",address: "801 Crest Ave, Sherman Oaks",     shootDate: prevWeekD(-3), status: "completed", workflowStatus: "paid", totalPrice: 1700, paidInFull: true, editingStartedAt: editStart1, deliveredAt: delivered1, photographerId: "sph1", photographerName: "Eliot Voss", zoneId: "sz1" },
+    { id: "sl12", clientName: "Redwood Realty", address: "430 Redwood Ct, Encino, CA",     shootDate: prevWeekD(-1), status: "completed", workflowStatus: "paid", totalPrice: 2050, paidInFull: true, editingStartedAt: editStart2, deliveredAt: delivered2, photographerId: "sph2", photographerName: "Anya Park",  zoneId: "sz2" },
+  ];
+
+  const revisions = [
+    { id: "sr1", bookingId: "sl2", agentName: "Sarah Chen", message: "Please reshoot the kitchen with better lighting", urgency: "high" },
+  ];
+
+  return { listings, team, zones, revisions };
+}
+
 // Returns { y, w } ISO week for a date string "YYYY-MM-DD"
 function isoWeek(dateStr) {
   const d = new Date(dateStr + "T12:00:00");
@@ -146,6 +203,7 @@ export default function DashboardHome() {
   const [todayScope,       setTodayScope]       = useState("today");
   const [groupMode,        setGroupMode]        = useState("photographer");
   const [setupOpen,        setSetupOpen]        = useState(null); // null = use default logic
+  const [isSample,         setIsSample]         = useState(false);
 
   const { permissions, userRole: ctxRole } = useDashboardPermissions();
   const isOwnerOrAdmin    = ctxRole === "owner" || ctxRole === "admin" || ctxRole === null;
@@ -174,14 +232,36 @@ export default function DashboardHome() {
         fetch("/api/dashboard/team",                     { headers: h }),
         fetch("/api/dashboard/service-areas",            { headers: h }),
       ]);
-      if (listRes.ok)   { const d = await listRes.json();   setListings(d.listings || []); }
-      if (tenantRes.ok) { const d = await tenantRes.json(); setTenant(d.tenant); }
-      if (revRes.ok)    { const d = await revRes.json();    setPendingRevisions(d.revisions || []); }
-      if (teamRes.ok)   { const d = await teamRes.json();   setTeamMembers(d.members || []); }
-      if (zonesRes.ok)  { const d = await zonesRes.json();  setZones(d.zones || []); }
-      const svcData = svcRes.ok ? await svcRes.json() : {};
-      const pkgData = pkgRes.ok ? await pkgRes.json() : {};
+      const listData  = listRes.ok  ? await listRes.json()   : {};
+      const tenantData= tenantRes.ok? await tenantRes.json() : {};
+      const revData   = revRes.ok   ? await revRes.json()    : {};
+      const teamData  = teamRes.ok  ? await teamRes.json()   : {};
+      const zonesData = zonesRes.ok ? await zonesRes.json()  : {};
+      const svcData   = svcRes.ok   ? await svcRes.json()    : {};
+      const pkgData   = pkgRes.ok   ? await pkgRes.json()    : {};
+
+      const realListings = listData.listings || [];
+      const realTeam     = teamData.members  || [];
+      const realZones    = zonesData.zones   || [];
+
+      setTenant(tenantData.tenant || null);
       setHasProducts((svcData.items?.length || 0) > 0 || (pkgData.items?.length || 0) > 0);
+
+      // Show sample data when tenant has no listings yet
+      if (realListings.length === 0) {
+        const sample = buildSampleData();
+        setListings(sample.listings);
+        setTeamMembers(sample.team);
+        setZones(sample.zones);
+        setPendingRevisions(sample.revisions);
+        setIsSample(true);
+      } else {
+        setListings(realListings);
+        setTeamMembers(realTeam);
+        setZones(realZones);
+        setPendingRevisions(revData.revisions || []);
+        setIsSample(false);
+      }
       setLoading(false);
     });
   }, []);
@@ -436,6 +516,20 @@ export default function DashboardHome() {
             )}
           </div>
         </div>
+
+        {/* ── Sample data notice ───────────────────────────────────────── */}
+        {isSample && (
+          <div className="rounded-xl px-4 py-2.5 flex items-center gap-3 text-[12px]"
+            style={{ background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E" }}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>This is sample data — it will be replaced once you add your first booking.</span>
+            <Link href="/dashboard/bookings/create" className="ml-auto font-semibold underline whitespace-nowrap hover:opacity-75">
+              Add a booking →
+            </Link>
+          </div>
+        )}
 
         {/* ── Onboarding banner ─────────────────────────────────────────── */}
         {showSetupBanner && (
