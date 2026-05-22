@@ -1330,13 +1330,16 @@ export default function TeamPage() {
     return cells;
   }, [anchor]);
 
-  // Map confirmed/completed bookings that have a shootDate to calendar
+  // Map confirmed/completed bookings that have a confirmed shootDate to calendar.
+  // Only shootDate (not preferredDate) counts — preferredDate is unconfirmed client preference.
+  // Requested bookings are excluded: they haven't been scheduled yet.
   const calendarEvents = useMemo(() => {
     return bookings
-      .filter((b) => (b.shootDate || b.preferredDate) && ["confirmed", "completed", "requested"].includes(b.status))
+      .filter((b) => b.shootDate && ["confirmed", "completed"].includes(b.status))
       .map((b) => {
-        const raw = b.shootDate || b.preferredDate;
-        const ds = typeof raw === "string" && raw.length === 10 ? raw + "T12:00:00" : raw;
+        const ds = typeof b.shootDate === "string" && b.shootDate.length === 10
+          ? b.shootDate + "T12:00:00"
+          : b.shootDate;
         return { ...b, shootDateObj: new Date(ds) };
       });
   }, [bookings]);
