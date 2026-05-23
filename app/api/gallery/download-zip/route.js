@@ -3,10 +3,11 @@ import sharp from "sharp";
 import { adminDb } from "@/lib/firebase-admin";
 import { rateLimit } from "@/lib/rateLimit";
 
-export const dynamic = "force-dynamic";
+export const dynamic    = "force-dynamic";
+export const maxDuration = 300; // Vercel Pro max — prevents 504 on large galleries
 
 const WEB_MAX_PX  = 2048;
-const WEB_QUALITY = 85;
+const WEB_QUALITY = 82;
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
@@ -138,26 +139,33 @@ export async function GET(req) {
     if (lines.length) linksText = lines.join("\n");
   }
 
-  // Build zip
-  const zipBuffer = await new Promise((resolve, reject) => {
-    const chunks = [];
-    const archive = archiver("zip", { zlib: { level: 6 } });
-    archive.on("data",  (chunk) => chunks.push(chunk));
-    archive.on("end",   () => resolve(Buffer.concat(chunks)));
-    archive.on("error", reject);
-    for (const { buffer, fileName } of entries) {
-      archive.append(buffer, { name: fileName });
-    }
-    for (const { buffer, fileName } of extraEntries) {
-      archive.append(buffer, { name: fileName });
-    }
-    if (linksText) {
-      archive.append(Buffer.from(linksText, "utf8"), { name: "Tour Links.txt" });
-    }
-    archive.finalize();
+  const address = (gallery.bookingAddress || "gallery").replace(/[^a-z0-9]/gi, "-").toLowerCase();
+  const zipName = extras
+    ? `${address}-complete-package.zip`
+    : `${address}-${format === "web" ? "web-ready" : "print"}.zip`;
+
+  // Stream the zip as it builds — avoids holding entire gallery in memory
+  const archive = archiver("zip", { zlib: { level: 5 } });
+  for (const { buffer, fileName } of entries) {
+    archive.append(buffer, { name: fileName });
+  }
+  for (const { buffer, fileName } of extraEntries) {
+    archive.append(buffer, { name: fileName });
+  }
+  if (linksText) {
+    archive.append(Buffer.from(linksText, "utf8"), { name: "Tour Links.txt" });
+  }
+
+  const readable = new ReadableStream({
+    start(controller) {
+      archive.on("data",  (chunk) => controller.enqueue(new Uint8Array(chunk)));
+      archive.on("end",   () => controller.close());
+      archive.on("error", (err) => controller.error(err));
+      archive.finalize();
+    },
   });
 
-  // Log download activity
+  // Log download activity (fire-and-forget)
   if (tenantDoc.data()?.gallerySettings?.viewerTracking !== false) {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null;
     adminDb
@@ -168,17 +176,11 @@ export async function GET(req) {
       .catch(() => {});
   }
 
-  const address = (gallery.bookingAddress || "gallery").replace(/[^a-z0-9]/gi, "-").toLowerCase();
-  const zipName = extras
-    ? `${address}-complete-package.zip`
-    : `${address}-${format === "web" ? "web-ready" : "print"}.zip`;
-
-  return new Response(zipBuffer, {
+  return new Response(readable, {
     status: 200,
     headers: {
       "Content-Type":        "application/zip",
       "Content-Disposition": `attachment; filename="${zipName}"`,
-      "Content-Length":      String(zipBuffer.length),
       "Cache-Control":       "private, no-store",
     },
   });

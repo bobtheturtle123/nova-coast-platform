@@ -20,14 +20,19 @@ export async function GET(req) {
     return Response.json({ error: "not_connected", message: "CubiCasa account not connected." }, { status: 403 });
   }
 
-  const apiKey = creds.apiKey.trim();
-  console.log(`[cubicasa/orders] key length=${apiKey.length} prefix=${apiKey.slice(0, 6)} email=${creds.email}`);
+  const apiKey   = creds.apiKey.trim();
+  const email    = creds.email.trim();
+  const basicB64 = Buffer.from(`${email}:${apiKey}`).toString("base64");
+  console.log(`[cubicasa/orders] key length=${apiKey.length} prefix=${apiKey.slice(0, 6)} email=${email}`);
 
-  // /orders exists (returned auth error before, not 404). Try auth header variants.
+  // CubiCasa v3 partner API — try multiple auth formats and endpoint names
   const attempts = [
-    { url: "https://app.cubi.casa/api/integrate/v3/orders", headers: { "X-API-KEY": apiKey } },
+    { url: "https://app.cubi.casa/api/integrate/v3/scans",  headers: { Authorization: `Bearer ${apiKey}` } },
+    { url: "https://app.cubi.casa/api/integrate/v3/scans",  headers: { Authorization: `Basic ${basicB64}` } },
+    { url: "https://app.cubi.casa/api/integrate/v3/scans",  headers: { "X-Api-Key": apiKey } },
     { url: "https://app.cubi.casa/api/integrate/v3/orders", headers: { Authorization: `Bearer ${apiKey}` } },
-    { url: `https://app.cubi.casa/api/integrate/v3/orders?email=${encodeURIComponent(creds.email)}`, headers: { "X-API-KEY": apiKey } },
+    { url: "https://app.cubi.casa/api/integrate/v3/orders", headers: { Authorization: `Basic ${basicB64}` } },
+    { url: "https://app.cubi.casa/api/integrate/v3/orders", headers: { "X-Api-Key": apiKey } },
   ];
 
   for (const attempt of attempts) {
@@ -52,7 +57,7 @@ export async function GET(req) {
         return Response.json({ error: `CubiCasa returned non-JSON: ${text.slice(0, 200)}` }, { status: 502 });
       }
 
-      const raw    = Array.isArray(data) ? data : (data.orders ?? data.data ?? data.results ?? []);
+      const raw    = Array.isArray(data) ? data : (data.scans ?? data.orders ?? data.data ?? data.results ?? []);
       const orders = raw.map((o) => ({
         id:                         o.id ?? o.order_id ?? String(Math.random()),
         address:                    o.address ?? o.property_address ?? o.location ?? "",
