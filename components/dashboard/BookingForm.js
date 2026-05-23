@@ -1714,10 +1714,29 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                           </div>
                         </div>
                       </div>
-                      <button type="button" onClick={() => setShowSchedulePopup(false)}
+                      <button type="button"
+                        onClick={async () => {
+                          setShowSchedulePopup(false);
+                          if (isEdit && bookingId) {
+                            setSaving(true);
+                            try {
+                              const token = await getToken();
+                              await fetch(`/api/dashboard/bookings/${bookingId}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                                body: JSON.stringify({
+                                  shootDate:     form.shootDate,
+                                  shootTime:     form.shootTime,
+                                  shootDuration: Number(form.shootDuration) || null,
+                                }),
+                              });
+                            } catch { /* non-critical — full save still available */ }
+                            finally { setSaving(false); }
+                          }
+                        }}
                         className="w-full py-3 rounded-xl text-white text-sm font-semibold transition-colors"
                         style={{ backgroundColor: "#3486cf" }}>
-                        Confirm Schedule ✓
+                        {saving ? "Saving…" : "Confirm Schedule ✓"}
                       </button>
                     </div>
                   )}

@@ -1,6 +1,7 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { v4 as uuidv4 } from "uuid";
 import { stripTags } from "@/lib/rateLimit";
+import { stripe } from "@/lib/stripe";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -12,7 +13,7 @@ async function getCtx(req) {
   } catch { return null; }
 }
 
-const ALLOWED_TYPES = ["packages", "services", "addons"];
+const ALLOWED_TYPES = ["packages", "services", "addons", "retainers"];
 
 // GET /api/dashboard/products?type=packages
 export async function GET(req) {
@@ -53,12 +54,41 @@ export async function POST(req) {
   const item = sanitizeItem(body, type);
   item.id = id;
 
+  // For retainers, create Stripe Product + recurring Price
+  if (type === "retainers" && process.env.STRIPE_SECRET_KEY) {
+    try {
+      const { interval, interval_count } = stripeInterval(item.billingInterval);
+      const stripeProduct = await stripe.products.create({
+        name:        item.name,
+        description: item.description || undefined,
+        metadata:    { tenantId: ctx.tenantId, productId: id },
+      });
+      const stripePrice = await stripe.prices.create({
+        product:    stripeProduct.id,
+        unit_amount: Math.round(item.price * 100),
+        currency:   "usd",
+        recurring:  { interval, interval_count },
+        metadata:   { tenantId: ctx.tenantId, productId: id },
+      });
+      item.stripeProductId = stripeProduct.id;
+      item.stripePriceId   = stripePrice.id;
+    } catch (e) {
+      console.error("Stripe retainer create failed:", e.message);
+    }
+  }
+
   await adminDb
     .collection("tenants").doc(ctx.tenantId)
     .collection(type).doc(id)
     .set(item);
 
   return Response.json({ item });
+}
+
+function stripeInterval(billingInterval) {
+  if (billingInterval === "year")    return { interval: "year",  interval_count: 1 };
+  if (billingInterval === "quarter") return { interval: "month", interval_count: 3 };
+  return { interval: "month", interval_count: 1 };
 }
 
 function sanitizeItem(body, type) {
@@ -90,6 +120,14 @@ function sanitizeItem(body, type) {
       ? body.includes.map((s) => stripTags(String(s)).slice(0, 100))
       : [];
     base.featured = !!body.featured;
+  }
+
+  // Retainer-specific
+  if (type === "retainers") {
+    const allowed = ["month", "quarter", "year"];
+    base.billingInterval = allowed.includes(body.billingInterval) ? body.billingInterval : "month";
+    base.recurring = true;
+    base.priceTiers = null;
   }
 
   return base;

@@ -28,10 +28,21 @@ const TIER_LABELS = {
 };
 
 const TYPE_META = {
-  packages: { label: "Packages",   singular: "Package",     color: "bg-blue-50 text-blue-700 border-blue-200" },
-  services: { label: "Services",   singular: "Service",     color: "bg-purple-50 text-purple-700 border-purple-200" },
-  addons:   { label: "Add-ons",    singular: "Add-on",      color: "bg-amber-50 text-amber-700 border-amber-200" },
+  packages:  { label: "Packages",   singular: "Package",   color: "bg-blue-50 text-blue-700 border-blue-200" },
+  services:  { label: "Services",   singular: "Service",   color: "bg-purple-50 text-purple-700 border-purple-200" },
+  addons:    { label: "Add-ons",    singular: "Add-on",    color: "bg-amber-50 text-amber-700 border-amber-200" },
+  retainers: { label: "Retainers",  singular: "Retainer",  color: "bg-teal-50 text-teal-700 border-teal-200" },
 };
+
+const BILLING_INTERVALS = [
+  { value: "month",   label: "Monthly",   stripe: { interval: "month",  interval_count: 1 } },
+  { value: "quarter", label: "Quarterly", stripe: { interval: "month",  interval_count: 3 } },
+  { value: "year",    label: "Annually",  stripe: { interval: "year",   interval_count: 1 } },
+];
+
+function intervalLabel(v) {
+  return BILLING_INTERVALS.find((b) => b.value === v)?.label || "Monthly";
+}
 
 // ─── Product edit form ────────────────────────────────────────────────────────
 function ProductForm({ item, type: initialType, allServices, allPackages, teamMembers, pricingConfig, onSave, onDelete, onClose }) {
@@ -55,6 +66,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
     payRateTiers:  item?.payRateTiers  || {},
     duration:      item?.duration      ?? "",
     durationTiers: item?.durationTiers || {},
+    billingInterval: item?.billingInterval || "month",
   }));
   const [saving,      setSaving]      = useState(false);
   const [deleting,    setDeleting]    = useState(false);
@@ -142,8 +154,14 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
       thumbnailUrl: form.mediaUrls[0] || "",
       price:       Number(form.price),
       active:      form.active,
-      assignedPhotographers: form.assignedPhotographers,
-      ...(form.tiered ? { priceTiers: form.priceTiers } : { priceTiers: null }),
+      assignedPhotographers: type === "retainers" ? [] : form.assignedPhotographers,
+      ...(type === "retainers" ? {
+        billingInterval: form.billingInterval || "month",
+        recurring:       true,
+        priceTiers:      null,
+      } : {
+        ...(form.tiered ? { priceTiers: form.priceTiers } : { priceTiers: null }),
+      }),
       ...(type === "packages" ? { tagline: form.tagline, deliverables: form.deliverables, featured: form.featured, includes: form.includes } : {}),
       ...(type === "addons" ? { showWith: form.showWith } : {}),
       ...((type === "services" || type === "packages") ? { isTwilight: form.isTwilight } : {}),
@@ -151,8 +169,10 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
         duration:      !form.tiered && form.duration !== "" ? Number(form.duration) : null,
         durationTiers: form.tiered && Object.keys(form.durationTiers).length > 0 ? form.durationTiers : null,
       } : {}),
-      payRate:      form.payRate !== "" ? Number(form.payRate) : null,
-      payRateTiers: form.tiered && Object.keys(form.payRateTiers).length > 0 ? form.payRateTiers : null,
+      ...(type !== "retainers" ? {
+        payRate:      form.payRate !== "" ? Number(form.payRate) : null,
+        payRateTiers: form.tiered && Object.keys(form.payRateTiers).length > 0 ? form.payRateTiers : null,
+      } : {}),
     };
     await onSave(payload, type);
     setSaving(false);
@@ -211,9 +231,11 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                 <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{form.description}</p>
               )}
               <p className="text-sm font-semibold text-[#0F172A] mt-1">
-                {form.tiered
-                  ? (() => { const tv = Object.values(form.priceTiers).filter(v => v > 0); return tv.length > 0 ? `From ${fmtMoney(Math.min(...tv))}` : "Set tier prices below"; })()
-                  : fmtMoney(Number(form.price))}
+                {type === "retainers"
+                  ? `${fmtMoney(Number(form.price))} / ${{ month: "month", quarter: "quarter", year: "year" }[form.billingInterval] || "month"}`
+                  : form.tiered
+                    ? (() => { const tv = Object.values(form.priceTiers).filter(v => v > 0); return tv.length > 0 ? `From ${fmtMoney(Math.min(...tv))}` : "Set tier prices below"; })()
+                    : fmtMoney(Number(form.price))}
               </p>
             </div>
           </div>
@@ -229,6 +251,26 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
             <textarea value={form.description} onChange={field("description")} rows={3}
               className="input-field w-full resize-none" placeholder="Describe what this includes…" />
           </div>
+
+          {/* Retainer: billing interval */}
+          {type === "retainers" && (
+            <div>
+              <label className="label-field">Billing Interval</label>
+              <div className="flex gap-2">
+                {BILLING_INTERVALS.map((b) => (
+                  <button key={b.value} type="button" onClick={() => setForm((f) => ({ ...f, billingInterval: b.value }))}
+                    className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      form.billingInterval === b.value
+                        ? "border-[#3486cf] bg-[#3486cf] text-white"
+                        : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                    }`}>
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">Clients will be charged on this schedule. A Stripe Price is created automatically.</p>
+            </div>
+          )}
 
           {/* Media upload */}
           <div>
@@ -354,16 +396,20 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
           {/* Pricing */}
           <details className="border border-gray-200 rounded-lg" open>
             <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none hover:bg-gray-50 rounded-lg">
-              <span className="text-sm font-medium text-[#0F172A]">Pricing</span>
-              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                <span className="text-xs text-gray-500">Tier pricing</span>
-                <div
-                  onClick={() => setForm((f) => ({ ...f, tiered: !f.tiered }))}
-                  className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${form.tiered ? "bg-[#3486cf]" : "bg-gray-300"}`}
-                >
-                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.tiered ? "translate-x-4" : "translate-x-0.5"}`} />
+              <span className="text-sm font-medium text-[#0F172A]">
+                Pricing{type === "retainers" ? ` — billed ${intervalLabel(form.billingInterval).toLowerCase()}` : ""}
+              </span>
+              {type !== "retainers" && (
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <span className="text-xs text-gray-500">Tier pricing</span>
+                  <div
+                    onClick={() => setForm((f) => ({ ...f, tiered: !f.tiered }))}
+                    className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${form.tiered ? "bg-[#3486cf]" : "bg-gray-300"}`}
+                  >
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.tiered ? "translate-x-4" : "translate-x-0.5"}`} />
+                  </div>
                 </div>
-              </div>
+              )}
             </summary>
             <div className="px-4 pb-4 pt-3 border-t border-gray-100 space-y-4">
               {!form.tiered ? (
@@ -410,8 +456,8 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
             </div>
           </details>
 
-          {/* Photographer pay rate — collapsed by default */}
-          <details className="border border-gray-200 rounded-lg">
+          {/* Photographer pay rate — collapsed by default — not applicable to retainers */}
+          {type !== "retainers" && <details className="border border-gray-200 rounded-lg">
             <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none hover:bg-gray-50 rounded-lg">
               <span className="text-sm font-medium text-[#0F172A]">Photographer Pay Rate</span>
               <span className="text-xs text-gray-400">optional</span>
@@ -450,10 +496,10 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                 })()
               )}
             </div>
-          </details>
+          </details>}
 
           {/* Photographer assignment */}
-          {teamMembers?.length > 0 && (
+          {type !== "retainers" && teamMembers?.length > 0 && (
             <div>
               <label className="label-field">Assigned Photographers</label>
               <p className="text-xs text-gray-400 mb-2">Only these photographers will be assigned to this service. Leave blank for all.</p>
@@ -591,9 +637,14 @@ function fmtMoney(v) {
 // ─── Product row ──────────────────────────────────────────────────────────────
 function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate }) {
   const tierVals = item.priceTiers ? Object.values(item.priceTiers).filter(v => v > 0) : [];
-  const fromPrice = item.priceTiers
-    ? tierVals.length > 0 ? `From ${fmtMoney(Math.min(...tierVals))}` : "Tier pricing"
-    : fmtMoney(item.price || 0);
+  const intervalSuffix = type === "retainers"
+    ? { month: "/mo", quarter: "/qtr", year: "/yr" }[item.billingInterval || "month"]
+    : "";
+  const fromPrice = type === "retainers"
+    ? `${fmtMoney(item.price || 0)}${intervalSuffix}`
+    : item.priceTiers
+      ? tierVals.length > 0 ? `From ${fmtMoney(Math.min(...tierVals))}` : "Tier pricing"
+      : fmtMoney(item.price || 0);
 
   const [hovered, setHovered] = useState(false);
   return (
@@ -878,7 +929,7 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
 export default function ProductsPage() {
   const toast = useToast();
   const [activeType,  setActiveType]  = useState("packages");
-  const [items,       setItems]       = useState({ packages: [], services: [], addons: [] });
+  const [items,       setItems]       = useState({ packages: [], services: [], addons: [], retainers: [] });
   const [loading,     setLoading]     = useState(true);
   const [editing,     setEditing]     = useState(null);
   const [search,      setSearch]      = useState("");
@@ -890,20 +941,22 @@ export default function ProductsPage() {
   useEffect(() => {
     async function load() {
       const token = await getToken();
-      const [pkgRes, svcRes, adnRes, teamRes, tenantRes] = await Promise.all([
-        fetch("/api/dashboard/products?type=packages", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/products?type=services", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/products?type=addons",   { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/team",                   { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/tenant",                 { headers: { Authorization: `Bearer ${token}` } }),
+      const [pkgRes, svcRes, adnRes, retRes, teamRes, tenantRes] = await Promise.all([
+        fetch("/api/dashboard/products?type=packages",  { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/products?type=services",  { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/products?type=addons",    { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/products?type=retainers", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/team",                    { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/tenant",                  { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      const [pkgData, svcData, adnData, teamData, tenantData] = await Promise.all([
-        pkgRes.json(), svcRes.json(), adnRes.json(), teamRes.json(), tenantRes.json(),
+      const [pkgData, svcData, adnData, retData, teamData, tenantData] = await Promise.all([
+        pkgRes.json(), svcRes.json(), adnRes.json(), retRes.json(), teamRes.json(), tenantRes.json(),
       ]);
       setItems({
-        packages: pkgData.items || [],
-        services: svcData.items || [],
-        addons:   adnData.items || [],
+        packages:  pkgData.items || [],
+        services:  svcData.items || [],
+        addons:    adnData.items || [],
+        retainers: retData.items || [],
       });
       setTeamMembers(teamData.members || []);
       setPricingConfig(tenantData.tenant?.pricingConfig || null);
@@ -1035,8 +1088,9 @@ export default function ProductsPage() {
       const durStr = item.duration ? `${item.duration} min` : null;
       return durStr ? `${pkgStr} · ${durStr}` : pkgStr;
     }
-    if (activeType === "addons") return addonTriggerLabel(item);
-    if (activeType === "packages") return packageServicesLabel(item);
+    if (activeType === "addons")    return addonTriggerLabel(item);
+    if (activeType === "packages")  return packageServicesLabel(item);
+    if (activeType === "retainers") return intervalLabel(item.billingInterval || "month");
     return null;
   };
 
@@ -1051,9 +1105,10 @@ export default function ProductsPage() {
           <ImportPricingButton
             onImport={(imported) => {
               setItems((prev) => ({
-                packages: [...(imported.packages || []), ...prev.packages],
-                services: [...(imported.services || []), ...prev.services],
-                addons:   [...(imported.addons   || []), ...prev.addons],
+                packages:  [...(imported.packages  || []), ...prev.packages],
+                services:  [...(imported.services  || []), ...prev.services],
+                addons:    [...(imported.addons    || []), ...prev.addons],
+                retainers: [...(imported.retainers || []), ...prev.retainers],
               }));
             }}
             activeType={activeType}
@@ -1107,7 +1162,7 @@ export default function ProductsPage() {
           <div className="w-12 flex-shrink-0" />
           <div className="flex-1">Product</div>
           <div className="w-32 flex-shrink-0 text-right">
-            {activeType === "services" ? "In packages" : activeType === "addons" ? "Triggers" : "Services"}
+            {activeType === "services" ? "In packages" : activeType === "addons" ? "Triggers" : activeType === "retainers" ? "Billing" : "Services"}
           </div>
           <div className="w-28 flex-shrink-0 text-right">Price</div>
           <div className="w-9 flex-shrink-0 text-center">Active</div>
@@ -1122,7 +1177,11 @@ export default function ProductsPage() {
             ) : (
               <>
                 <p className="font-medium text-gray-500">No {TYPE_META[activeType].label.toLowerCase()} yet</p>
-                <p className="text-sm mt-1">Click "+ New Item" to add one.</p>
+                <p className="text-sm mt-1">
+                  {activeType === "retainers"
+                    ? "Retainers let you offer monthly, quarterly, or annual recurring billing to clients."
+                    : "Click \"+ New Item\" to add one."}
+                </p>
               </>
             )}
           </div>
