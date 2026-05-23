@@ -1068,11 +1068,11 @@ export default function GalleryDetailPage() {
     ? `${APP_URL}/${gallery.tenantSlug || ""}/gallery/${gallery.accessToken}`
     : null;
 
-  // Determine what images to show in current tab
-  let displayImages = allMedia;
+  // Determine what images (photos only) to show in current tab
+  let displayImages = images;
   if (activeTab !== "all") {
     const catKeys = categories[activeTab] || [];
-    displayImages = allMedia.filter((m) => catKeys.includes(m.key));
+    displayImages = images.filter((m) => catKeys.includes(m.key));
   }
 
   return (
@@ -1084,7 +1084,10 @@ export default function GalleryDetailPage() {
         <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
           <div>
             <h1 className="font-display text-white text-xl">{gallery.bookingAddress || "Gallery"}</h1>
-            <p className="text-white/60 text-xs mt-0.5">{allMedia.length} items</p>
+            <p className="text-white/60 text-xs mt-0.5">
+              {images.length} photo{images.length !== 1 ? "s" : ""}
+              {videos.length > 0 && ` · ${videos.length} video${videos.length !== 1 ? "s" : ""}`}
+            </p>
           </div>
           <span className={`text-xs px-3 py-1 rounded-full font-medium ${
             gallery.delivered ? "bg-green-500 text-white" :
@@ -1370,7 +1373,7 @@ export default function GalleryDetailPage() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
                 {[
-                  { id: "all",    label: `All (${allMedia.length})` },
+                  { id: "all",    label: `Photos (${images.length})` },
                   ...catNames.map((c) => ({ id: c, label: `${c} (${(categories[c] || []).length})` })),
                 ].map((t) => (
                   <button key={t.id} onClick={() => setActiveTab(t.id)}
@@ -1500,20 +1503,6 @@ export default function GalleryDetailPage() {
                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                             {group.items.map((m, i) => {
                               const globalIdx = displayImages.indexOf(m);
-                              if (m.fileType?.startsWith("video/")) {
-                                return (
-                                  <div key={m.key || i} className={`group relative rounded-xl overflow-hidden border border-gray-100 ${m.hidden ? "opacity-50" : ""}`}>
-                                    <video src={m.url} controls className="w-full aspect-video object-cover" />
-                                    <div className="flex items-center justify-between px-2 py-1 bg-gray-50">
-                                      <p className="text-[10px] text-gray-400 truncate flex-1">{m.fileName}</p>
-                                      <div className="flex gap-1">
-                                        <button onClick={() => m.key && toggleHideMedia(m.key)} className="text-[10px] text-gray-400 hover:text-[#3486cf] px-1">{m.hidden ? "Show" : "Hide"}</button>
-                                        <button onClick={() => m.key && deleteMedia([m.key])} disabled={deleting} className="text-[10px] text-red-400 hover:text-red-600 px-1">Del</button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              }
                               return (
                                 <MediaThumb
                                   key={m.key || i}
@@ -1544,48 +1533,64 @@ export default function GalleryDetailPage() {
                   });
                 })() : (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {displayImages.map((m, i) => {
-                      if (m.fileType?.startsWith("video/")) {
-                        return (
-                          <div key={m.key || i} className={`group relative rounded-xl overflow-hidden border border-gray-100 ${m.hidden ? "opacity-50" : ""}`}>
-                            <video src={m.url} controls className="w-full aspect-video object-cover" />
-                            <div className="flex items-center justify-between px-2 py-1 bg-gray-50">
-                              <p className="text-[10px] text-gray-400 truncate flex-1">{m.fileName}</p>
-                              <div className="flex gap-1">
-                                <button onClick={() => m.key && toggleHideMedia(m.key)} className="text-[10px] text-gray-400 hover:text-[#3486cf] px-1">{m.hidden ? "Show" : "Hide"}</button>
-                                <button onClick={() => m.key && deleteMedia([m.key])} disabled={deleting} className="text-[10px] text-red-400 hover:text-red-600 px-1">Del</button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return (
-                        <MediaThumb
-                          key={m.key || i}
-                          src={m.url} alt={m.fileName || `Photo ${i+1}`}
-                          isFirst={i === 0 && activeTab === "all"}
-                          index={i}
-                          isDragging={dragIdx === i}
-                          category={getMediaCategory(m.key)}
-                          categories={catNames}
-                          onDragStart={(e) => handleDragStart(e, i)}
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, i)}
-                          onDragEnd={handleDragEnd}
-                          onAssignCategory={(cat) => assignCategory(m.key, cat)}
-                          selected={selectedKeys.has(m.key)}
-                          onSelect={(e) => m.key && handleSelectWithShift(m.key, i, e)}
-                          onDelete={() => m.key && deleteMedia([m.key])}
-                          selectMode={selectMode}
-                          hidden={!!m.hidden}
-                          onToggleHide={() => m.key && toggleHideMedia(m.key)}
-                        />
-                      );
-                    })}
+                    {displayImages.map((m, i) => (
+                      <MediaThumb
+                        key={m.key || i}
+                        src={m.url} alt={m.fileName || `Photo ${i+1}`}
+                        isFirst={i === 0 && activeTab === "all"}
+                        index={i}
+                        isDragging={dragIdx === i}
+                        category={getMediaCategory(m.key)}
+                        categories={catNames}
+                        onDragStart={(e) => handleDragStart(e, i)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, i)}
+                        onDragEnd={handleDragEnd}
+                        onAssignCategory={(cat) => assignCategory(m.key, cat)}
+                        selected={selectedKeys.has(m.key)}
+                        onSelect={(e) => m.key && handleSelectWithShift(m.key, i, e)}
+                        onDelete={() => m.key && deleteMedia([m.key])}
+                        selectMode={selectMode}
+                        hidden={!!m.hidden}
+                        onToggleHide={() => m.key && toggleHideMedia(m.key)}
+                      />
+                    ))}
                   </div>
                 )}
 
           </>
+        )}
+
+        {/* ── Uploaded Videos ────────────────────────────────────────────── */}
+        {videos.length > 0 && (
+          <div className="mt-6 mb-2">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              Uploaded Videos ({videos.length})
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {videos.map((m, i) => (
+                <div key={m.key || i} className={`rounded-xl overflow-hidden border border-gray-100 ${m.hidden ? "opacity-50" : ""}`}>
+                  <video src={m.url} controls className="w-full aspect-video bg-black" />
+                  <div className="flex items-center justify-between px-2 py-1.5 bg-gray-50">
+                    <p className="text-xs text-gray-500 truncate flex-1">{m.fileName || "video"}</p>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => m.key && toggleHideMedia(m.key)}
+                        className="text-xs text-gray-400 hover:text-[#3486cf] px-2 py-0.5 rounded hover:bg-gray-100 transition-colors">
+                        {m.hidden ? "Show" : "Hide"}
+                      </button>
+                      <button
+                        onClick={() => m.key && deleteMedia([m.key])}
+                        disabled={deleting}
+                        className="text-xs text-red-400 hover:text-red-600 px-2 py-0.5 rounded hover:bg-red-50 transition-colors disabled:opacity-50">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 

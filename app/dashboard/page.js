@@ -342,7 +342,9 @@ export default function DashboardHome() {
   // Team enriched with scope status
   const teamWithStatus = useMemo(() => teamMembers.map(m => {
     const shoots = scopeListings.filter(l => l.photographerId === m.id);
-    const zone   = shoots.length ? zones.find(z => z.id === shoots[0]?.zoneId) : null;
+    const zone   = shoots.length
+      ? (zones.find(z => z.id === shoots[0]?.zoneId) || zones.find(z => (z.assignedTo || []).includes(m.id)))
+      : null;
     const times  = shoots.filter(l => l.shootTime).map(l => l.shootTime).sort();
     return {
       ...m,
@@ -354,8 +356,12 @@ export default function DashboardHome() {
   }).sort((a, b) => Number(b.workingToday) - Number(a.workingToday)), [teamMembers, scopeListings, zones]);
 
   // Zones enriched with scope shoot counts
+  // Fallback: match by zone.assignedTo when booking predates zoneId tracking
   const zonesWithStatus = useMemo(() => zones.map(z => {
-    const zoneShots = scopeListings.filter(l => l.zoneId === z.id);
+    const zoneShots = scopeListings.filter(l =>
+      l.zoneId === z.id ||
+      (!l.zoneId && l.photographerId && (z.assignedTo || []).includes(l.photographerId))
+    );
     const names     = [...new Set(zoneShots.map(l => l.photographerName).filter(Boolean))];
     return { ...z, todayShootCount: zoneShots.length, todayPhotographerNames: names };
   }).sort((a, b) => b.todayShootCount - a.todayShootCount || (a.name || "").localeCompare(b.name || "")), [zones, scopeListings]);
@@ -374,7 +380,7 @@ export default function DashboardHome() {
           photographerId:   l.photographerId,
           photographerName: l.photographerName || ph?.name || "Unassigned",
           phColor:          ph?.color || avatarColor(l.photographerName || ""),
-          zone:             zones.find(z => z.id === l.zoneId),
+          zone:             zones.find(z => z.id === l.zoneId) || zones.find(z => (z.assignedTo || []).includes(l.photographerId)),
           shoots:           [],
           dayTotal:         0,
         };
@@ -858,7 +864,7 @@ export default function DashboardHome() {
               // By time: flat sorted list
               <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #F3F4F6" }}>
                 {[...scopeListings].sort((a, b) => (a.shootTime || "").localeCompare(b.shootTime || "")).map((l, idx, arr) => {
-                  const zone      = zones.find(z => z.id === l.zoneId);
+                  const zone      = zones.find(z => z.id === l.zoneId) || zones.find(z => (z.assignedTo || []).includes(l.photographerId));
                   const lineColor = zone ? (zone.type === "exclude" ? "#EF4444" : (zone.color || "#3B82F6")) : avatarColor(l.photographerName || "");
                   const pay       = payLabel(l);
                   return (
