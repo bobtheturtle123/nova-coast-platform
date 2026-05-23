@@ -73,6 +73,13 @@ export async function GET(req) {
     }
   }
 
+  // Normalize a date value (Timestamp ISO or plain string) to YYYY-MM-DD
+  function toDateStr(val) {
+    if (!val) return null;
+    if (typeof val === "string") return val.length > 10 ? val.slice(0, 10) : val;
+    return null;
+  }
+
   const listings = docs
     .filter((doc) => doc.data().isListing !== false)
     .map((doc) => {
@@ -88,9 +95,10 @@ export async function GET(req) {
         state:        b.state        || "",
         squareFootage:b.squareFootage|| "",
         propertyType: b.propertyType || "",
-        status:       b.status       || "pending_payment",
-        shootDate:    b.shootDate    || b.preferredDate || null,
-        preferredDate:b.preferredDate|| null,
+        status:          b.status          || "pending_payment",
+        workflowStatus:  b.workflowStatus  || null,
+        shootDate:       toDateStr(b.shootDate) || toDateStr(b.preferredDate) || null,
+        preferredDate:   toDateStr(b.preferredDate) || null,
         totalPrice:       b.totalPrice       || 0,
         depositAmount:    b.depositAmount    || 0,
         remainingBalance: b.remainingBalance || 0,
@@ -103,11 +111,14 @@ export async function GET(req) {
         createdAt:   b.createdAt  || null,
         galleryId:   b.galleryId  || null,
         gallery:     galleryMap[doc.id] || null,
+        zoneId:            b.zoneId            || null,
         photographerId:    b.photographerId    || null,
         photographerEmail: b.photographerEmail || null,
         photographerName:  b.photographerName  || null,
         preferredTime:     b.preferredTime     || null,
         shootTime:         b.shootTime         || null,
+        editingStartedAt:  b.editingStartedAt  || null,
+        deliveredAt:       b.deliveredAt       || null,
         source:            b.source            || null,
       };
     });

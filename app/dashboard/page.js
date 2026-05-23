@@ -221,51 +221,60 @@ export default function DashboardHome() {
     if (setupPref !== null) setSetupOpen(setupPref === "true");
   }, []);
 
+  async function loadAll() {
+    const result = await auth.currentUser?.getIdTokenResult(true);
+    if (!result) return;
+    const token = result.token;
+    const h = { Authorization: `Bearer ${token}` };
+    const [listRes, tenantRes, svcRes, pkgRes, revRes, teamRes, zonesRes] = await Promise.all([
+      fetch("/api/dashboard/listings",                 { headers: h }),
+      fetch("/api/dashboard/tenant",                   { headers: h }),
+      fetch("/api/dashboard/products?type=services",   { headers: h }),
+      fetch("/api/dashboard/products?type=packages",   { headers: h }),
+      fetch("/api/dashboard/revisions?status=pending", { headers: h }),
+      fetch("/api/dashboard/team",                     { headers: h }),
+      fetch("/api/dashboard/service-areas",            { headers: h }),
+    ]);
+    const listData  = listRes.ok  ? await listRes.json()   : {};
+    const tenantData= tenantRes.ok? await tenantRes.json() : {};
+    const revData   = revRes.ok   ? await revRes.json()    : {};
+    const teamData  = teamRes.ok  ? await teamRes.json()   : {};
+    const zonesData = zonesRes.ok ? await zonesRes.json()  : {};
+    const svcData   = svcRes.ok   ? await svcRes.json()    : {};
+    const pkgData   = pkgRes.ok   ? await pkgRes.json()    : {};
+
+    const realListings = listData.listings || [];
+    const realTeam     = teamData.members  || [];
+    const realZones    = zonesData.zones   || [];
+
+    setTenant(tenantData.tenant || null);
+    setHasProducts((svcData.items?.length || 0) > 0 || (pkgData.items?.length || 0) > 0);
+
+    // Show sample data when tenant has no listings yet
+    if (realListings.length === 0) {
+      const sample = buildSampleData();
+      setListings(sample.listings);
+      setTeamMembers(sample.team);
+      setZones(sample.zones);
+      setPendingRevisions(sample.revisions);
+      setIsSample(true);
+    } else {
+      setListings(realListings);
+      setTeamMembers(realTeam);
+      setZones(realZones);
+      setPendingRevisions(revData.revisions || []);
+      setIsSample(false);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => { loadAll(); }, []);
+
+  // Refetch silently when the tab regains focus (picks up team/listing changes made in other tabs)
   useEffect(() => {
-    auth.currentUser?.getIdTokenResult(true).then(async (result) => {
-      const token = result.token;
-      const h = { Authorization: `Bearer ${token}` };
-      const [listRes, tenantRes, svcRes, pkgRes, revRes, teamRes, zonesRes] = await Promise.all([
-        fetch("/api/dashboard/listings",                 { headers: h }),
-        fetch("/api/dashboard/tenant",                   { headers: h }),
-        fetch("/api/dashboard/products?type=services",   { headers: h }),
-        fetch("/api/dashboard/products?type=packages",   { headers: h }),
-        fetch("/api/dashboard/revisions?status=pending", { headers: h }),
-        fetch("/api/dashboard/team",                     { headers: h }),
-        fetch("/api/dashboard/service-areas",            { headers: h }),
-      ]);
-      const listData  = listRes.ok  ? await listRes.json()   : {};
-      const tenantData= tenantRes.ok? await tenantRes.json() : {};
-      const revData   = revRes.ok   ? await revRes.json()    : {};
-      const teamData  = teamRes.ok  ? await teamRes.json()   : {};
-      const zonesData = zonesRes.ok ? await zonesRes.json()  : {};
-      const svcData   = svcRes.ok   ? await svcRes.json()    : {};
-      const pkgData   = pkgRes.ok   ? await pkgRes.json()    : {};
-
-      const realListings = listData.listings || [];
-      const realTeam     = teamData.members  || [];
-      const realZones    = zonesData.zones   || [];
-
-      setTenant(tenantData.tenant || null);
-      setHasProducts((svcData.items?.length || 0) > 0 || (pkgData.items?.length || 0) > 0);
-
-      // Show sample data when tenant has no listings yet
-      if (realListings.length === 0) {
-        const sample = buildSampleData();
-        setListings(sample.listings);
-        setTeamMembers(sample.team);
-        setZones(sample.zones);
-        setPendingRevisions(sample.revisions);
-        setIsSample(true);
-      } else {
-        setListings(realListings);
-        setTeamMembers(realTeam);
-        setZones(realZones);
-        setPendingRevisions(revData.revisions || []);
-        setIsSample(false);
-      }
-      setLoading(false);
-    });
+    function onFocus() { if (!document.hidden) loadAll(); }
+    document.addEventListener("visibilitychange", onFocus);
+    return () => document.removeEventListener("visibilitychange", onFocus);
   }, []);
 
   // Date helpers
@@ -384,7 +393,7 @@ export default function DashboardHome() {
     { id: "pricing",  done: !!(tenant.pricingConfig?.tiers?.length || tenant.pricingConfig?.mode), label: "Configure pricing",    desc: "Set your rates, tiers, and deposit percentage",    href: "/dashboard/settings#settings-pricing" },
     { id: "booking",  done: !!(tenant.bookingConfig),                                               label: "Booking settings",     desc: "Set availability, time slots, and booking policies", href: "/dashboard/settings#settings-booking" },
     { id: "products", done: hasProducts,                                                            label: "Add products",          desc: "Create the packages and add-ons clients can book",   href: "/dashboard/products" },
-    ...(planSupportsTeam ? [{ id: "team", done: false, label: "Add team members", desc: "Invite photographers, editors, and managers", href: "/dashboard/team" }] : []),
+    ...(planSupportsTeam ? [{ id: "team", done: teamMembers.length > 0 && !isSample, label: "Add team members", desc: "Invite photographers, editors, and managers", href: "/dashboard/team" }] : []),
   ] : [];
   const starterDone      = starterSteps.filter(s => s.done).length;
   const starterComplete  = starterDone === starterSteps.length;

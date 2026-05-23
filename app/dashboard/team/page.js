@@ -369,8 +369,9 @@ function BookingCalendarTab({ listings, loading }) {
 
 // ─── Booking Unscheduled tab (merged from /dashboard/calendar) ────────────────
 function BookingUnscheduledTab({ listings }) {
-  const unscheduled = listings.filter((l) => !l.shootDate && !l.preferredDate);
-  const noDate      = listings.filter((l) => l.preferredDate && !l.shootDate);
+  const active      = listings.filter((l) => l.status !== "cancelled");
+  const unscheduled = active.filter((l) => !l.shootDate && !l.preferredDate);
+  const noDate      = active.filter((l) => l.preferredDate && !l.shootDate);
 
   if (listings.length === 0) {
     return (
@@ -1336,12 +1337,11 @@ export default function TeamPage() {
     if (typeof window !== "undefined") localStorage.setItem("kyoria_schedule_view", calView);
   }, [calView]);
 
-  // Map confirmed/completed bookings that have a confirmed shootDate to calendar.
+  // All non-cancelled bookings with a confirmed shootDate appear on the calendar.
   // Only shootDate (not preferredDate) counts — preferredDate is unconfirmed client preference.
-  // Requested bookings are excluded: they haven't been scheduled yet.
   const calendarEvents = useMemo(() => {
     return bookings
-      .filter((b) => b.shootDate && ["confirmed", "completed"].includes(b.status))
+      .filter((b) => b.shootDate && b.status !== "cancelled")
       .map((b) => {
         const ds = typeof b.shootDate === "string" && b.shootDate.length === 10
           ? b.shootDate + "T12:00:00"
@@ -1350,9 +1350,9 @@ export default function TeamPage() {
       });
   }, [bookings]);
 
-  // Bookings with no photographer assigned (needs scheduling)
+  // Bookings with no shoot date yet (needs scheduling) — any non-cancelled booking without a shootDate
   const unscheduled = bookings.filter(
-    (b) => b.status === "requested" || (b.status === "confirmed" && !b.shootDate)
+    (b) => !b.shootDate && b.status !== "cancelled"
   );
 
   const weekShootCount = useMemo(() =>
