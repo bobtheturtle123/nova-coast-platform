@@ -42,9 +42,11 @@ export async function GET(req) {
       });
 
       const text = await res.text();
-      console.log(`[cubicasa/orders] ${attempt.url} auth=${Object.keys(attempt.headers)[0]} → status=${res.status} body=${text.slice(0, 500)}`);
+      const isHtml = text.trimStart().startsWith("<!DOCTYPE") || text.trimStart().startsWith("<html");
+      console.log(`[cubicasa/orders] ${attempt.url} auth=${Object.keys(attempt.headers)[0]} → status=${res.status} html=${isHtml} body=${text.slice(0, 300)}`);
 
-      if (res.status === 401 || res.status === 403) continue; // try next auth format
+      // HTML response means a redirect/login page — auth failed, try next format
+      if (isHtml || res.status === 401 || res.status === 403) continue;
 
       if (!res.ok) {
         let errMsg = `CubiCasa ${res.status}`;

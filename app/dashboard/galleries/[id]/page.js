@@ -1367,8 +1367,8 @@ export default function GalleryDetailPage() {
           </div>
         )}
 
-        {/* Tabs */}
-        {allMedia.length > 0 && (
+        {/* Tabs — photos only; videos have their own section below */}
+        {images.length > 0 && (
           <>
             <div className="flex items-center justify-between mb-3">
               <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">

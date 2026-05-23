@@ -342,9 +342,8 @@ export default function DashboardHome() {
   // Team enriched with scope status
   const teamWithStatus = useMemo(() => teamMembers.map(m => {
     const shoots = scopeListings.filter(l => l.photographerId === m.id);
-    const zone   = shoots.length
-      ? (zones.find(z => z.id === shoots[0]?.zoneId) || zones.find(z => (z.assignedTo || []).includes(m.id)))
-      : null;
+    const zoneId = shoots[0]?.zoneId || photographerZoneMap[m.id] || null;
+    const zone   = zoneId ? zones.find(z => z.id === zoneId) : null;
     const times  = shoots.filter(l => l.shootTime).map(l => l.shootTime).sort();
     return {
       ...m,
@@ -353,18 +352,27 @@ export default function DashboardHome() {
       primaryZone:     zone ? { id: zone.id, name: zone.name, color: zone.type === "exclude" ? "#EF4444" : (zone.color || "#3B82F6") } : null,
       hoursToday:      times.length ? `${times[0]} – ${times[times.length - 1]}` : null,
     };
-  }).sort((a, b) => Number(b.workingToday) - Number(a.workingToday)), [teamMembers, scopeListings, zones]);
+  }).sort((a, b) => Number(b.workingToday) - Number(a.workingToday)), [teamMembers, scopeListings, zones, photographerZoneMap]);
+
+  // Map each photographer to their primary assigned zone (oldest zone wins to avoid drift)
+  const photographerZoneMap = useMemo(() => {
+    const map = {};
+    [...zones].reverse().forEach(z => {
+      (z.assignedTo || []).forEach(phId => { map[phId] = z.id; });
+    });
+    return map;
+  }, [zones]);
 
   // Zones enriched with scope shoot counts
-  // Fallback: match by zone.assignedTo when booking predates zoneId tracking
+  // Fallback to photographerZoneMap when booking predates zoneId tracking
   const zonesWithStatus = useMemo(() => zones.map(z => {
     const zoneShots = scopeListings.filter(l =>
       l.zoneId === z.id ||
-      (!l.zoneId && l.photographerId && (z.assignedTo || []).includes(l.photographerId))
+      (!l.zoneId && l.photographerId && photographerZoneMap[l.photographerId] === z.id)
     );
     const names     = [...new Set(zoneShots.map(l => l.photographerName).filter(Boolean))];
     return { ...z, todayShootCount: zoneShots.length, todayPhotographerNames: names };
-  }).sort((a, b) => b.todayShootCount - a.todayShootCount || (a.name || "").localeCompare(b.name || "")), [zones, scopeListings]);
+  }).sort((a, b) => b.todayShootCount - a.todayShootCount || (a.name || "").localeCompare(b.name || "")), [zones, scopeListings, photographerZoneMap]);
 
   const activeZoneCount  = useMemo(() => zonesWithStatus.filter(z => z.type !== "exclude" && z.todayShootCount > 0).length, [zonesWithStatus]);
   const totalZoneCount   = useMemo(() => zonesWithStatus.filter(z => z.type === "include").length, [zonesWithStatus]);
@@ -380,7 +388,7 @@ export default function DashboardHome() {
           photographerId:   l.photographerId,
           photographerName: l.photographerName || ph?.name || "Unassigned",
           phColor:          ph?.color || avatarColor(l.photographerName || ""),
-          zone:             zones.find(z => z.id === l.zoneId) || zones.find(z => (z.assignedTo || []).includes(l.photographerId)),
+          zone:             zones.find(z => z.id === (l.zoneId || photographerZoneMap[l.photographerId])),
           shoots:           [],
           dayTotal:         0,
         };
@@ -391,7 +399,7 @@ export default function DashboardHome() {
     return Object.values(grouped)
       .map(g => ({ ...g, shoots: g.shoots.slice().sort((a, b) => (a.shootTime || "").localeCompare(b.shootTime || "")) }))
       .sort((a, b) => (a.shoots[0]?.shootTime || "99:99").localeCompare(b.shoots[0]?.shootTime || "99:99"));
-  }, [scopeListings, teamMembers, zones]);
+  }, [scopeListings, teamMembers, zones, photographerZoneMap]);
 
   // Starter guide steps
   const planSupportsTeam = tenant && !["starter", "basic"].includes(tenant.plan);
@@ -864,7 +872,7 @@ export default function DashboardHome() {
               // By time: flat sorted list
               <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #F3F4F6" }}>
                 {[...scopeListings].sort((a, b) => (a.shootTime || "").localeCompare(b.shootTime || "")).map((l, idx, arr) => {
-                  const zone      = zones.find(z => z.id === l.zoneId) || zones.find(z => (z.assignedTo || []).includes(l.photographerId));
+                  const zone      = zones.find(z => z.id === (l.zoneId || photographerZoneMap[l.photographerId]));
                   const lineColor = zone ? (zone.type === "exclude" ? "#EF4444" : (zone.color || "#3B82F6")) : avatarColor(l.photographerName || "");
                   const pay       = payLabel(l);
                   return (
