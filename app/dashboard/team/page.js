@@ -2124,7 +2124,7 @@ export default function TeamPage() {
                             <div key={ev.id} className="px-4 py-3">
                               <p className="text-sm font-medium text-[#0F172A]">{ev.address}</p>
                               <p className="text-xs text-gray-400 mt-0.5">{ev.clientName} · {ev.shootTime || ev.preferredTime || "Time TBD"}</p>
-                              <a href={`/dashboard/bookings/${ev.id}`} className="text-xs text-[#3486cf] hover:underline">View booking →</a>
+                              <a href={`/dashboard/listings/${ev.id}`} className="text-xs text-[#3486cf] hover:underline">View booking →</a>
                             </div>
                           ))}
                         </div>

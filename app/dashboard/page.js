@@ -339,6 +339,15 @@ export default function DashboardHome() {
     [actionItems, canViewRevenue]
   );
 
+  // Map each photographer to their primary assigned zone (oldest zone wins to avoid drift)
+  const photographerZoneMap = useMemo(() => {
+    const map = {};
+    [...zones].reverse().forEach(z => {
+      (z.assignedTo || []).forEach(phId => { map[phId] = z.id; });
+    });
+    return map;
+  }, [zones]);
+
   // Team enriched with scope status
   const teamWithStatus = useMemo(() => teamMembers.map(m => {
     const shoots = scopeListings.filter(l => l.photographerId === m.id);
@@ -353,15 +362,6 @@ export default function DashboardHome() {
       hoursToday:      times.length ? `${times[0]} – ${times[times.length - 1]}` : null,
     };
   }).sort((a, b) => Number(b.workingToday) - Number(a.workingToday)), [teamMembers, scopeListings, zones, photographerZoneMap]);
-
-  // Map each photographer to their primary assigned zone (oldest zone wins to avoid drift)
-  const photographerZoneMap = useMemo(() => {
-    const map = {};
-    [...zones].reverse().forEach(z => {
-      (z.assignedTo || []).forEach(phId => { map[phId] = z.id; });
-    });
-    return map;
-  }, [zones]);
 
   // Zones enriched with scope shoot counts
   // Fallback to photographerZoneMap when booking predates zoneId tracking
