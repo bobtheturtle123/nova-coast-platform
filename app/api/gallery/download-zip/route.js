@@ -1,10 +1,17 @@
 import archiver from "archiver";
 import sharp from "sharp";
+import { Readable } from "stream";
 import { adminDb } from "@/lib/firebase-admin";
 import { rateLimit } from "@/lib/rateLimit";
 
-export const dynamic    = "force-dynamic";
-export const maxDuration = 300; // Vercel Pro max — prevents 504 on large galleries
+// Convert a Web ReadableStream (fetch response body) to a Node.js Readable
+// so archiver can pipe it directly without buffering the whole file.
+function toNodeStream(webStream) {
+  return Readable.fromWeb(webStream);
+}
+
+export const dynamic     = "force-dynamic";
+export const maxDuration = 300; // Vercel Pro — 5 min max
 
 const WEB_MAX_PX  = 2048;
 const WEB_QUALITY = 82;
@@ -13,15 +20,13 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const token  = searchParams.get("token");
   const format = searchParams.get("format") || "web"; // "web" | "print"
-  const extras = searchParams.get("extras") === "true"; // include floor plans, files, links.txt + BOTH photo formats
+  const extras = searchParams.get("extras") === "true";
 
-  if (!token) return new Response("Missing params", { status: 400 });
+  if (!token) return new Response("Missing token", { status: 400 });
 
-  // 5 zip downloads per token per IP per hour — prevents bulk scraping
   const rl = await rateLimit(req, `zip-dl:${token}`, 5, 3600);
-  if (rl.limited) return new Response("Too many download requests. Please try again later.", { status: 429 });
+  if (rl.limited) return new Response("Too many download requests. Try again later.", { status: 429 });
 
-  // Resolve gallery via top-level index (avoids cross-tenant token collision)
   const tokenDoc = await adminDb.collection("galleryTokens").doc(token).get();
   if (!tokenDoc.exists) return new Response("Gallery not found", { status: 404 });
 
@@ -37,142 +42,141 @@ export async function GET(req) {
   if (gallery.accessToken !== token) return new Response("Gallery not found", { status: 404 });
   if (!gallery.unlocked) return new Response("Gallery is locked", { status: 403 });
 
-  const images = (gallery.media || []).filter(
-    (m) => m.key && !m.fileType?.startsWith("video/")
-  );
-
-  if (images.length === 0) return new Response("No images", { status: 404 });
-
   const r2Url = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
   if (!r2Url) return new Response("Storage not configured", { status: 500 });
 
-  const MAX_ZIP_FILES = 300;
-  const toProcess = images.slice(0, MAX_ZIP_FILES);
-  const BATCH = 8;
-  const entries = [];
-
-  if (extras) {
-    // Dual-format: fetch each image once, produce Print + Web-MLS versions
-    for (let i = 0; i < toProcess.length; i += BATCH) {
-      const batch = toProcess.slice(i, i + BATCH);
-      const results = await Promise.allSettled(
-        batch.map(async (img) => {
-          const sourceRes = await fetch(`${r2Url}/${img.key}`);
-          if (!sourceRes.ok) return null;
-          const buffer = Buffer.from(await sourceRes.arrayBuffer());
-          const baseName = (img.fileName || "image").replace(/\.[^.]+$/, "");
-          const webBuffer = await sharp(buffer)
-            .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
-            .jpeg({ quality: WEB_QUALITY, progressive: true })
-            .toBuffer();
-          return [
-            { buffer, fileName: `Photos/Print/${img.fileName || "image.jpg"}` },
-            { buffer: webBuffer, fileName: `Photos/Web-MLS/${baseName}-MLS.jpg` },
-          ];
-        })
-      );
-      for (const r of results) {
-        if (r.status === "fulfilled" && r.value) entries.push(...r.value);
-      }
-    }
-  } else {
-    // Single format
-    for (let i = 0; i < toProcess.length; i += BATCH) {
-      const batch = toProcess.slice(i, i + BATCH);
-      const results = await Promise.allSettled(
-        batch.map(async (img) => {
-          const sourceRes = await fetch(`${r2Url}/${img.key}`);
-          if (!sourceRes.ok) return null;
-          const arrayBuffer = await sourceRes.arrayBuffer();
-          let buffer = Buffer.from(arrayBuffer);
-          const baseName = (img.fileName || "image").replace(/\.[^.]+$/, "");
-          let fileName;
-          if (format === "web") {
-            buffer = await sharp(buffer)
-              .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
-              .jpeg({ quality: WEB_QUALITY, progressive: true })
-              .toBuffer();
-            fileName = `${baseName}-MLS.jpg`;
-          } else {
-            fileName = img.fileName || "image.jpg";
-          }
-          return { buffer, fileName };
-        })
-      );
-      for (const r of results) {
-        if (r.status === "fulfilled" && r.value) entries.push(r.value);
-      }
-    }
-  }
-
-  if (entries.length === 0) return new Response("Failed to fetch images", { status: 500 });
-
-  // Fetch floor plans + attached files + build links.txt when extras=true
-  const extraEntries = [];
-  let linksText = "";
-  if (extras) {
-    const floorPlans    = (gallery.floorPlans    || []).filter((fp) => !fp.hidden && fp.key);
-    const attachedFiles = (gallery.attachedFiles || []).filter((f)  => !f.hidden  && f.key);
-    const allExtras = [
-      ...floorPlans.map((fp) => ({ ...fp, folder: "Floor Plans" })),
-      ...attachedFiles.map((f) => ({ ...f, folder: "Documents" })),
-    ];
-    const extraResults = await Promise.allSettled(
-      allExtras.map(async (item) => {
-        const res = await fetch(`${r2Url}/${item.key}`);
-        if (!res.ok) return null;
-        const buf = Buffer.from(await res.arrayBuffer());
-        return { buffer: buf, fileName: `${item.folder}/${item.fileName || item.key.split("/").pop()}` };
-      })
-    );
-    for (const r of extraResults) {
-      if (r.status === "fulfilled" && r.value) extraEntries.push(r.value);
-    }
-
-    const lines = [];
-    if (gallery.matterportUrl && !gallery.matterportHidden)
-      lines.push(`3D Tour: ${gallery.matterportUrl}`);
-    if (gallery.videoUrl && !gallery.videoUrlHidden)
-      lines.push(`Video Tour: ${gallery.videoUrl}`);
-    for (const l of (gallery.virtualLinks || []).filter((l) => !l.hidden))
-      lines.push(`${l.label || "Virtual Tour"}: ${l.url}`);
-    if (lines.length) linksText = lines.join("\n");
-  }
+  const allMedia      = (gallery.media || []).filter((m) => m.key && !m.hidden);
+  const photos        = allMedia.filter((m) => !m.fileType?.startsWith("video/"));
+  const videos        = allMedia.filter((m) =>  m.fileType?.startsWith("video/"));
+  const floorPlans    = (gallery.floorPlans    || []).filter((fp) => !fp.hidden && fp.key);
+  const attachedFiles = (gallery.attachedFiles || []).filter((f)  => !f.hidden  && f.key);
 
   const address = (gallery.bookingAddress || "gallery").replace(/[^a-z0-9]/gi, "-").toLowerCase();
   const zipName = extras
     ? `${address}-complete-package.zip`
     : `${address}-${format === "web" ? "web-ready" : "print"}.zip`;
 
-  // Stream the zip as it builds — avoids holding entire gallery in memory
-  const archive = archiver("zip", { zlib: { level: 5 } });
-  for (const { buffer, fileName } of entries) {
-    archive.append(buffer, { name: fileName });
-  }
-  for (const { buffer, fileName } of extraEntries) {
-    archive.append(buffer, { name: fileName });
-  }
-  if (linksText) {
-    archive.append(Buffer.from(linksText, "utf8"), { name: "Tour Links.txt" });
-  }
+  // Build archive and start streaming the response immediately.
+  // Each file is fetched and appended one at a time so we never hold the
+  // full gallery in memory at once.
+  const archive = archiver("zip", { zlib: { level: 4 } });
 
   const readable = new ReadableStream({
-    start(controller) {
+    async start(controller) {
       archive.on("data",  (chunk) => controller.enqueue(new Uint8Array(chunk)));
       archive.on("end",   () => controller.close());
-      archive.on("error", (err) => controller.error(err));
+      archive.on("error", (err) => {
+        console.error("[download-zip] archiver error:", err?.message || err);
+        controller.error(err);
+      });
+
+      try {
+        // ── Photos ──────────────────────────────────────────────────────────
+        const MAX_PHOTOS = 300;
+        for (const img of photos.slice(0, MAX_PHOTOS)) {
+          try {
+            const res = await fetch(`${r2Url}/${img.key}`);
+            if (!res.ok) continue;
+            const buffer   = Buffer.from(await res.arrayBuffer());
+            const baseName = (img.fileName || "photo").replace(/\.[^.]+$/, "");
+
+            if (extras) {
+              const webBuf = await sharp(buffer)
+                .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
+                .jpeg({ quality: WEB_QUALITY, progressive: true })
+                .toBuffer();
+              archive.append(buffer,  { name: `Photos/Print/${img.fileName || "photo.jpg"}` });
+              archive.append(webBuf,  { name: `Photos/Web-MLS/${baseName}-MLS.jpg` });
+            } else if (format === "web") {
+              const webBuf = await sharp(buffer)
+                .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
+                .jpeg({ quality: WEB_QUALITY, progressive: true })
+                .toBuffer();
+              archive.append(webBuf, { name: `${baseName}-MLS.jpg` });
+            } else {
+              // Print: use the already-fetched buffer (no resize)
+              archive.append(buffer, { name: img.fileName || "photo.jpg" });
+            }
+          } catch (e) {
+            console.warn("[download-zip] photo failed:", img.key, e?.message);
+          }
+        }
+
+        // ── Videos (streamed — can be very large) ───────────────────────────
+        for (const vid of videos) {
+          try {
+            const res = await fetch(`${r2Url}/${vid.key}`);
+            if (!res.ok || !res.body) continue;
+            const folder = extras ? "Videos/" : "";
+            archive.append(toNodeStream(res.body), {
+              name: `${folder}${vid.fileName || vid.key.split("/").pop()}`,
+            });
+          } catch (e) {
+            console.warn("[download-zip] video failed:", vid.key, e?.message);
+          }
+        }
+
+        // ── Floor Plans ──────────────────────────────────────────────────────
+        for (const fp of floorPlans) {
+          try {
+            const res = await fetch(`${r2Url}/${fp.key}`);
+            if (!res.ok || !res.body) continue;
+            archive.append(toNodeStream(res.body), {
+              name: `Floor Plans/${fp.fileName || fp.key.split("/").pop()}`,
+            });
+          } catch (e) {
+            console.warn("[download-zip] floor plan failed:", fp.key, e?.message);
+          }
+        }
+
+        // ── Documents / Attached Files ───────────────────────────────────────
+        for (const file of attachedFiles) {
+          try {
+            const res = await fetch(`${r2Url}/${file.key}`);
+            if (!res.ok || !res.body) continue;
+            archive.append(toNodeStream(res.body), {
+              name: `Documents/${file.fileName || file.key.split("/").pop()}`,
+            });
+          } catch (e) {
+            console.warn("[download-zip] file failed:", file.key, e?.message);
+          }
+        }
+
+        // ── Tour Links text file ─────────────────────────────────────────────
+        const lines = [];
+        if (gallery.matterportUrl && !gallery.matterportHidden)
+          lines.push(`3D Tour: ${gallery.matterportUrl}`);
+        if (gallery.videoUrl && !gallery.videoUrlHidden)
+          lines.push(`Video Tour: ${gallery.videoUrl}`);
+        for (const l of (gallery.virtualLinks || []).filter((l) => !l.hidden))
+          lines.push(`${l.label || "Virtual Tour"}: ${l.url}`);
+        if (lines.length) {
+          archive.append(Buffer.from(lines.join("\n"), "utf8"), { name: "Tour Links.txt" });
+        }
+
+      } catch (outerErr) {
+        console.error("[download-zip] processing error:", outerErr?.message || outerErr);
+      }
+
       archive.finalize();
     },
   });
 
-  // Log download activity (fire-and-forget)
+  // Log activity (fire-and-forget — don't block the stream)
   if (tenantDoc.data()?.gallerySettings?.viewerTracking !== false) {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null;
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+             || req.headers.get("x-real-ip") || null;
     adminDb
       .collection("tenants").doc(tenantId)
       .collection("galleries").doc(galleryId)
       .collection("activityLog")
-      .add({ event: "download_zip", format: extras ? "package" : format, fileCount: entries.length, timestamp: new Date(), ip })
+      .add({
+        event:     "download_zip",
+        format:    extras ? "package" : format,
+        fileCount: (gallery.media || []).length,
+        timestamp: new Date(),
+        ip,
+      })
       .catch(() => {});
   }
 
@@ -182,6 +186,7 @@ export async function GET(req) {
       "Content-Type":        "application/zip",
       "Content-Disposition": `attachment; filename="${zipName}"`,
       "Cache-Control":       "private, no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }
