@@ -41,10 +41,16 @@ export async function GET(req) {
     ? (lastCreated.toDate ? lastCreated.toDate().toISOString() : new Date(lastCreated).toISOString())
     : null;
 
+  const showHidden = searchParams.get("showHidden") === "true";
+
   const bookings = docs
-    .filter((d) => abandoned
-      ? d.data().status === "pending_payment"
-      : d.data().status !== "pending_payment")
+    .filter((d) => {
+      const data = d.data();
+      if (abandoned) return data.status === "pending_payment";
+      if (data.status === "pending_payment") return false;
+      if (data.hidden && !showHidden) return false;
+      return true;
+    })
     .map((d) => {
       const data = d.data();
       for (const key of ["createdAt", "updatedAt", "preferredDate", "shootDate"]) {

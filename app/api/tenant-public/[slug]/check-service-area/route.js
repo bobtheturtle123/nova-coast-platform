@@ -137,6 +137,7 @@ export async function POST(req, { params }) {
         covered: true,
         assignedPhotographers: zone.assignedTo || [],
         zoneName: zone.name,
+        zoneId:   zone.id,
         contact,
       });
     }

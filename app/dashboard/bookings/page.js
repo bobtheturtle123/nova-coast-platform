@@ -273,6 +273,7 @@ export default function BookingsPage() {
   const tenantSlugRef = useRef(null);
   const [zonePhotographers, setZonePhotographers] = useState(null); // null=unchecked []=[ids]
   const [zoneName,          setZoneName]          = useState(null);
+  const [zoneId,            setZoneId]            = useState(null);
   const zoneDebounceRef = useRef(null);
   const [activeTab,          setActiveTab]          = useState("bookings");
   const [abandonedBookings,  setAbandonedBookings]  = useState([]);
@@ -332,9 +333,11 @@ export default function BookingsPage() {
       if (data.covered && data.assignedPhotographers?.length > 0) {
         setZonePhotographers(data.assignedPhotographers);
         setZoneName(data.zoneName);
+        setZoneId(data.zoneId || null);
       } else {
         setZonePhotographers(null);
         setZoneName(null);
+        setZoneId(null);
       }
     } catch { /* ignore */ }
   }
@@ -551,6 +554,7 @@ export default function BookingsPage() {
           customLineItems: form.customLineItems,
           apn:             form.apn || null,
           source:          "manual",
+          zoneId:          zoneId || null,
         }),
       });
       const data = await res.json();

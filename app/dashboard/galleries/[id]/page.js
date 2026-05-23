@@ -327,6 +327,7 @@ export default function GalleryDetailPage() {
   // Gallery access
   const [agentCanShare, setAgentCanShare] = useState(true);
   const [extraAccessEmail, setExtraAccessEmail] = useState("");
+  const [showAccessPanel, setShowAccessPanel] = useState(false);
 
   // Category state
   const [showCatPanel,    setShowCatPanel]    = useState(false);
@@ -1125,57 +1126,82 @@ export default function GalleryDetailPage() {
           </div>
         </div>
 
-        {/* Gallery access panel */}
-        <div className="mb-5 card p-4">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-semibold text-[#0F172A]">Gallery Access</p>
-              <span className="text-xs text-gray-400">Anyone with the link can view</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5 mb-3 min-h-6">
-              {(gallery.authorizedEmails || []).length === 0
-                ? <span className="text-xs text-gray-400 italic">No recipients yet — send the gallery to add them.</span>
-                : (gallery.authorizedEmails || []).map((email) => (
-                  <span key={email} className="inline-flex items-center gap-1 bg-[#3486cf]/8 text-[#3486cf] text-xs px-2.5 py-1 rounded-full">
-                    {email}
-                    <button
-                      onClick={async () => {
-                        const updated = (gallery.authorizedEmails || []).filter((e) => e !== email);
-                        setGallery((g) => ({ ...g, authorizedEmails: updated }));
-                        const token = await auth.currentUser.getIdToken();
-                        await fetch(`/api/dashboard/galleries/${id}`, {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                          body: JSON.stringify({ authorizedEmails: updated }),
-                        });
-                      }}
-                      className="hover:text-red-500 text-[#3486cf]/50 leading-none ml-0.5 text-sm">&times;</button>
-                  </span>
-                ))
-              }
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="email"
-                value={extraAccessEmail}
-                onChange={(e) => setExtraAccessEmail(e.target.value)}
-                onKeyDown={async (e) => {
-                  if (e.key === "Enter" && extraAccessEmail.includes("@")) {
-                    const updated = [...new Set([...(gallery.authorizedEmails || []), extraAccessEmail.trim()])];
-                    setGallery((g) => ({ ...g, authorizedEmails: updated }));
-                    setExtraAccessEmail("");
-                    const token = await auth.currentUser.getIdToken();
-                    await fetch(`/api/dashboard/galleries/${id}`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                      body: JSON.stringify({ authorizedEmails: updated }),
-                    });
+        {/* Gallery access — compact collapsible */}
+        <div className="mb-5">
+          <button
+            onClick={() => setShowAccessPanel((v) => !v)}
+            className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors mb-2">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"
+              className={`transition-transform ${showAccessPanel ? "rotate-90" : ""}`}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+            </svg>
+            <span>
+              Manage access
+              {(gallery.authorizedEmails || []).length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 bg-gray-100 rounded text-gray-500">
+                  {(gallery.authorizedEmails || []).length} recipient{(gallery.authorizedEmails || []).length !== 1 ? "s" : ""}
+                </span>
+              )}
+              {gallery.agentCanShare !== false && (
+                <span className="ml-1 px-1.5 py-0.5 bg-[#3486cf]/10 text-[#3486cf] rounded">resharing on</span>
+              )}
+            </span>
+          </button>
+          {showAccessPanel && (
+            <div className="card p-4 space-y-3">
+              {/* Authorized recipients */}
+              <div>
+                <p className="text-xs text-gray-400 mb-2">Recipients with gallery access</p>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {(gallery.authorizedEmails || []).length === 0
+                    ? <span className="text-xs text-gray-300 italic">No additional recipients — delivery adds them automatically.</span>
+                    : (gallery.authorizedEmails || []).map((email) => (
+                      <span key={email} className="inline-flex items-center gap-1 bg-[#3486cf]/8 text-[#3486cf] text-xs px-2.5 py-1 rounded-full">
+                        {email}
+                        <button
+                          onClick={async () => {
+                            const updated = (gallery.authorizedEmails || []).filter((e) => e !== email);
+                            setGallery((g) => ({ ...g, authorizedEmails: updated }));
+                            const token = await auth.currentUser.getIdToken();
+                            await fetch(`/api/dashboard/galleries/${id}`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ authorizedEmails: updated }),
+                            });
+                          }}
+                          className="hover:text-red-500 text-[#3486cf]/50 leading-none ml-0.5 text-sm">&times;</button>
+                      </span>
+                    ))
                   }
-                }}
-                placeholder="Add email and press Enter"
-                className="input-field flex-1 text-sm py-1.5"
-              />
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-400">Reshare:</span>
+                </div>
+                <input
+                  type="email"
+                  value={extraAccessEmail}
+                  onChange={(e) => setExtraAccessEmail(e.target.value)}
+                  onKeyDown={async (e) => {
+                    if (e.key === "Enter" && extraAccessEmail.includes("@")) {
+                      const updated = [...new Set([...(gallery.authorizedEmails || []), extraAccessEmail.trim()])];
+                      setGallery((g) => ({ ...g, authorizedEmails: updated }));
+                      setExtraAccessEmail("");
+                      const token = await auth.currentUser.getIdToken();
+                      await fetch(`/api/dashboard/galleries/${id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ authorizedEmails: updated }),
+                      });
+                    }
+                  }}
+                  placeholder="Add email and press Enter"
+                  className="input-field w-full text-sm py-1.5"
+                />
+              </div>
+
+              {/* Resharing permission */}
+              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                <div>
+                  <p className="text-xs font-medium text-[#0F172A]">Allow client to reshare</p>
+                  <p className="text-xs text-gray-400">Client can forward gallery link to others</p>
+                </div>
                 <button
                   onClick={async () => {
                     const newVal = !gallery.agentCanShare;
@@ -1193,7 +1219,8 @@ export default function GalleryDetailPage() {
                 </button>
               </div>
             </div>
-          </div>
+          )}
+        </div>
 
         {/* Scheduled delivery banner */}
         {gallery.scheduledDelivery && ["pending", "processing", "error"].includes(gallery.scheduledDelivery.status) && (() => {

@@ -239,6 +239,15 @@ const [listingUrl,       setListingUrl]        = useState("");
   const [sendingReminder, setSendingReminder] = useState(false);
   const [reminderMsg,     setReminderMsg]     = useState("");
 
+  // Deposit request state
+  const [sendingDeposit, setSendingDeposit] = useState(false);
+  const [depositLinkMsg, setDepositLinkMsg] = useState("");
+  const [depositUrl,     setDepositUrl]     = useState("");
+
+  // Cancel / hide state
+  const [cancelling,  setCancelling]  = useState(false);
+  const [hiding,      setHiding]      = useState(false);
+
   // Role-based access
   const [userRole, setUserRole] = useState("owner"); // "owner" | "admin" | "manager"
   const [convertingToListing, setConvertingToListing] = useState(false);
@@ -699,18 +708,23 @@ if (loading) return (
                 </div>
               )}
 
-              {/* Agent Portal */}
+              {/* Agent Agreement */}
               <div className="mt-4 pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-2">Agent Portal</p>
+                <p className="text-xs text-gray-400 mb-2">Agreement</p>
                 <div className="flex items-center gap-2">
                   <button onClick={() => sendAgentAccess(true)} disabled={sendingAgentAccess || !booking.clientEmail}
                     className="text-xs bg-[#3486cf] text-white px-3 py-1.5 rounded-lg hover:bg-[#3486cf]/90 disabled:opacity-40 transition-colors">
-                    {sendingAgentAccess ? "Sending…" : "Send Portal Invite"}
+                    {sendingAgentAccess ? "Sending…" : "Send Agreement to Agent"}
                   </button>
                   {agentAccessMsg && <p className="text-xs text-green-600">{agentAccessMsg}</p>}
                 </div>
+                {booking.emailCooldowns?.agentPortal && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Last sent {new Date(booking.emailCooldowns.agentPortal?.seconds ? booking.emailCooldowns.agentPortal.seconds * 1000 : booking.emailCooldowns.agentPortal).toLocaleDateString()}
+                  </p>
+                )}
                 {!booking.clientEmail && (
-                  <p className="text-xs text-gray-400 mt-1">Add a client email to enable portal invites.</p>
+                  <p className="text-xs text-gray-400 mt-1">Add a client email to send the agreement.</p>
                 )}
               </div>
 
@@ -1313,11 +1327,103 @@ if (loading) return (
               </div>
             )}
 
+            {/* Request Deposit — only when deposit not yet paid */}
+            {userRole !== "manager" && !booking.depositPaid && !booking.paidInFull && (
+              <div className="card p-5">
+                <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Request Deposit</p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Generate a Stripe payment link for the{" "}
+                  <strong>${(booking.depositAmount || 0).toLocaleString()}</strong> deposit and share it with the client.
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    disabled={sendingDeposit}
+                    onClick={async () => {
+                      setSendingDeposit(true);
+                      setDepositLinkMsg("");
+                      setDepositUrl("");
+                      try {
+                        const token = await auth.currentUser?.getIdToken(true);
+                        const res = await fetch(`/api/dashboard/bookings/${id}/send-deposit`, {
+                          method: "POST",
+                          headers: { Authorization: `Bearer ${token}` },
+                        });
+                        const d = await res.json();
+                        if (res.ok && d.url) {
+                          setDepositUrl(d.url);
+                          setDepositLinkMsg(d.cached ? "Using existing link (valid 4h)" : "Link generated");
+                        } else {
+                          setDepositLinkMsg(d.error || "Failed to generate link.");
+                        }
+                      } catch { setDepositLinkMsg("Failed to generate link."); }
+                      finally { setSendingDeposit(false); }
+                    }}
+                    className="btn-outline text-sm px-5 py-2 disabled:opacity-50"
+                  >
+                    {sendingDeposit ? "Generating…" : "Get Deposit Link"}
+                  </button>
+                  {depositUrl && (
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(depositUrl); setDepositLinkMsg("Copied!"); }}
+                      className="text-xs text-[#3486cf] border border-[#3486cf]/25 px-3 py-2 rounded-lg hover:bg-[#3486cf]/5 transition-colors">
+                      Copy Link
+                    </button>
+                  )}
+                </div>
+                {depositUrl && (
+                  <div className="mt-3 p-3 bg-gray-50 rounded-xl break-all">
+                    <a href={depositUrl} target="_blank" rel="noreferrer" className="text-xs text-[#3486cf] underline">{depositUrl}</a>
+                  </div>
+                )}
+                {depositLinkMsg && !depositUrl && (
+                  <p className={`mt-3 text-xs ${depositLinkMsg === "Copied!" || depositLinkMsg.startsWith("Link") || depositLinkMsg.startsWith("Using") ? "text-green-600" : "text-red-500"}`}>
+                    {depositLinkMsg}
+                  </p>
+                )}
+              </div>
+            )}
+
             {userRole !== "manager" && booking.stripeDepositIntentId && (
               <div className="bg-gray-50 rounded-xl border border-gray-100 p-4 text-xs text-gray-500 space-y-1">
                 <p>Deposit intent: <code className="font-mono">{booking.stripeDepositIntentId}</code></p>
                 {booking.stripeBalanceIntentId && (
                   <p>Balance intent: <code className="font-mono">{booking.stripeBalanceIntentId}</code></p>
+                )}
+              </div>
+            )}
+
+            {/* Cancel / Hide Booking */}
+            {(userRole === "owner" || userRole === "admin") && (
+              <div className="card p-5 border-red-100">
+                <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Booking Actions</p>
+                <div className="flex flex-wrap gap-2">
+                  {booking.status !== "cancelled" && (
+                    <button
+                      disabled={cancelling}
+                      onClick={async () => {
+                        if (!confirm("Cancel this booking? The client will not be notified automatically.")) return;
+                        setCancelling(true);
+                        await patchBooking({ status: "cancelled" });
+                        setCancelling(false);
+                      }}
+                      className="text-sm px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors">
+                      {cancelling ? "Cancelling…" : "Cancel Booking"}
+                    </button>
+                  )}
+                  <button
+                    disabled={hiding}
+                    onClick={async () => {
+                      const isHidden = booking.hidden;
+                      setHiding(true);
+                      await patchBooking({ hidden: !isHidden });
+                      setHiding(false);
+                    }}
+                    className="text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                    {hiding ? "Saving…" : booking.hidden ? "Unhide Booking" : "Hide Booking"}
+                  </button>
+                </div>
+                {booking.hidden && (
+                  <p className="text-xs text-amber-600 mt-2">This booking is hidden from your main dashboard view.</p>
                 )}
               </div>
             )}

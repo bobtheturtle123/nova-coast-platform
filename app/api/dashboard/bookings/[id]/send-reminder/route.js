@@ -30,11 +30,11 @@ export async function POST(req, { params }) {
 
   const booking = bookingDoc.data();
 
-  if (!booking.galleryId) {
-    return Response.json({ error: "Gallery not yet delivered. Send reminder after gallery is delivered." }, { status: 400 });
+  if (!booking.depositPaid && !booking.galleryId) {
+    // If no deposit and no gallery, nothing to remind about yet
   }
 
-  if (!booking.depositPaid || booking.paidInFull || booking.balancePaid) {
+  if (booking.paidInFull || booking.balancePaid) {
     return Response.json({ error: "No outstanding balance on this booking." }, { status: 400 });
   }
 
@@ -47,20 +47,16 @@ export async function POST(req, { params }) {
   const tenant = await getTenantById(ctx.tenantId);
   if (!tenant) return Response.json({ error: "Tenant not found" }, { status: 404 });
 
-  // Fetch gallery token for the payment link
-  const galleryDoc = await adminDb
-    .collection("tenants").doc(ctx.tenantId)
-    .collection("galleries").doc(booking.galleryId)
-    .get();
-
-  if (!galleryDoc.exists) {
-    return Response.json({ error: "Gallery not found." }, { status: 404 });
-  }
-
-  // Gallery stores the shareable token as "accessToken", not "token"
-  const galleryToken = galleryDoc.data().accessToken || galleryDoc.data().token;
-  if (!galleryToken) {
-    return Response.json({ error: "Gallery access token missing — cannot generate payment link." }, { status: 500 });
+  // Fetch gallery token for the payment link (optional — reminder sends even without gallery)
+  let galleryToken = null;
+  if (booking.galleryId) {
+    const galleryDoc = await adminDb
+      .collection("tenants").doc(ctx.tenantId)
+      .collection("galleries").doc(booking.galleryId)
+      .get();
+    if (galleryDoc.exists) {
+      galleryToken = galleryDoc.data().accessToken || galleryDoc.data().token || null;
+    }
   }
 
   await sendPaymentReminder({ booking, galleryToken, tenant });

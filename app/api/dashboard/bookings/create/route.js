@@ -32,6 +32,7 @@ export async function POST(req) {
       additionalAppointments = [],
       additionalPhotographers = [],
       sendNotification = true,
+      zoneId = null,
     } = await req.json();
 
     if (!clientName || !clientEmail || !address) {
@@ -100,6 +101,7 @@ export async function POST(req) {
       stripeBalanceIntentId:  null,
       galleryId:       null,
       isListing:       autoConvert,
+      zoneId:          zoneId || null,
     };
 
     await bookingRef.set(bookingData);
@@ -180,7 +182,7 @@ export async function POST(req) {
                 <p style="color:#ccc;font-size:11px">${bizName}</p>
               </div>`;
 
-            // Client confirmation
+            // Client confirmation (with ICS if date/time set)
             if (clientEmail) {
               sends.push(
                 resend.emails.send({
@@ -191,6 +193,7 @@ export async function POST(req) {
                     `Hi ${clientName}, your booking for <strong>${fullAddress}</strong> has been created.`,
                     `<p style="color:#888;font-size:12px;margin:0">Questions? Reply to this email.</p>`
                   ),
+                  ...(icsAttachment.length ? { attachments: [{ ...icsAttachment[0], filename: "shoot-appointment.ics" }] } : {}),
                 }).then(() => console.log("[email] client confirmation sent to", clientEmail))
                   .catch((e) => console.error("[email] client confirmation FAILED:", e?.message || e))
               );
@@ -208,11 +211,26 @@ export async function POST(req) {
               );
             }
 
-            // Build .ics attachment for photographer calendar invites
+            // Build .ics attachment for calendar invites
+            // Normalize time to 24h "HH:MM" — handles both "09:00" and "9:00 AM" formats
+            function to24h(t) {
+              if (!t) return null;
+              const ampmMatch = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+              if (ampmMatch) {
+                let h = parseInt(ampmMatch[1], 10);
+                const m = ampmMatch[2];
+                const period = ampmMatch[3].toUpperCase();
+                if (period === "PM" && h !== 12) h += 12;
+                if (period === "AM" && h === 12) h = 0;
+                return `${String(h).padStart(2, "0")}:${m}`;
+              }
+              return t; // already HH:MM
+            }
             let icsAttachment = [];
             const calDate = shootDate || preferredDate;
-            const calTime = shootTime || preferredTime;
-            if (calDate && calTime && !["flexible","morning","afternoon"].includes(calTime)) {
+            const calTimeRaw = shootTime || preferredTime;
+            const calTime = to24h(calTimeRaw);
+            if (calDate && calTime && !["flexible","morning","afternoon"].includes(calTimeRaw)) {
               const icsContent = generateCalendarICS({
                 summary:         `Photo Shoot — ${fullAddress}`,
                 description:     `Client: ${clientName}\nProperty: ${fullAddress}${notes ? `\nNotes: ${notes}` : ""}`,
@@ -221,7 +239,7 @@ export async function POST(req) {
                 durationMinutes: 120,
               });
               if (icsContent) {
-                icsAttachment = [{ filename: "shoot-assignment.ics", content: Buffer.from(icsContent).toString("base64") }];
+                icsAttachment = [{ filename: "shoot-appointment.ics", content: Buffer.from(icsContent).toString("base64") }];
               }
             }
 
