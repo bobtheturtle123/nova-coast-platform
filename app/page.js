@@ -17,7 +17,7 @@ export default function MarketingPage() {
           <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-8 w-auto object-contain" />
           <nav className="hidden md:flex items-center gap-8 text-sm text-gray-600">
             <a href="#how-it-works" className="hover:text-navy transition-colors">How it works</a>
-            <a href="#features" className="hover:text-navy transition-colors">Features</a>
+            <a href="/features" className="hover:text-navy transition-colors">Features</a>
             <a href="#pricing" className="hover:text-navy transition-colors">Pricing</a>
           </nav>
           <div className="flex items-center gap-3">
@@ -141,6 +141,64 @@ export default function MarketingPage() {
           ))}
         </div>
       </div>
+
+      {/* PRODUCT SCREENSHOTS */}
+      <section className="py-20 px-6 bg-white border-b border-gray-100">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">Real product · real screenshots</p>
+            <h2 className="font-serif text-4xl text-navy mb-4 font-normal">
+              Every part of your business,<br />in one dashboard.
+            </h2>
+            <p className="text-gray-500 max-w-xl mx-auto text-base leading-relaxed">
+              Not renders. Not mockups. This is the actual platform, running live businesses today.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-5">
+            {[
+              {
+                src: "/screenshots/schedule.png",
+                title: "Team Schedule & Calendar",
+                desc: "See every photographer's week at a glance. Assign shoots, track availability, block time off — week, month, or 2-week view.",
+                href: "/features/team-scheduling",
+              },
+              {
+                src: "/screenshots/customers.png",
+                title: "Customer & Agent CRM",
+                desc: "All your agents and clients in one place. Group by brokerage, track lifetime revenue, and surface your highest-value accounts.",
+                href: "/features/client-crm",
+              },
+              {
+                src: "/screenshots/service-areas.png",
+                title: "Service Area Map",
+                desc: "Draw custom zones on a real map. Set which photographers cover each territory — auto-suggested on every new booking.",
+                href: "/features/service-areas",
+              },
+              {
+                src: "/screenshots/zone-setup.png",
+                title: "Smart Zone Setup",
+                desc: "Name a zone, pick a color, and assign exactly which photographers cover that territory. Exclusion zones for restricted areas too.",
+                href: "/features/service-areas",
+              },
+            ].map((s) => (
+              <a key={s.title} href={s.href} className="group bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md hover:border-navy/20 transition-all block">
+                <div className="overflow-hidden bg-gray-100 aspect-[16/9]">
+                  <img
+                    src={s.src}
+                    alt={`${s.title} — KyoriaOS real estate photography software`}
+                    className="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform duration-500"
+                  />
+                </div>
+                <div className="p-5 border-t border-gray-100">
+                  <p className="text-sm font-semibold text-navy mb-1">{s.title}</p>
+                  <p className="text-xs text-gray-500 leading-relaxed">{s.desc}</p>
+                  <p className="text-xs text-gold font-medium mt-2">Learn more →</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* PAIN POINTS */}
       <section className="py-24 px-6 bg-white">
@@ -379,37 +437,13 @@ export default function MarketingPage() {
                 ))}
               </ul>
             </div>
-            {/* Team dispatch mockup */}
-            <div className="bg-gray-50 rounded-2xl border border-gray-100 p-5 shadow-sm">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-3 font-semibold">Assign photographer</p>
-              <div className="bg-navy/5 border border-navy/10 rounded-xl p-3 mb-4">
-                <p className="text-xs font-semibold text-navy">3310 Maple Ave, La Jolla</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">Tomorrow · 10:00 AM · Elite Package</p>
-              </div>
-              {[
-                { name: "Marcus W.",  zone: "Coronado, La Jolla",      available: true,  jobs: "2 today" },
-                { name: "Devon T.",   zone: "San Diego, Chula Vista",   available: true,  jobs: "1 today" },
-                { name: "Brooke S.",  zone: "Del Mar, Encinitas",       available: false, jobs: "3 today" },
-              ].map((p) => (
-                <div key={p.name} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0">
-                  <div className="w-7 h-7 rounded-full bg-navy flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-[10px] font-bold">{p.name[0]}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-gray-900">{p.name}</p>
-                    <p className="text-[9px] text-gray-400 truncate">{p.zone} · {p.jobs}</p>
-                  </div>
-                  <button
-                    className={`text-[9px] font-semibold px-2.5 py-1 rounded-lg border flex-shrink-0 ${
-                      p.available
-                        ? "bg-navy text-white border-navy"
-                        : "bg-gray-100 text-gray-400 border-gray-100"
-                    }`}
-                  >
-                    {p.available ? "Assign" : "Busy"}
-                  </button>
-                </div>
-              ))}
+            {/* Real schedule screenshot */}
+            <div className="rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+              <img
+                src="/screenshots/schedule.png"
+                alt="KyoriaOS team schedule — week view with photographer assignments"
+                className="w-full"
+              />
             </div>
           </div>
         </section>
