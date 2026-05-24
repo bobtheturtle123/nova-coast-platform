@@ -39,7 +39,10 @@ export default function StripeStep() {
 
   async function handleContinue() {
     setSaving(true);
-    await patch({ pricingConfig: { ...(tenant?.pricingConfig || {}), depositPercent: depositPct } }).catch(() => {});
+    await patch({
+      pricingConfig: { ...(tenant?.pricingConfig || {}), depositPercent: depositPct },
+      bookingConfig: { ...(tenant?.bookingConfig || {}), depositPercent: depositPct },
+    }).catch(() => {});
     await saveOnboarding({
       completed: { ...(onboarding?.completed || {}), stripe: true },
       currentStep: 3,

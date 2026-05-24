@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/components/Toast";
 import { getAppUrl } from "@/lib/appUrl";
+import { getEffectivePlan, getSeatLimit } from "@/lib/plans";
 
 // ─── Notification definitions (shared with notifications page) ───────────────
 
@@ -59,7 +60,9 @@ function NotifToggleRow({ notif, pref, plan, onToggle }) {
 }
 
 // ─── Staff Access Section ─────────────────────────────────────────────────────
-function StaffAccessSection() {
+function StaffAccessSection({ tenant }) {
+  const isSolo = getEffectivePlan(tenant) === "solo";
+  const seatLimit = getSeatLimit(getEffectivePlan(tenant), tenant?.addonSeats || 0);
   const [members,     setMembers]     = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -113,22 +116,47 @@ function StaffAccessSection() {
         Full profiles (pay rates, skills, hours) can be set on the <a href="/dashboard/team" className="text-[#3486cf] hover:underline">Team page</a>.
       </p>
 
-      {/* Invite form */}
-      <div className="flex gap-3 flex-wrap mb-4">
-        <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendInvite()}
-          className="input-field flex-1 min-w-48" placeholder="colleague@email.com" />
-        <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="input-field w-40">
-          <option value="photographer">Photographer</option>
-          <option value="assistant">Assistant</option>
-          <option value="manager">Manager</option>
-          <option value="admin">Admin</option>
-        </select>
-        <button onClick={sendInvite} disabled={sending || !inviteEmail.trim()} className="btn-primary px-6 py-2 text-sm">
-          {sending ? "Sending…" : "Send Invite"}
-        </button>
-      </div>
-      {msg && <p className="text-sm text-green-700 mb-4">{msg}</p>}
+      {/* Invite form — hidden on solo plan */}
+      {isSolo || (seatLimit !== null && members.length >= seatLimit) ? (
+        <div className="flex items-center gap-3 p-4 mb-4 border border-amber-200 bg-amber-50 rounded-xl">
+          <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-amber-600">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800">
+              {isSolo ? "Team invites require Studio plan or above" : `Seat limit reached (${seatLimit} seats on your plan)`}
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              {isSolo
+                ? "The Solo plan is for individual photographers."
+                : "Remove a member or upgrade to add more."}
+            </p>
+          </div>
+          <a href="/dashboard/billing" className="flex-shrink-0 text-xs font-semibold text-[#3486cf] hover:underline whitespace-nowrap">
+            Upgrade Plan →
+          </a>
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-3 flex-wrap mb-4">
+            <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendInvite()}
+              className="input-field flex-1 min-w-48" placeholder="colleague@email.com" />
+            <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="input-field w-40">
+              <option value="photographer">Photographer</option>
+              <option value="assistant">Assistant</option>
+              <option value="manager">Manager</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button onClick={sendInvite} disabled={sending || !inviteEmail.trim()} className="btn-primary px-6 py-2 text-sm">
+              {sending ? "Sending…" : "Send Invite"}
+            </button>
+          </div>
+          {msg && <p className="text-sm text-green-700 mb-4">{msg}</p>}
+        </>
+      )}
 
       {/* Member list */}
       {loading ? (
@@ -136,7 +164,7 @@ function StaffAccessSection() {
           <div className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
         </div>
       ) : members.length === 0 ? (
-        <p className="text-sm text-gray-400">No team members yet. Send an invite above.</p>
+        <p className="text-sm text-gray-400">{isSolo ? "No team members on Solo plan." : "No team members yet. Send an invite above."}</p>
       ) : (
         <div className="space-y-2">
           {members.map((m) => (
@@ -2613,7 +2641,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── Staff Access ────────────────────────────────────────────────────── */}
-      <StaffAccessSection />
+      <StaffAccessSection tenant={tenant} />
 
         </div>
         )}

@@ -11,6 +11,7 @@ import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 import { avatarColor, initials } from "@/lib/avatar";
 import { ZONE_COLORS } from "@/lib/zoneColors";
 import { useDashboardPermissions } from "@/lib/dashboardPermissions";
+import { getEffectivePlan, getSeatLimit } from "@/lib/plans";
 
 const ROLE_OPTIONS = [
   { id: "photographer", label: "Photographer", icon: "📷", desc: "Shows in booking schedule. Gets shoot notifications & their own calendar." },
@@ -1116,6 +1117,7 @@ export default function TeamPage() {
   const { permissions, userRole } = useDashboardPermissions();
   const canViewRevenue = userRole === "owner" || !!permissions?.canViewRevenue;
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "team");
+  const [tenant,        setTenant]        = useState(null);
   const [members,       setMembers]       = useState([]);
   const [bookings,      setBookings]      = useState([]);
   const [products,      setProducts]      = useState({ services: [], packages: [], addons: [] });
@@ -1155,17 +1157,19 @@ export default function TeamPage() {
   useEffect(() => {
     async function load() {
       const token = await getToken(true);
-      const [teamRes, listRes, svcRes, pkgRes, adnRes, blocksRes] = await Promise.all([
+      const [teamRes, listRes, svcRes, pkgRes, adnRes, blocksRes, tenantRes] = await Promise.all([
         fetch("/api/dashboard/team",                   { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/listings",               { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/products?type=services", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/products?type=packages", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/products?type=addons",   { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/team/blocks",            { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/tenant",                 { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      const [teamData, listData, svcData, pkgData, adnData, blocksData] = await Promise.all([
-        teamRes.json(), listRes.json(), svcRes.json(), pkgRes.json(), adnRes.json(), blocksRes.json(),
+      const [teamData, listData, svcData, pkgData, adnData, blocksData, tenantData] = await Promise.all([
+        teamRes.json(), listRes.json(), svcRes.json(), pkgRes.json(), adnRes.json(), blocksRes.json(), tenantRes.json(),
       ]);
+      setTenant(tenantData.tenant || null);
       setMembers(teamData.members   || []);
       setBookings(listData.listings || []);
       setProducts({
@@ -1391,6 +1395,13 @@ export default function TeamPage() {
     </div>
   );
 
+  const planId = getEffectivePlan(tenant);
+  const seatLimit = getSeatLimit(planId, tenant?.addonSeats || 0);
+  const isSolo = planId === "solo";
+  const atSeatLimit = seatLimit !== null && members.length >= seatLimit;
+  const ownerLabel = tenant?.ownerName || tenant?.businessName || "You";
+  const soloOwnerMember = { id: "__owner__", name: ownerLabel, color: "#3486cf" };
+
   // In availability views hide inactive photographers; the member list still shows all
   const activeMembers = members.filter((m) => m.active !== false);
   const visibleMembers = filterMember === "all"
@@ -1414,7 +1425,11 @@ export default function TeamPage() {
         <div>
           <h1 className="page-title">Team Schedule</h1>
           {activeTab === "team" && (
-            <p className="page-subtitle">{members.length} team member{members.length !== 1 ? "s" : ""}</p>
+            <p className="page-subtitle">
+              {isSolo && members.length === 0
+                ? "Solo plan · just you"
+                : `${members.length} team member${members.length !== 1 ? "s" : ""}${seatLimit !== null ? ` · ${seatLimit} seat${seatLimit !== 1 ? "s" : ""} on your plan` : ""}`}
+            </p>
           )}
         </div>
         {activeTab === "team" ? (
@@ -1422,9 +1437,16 @@ export default function TeamPage() {
             <button onClick={() => setShowBlockModal(true)} className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
               🚫 Block Time
             </button>
-            <button onClick={() => setAddMode("choice")} className="btn-primary text-sm px-5 py-2 flex items-center gap-2">
-              <span className="text-lg leading-none">+</span> Add Team Member
-            </button>
+            {atSeatLimit ? (
+              <a href="/dashboard/billing"
+                className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-2 rounded-lg border border-[#3486cf]/30 text-[#3486cf] hover:bg-[#3486cf]/5 transition-colors">
+                Upgrade to Add Members
+              </a>
+            ) : (
+              <button onClick={() => setAddMode("choice")} className="btn-primary text-sm px-5 py-2 flex items-center gap-2">
+                <span className="text-lg leading-none">+</span> Add Team Member
+              </button>
+            )}
           </div>
         ) : (
           <Link href="/dashboard/bookings/create"
@@ -1482,13 +1504,27 @@ export default function TeamPage() {
       {members.length === 0 && (
         <div className="card p-10 text-center mb-6">
           <div className="text-5xl mb-3">👥</div>
-          <p className="font-semibold text-[#0F172A] mb-1">No team members yet</p>
-          <p className="text-sm text-gray-500 mb-5 max-w-sm mx-auto">
-            Add photographers, managers, editors, and assistants. Only photographers appear in booking schedule.
-          </p>
-          <button onClick={() => setAddMode("choice")} className="btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-2">
-            <span className="text-lg leading-none">+</span> Add Your First Team Member
-          </button>
+          {isSolo ? (
+            <>
+              <p className="font-semibold text-[#0F172A] mb-1">Team members require Studio plan or above</p>
+              <p className="text-sm text-gray-500 mb-5 max-w-sm mx-auto">
+                The Solo plan is designed for individual photographers. Upgrade to Studio to add photographers, assistants, and managers.
+              </p>
+              <a href="/dashboard/billing" className="btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-2">
+                View Upgrade Options
+              </a>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold text-[#0F172A] mb-1">No team members yet</p>
+              <p className="text-sm text-gray-500 mb-5 max-w-sm mx-auto">
+                Add photographers, managers, editors, and assistants. Only photographers appear in booking schedule.
+              </p>
+              <button onClick={() => setAddMode("choice")} className="btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-2">
+                <span className="text-lg leading-none">+</span> Add Your First Team Member
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -1587,15 +1623,25 @@ export default function TeamPage() {
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <button onClick={() => setFilterMember("all")} className={`fchip${filterMember === "all" ? " fchip-active" : ""}`}>All</button>
-              {members.map((m, i) => (
-                <button key={m.id} onClick={() => setFilterMember(m.id)} className={`fchip${filterMember === m.id ? " fchip-active" : ""}`}>
+              {isSolo && members.length === 0 ? (
+                <span className="fchip fchip-active">
                   <span className="w-4 h-4 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
-                    style={{ fontSize: 8, background: ZONE_COLORS[i % ZONE_COLORS.length] }}>
-                    {initials(m.name).slice(0, 2)}
+                    style={{ fontSize: 8, background: "#3486cf" }}>
+                    {ownerLabel[0]?.toUpperCase() || "Y"}
                   </span>
-                  {m.name.split(" ")[0]}
-                </button>
-              ))}
+                  {ownerLabel.split(" ")[0]}
+                </span>
+              ) : (
+                members.map((m, i) => (
+                  <button key={m.id} onClick={() => setFilterMember(m.id)} className={`fchip${filterMember === m.id ? " fchip-active" : ""}`}>
+                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                      style={{ fontSize: 8, background: ZONE_COLORS[i % ZONE_COLORS.length] }}>
+                      {initials(m.name).slice(0, 2)}
+                    </span>
+                    {m.name.split(" ")[0]}
+                  </button>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -1603,7 +1649,7 @@ export default function TeamPage() {
         {/* ── 2-WEEK AVAILABILITY GRID ───────────────────────────────────── */}
         {calView === "2wk" && (
           <div className="overflow-x-auto">
-            {members.length === 0 && timeBlocks.filter((b) => !b.memberId).length === 0 ? (
+            {members.length === 0 && !isSolo && timeBlocks.filter((b) => !b.memberId).length === 0 ? (
               <div className="p-10 text-center text-gray-400">
                 <p className="text-3xl mb-2">📅</p>
                 <p className="font-medium text-gray-500">No team members yet</p>
@@ -1679,10 +1725,12 @@ export default function TeamPage() {
                       </tr>
                     );
                   })()}
-                  {visibleMembers.map((member) => {
-                    const memberEvents = calendarEvents.filter(
-                      (e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email)
-                    );
+                  {(isSolo && members.length === 0 ? [soloOwnerMember] : visibleMembers).map((member) => {
+                    const memberEvents = member.id === "__owner__"
+                      ? calendarEvents
+                      : calendarEvents.filter(
+                          (e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email)
+                        );
                     return (
                       <tr key={member.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/40 transition-colors">
                         <td className="px-3 py-2 border-r border-gray-200 bg-white sticky left-0 z-10">
