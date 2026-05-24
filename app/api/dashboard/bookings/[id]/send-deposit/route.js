@@ -49,6 +49,9 @@ export async function POST(req, { params }) {
   if (!depositAmount || depositAmount <= 0) {
     return Response.json({ error: "No deposit amount set on this booking" }, { status: 400 });
   }
+  if (Math.round(depositAmount * 100) < 50) {
+    return Response.json({ error: `Deposit of $${depositAmount} is below the $0.50 minimum for online payment.` }, { status: 400 });
+  }
 
   const appUrl = getAppUrl();
   const address = booking.fullAddress || booking.address || "Property";
@@ -80,14 +83,18 @@ export async function POST(req, { params }) {
   };
 
   let session;
-  if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
-    // Route through Connect account
-    const platformFee = Math.round(depositAmount * 100 * (Number(process.env.PLATFORM_FEE_BPS || 150) / 10000));
-    session = await stripe.checkout.sessions.create(
-      { ...sessionParams, payment_intent_data: { application_fee_amount: platformFee, transfer_data: { destination: tenant.stripeConnectAccountId } } },
-    );
-  } else {
-    session = await stripe.checkout.sessions.create(sessionParams);
+  try {
+    if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
+      const platformFee = Math.round(depositAmount * 100 * (Number(process.env.PLATFORM_FEE_BPS || 150) / 10000));
+      session = await stripe.checkout.sessions.create(
+        { ...sessionParams, payment_intent_data: { application_fee_amount: platformFee, transfer_data: { destination: tenant.stripeConnectAccountId } } },
+      );
+    } else {
+      session = await stripe.checkout.sessions.create(sessionParams);
+    }
+  } catch (e) {
+    console.error("[send-deposit] Stripe checkout failed:", e?.message);
+    return Response.json({ error: e?.message || "Failed to create payment link." }, { status: 500 });
   }
 
   // Store the checkout session ID and cooldown timestamp

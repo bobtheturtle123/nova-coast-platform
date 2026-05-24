@@ -54,47 +54,51 @@ export async function POST(req, { params }) {
 
   let paymentUrl = null;
 
-  if (amountDue > 0) {
-    const sessionParams = {
-      mode: "payment",
-      payment_method_types: ["card"],
-      line_items: [{
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: `${paymentLabel} — ${address}`,
-            description: `${tenant.businessName || "Photography"} invoice`,
+  if (amountDue >= 0.5) {
+    try {
+      const sessionParams = {
+        mode: "payment",
+        payment_method_types: ["card"],
+        line_items: [{
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `${paymentLabel} — ${address}`,
+              description: `${tenant.businessName || "Photography"} invoice`,
+            },
+            unit_amount: Math.round(amountDue * 100),
           },
-          unit_amount: Math.round(amountDue * 100),
+          quantity: 1,
+        }],
+        customer_email: booking.clientEmail || undefined,
+        success_url: `${appUrl}/payment-success?bookingId=${params.id}&type=${depositPaid ? "balance" : "deposit"}`,
+        cancel_url:  `${appUrl}/${tenant.slug || ""}/book/payment?cancelled=true`,
+        metadata: {
+          bookingId:  params.id,
+          tenantId:   ctx.tenantId,
+          type:       depositPaid ? "balance" : "deposit",
+          clientName: booking.clientName || "",
         },
-        quantity: 1,
-      }],
-      customer_email: booking.clientEmail || undefined,
-      success_url: `${appUrl}/payment-success?bookingId=${params.id}&type=${depositPaid ? "balance" : "deposit"}`,
-      cancel_url:  `${appUrl}/${tenant.slug || ""}/book/payment?cancelled=true`,
-      metadata: {
-        bookingId:  params.id,
-        tenantId:   ctx.tenantId,
-        type:       depositPaid ? "balance" : "deposit",
-        clientName: booking.clientName || "",
-      },
-    };
+      };
 
-    let session;
-    if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
-      const platformFee = Math.round(amountDue * 100 * (Number(process.env.PLATFORM_FEE_BPS || 150) / 10000));
-      session = await stripe.checkout.sessions.create({
-        ...sessionParams,
-        payment_intent_data: {
-          application_fee_amount: platformFee,
-          transfer_data: { destination: tenant.stripeConnectAccountId },
-        },
-      });
-    } else {
-      session = await stripe.checkout.sessions.create(sessionParams);
+      let session;
+      if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
+        const platformFee = Math.round(amountDue * 100 * (Number(process.env.PLATFORM_FEE_BPS || 150) / 10000));
+        session = await stripe.checkout.sessions.create({
+          ...sessionParams,
+          payment_intent_data: {
+            application_fee_amount: platformFee,
+            transfer_data: { destination: tenant.stripeConnectAccountId },
+          },
+        });
+      } else {
+        session = await stripe.checkout.sessions.create(sessionParams);
+      }
+
+      paymentUrl = session.url;
+    } catch (e) {
+      console.error("[send-invoice] Stripe checkout failed (non-fatal):", e?.message);
     }
-
-    paymentUrl = session.url;
   }
 
   await sendInvoiceEmail({ booking, paymentUrl, tenant });

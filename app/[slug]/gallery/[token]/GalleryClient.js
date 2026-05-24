@@ -791,6 +791,24 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           </section>
         )}
 
+        {/* ── Agent portal signup CTA ──────────────────────────────────── */}
+        {unlocked && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
+            <div>
+              <p className="font-semibold text-gray-900 mb-1">Track all your listings in one place</p>
+              <p className="text-sm text-gray-500">
+                Create a free agent account to access all your media, property websites, and order history — anytime.
+              </p>
+            </div>
+            <a
+              href={`/${slug}/agent/login`}
+              className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap border transition-colors hover:opacity-90"
+              style={{ background: primary, color: "#fff" }}>
+              Create Free Account →
+            </a>
+          </div>
+        )}
+
       </main>
 
       {/* Footer */}
