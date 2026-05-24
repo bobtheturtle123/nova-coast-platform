@@ -5,8 +5,8 @@ async function getCtx(req) {
   if (!auth) return null;
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
-    if (decoded.role !== "photographer" || !decoded.tenantId || !decoded.memberId) return null;
-    return { uid: decoded.uid, tenantId: decoded.tenantId, memberId: decoded.memberId };
+    if (decoded.role !== "photographer" || !decoded.tenantId) return null;
+    return { uid: decoded.uid, tenantId: decoded.tenantId, memberId: decoded.memberId || null, email: decoded.email || null };
   } catch { return null; }
 }
 
@@ -61,6 +61,7 @@ export async function GET(req) {
       status:         raw.status,
       workflowStatus: raw.workflowStatus || null,
       shootDate:      raw.shootDate,
+      shootTime:      raw.shootTime,
       preferredDate:  raw.preferredDate,
       preferredTime:  raw.preferredTime,
       address:        raw.address,

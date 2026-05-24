@@ -311,8 +311,8 @@ function ImportModal({ onClose, onImported }) {
       <div className="modal-card relative w-full max-w-[560px]">
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div>
-            <h2 className="text-[15px] font-semibold text-[#0F172A]">Import Customers</h2>
-            <p className="text-xs text-gray-400 mt-0.5">From Aryeo or any CSV with matching columns</p>
+            <h2 className="text-[15px] font-semibold text-[#0F172A]">Import Customer Data</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Upload a CSV file — download the template below to get started</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
@@ -321,11 +321,25 @@ function ImportModal({ onClose, onImported }) {
           {/* File picker */}
           {!done && (
             <>
-              <div>
-                <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Expected CSV columns</p>
-                <p className="text-xs text-gray-400 font-mono bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
-                  First Name · Last Name · Email · Phone · Office/Brokerage/Team Name · License Number · Timezone
-                </p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">CSV Template</p>
+                <button
+                  onClick={() => {
+                    const header = "First Name\tLast Name\tEmail\tPhone\tOffice/Brokerage/Team Name\tLicense Number\tTimezone";
+                    const example = "Jane\tSmith\tjane@example.com\t5551234567\tExample Realty\t\tUS/Pacific";
+                    const blob = new Blob([header + "\n" + example], { type: "text/tab-separated-values" });
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = "customers-template.csv";
+                    a.click();
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded-lg hover:bg-[#3486cf]/5 font-medium transition-colors"
+                >
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                  Download Template
+                </button>
               </div>
               <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-8 cursor-pointer transition-colors ${rows.length ? "border-[#3486cf]/40 bg-blue-50/40" : "border-gray-200 hover:border-[#3486cf]/30"}`}>
                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400">
@@ -614,7 +628,7 @@ export default function AgentsPage() {
           )}
           <button onClick={() => setShowImport(true)}
             className="btn-outline text-sm px-3.5 py-2">
-            Import from Aryeo
+            Import Customers
           </button>
           <button onClick={() => { setEditingTeam(null); setShowTeamModal(true); }}
             className="btn-outline text-sm px-3.5 py-2">

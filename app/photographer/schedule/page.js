@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { auth } from "@/lib/firebase";
 
 const DAYS_SHORT  = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -254,11 +255,13 @@ export default function PhotographerSchedulePage() {
                       </div>
                     ))}
                     {dayEvents.map((ev) => (
-                      <div key={ev.id} style={{ background: memberColor + "22", borderLeftColor: memberColor }}
-                        className="text-xs border-l-2 px-1.5 py-1 rounded-xl mb-1 relative z-10">
+                      <Link key={ev.id} href={`/photographer/shoots/${ev.id}`}
+                        style={{ background: memberColor + "22", borderLeftColor: memberColor }}
+                        className="block text-xs border-l-2 px-1.5 py-1 rounded-xl mb-1 relative z-10 hover:opacity-80 transition-opacity">
                         <p className="font-medium truncate" style={{ color: memberColor }}>{ev.address?.split(",")[0] || "Shoot"}</p>
-                        {ev.preferredTime && <p className="text-gray-400 capitalize">{ev.preferredTime}</p>}
-                      </div>
+                        {ev.clientName && <p className="text-gray-500 truncate">{ev.clientName}</p>}
+                        {(ev.shootTime || ev.preferredTime) && <p className="text-gray-400 capitalize">{ev.shootTime || ev.preferredTime}</p>}
+                      </Link>
                     ))}
                   </div>
                 );
@@ -288,10 +291,12 @@ export default function PhotographerSchedulePage() {
                       {d.getDate()}
                     </p>
                     {dayEvents.slice(0,2).map((ev) => (
-                      <div key={ev.id} style={{ background: memberColor + "22", borderLeftColor: memberColor }}
-                        className="text-xs border-l-2 px-1 py-0.5 rounded-xl mb-0.5 truncate">
+                      <Link key={ev.id} href={`/photographer/shoots/${ev.id}`}
+                        style={{ background: memberColor + "22", borderLeftColor: memberColor }}
+                        className="block text-xs border-l-2 px-1 py-0.5 rounded-xl mb-0.5 truncate hover:opacity-80 transition-opacity">
                         <span style={{ color: memberColor }} className="font-medium">{ev.address?.split(",")[0] || "Shoot"}</span>
-                      </div>
+                        {ev.clientName && <span className="text-gray-500 ml-1">{ev.clientName}</span>}
+                      </Link>
                     ))}
                     {dayEvents.length > 2 && <p className="text-xs text-gray-400">+{dayEvents.length - 2}</p>}
                     {hasBlock && <p className="text-[10px] text-red-500 font-medium">Blocked</p>}
