@@ -15,6 +15,9 @@ export const metadata = {
     statusBarStyle: "black-translucent",
     title: "KyoriaOS",
   },
+};
+
+export const viewport = {
   themeColor: "#0F172A",
 };
 
