@@ -596,7 +596,22 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
           {/* ── SERVICES ── */}
           {tab === "services" && (
             <>
-              <p className="text-xs text-gray-500">Select which products/services this team member can perform. Leave blank to allow all.</p>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-gray-500">Select which products/services this team member can perform. Leave blank to allow all.</p>
+                {allProducts.length > 0 && (
+                  <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                    <button type="button"
+                      onClick={() => setForm((f) => ({ ...f, skills: allProducts.map((p) => p.id) }))}
+                      className="text-xs font-medium text-[#3486cf] hover:underline whitespace-nowrap">
+                      Select all
+                    </button>
+                    {form.skills.length > 0 && (
+                      <button type="button" onClick={() => setForm((f) => ({ ...f, skills: [] }))}
+                        className="text-xs text-gray-400 hover:text-red-500 whitespace-nowrap">Clear all</button>
+                    )}
+                  </div>
+                )}
+              </div>
               {allProducts.length === 0 ? (
                 <p className="text-sm text-gray-400 py-4 text-center">Add products first in the Products page.</p>
               ) : (
@@ -615,11 +630,7 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
                 </div>
               )}
               {form.skills.length > 0 && (
-                <div className="mt-1">
-                  <p className="text-xs font-medium text-gray-500 mb-2">{form.skills.length} service{form.skills.length !== 1 ? "s" : ""} assigned</p>
-                  <button type="button" onClick={() => setForm((f) => ({...f, skills: []}))}
-                    className="text-xs text-gray-400 hover:text-red-500">Clear all</button>
-                </div>
+                <p className="text-xs font-medium text-gray-500 mt-1">{form.skills.length} of {allProducts.length} service{allProducts.length !== 1 ? "s" : ""} assigned</p>
               )}
             </>
           )}

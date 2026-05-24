@@ -213,9 +213,9 @@ export default function DashboardHome() {
     return () => document.removeEventListener("visibilitychange", onFocus);
   }, []);
 
-  // Date helpers
-  const todayStr    = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const tomorrowStr = useMemo(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10), []);
+  // Date helpers — use LOCAL date, not UTC, so "today" matches regardless of timezone
+  const todayStr    = useMemo(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }, []);
+  const tomorrowStr = useMemo(() => { const d = new Date(Date.now() + 86400000); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }, []);
   const nowWeek     = useMemo(() => isoWeek(todayStr), [todayStr]);
 
   // Listings filtered by scope — hidden bookings excluded from live view
@@ -241,7 +241,7 @@ export default function DashboardHome() {
     [listings, nowWeek]
   );
   const prevWeekRev = useMemo(() => {
-    const prev = isoWeek(new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10));
+    const pw = new Date(Date.now() - 7 * 86400000); const prev = isoWeek(`${pw.getFullYear()}-${String(pw.getMonth()+1).padStart(2,'0')}-${String(pw.getDate()).padStart(2,'0')}`);
     return listings.filter(l => !l.hidden && l.shootDate).filter(l => { const w = isoWeek(l.shootDate); return w.y === prev.y && w.w === prev.w; }).reduce((s, l) => s + paidAmount(l), 0);
   }, [listings]);
   const weekDelta = prevWeekRev > 0 ? Math.round(((thisWeekRev - prevWeekRev) / prevWeekRev) * 100) : null;
