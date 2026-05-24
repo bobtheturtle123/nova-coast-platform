@@ -8,6 +8,7 @@ import { calculateTenantPrice, getSqftTier, getItemPrice, getFromPrice, formatPr
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 import { getPlan } from "@/lib/plans";
 import WeatherWidget from "@/components/dashboard/WeatherWidget";
+import { useTenantSettings } from "@/lib/TenantSettingsContext";
 
 const TIME_SLOTS = [
   { label: "7:00 AM",  value: "07:00" }, { label: "7:30 AM",  value: "07:30" },
@@ -85,6 +86,7 @@ function AutocompleteInput({ value, onChange, onSelect, suggestions, placeholder
 export default function BookingForm({ mode = "create", bookingId, initialValues, onSuccess }) {
   const router = useRouter();
   const isEdit = mode === "edit";
+  const { tempUnit } = useTenantSettings();
   const init   = initialValues || {};
 
   const [form, setForm] = useState({
@@ -981,7 +983,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
               </button>
 
               {catalog.showWeather && form.shootDate && confirmedAddress && (
-                <WeatherWidget address={confirmedAddress} date={form.shootDate} lat={form.lat} lng={form.lng} />
+                <WeatherWidget address={confirmedAddress} date={form.shootDate} lat={form.lat} lng={form.lng} unit={tempUnit} />
               )}
 
               {form.additionalAppointments.map((appt, i) => {

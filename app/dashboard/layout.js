@@ -8,6 +8,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import AiChatButton from "@/components/dashboard/AiChatButton";
 import { ToastProvider } from "@/components/Toast";
 import { DashboardPermissionsContext } from "@/lib/dashboardPermissions";
+import { TenantSettingsContext } from "@/lib/TenantSettingsContext";
 
 // permKey: required permission for non-owners. ownerOnly: only owner/admin sees it.
 const NAV = [
@@ -134,6 +135,7 @@ export default function DashboardLayout({ children }) {
   const [sidebarOpen,     setSidebarOpen]     = useState(false);
   const [pendingRevCount, setPendingRevCount] = useState(0);
   const [tenantPlan,      setTenantPlan]      = useState("starter");
+  const [tenantSettings,  setTenantSettings]  = useState({ tempUnit: "F", locale: "en-US", currency: "USD" });
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -168,6 +170,11 @@ export default function DashboardLayout({ children }) {
         if (d.tenant?.businessName) setTenantName(d.tenant.businessName);
         if (d.tenant?.branding?.logoUrl) setTenantLogo(d.tenant.branding.logoUrl);
         setTenantPlan(d.tenant?.permanentPlan || d.tenant?.subscriptionPlan || "starter");
+        setTenantSettings({
+          tempUnit: d.tenant?.tempUnit || "F",
+          locale:   d.tenant?.locale   || "en-US",
+          currency: d.tenant?.currency || "USD",
+        });
       }).catch(() => {});
     });
     return unsub;
@@ -362,9 +369,11 @@ export default function DashboardLayout({ children }) {
             <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-6 w-auto object-contain" />
           </div>
 
-          <DashboardPermissionsContext.Provider value={{ permissions: permissions || {}, userRole }}>
-            <main className="flex-1 overflow-x-hidden min-w-0">{children}</main>
-          </DashboardPermissionsContext.Provider>
+          <TenantSettingsContext.Provider value={tenantSettings}>
+            <DashboardPermissionsContext.Provider value={{ permissions: permissions || {}, userRole }}>
+              <main className="flex-1 overflow-x-hidden min-w-0">{children}</main>
+            </DashboardPermissionsContext.Provider>
+          </TenantSettingsContext.Provider>
         </div>
 
         <AiChatButton />

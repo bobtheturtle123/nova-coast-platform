@@ -9,6 +9,7 @@ import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 import { getAppUrl } from "@/lib/appUrl";
 import WeatherWidget from "@/components/dashboard/WeatherWidget";
+import { useTenantSettings, formatCurrency } from "@/lib/TenantSettingsContext";
 
 // ─── Agent Image Field (upload file OR paste URL) ────────────────────────────
 function AgentImageField({ label, value, onChange, folder, placeholder, hint, preview }) {
@@ -190,6 +191,7 @@ export default function ListingDetailPage() {
   const { id }  = useParams();
   const router  = useRouter();
   const toast   = useToast();
+  const { tempUnit, locale, currency } = useTenantSettings();
 
   const [booking,    setBooking]   = useState(null);
   const [gallery,    setGallery]   = useState(null);
@@ -1092,7 +1094,7 @@ if (loading) return (
                   <div className="flex justify-between">
                     <span className="text-gray-500">Shoot Date</span>
                     <span className="font-medium text-[#0F172A]">
-                      {new Date(booking.shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                      {new Date(booking.shootDate + "T12:00:00").toLocaleDateString(locale, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
                       {booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}
                     </span>
                   </div>
@@ -1109,6 +1111,7 @@ if (loading) return (
                       date={(booking.shootDate || booking.preferredDate).split("T")[0]}
                       lat={booking.lat || undefined}
                       lng={booking.lng || undefined}
+                      unit={tempUnit}
                     />
                   </div>
                 )}
@@ -1200,27 +1203,27 @@ if (loading) return (
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Total</span>
-                    <span className="font-semibold">${(booking.totalPrice || 0).toLocaleString()}</span>
+                    <span className="font-semibold">{formatCurrency(booking.totalPrice, currency, locale)}</span>
                   </div>
 
                   {booking.paidInFull ? (
                     <div className="flex justify-between text-green-700 font-medium">
                       <span>Paid in full</span>
-                      <span>${(booking.totalPrice || 0).toLocaleString()} ✓</span>
+                      <span>{formatCurrency(booking.totalPrice, currency, locale)} ✓</span>
                     </div>
                   ) : (
                     <>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Deposit</span>
                         <span className={booking.depositPaid ? "text-green-600 font-medium" : "text-gray-400"}>
-                          ${(booking.depositAmount || 0).toLocaleString()}
+                          {formatCurrency(booking.depositAmount, currency, locale)}
                           {booking.depositPaid ? " ✓ Paid" : " — Unpaid"}
                         </span>
                       </div>
                       <div className="flex justify-between border-t border-gray-100 pt-3">
                         <span className="text-gray-500">Balance due</span>
                         <span className={booking.balancePaid ? "text-green-600 font-medium" : "text-amber-600 font-medium"}>
-                          ${(booking.remainingBalance || 0).toLocaleString()}
+                          {formatCurrency(booking.remainingBalance, currency, locale)}
                           {booking.balancePaid ? " ✓ Paid" : " — Due at delivery"}
                         </span>
                       </div>
@@ -1230,7 +1233,7 @@ if (loading) return (
                   {booking.tipAmount > 0 && (
                     <div className="flex justify-between text-gray-500">
                       <span>Tip</span>
-                      <span className="text-green-600 font-medium">+${booking.tipAmount.toLocaleString()}</span>
+                      <span className="text-green-600 font-medium">+{formatCurrency(booking.tipAmount, currency, locale)}</span>
                     </div>
                   )}
                 </div>
@@ -1282,7 +1285,7 @@ if (loading) return (
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Payment Reminder</p>
                 <p className="text-sm text-gray-500 mb-4">
                   Send the client a reminder about their outstanding {booking.depositPaid ? "balance" : "deposit"} of{" "}
-                  <strong>${(booking.depositPaid ? booking.remainingBalance : booking.depositAmount) || 0}</strong>.
+                  <strong>{formatCurrency(booking.depositPaid ? booking.remainingBalance : booking.depositAmount, currency, locale)}</strong>.
                 </p>
                 <button
                   disabled={sendingReminder}
@@ -1322,7 +1325,7 @@ if (loading) return (
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Request Deposit</p>
                 <p className="text-sm text-gray-500 mb-4">
                   Send the client a deposit request email with a Stripe payment link for{" "}
-                  <strong>${(booking.depositAmount || 0).toLocaleString()}</strong>.
+                  <strong>{formatCurrency(booking.depositAmount, currency, locale)}</strong>.
                   {!booking.clientEmail && <span className="text-amber-600"> Add a client email first.</span>}
                 </p>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -2607,7 +2610,7 @@ if (loading) return (
                 {fee > 0 && (
                   <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                     <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide mb-0.5">Reschedule Fee</p>
-                    <p className="text-xl font-bold text-amber-700">${fee.toFixed(2)}</p>
+                    <p className="text-xl font-bold text-amber-700">{formatCurrency(fee, currency, locale)}</p>
                     <p className="text-[10px] text-amber-600 mt-0.5">{reschedPct}% of booking total — within {reschedWindowHrs}hr window</p>
                   </div>
                 )}
