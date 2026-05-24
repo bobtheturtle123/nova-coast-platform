@@ -902,6 +902,32 @@ function OwnerCalSyncModal({ tenant, onClose }) {
     }
   }
 
+  async function disconnectGcal() {
+    if (!confirm("Disconnect your Google Calendar? All synced busy blocks will be removed.")) return;
+    setDisconnecting(true);
+    try {
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const idToken = await firebaseAuth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/team/google-sync", {
+        method:  "DELETE",
+        headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
+        body:    JSON.stringify({ memberId: "__owner__" }),
+      });
+      if (res.ok) {
+        setGcalConnected(false);
+        setSyncResult(null);
+        setLastSynced(null);
+      } else {
+        const d = await res.json();
+        setConnectError(d.error || "Disconnect failed");
+      }
+    } catch (e) {
+      setConnectError(e.message);
+    } finally {
+      setDisconnecting(false);
+    }
+  }
+
   const feedUrl    = calToken ? `${APP_URL}/api/calendar/owner/${calToken}` : null;
   const webcalUrl  = feedUrl ? feedUrl.replace(/^https?:\/\//, "webcal://") : null;
   const gcalUrl    = feedUrl ? `https://calendar.google.com/calendar/r/settings/addbyurl?url=${encodeURIComponent(feedUrl)}` : null;
@@ -925,7 +951,7 @@ function OwnerCalSyncModal({ tenant, onClose }) {
 
         <div className="p-6 space-y-4">
           {/* Google Calendar */}
-          {isGCalConnected ? (
+          {gcalConnected ? (
             <div className="border border-green-200 bg-green-50 rounded-xl p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -944,10 +970,16 @@ function OwnerCalSyncModal({ tenant, onClose }) {
                     )}
                   </div>
                 </div>
-                <button onClick={syncNow} disabled={syncing}
-                  className="flex-shrink-0 text-xs bg-white border border-green-300 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-50 disabled:opacity-50 font-medium">
-                  {syncing ? "Syncing…" : "Sync Now"}
-                </button>
+                <div className="flex flex-col gap-1.5 flex-shrink-0">
+                  <button onClick={syncNow} disabled={syncing}
+                    className="text-xs bg-white border border-green-300 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-50 disabled:opacity-50 font-medium">
+                    {syncing ? "Syncing…" : "Sync Now"}
+                  </button>
+                  <button onClick={disconnectGcal} disabled={disconnecting}
+                    className="text-xs bg-white border border-red-200 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-50 font-medium">
+                    {disconnecting ? "Removing…" : "Disconnect"}
+                  </button>
+                </div>
               </div>
               {connectError && (
                 <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">{connectError}</div>

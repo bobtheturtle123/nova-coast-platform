@@ -66,14 +66,30 @@ export async function DELETE(req) {
   return Response.json({ ok: true });
 }
 
+const SYNC_RATE_LIMIT   = 5;  // max manual syncs per member per hour
+const SYNC_WINDOW_MS    = 60 * 60 * 1000;
+
 // POST { memberId } — admin-triggered Google Calendar sync. Use memberId "__owner__" for the tenant owner.
 export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const { memberId } = body;
+  const { memberId, _cron } = body;
   if (!memberId) return Response.json({ error: "memberId required" }, { status: 400 });
+
+  // Rate-limit manual syncs (skip for cron-triggered calls)
+  if (!_cron) {
+    const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
+    const rateRef   = tenantRef.collection("syncRateLimits").doc(memberId);
+    const rateSnap  = await rateRef.get();
+    const now       = Date.now();
+    const recent    = (rateSnap.data()?.timestamps || []).filter((t) => now - t < SYNC_WINDOW_MS);
+    if (recent.length >= SYNC_RATE_LIMIT) {
+      return Response.json({ error: `Sync limit reached — max ${SYNC_RATE_LIMIT} syncs per hour. Try again later.` }, { status: 429 });
+    }
+    await rateRef.set({ timestamps: [...recent, now] }, { merge: true });
+  }
 
   const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
   let gcal, accessToken, updateTokens;

@@ -71,10 +71,23 @@ export async function PATCH(req) {
   return Response.json({ ok: true });
 }
 
+const SYNC_RATE_LIMIT = 5;
+const SYNC_WINDOW_MS  = 60 * 60 * 1000;
+
 // POST — sync photographer's Google Calendar busy times into timeBlocks
 export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Rate limit: max 5 manual syncs per hour
+  const rateRef  = adminDb.collection("tenants").doc(ctx.tenantId).collection("syncRateLimits").doc(ctx.memberId);
+  const rateSnap = await rateRef.get();
+  const now      = Date.now();
+  const recent   = (rateSnap.data()?.timestamps || []).filter((t) => now - t < SYNC_WINDOW_MS);
+  if (recent.length >= SYNC_RATE_LIMIT) {
+    return Response.json({ error: `Sync limit reached — max ${SYNC_RATE_LIMIT} syncs per hour. Try again later.` }, { status: 429 });
+  }
+  await rateRef.set({ timestamps: [...recent, now] }, { merge: true });
 
   const memberRef = adminDb
     .collection("tenants").doc(ctx.tenantId)
