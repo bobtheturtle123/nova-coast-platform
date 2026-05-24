@@ -72,7 +72,7 @@ export async function POST(req, { params }) {
       quantity: 1,
     }],
     customer_email: booking.clientEmail || undefined,
-    success_url: `${appUrl}/payment-success?bookingId=${params.id}&type=deposit`,
+    success_url: `${appUrl}/payment-success?bookingId=${params.id}&type=deposit&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url:  `${appUrl}/${tenant.slug || ""}/book/payment?cancelled=true`,
     metadata: {
       bookingId:  params.id,
@@ -80,15 +80,27 @@ export async function POST(req, { params }) {
       type:       "deposit",
       clientName: booking.clientName || "",
     },
+    payment_intent_data: {
+      metadata: {
+        bookingId: params.id,
+        tenantId:  ctx.tenantId,
+        type:      "deposit",
+      },
+    },
   };
 
   let session;
   try {
     if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
       const platformFee = Math.round(depositAmount * 100 * (Number(process.env.PLATFORM_FEE_BPS || 150) / 10000));
-      session = await stripe.checkout.sessions.create(
-        { ...sessionParams, payment_intent_data: { application_fee_amount: platformFee, transfer_data: { destination: tenant.stripeConnectAccountId } } },
-      );
+      session = await stripe.checkout.sessions.create({
+        ...sessionParams,
+        payment_intent_data: {
+          ...sessionParams.payment_intent_data,
+          application_fee_amount: platformFee,
+          transfer_data: { destination: tenant.stripeConnectAccountId },
+        },
+      });
     } else {
       session = await stripe.checkout.sessions.create(sessionParams);
     }

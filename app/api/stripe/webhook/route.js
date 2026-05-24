@@ -172,9 +172,8 @@ export async function POST(req) {
           break;
         }
 
-        // Booking deposit via Checkout session
-        if (type !== "deposit" || !bookingId) {
-          if (type !== "topup") console.warn(`[stripe/webhook] checkout.session.completed deposit missing bookingId — session=${session.id} type=${type}`);
+        if (!bookingId) {
+          console.warn(`[stripe/webhook] checkout.session.completed missing bookingId — session=${session.id} type=${type}`);
           break;
         }
 
@@ -186,27 +185,67 @@ export async function POST(req) {
         if (!bookingDoc.exists) break;
         const booking = bookingDoc.data();
 
-        let checkoutShouldNotify = false;
-        await adminDb.runTransaction(async (tx) => {
-          const snap = await tx.get(bookingRef);
-          if (!snap.exists || snap.data().depositPaid) return;
-          tx.update(bookingRef, { depositPaid: true, status: "requested", stripeDepositSessionId: session.id });
-          checkoutShouldNotify = true;
-        });
-        if (checkoutShouldNotify) {
-          try {
-            const tenant = await getTenantById(tenantId);
-            if (tenant) {
-              await sendBookingCreatedNotifications({
-                booking: { ...booking, depositPaid: true },
-                tenant,
-                adminEmail: tenant.email || null,
-              });
-              sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" }).catch(() => {});
-              sendBookingConfirmedSms({ booking, tenant }).catch(() => {});
-            }
-          } catch (e) { console.error("Deposit confirmation email failed:", e); }
+        if (type === "deposit") {
+          let shouldNotify = false;
+          await adminDb.runTransaction(async (tx) => {
+            const snap = await tx.get(bookingRef);
+            if (!snap.exists || snap.data().depositPaid) return;
+            const data = snap.data();
+            const newRemainingBalance = Math.max(0, (data.totalPrice || 0) - (data.depositAmount || 0));
+            tx.update(bookingRef, {
+              depositPaid: true,
+              remainingBalance: newRemainingBalance,
+              status: "requested",
+              stripeDepositSessionId: session.id,
+            });
+            shouldNotify = true;
+          });
+          if (shouldNotify) {
+            console.log(`[stripe/webhook] checkout deposit confirmed — bookingId=${bookingId}`);
+            try {
+              const tenant = await getTenantById(tenantId);
+              if (tenant) {
+                await sendBookingCreatedNotifications({
+                  booking: { ...booking, depositPaid: true },
+                  tenant,
+                  adminEmail: tenant.email || null,
+                });
+                sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" }).catch(() => {});
+                sendBookingConfirmedSms({ booking, tenant }).catch(() => {});
+              }
+            } catch (e) { console.error("[stripe/webhook] deposit notification FAILED:", e); }
+          }
+          break;
         }
+
+        if (type === "balance") {
+          let shouldNotify = false;
+          let galleryId = null;
+          await adminDb.runTransaction(async (tx) => {
+            const snap = await tx.get(bookingRef);
+            if (!snap.exists || snap.data().balancePaid) return;
+            galleryId = snap.data().galleryId || null;
+            tx.update(bookingRef, {
+              balancePaid: true,
+              paidInFull: true,
+              remainingBalance: 0,
+              stripeBalanceSessionId: session.id,
+            });
+            shouldNotify = true;
+          });
+          if (galleryId) {
+            await adminDb
+              .collection("tenants").doc(tenantId)
+              .collection("galleries").doc(galleryId)
+              .update({ unlocked: true });
+          }
+          if (shouldNotify) {
+            console.log(`[stripe/webhook] checkout balance confirmed — bookingId=${bookingId}`);
+          }
+          break;
+        }
+
+        console.warn(`[stripe/webhook] checkout.session.completed unhandled type="${type}" session=${session.id}`);
         break;
       }
 

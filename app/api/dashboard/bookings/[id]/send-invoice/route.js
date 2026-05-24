@@ -71,13 +71,20 @@ export async function POST(req, { params }) {
           quantity: 1,
         }],
         customer_email: booking.clientEmail || undefined,
-        success_url: `${appUrl}/payment-success?bookingId=${params.id}&type=${depositPaid ? "balance" : "deposit"}`,
+        success_url: `${appUrl}/payment-success?bookingId=${params.id}&type=${depositPaid ? "balance" : "deposit"}&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url:  `${appUrl}/${tenant.slug || ""}/book/payment?cancelled=true`,
         metadata: {
           bookingId:  params.id,
           tenantId:   ctx.tenantId,
           type:       depositPaid ? "balance" : "deposit",
           clientName: booking.clientName || "",
+        },
+        payment_intent_data: {
+          metadata: {
+            bookingId: params.id,
+            tenantId:  ctx.tenantId,
+            type:      depositPaid ? "balance" : "deposit",
+          },
         },
       };
 
@@ -87,6 +94,7 @@ export async function POST(req, { params }) {
         session = await stripe.checkout.sessions.create({
           ...sessionParams,
           payment_intent_data: {
+            ...sessionParams.payment_intent_data,
             application_fee_amount: platformFee,
             transfer_data: { destination: tenant.stripeConnectAccountId },
           },
