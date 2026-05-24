@@ -80,7 +80,9 @@ export default function TeamStep() {
     <StepCard
       eyebrow="Step 3 of 5 · Team"
       headline="Who's shooting with you?"
-      lede="Invite photographers, editors, or coordinators. They'll get their own login and only see what they need. You can add more anytime."
+      lede={isSolo
+        ? "The Solo plan is designed for individual photographers. Upgrade to Studio or higher to add team members."
+        : "Invite photographers, editors, or coordinators. They'll get their own login and only see what they need."}
       footer={
         <>
           <button className="btn-ghost" onClick={() => router.push("/onboarding/stripe")}>← Back</button>
@@ -188,7 +190,7 @@ export default function TeamStep() {
           <div style={{ marginTop: 20, padding: "12px 16px", background: "rgba(201,169,110,0.10)", border: "1px dashed #C9A96E", borderRadius: 10, display: "flex", alignItems: "flex-start", gap: 10 }}>
             <span style={{ fontSize: 16, color: "#C9A96E", flexShrink: 0 }}>✦</span>
             <p style={{ margin: 0, fontSize: 13, color: "#0F172A", lineHeight: 1.5 }}>
-              <strong>Solo studio?</strong> Skip this step — you can invite teammates later from <strong>Team &amp; Schedule</strong> anytime.
+              <strong>Working solo?</strong> Skip this step — add teammates from <strong>Team &amp; Schedule</strong> anytime after onboarding.
             </p>
           </div>
         </>

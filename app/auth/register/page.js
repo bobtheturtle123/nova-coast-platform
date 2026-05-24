@@ -81,8 +81,8 @@ export default function RegisterPage() {
       // 3. Force token refresh to pick up new claims
       await cred.user.getIdToken(true);
 
-      // 4. Go to onboarding
-      router.push("/onboarding");
+      // 4. Go to plan selection before onboarding
+      router.push("/auth/plan");
     } catch (err) {
       if (err.code === "auth/email-already-in-use") {
         setError("An account with this email already exists. Try signing in instead.");

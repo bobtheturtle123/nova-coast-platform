@@ -237,6 +237,187 @@ function CustomerModal({ agent, teams, onClose, onSaved }) {
   );
 }
 
+// ─── CSV Import Modal ─────────────────────────────────────────────────────────
+const MAX_IMPORT_ROWS = 500;
+
+function parseAryeoCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  // Detect separator: tabs or commas
+  const sep = lines[0].includes("\t") ? "\t" : ",";
+  const headers = lines[0].split(sep).map((h) => h.trim().toLowerCase().replace(/[^a-z]/g, ""));
+  return lines.slice(1).map((line) => {
+    const cols = line.split(sep).map((c) => c.trim().replace(/^"|"$/g, ""));
+    const obj  = {};
+    headers.forEach((h, i) => { obj[h] = cols[i] || ""; });
+    return {
+      firstName: obj["firstname"]       || obj["first"]    || "",
+      lastName:  obj["lastname"]        || obj["last"]     || "",
+      email:     obj["email"]           || "",
+      phone:     obj["phone"]           || "",
+      company:   obj["officebrokerage"] || obj["officebrokerage/teamname"] || obj["officebrokerage"] || obj["office"] || obj["company"] || "",
+      notes:     obj["licensenumber"] ? `License: ${obj["licensenumber"]}` : "",
+    };
+  }).filter((r) => r.email.trim());
+}
+
+function ImportModal({ onClose, onImported }) {
+  const [rows,       setRows]       = useState([]);
+  const [fileName,   setFileName]   = useState("");
+  const [importing,  setImporting]  = useState(false);
+  const [done,       setDone]       = useState(null); // { imported, skipped }
+  const [error,      setError]      = useState("");
+
+  function handleFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const parsed = parseAryeoCSV(ev.target.result || "");
+      setRows(parsed.slice(0, MAX_IMPORT_ROWS));
+      if (parsed.length > MAX_IMPORT_ROWS) {
+        setError(`CSV has ${parsed.length} contacts — only the first ${MAX_IMPORT_ROWS} will be imported.`);
+      } else {
+        setError("");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async function handleImport() {
+    if (!rows.length) return;
+    setImporting(true); setError("");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res   = await fetch("/api/dashboard/agents/import", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ contacts: rows }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Import failed."); setImporting(false); return; }
+      setDone({ imported: data.imported, skipped: data.skipped });
+      onImported(data.imported);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    }
+    setImporting(false);
+  }
+
+  return (
+    <div className="modal-backdrop">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="modal-card relative w-full max-w-[560px]">
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <div>
+            <h2 className="text-[15px] font-semibold text-[#0F172A]">Import Customers</h2>
+            <p className="text-xs text-gray-400 mt-0.5">From Aryeo or any CSV with matching columns</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {/* File picker */}
+          {!done && (
+            <>
+              <div>
+                <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Expected CSV columns</p>
+                <p className="text-xs text-gray-400 font-mono bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                  First Name · Last Name · Email · Phone · Office/Brokerage/Team Name · License Number · Timezone
+                </p>
+              </div>
+              <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-8 cursor-pointer transition-colors ${rows.length ? "border-[#3486cf]/40 bg-blue-50/40" : "border-gray-200 hover:border-[#3486cf]/30"}`}>
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-gray-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+                {fileName ? (
+                  <p className="text-sm font-medium text-[#3486cf]">{fileName} — {rows.length} contacts</p>
+                ) : (
+                  <p className="text-sm text-gray-500">Click to select CSV file</p>
+                )}
+                <input type="file" accept=".csv,.tsv,.txt" className="hidden" onChange={handleFile} />
+              </label>
+
+              {error && <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{error}</p>}
+
+              {rows.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Preview (first 3)</p>
+                  <div className="border border-gray-100 rounded-xl overflow-hidden text-xs">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          {["Name", "Email", "Phone", "Company"].map((h) => (
+                            <th key={h} className="text-left px-3 py-2 font-semibold text-gray-500">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.slice(0, 3).map((r, i) => (
+                          <tr key={i} className="border-t border-gray-50">
+                            <td className="px-3 py-2 text-gray-700">{[r.firstName, r.lastName].filter(Boolean).join(" ") || "—"}</td>
+                            <td className="px-3 py-2 text-gray-500 truncate max-w-[160px]">{r.email}</td>
+                            <td className="px-3 py-2 text-gray-500">{r.phone || "—"}</td>
+                            <td className="px-3 py-2 text-gray-500 truncate max-w-[120px]">{r.company || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {rows.length > 3 && (
+                      <p className="px-3 py-2 text-gray-400 border-t border-gray-50">…and {rows.length - 3} more</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+                <p className="text-xs text-[#3486cf] font-medium">
+                  An email will be sent to you when the import completes. Duplicate emails are automatically skipped. Maximum {MAX_IMPORT_ROWS} contacts per import.
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* Done state */}
+          {done && (
+            <div className="text-center py-6">
+              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#059669" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <p className="font-semibold text-gray-900 mb-1">Import complete</p>
+              <p className="text-sm text-gray-500">
+                {done.imported} contact{done.imported !== 1 ? "s" : ""} imported
+                {done.skipped > 0 ? ` · ${done.skipped} skipped (duplicates)` : ""}
+              </p>
+              <p className="text-xs text-gray-400 mt-2">A confirmation email has been sent to you.</p>
+            </div>
+          )}
+        </div>
+
+        {!done && (
+          <div className="px-6 py-4 flex justify-end gap-3" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+            <button onClick={onClose} className="btn-outline px-5 text-sm">Cancel</button>
+            <button
+              onClick={handleImport}
+              disabled={!rows.length || importing}
+              className="btn-primary text-sm px-6">
+              {importing ? `Importing ${rows.length} contacts…` : `Import ${rows.length} contact${rows.length !== 1 ? "s" : ""}`}
+            </button>
+          </div>
+        )}
+        {done && (
+          <div className="px-6 py-4 flex justify-end" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+            <button onClick={onClose} className="btn-primary text-sm px-6">Done</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function AgentsPage() {
   const [agents,        setAgents]        = useState([]);
@@ -249,6 +430,7 @@ export default function AgentsPage() {
   const [editing,       setEditing]       = useState(null);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [editingTeam,   setEditingTeam]   = useState(null);
+  const [showImport,    setShowImport]    = useState(false);
 
   const { permissions, userRole } = useDashboardPermissions();
   const isOwnerOrAdmin = userRole === "owner" || userRole === "admin" || userRole === null;
@@ -430,6 +612,10 @@ export default function AgentsPage() {
               Export CSV
             </button>
           )}
+          <button onClick={() => setShowImport(true)}
+            className="btn-outline text-sm px-3.5 py-2">
+            Import from Aryeo
+          </button>
           <button onClick={() => { setEditingTeam(null); setShowTeamModal(true); }}
             className="btn-outline text-sm px-3.5 py-2">
             + New team
@@ -740,6 +926,12 @@ export default function AgentsPage() {
       )}
 
       {/* Modals */}
+      {showImport && (
+        <ImportModal
+          onClose={() => setShowImport(false)}
+          onImported={(count) => { if (count > 0) loadAll(); }}
+        />
+      )}
       {showModal && (
         <CustomerModal
           agent={editing}

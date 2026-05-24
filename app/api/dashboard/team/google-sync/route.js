@@ -31,7 +31,7 @@ function formatTime(date) {
   return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
-// POST { memberId } — admin-triggered Google Calendar sync for a team member
+// POST { memberId } — admin-triggered Google Calendar sync. Use memberId "__owner__" for the tenant owner.
 export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -40,28 +40,45 @@ export async function POST(req) {
   const { memberId } = body;
   if (!memberId) return Response.json({ error: "memberId required" }, { status: 400 });
 
-  const memberRef = adminDb
-    .collection("tenants").doc(ctx.tenantId)
-    .collection("team").doc(memberId);
+  const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
+  let gcal, accessToken, updateTokens;
 
-  const memberDoc = await memberRef.get();
-  if (!memberDoc.exists) return Response.json({ error: "Member not found" }, { status: 404 });
-
-  const gcal = memberDoc.data().googleCalendar;
-  if (!gcal?.refreshToken) {
-    return Response.json({ error: "Google Calendar not connected for this member" }, { status: 400 });
+  if (memberId === "__owner__") {
+    const tenantDoc = await tenantRef.get();
+    if (!tenantDoc.exists) return Response.json({ error: "Tenant not found" }, { status: 404 });
+    gcal = tenantDoc.data().ownerGoogleCalendar;
+    if (!gcal?.refreshToken) {
+      return Response.json({ error: "Google Calendar not connected for this member" }, { status: 400 });
+    }
+    updateTokens = async (refreshed) => {
+      await tenantRef.update({
+        "ownerGoogleCalendar.accessToken": refreshed.accessToken,
+        "ownerGoogleCalendar.expiresAt":   refreshed.expiresAt,
+      });
+    };
+  } else {
+    const memberRef = tenantRef.collection("team").doc(memberId);
+    const memberDoc = await memberRef.get();
+    if (!memberDoc.exists) return Response.json({ error: "Member not found" }, { status: 404 });
+    gcal = memberDoc.data().googleCalendar;
+    if (!gcal?.refreshToken) {
+      return Response.json({ error: "Google Calendar not connected for this member" }, { status: 400 });
+    }
+    updateTokens = async (refreshed) => {
+      await memberRef.update({
+        "googleCalendar.accessToken": refreshed.accessToken,
+        "googleCalendar.expiresAt":   refreshed.expiresAt,
+      });
+    };
   }
 
-  let accessToken = gcal.accessToken;
+  accessToken = gcal.accessToken;
 
   if (!accessToken || (gcal.expiresAt && Date.now() > gcal.expiresAt - 60000)) {
     try {
       const refreshed = await refreshAccessToken(gcal.refreshToken);
       accessToken = refreshed.accessToken;
-      await memberRef.update({
-        "googleCalendar.accessToken": refreshed.accessToken,
-        "googleCalendar.expiresAt":   refreshed.expiresAt,
-      });
+      await updateTokens(refreshed);
     } catch (err) {
       return Response.json({ error: "Token refresh failed. Member may need to reconnect Google Calendar." }, { status: 401 });
     }
@@ -133,8 +150,12 @@ export async function POST(req) {
     newBlocks.push({ id, startDate, endDate, reason: block.reason, note: block.note });
   }
 
-  // Record last sync time on the member's googleCalendar sub-document
-  batch.update(memberRef, { "googleCalendar.lastSynced": new Date().toISOString() });
+  // Record last sync time
+  if (memberId === "__owner__") {
+    batch.update(tenantRef, { "ownerGoogleCalendar.lastSynced": new Date().toISOString() });
+  } else {
+    batch.update(tenantRef.collection("team").doc(memberId), { "googleCalendar.lastSynced": new Date().toISOString() });
+  }
 
   await batch.commit();
 

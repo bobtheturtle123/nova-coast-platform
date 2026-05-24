@@ -16,7 +16,7 @@ export async function POST(req) {
     const ctx = await getCtx(req);
     if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { plan } = await req.json();
+    const { plan, successPath } = await req.json();
     const priceId  = PLAN_PRICE_IDS[plan];
     if (!priceId) return Response.json({ error: "Invalid plan" }, { status: 400 });
 
@@ -41,8 +41,8 @@ export async function POST(req) {
       customer:               customerId,
       line_items:             [{ price: priceId, quantity: 1 }],
       allow_promotion_codes:  true,
-      success_url:  `${getAppUrl()}/dashboard/billing?subscribed=true`,
-      cancel_url:   `${getAppUrl()}/dashboard/billing`,
+      success_url:  successPath ? `${getAppUrl()}${successPath}` : `${getAppUrl()}/dashboard/billing?subscribed=true`,
+      cancel_url:   successPath ? `${getAppUrl()}${successPath.split("?")[0]}` : `${getAppUrl()}/dashboard/billing`,
       subscription_data: {
         metadata: { tenantId: ctx.tenantId, plan },
       },

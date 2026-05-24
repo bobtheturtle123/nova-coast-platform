@@ -812,6 +812,211 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
   );
 }
 
+// ─── Owner Calendar Sync Modal ────────────────────────────────────────────────
+function OwnerCalSyncModal({ tenant, onClose }) {
+  const APP_URL = getAppUrl();
+  const isGCalConnected = !!tenant?.ownerGoogleCalendar?.refreshToken;
+
+  const [connecting,   setConnecting]   = useState(false);
+  const [connectError, setConnectError] = useState("");
+  const [syncing,      setSyncing]      = useState(false);
+  const [syncResult,   setSyncResult]   = useState(null);
+  const [lastSynced,   setLastSynced]   = useState(tenant?.ownerGoogleCalendar?.lastSynced || null);
+  const [calToken,     setCalToken]     = useState(tenant?.ownerCalendarToken || null);
+  const [tokenLoading, setTokenLoading] = useState(false);
+  const [copied,       setCopied]       = useState(false);
+
+  useEffect(() => {
+    if (calToken) return;
+    setTokenLoading(true);
+    (async () => {
+      try {
+        const { auth: firebaseAuth } = await import("@/lib/firebase");
+        const idToken = await firebaseAuth.currentUser.getIdToken();
+        const res = await fetch("/api/calendar/owner/token", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+        if (res.ok) {
+          const d = await res.json();
+          setCalToken(d.token);
+        }
+      } catch { /* non-fatal */ }
+      finally { setTokenLoading(false); }
+    })();
+  }, []);
+
+  async function connectGoogle() {
+    setConnecting(true);
+    setConnectError("");
+    try {
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const idToken = await firebaseAuth.currentUser.getIdToken();
+      const popup = window.open(
+        `/api/calendar/oauth/start?token=${encodeURIComponent(idToken)}&owner=1`,
+        "gcal-oauth",
+        "width=500,height=620,left=200,top=100"
+      );
+      await new Promise((resolve, reject) => {
+        let poll;
+        const cleanup = () => { clearInterval(poll); window.removeEventListener("message", handler); };
+        const handler = (e) => {
+          if (e.data?.type === "gcal-connected") { cleanup(); resolve(); }
+          if (e.data?.type === "gcal-error")     { cleanup(); reject(new Error(e.data.error || "Connection failed")); }
+        };
+        window.addEventListener("message", handler);
+        poll = setInterval(() => {
+          if (popup?.closed) { cleanup(); resolve(); }
+        }, 600);
+      });
+      onClose();
+    } catch (e) {
+      setConnectError(e.message || "Connection failed");
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  async function syncNow() {
+    setSyncing(true);
+    setSyncResult(null);
+    setConnectError("");
+    try {
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const idToken = await firebaseAuth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/team/google-sync", {
+        method:  "POST",
+        headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
+        body:    JSON.stringify({ memberId: "__owner__" }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setConnectError(d.error || "Sync failed"); return; }
+      setSyncResult(d.synced);
+      setLastSynced(new Date().toISOString());
+    } catch (e) {
+      setConnectError(e.message);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  const feedUrl    = calToken ? `${APP_URL}/api/calendar/owner/${calToken}` : null;
+  const webcalUrl  = feedUrl ? feedUrl.replace(/^https?:\/\//, "webcal://") : null;
+  const gcalUrl    = feedUrl ? `https://calendar.google.com/calendar/r/settings/addbyurl?url=${encodeURIComponent(feedUrl)}` : null;
+  const outlookUrl = feedUrl ? `https://outlook.live.com/owa/?path=/calendar/action/compose&rru=addsubscription&url=${encodeURIComponent(feedUrl)}` : null;
+
+  function copyLink() {
+    if (!feedUrl) return;
+    navigator.clipboard.writeText(feedUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="modal-backdrop">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="modal-card relative w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+          <h2 className="font-semibold text-[#0F172A] text-base">Your Calendar Sync</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {/* Google Calendar */}
+          {isGCalConnected ? (
+            <div className="border border-green-200 bg-green-50 rounded-xl p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" className="text-green-600">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">Google Calendar connected</p>
+                    <p className="text-xs text-green-700 mt-0.5">
+                      {lastSynced ? `Last synced ${new Date(lastSynced).toLocaleString()}` : "Not yet synced"}
+                    </p>
+                    {syncResult !== null && (
+                      <p className="text-xs text-green-600 font-medium mt-1">{syncResult} busy block{syncResult !== 1 ? "s" : ""} imported</p>
+                    )}
+                  </div>
+                </div>
+                <button onClick={syncNow} disabled={syncing}
+                  className="flex-shrink-0 text-xs bg-white border border-green-300 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-50 disabled:opacity-50 font-medium">
+                  {syncing ? "Syncing…" : "Sync Now"}
+                </button>
+              </div>
+              {connectError && (
+                <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">{connectError}</div>
+              )}
+            </div>
+          ) : (
+            <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="2" fill="#4285F4"/><path d="M18 12c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6 6-2.69 6-6z" fill="white"/><path d="M14.5 12c0-1.38-1.12-2.5-2.5-2.5S9.5 10.62 9.5 12s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z" fill="#4285F4"/></svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#0F172A]">Google Calendar</p>
+                  <p className="text-xs text-gray-500">Block your busy times automatically in your booking schedule.</p>
+                </div>
+              </div>
+              <button onClick={connectGoogle} disabled={connecting}
+                className="w-full flex items-center justify-center gap-2 border border-[#3486cf]/30 text-[#3486cf] text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-[#3486cf]/5 disabled:opacity-50 transition-colors">
+                {connecting ? "Opening…" : "Connect Google Calendar"}
+              </button>
+              {connectError && <p className="text-xs text-red-600">{connectError}</p>}
+            </div>
+          )}
+
+          {/* Subscribe to schedule (Apple, Outlook, Google) */}
+          <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-[#0F172A]">Subscribe to Your Schedule</p>
+              <p className="text-xs text-gray-500 mt-0.5">Add your full shoot calendar to Apple Calendar, Google Calendar, or Outlook. Updates automatically.</p>
+            </div>
+            {tokenLoading ? (
+              <p className="text-xs text-gray-400">Generating feed link…</p>
+            ) : feedUrl ? (
+              <>
+                <div className="flex gap-2 items-center">
+                  <code className="text-[11px] bg-gray-50 border border-gray-200 rounded px-3 py-2 flex-1 truncate text-gray-600">{feedUrl}</code>
+                  <button onClick={copyLink}
+                    className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2.5 py-2 rounded hover:bg-[#3486cf]/5 flex-shrink-0">
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <a href={gcalUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex flex-col items-center gap-1 border border-gray-200 rounded-lg px-2 py-2.5 hover:bg-gray-50 transition-colors text-xs font-medium text-gray-600 text-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="2" fill="#4285F4"/><path d="M18 12c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6 6-2.69 6-6z" fill="white"/><path d="M14.5 12c0-1.38-1.12-2.5-2.5-2.5S9.5 10.62 9.5 12s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z" fill="#4285F4"/></svg>
+                    Google
+                  </a>
+                  <a href={webcalUrl}
+                    className="flex flex-col items-center gap-1 border border-gray-200 rounded-lg px-2 py-2.5 hover:bg-gray-50 transition-colors text-xs font-medium text-gray-600 text-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="2" fill="#1c1c1e"/><rect x="4" y="5" width="16" height="15" rx="1.5" fill="white"/><rect x="4" y="5" width="16" height="4" rx="1.5" fill="#F44336"/><path d="M8 13h2v2H8v-2zm3 0h2v2h-2v-2zm3 0h2v2h-2v-2zM8 16h2v2H8v-2zm3 0h2v2h-2v-2z" fill="#1c1c1e"/></svg>
+                    Apple
+                  </a>
+                  <a href={outlookUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex flex-col items-center gap-1 border border-gray-200 rounded-lg px-2 py-2.5 hover:bg-gray-50 transition-colors text-xs font-medium text-gray-600 text-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="2" fill="#0078d4"/><rect x="4" y="6" width="16" height="12" rx="1" fill="white"/><path d="M4 9l8 5 8-5" stroke="#0078d4" strokeWidth="1.5"/></svg>
+                    Outlook
+                  </a>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="px-6 py-4 flex justify-end sticky bottom-0 bg-white" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+          <button onClick={onClose} className="btn-outline px-5 py-2 text-sm">Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Calendar sync modal — admin read-only status view ───────────────────────
 function CalendarSyncModal({ member, onClose, onRegenerate }) {
   const APP_URL = getAppUrl();
@@ -845,11 +1050,10 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
     }
   }
 
-  const feedUrl   = member.calendarToken ? `${APP_URL}/api/calendar/${member.calendarToken}` : null;
-  const webcalUrl = feedUrl ? feedUrl.replace(/^https?:\/\//, "webcal://") : null;
-  const gcalUrl   = feedUrl
-    ? `https://calendar.google.com/calendar/r/settings/addbyurl?url=${encodeURIComponent(feedUrl)}`
-    : null;
+  const feedUrl    = member.calendarToken ? `${APP_URL}/api/calendar/${member.calendarToken}` : null;
+  const webcalUrl  = feedUrl ? feedUrl.replace(/^https?:\/\//, "webcal://") : null;
+  const gcalUrl    = feedUrl ? `https://calendar.google.com/calendar/r/settings/addbyurl?url=${encodeURIComponent(feedUrl)}` : null;
+  const outlookUrl = feedUrl ? `https://outlook.live.com/owa/?path=/calendar/action/compose&rru=addsubscription&url=${encodeURIComponent(feedUrl)}` : null;
 
   const [copied, setCopied] = useState(false);
   function copyLink() {
@@ -921,47 +1125,45 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
             </div>
           )}
 
-          {/* ICS feed (secondary) */}
+          {/* ICS feed */}
           {feedUrl && (
-            <details className="group border border-gray-200 rounded-xl">
-              <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
-                <div>
-                  <p className="text-xs font-semibold text-gray-600">ICS Calendar Feed</p>
-                  <p className="text-[11px] text-gray-400">One-way read-only feed for Google, Apple, Outlook</p>
-                </div>
-                <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </summary>
-              <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
-                <div className="flex gap-2 items-center">
-                  <code className="text-[11px] bg-gray-50 border border-gray-200 rounded px-3 py-2 flex-1 truncate text-gray-600">
-                    {feedUrl}
-                  </code>
-                  <button onClick={copyLink}
-                    className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2.5 py-2 rounded hover:bg-[#3486cf]/5 flex-shrink-0">
-                    {copied ? "Copied!" : "Copy"}
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <a href={gcalUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex-1 flex items-center justify-center gap-1.5 border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors text-xs font-medium text-gray-600">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="2" fill="#4285F4"/><path d="M18 12c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6 6-2.69 6-6z" fill="white"/><path d="M14.5 12c0-1.38-1.12-2.5-2.5-2.5S9.5 10.62 9.5 12s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z" fill="#4285F4"/></svg>
-                    Google Calendar
-                  </a>
-                  <a href={webcalUrl}
-                    className="flex-1 flex items-center justify-center gap-1.5 border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors text-xs font-medium text-gray-600">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="2" fill="#1c1c1e"/><rect x="4" y="5" width="16" height="15" rx="1.5" fill="white"/><rect x="4" y="5" width="16" height="4" rx="1.5" fill="#F44336"/><path d="M8 13h2v2H8v-2zm3 0h2v2h-2v-2zm3 0h2v2h-2v-2zM8 16h2v2H8v-2zm3 0h2v2h-2v-2z" fill="#1c1c1e"/></svg>
-                    Apple Calendar
-                  </a>
-                </div>
-                <div className="pt-1 border-t border-gray-100">
-                  <button onClick={onRegenerate} className="text-xs text-red-400 hover:text-red-600">
-                    Regenerate link
-                  </button>
-                </div>
+            <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-600">Subscribe to Schedule</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">Read-only feed for Apple Calendar, Google Calendar, or Outlook</p>
               </div>
-            </details>
+              <div className="flex gap-2 items-center">
+                <code className="text-[11px] bg-gray-50 border border-gray-200 rounded px-3 py-2 flex-1 truncate text-gray-600">
+                  {feedUrl}
+                </code>
+                <button onClick={copyLink}
+                  className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2.5 py-2 rounded hover:bg-[#3486cf]/5 flex-shrink-0">
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <a href={gcalUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-1 border border-gray-200 rounded-lg px-2 py-2.5 hover:bg-gray-50 transition-colors text-xs font-medium text-gray-600 text-center">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="2" fill="#4285F4"/><path d="M18 12c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6 6-2.69 6-6z" fill="white"/><path d="M14.5 12c0-1.38-1.12-2.5-2.5-2.5S9.5 10.62 9.5 12s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z" fill="#4285F4"/></svg>
+                  Google
+                </a>
+                <a href={webcalUrl}
+                  className="flex flex-col items-center gap-1 border border-gray-200 rounded-lg px-2 py-2.5 hover:bg-gray-50 transition-colors text-xs font-medium text-gray-600 text-center">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="2" fill="#1c1c1e"/><rect x="4" y="5" width="16" height="15" rx="1.5" fill="white"/><rect x="4" y="5" width="16" height="4" rx="1.5" fill="#F44336"/><path d="M8 13h2v2H8v-2zm3 0h2v2h-2v-2zm3 0h2v2h-2v-2zM8 16h2v2H8v-2zm3 0h2v2h-2v-2z" fill="#1c1c1e"/></svg>
+                  Apple
+                </a>
+                <a href={outlookUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-1 border border-gray-200 rounded-lg px-2 py-2.5 hover:bg-gray-50 transition-colors text-xs font-medium text-gray-600 text-center">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="2" fill="#0078d4"/><rect x="4" y="6" width="16" height="12" rx="1" fill="white"/><path d="M4 9l8 5 8-5" stroke="#0078d4" strokeWidth="1.5"/></svg>
+                  Outlook
+                </a>
+              </div>
+              <div className="pt-1 border-t border-gray-100">
+                <button onClick={onRegenerate} className="text-xs text-red-400 hover:text-red-600">
+                  Regenerate link
+                </button>
+              </div>
+            </div>
           )}
 
         </div>
@@ -1136,8 +1338,9 @@ export default function TeamPage() {
   const [inviteMsg,     setInviteMsg]     = useState("");
   const [inviteUrl,     setInviteUrl]     = useState("");
   const [timeBlocks,    setTimeBlocks]    = useState([]);
-  const [showBlockModal, setShowBlockModal] = useState(false);
-  const [blockDetail,    setBlockDetail]    = useState(null); // { member, blocks, date }
+  const [showBlockModal,    setShowBlockModal]    = useState(false);
+  const [blockDetail,       setBlockDetail]       = useState(null); // { member, blocks, date }
+  const [showOwnerCalModal, setShowOwnerCalModal] = useState(false);
 
   const getToken = (forceRefresh = false) => auth.currentUser?.getIdToken(forceRefresh);
 
@@ -1404,9 +1607,11 @@ export default function TeamPage() {
 
   // In availability views hide inactive photographers; the member list still shows all
   const activeMembers = members.filter((m) => m.active !== false);
-  const visibleMembers = filterMember === "all"
-    ? (calView === "2wk" || calView === "week" ? activeMembers : members)
-    : members.filter((m) => m.id === filterMember);
+  const visibleMembers = filterMember === "__owner__"
+    ? [soloOwnerMember]
+    : filterMember === "all"
+      ? (calView === "2wk" || calView === "week" ? [soloOwnerMember, ...activeMembers] : [soloOwnerMember, ...members])
+      : members.filter((m) => m.id === filterMember);
 
   const feature = { scheduleNewTabs: false };
   const SCHEDULE_TABS = [
@@ -1528,47 +1733,76 @@ export default function TeamPage() {
         </div>
       )}
 
-      {/* Team member cards */}
-      {members.length > 0 && (
-        <div className="flex gap-3 flex-wrap mb-6">
-          {members.map((m) => (
-            <div key={m.id} className="flex items-center gap-3 card px-4 py-3 card-hover">
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                style={{ background: m.color || "#0b2a55" }}>
-                {m.name?.[0]?.toUpperCase() || "?"}
-              </div>
-              <button onClick={() => setEditing(m)} className="text-left">
-                <p className="text-sm font-medium text-[#0F172A]">{m.name}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {(() => { const rc = ROLE_COLORS[m.role || "photographer"] || ROLE_COLORS.photographer; return (
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border capitalize ${rc.bg} ${rc.text} ${rc.border}`}>
-                      {m.role || "photographer"}
-                    </span>
-                  ); })()}
-                  {m.skills?.length > 0 && <span className="text-[10px] text-gray-400">{m.skills.length} skills</span>}
-                </div>
-              </button>
-              <button
-                onClick={() => setCalModal(m)}
-                title={m.googleCalendar?.refreshToken ? `Last synced: ${m.googleCalendar.lastSynced ? new Date(m.googleCalendar.lastSynced).toLocaleDateString() : "never"}` : "Not connected — member connects from their profile"}
-                className={`ml-2 text-xs px-2.5 py-1 rounded-full border font-medium transition-colors flex items-center gap-1.5 ${
-                  m.googleCalendar?.refreshToken
-                    ? "border-green-200 bg-green-50 text-green-700"
-                    : "border-gray-200 text-gray-400 hover:border-amber-300 hover:text-amber-600"
-                }`}
-              >
-                <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                {m.googleCalendar?.refreshToken ? "Cal Synced" : "No Cal"}
-              </button>
+      {/* Team member cards — owner always shown first */}
+      <div className="flex gap-3 flex-wrap mb-6">
+        {/* Owner card */}
+        <div className="flex items-center gap-3 card px-4 py-3 card-hover">
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+            style={{ background: "#3486cf" }}>
+            {ownerLabel[0]?.toUpperCase() || "Y"}
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-medium text-[#0F172A]">{ownerLabel}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-100">owner</span>
             </div>
-          ))}
+          </div>
+          <button
+            onClick={() => setShowOwnerCalModal(true)}
+            title={tenant?.ownerGoogleCalendar?.refreshToken ? `Last synced: ${tenant.ownerGoogleCalendar.lastSynced ? new Date(tenant.ownerGoogleCalendar.lastSynced).toLocaleDateString() : "never"}` : "Sync your personal calendar"}
+            className={`ml-2 text-xs px-2.5 py-1 rounded-full border font-medium transition-colors flex items-center gap-1.5 ${
+              tenant?.ownerGoogleCalendar?.refreshToken
+                ? "border-green-200 bg-green-50 text-green-700"
+                : "border-gray-200 text-gray-400 hover:border-[#3486cf]/40 hover:text-[#3486cf]"
+            }`}
+          >
+            <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            {tenant?.ownerGoogleCalendar?.refreshToken ? "Cal Synced" : "Sync Cal"}
+          </button>
         </div>
-      )}
+        {/* Team member cards */}
+        {members.map((m) => (
+          <div key={m.id} className="flex items-center gap-3 card px-4 py-3 card-hover">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+              style={{ background: m.color || "#0b2a55" }}>
+              {m.name?.[0]?.toUpperCase() || "?"}
+            </div>
+            <button onClick={() => setEditing(m)} className="text-left">
+              <p className="text-sm font-medium text-[#0F172A]">{m.name}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {(() => { const rc = ROLE_COLORS[m.role || "photographer"] || ROLE_COLORS.photographer; return (
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border capitalize ${rc.bg} ${rc.text} ${rc.border}`}>
+                    {m.role || "photographer"}
+                  </span>
+                ); })()}
+                {m.skills?.length > 0 && <span className="text-[10px] text-gray-400">{m.skills.length} skills</span>}
+              </div>
+            </button>
+            <button
+              onClick={() => setCalModal(m)}
+              title={m.googleCalendar?.refreshToken ? `Last synced: ${m.googleCalendar.lastSynced ? new Date(m.googleCalendar.lastSynced).toLocaleDateString() : "never"}` : "Not connected — member connects from their profile"}
+              className={`ml-2 text-xs px-2.5 py-1 rounded-full border font-medium transition-colors flex items-center gap-1.5 ${
+                m.googleCalendar?.refreshToken
+                  ? "border-green-200 bg-green-50 text-green-700"
+                  : "border-gray-200 text-gray-400 hover:border-amber-300 hover:text-amber-600"
+              }`}
+            >
+              <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              {m.googleCalendar?.refreshToken ? "Cal Synced" : "No Cal"}
+            </button>
+          </div>
+        ))}
+      </div>
 
       {/* Calendar section + right rail */}
       <div className="flex items-start gap-4 mb-6">
@@ -1623,25 +1857,22 @@ export default function TeamPage() {
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <button onClick={() => setFilterMember("all")} className={`fchip${filterMember === "all" ? " fchip-active" : ""}`}>All</button>
-              {isSolo && members.length === 0 ? (
-                <span className="fchip fchip-active">
-                  <span className="w-4 h-4 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
-                    style={{ fontSize: 8, background: "#3486cf" }}>
-                    {ownerLabel[0]?.toUpperCase() || "Y"}
-                  </span>
-                  {ownerLabel.split(" ")[0]}
+              <button onClick={() => setFilterMember("__owner__")} className={`fchip${filterMember === "__owner__" ? " fchip-active" : ""}`}>
+                <span className="w-4 h-4 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                  style={{ fontSize: 8, background: "#3486cf" }}>
+                  {ownerLabel[0]?.toUpperCase() || "Y"}
                 </span>
-              ) : (
-                members.map((m, i) => (
-                  <button key={m.id} onClick={() => setFilterMember(m.id)} className={`fchip${filterMember === m.id ? " fchip-active" : ""}`}>
-                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
-                      style={{ fontSize: 8, background: ZONE_COLORS[i % ZONE_COLORS.length] }}>
-                      {initials(m.name).slice(0, 2)}
-                    </span>
-                    {m.name.split(" ")[0]}
-                  </button>
-                ))
-              )}
+                {ownerLabel.split(" ")[0]}
+              </button>
+              {members.map((m, i) => (
+                <button key={m.id} onClick={() => setFilterMember(m.id)} className={`fchip${filterMember === m.id ? " fchip-active" : ""}`}>
+                  <span className="w-4 h-4 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                    style={{ fontSize: 8, background: ZONE_COLORS[i % ZONE_COLORS.length] }}>
+                    {initials(m.name).slice(0, 2)}
+                  </span>
+                  {m.name.split(" ")[0]}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -1649,14 +1880,7 @@ export default function TeamPage() {
         {/* ── 2-WEEK AVAILABILITY GRID ───────────────────────────────────── */}
         {calView === "2wk" && (
           <div className="overflow-x-auto">
-            {members.length === 0 && !isSolo && timeBlocks.filter((b) => !b.memberId).length === 0 ? (
-              <div className="p-10 text-center text-gray-400">
-                <p className="text-3xl mb-2">📅</p>
-                <p className="font-medium text-gray-500">No team members yet</p>
-                <p className="text-sm mt-1">Add photographers to see their schedule here.</p>
-              </div>
-            ) : (
-              <table className="min-w-full border-collapse text-xs">
+            <table className="min-w-full border-collapse text-xs">
                 <thead>
                   <tr>
                     <th className="w-32 min-w-32 text-left px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-r border-gray-200 bg-gray-50/60 sticky left-0 z-10">
@@ -1725,9 +1949,9 @@ export default function TeamPage() {
                       </tr>
                     );
                   })()}
-                  {(isSolo && members.length === 0 ? [soloOwnerMember] : visibleMembers).map((member) => {
+                  {visibleMembers.map((member) => {
                     const memberEvents = member.id === "__owner__"
-                      ? calendarEvents
+                      ? calendarEvents.filter((e) => !e.photographerId || e.photographerId === "__owner__")
                       : calendarEvents.filter(
                           (e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email)
                         );
@@ -1796,7 +2020,6 @@ export default function TeamPage() {
                   })}
                 </tbody>
               </table>
-            )}
 
             {/* Legend */}
             <div className="flex items-center gap-4 px-4 py-2 border-t border-gray-100 bg-gray-50/60 text-xs text-gray-400">
@@ -1828,14 +2051,7 @@ export default function TeamPage() {
               );
             })}
           </div>
-          {visibleMembers.length === 0 && members.length === 0 ? (
-            <div className="p-10 text-center text-gray-400">
-              <p className="text-3xl mb-2">📅</p>
-              <p className="font-medium text-gray-500">No team members yet</p>
-              <p className="text-sm mt-1">Add photographers to see their schedule here.</p>
-            </div>
-          ) : (
-            <div>
+          <div>
               {/* All-Team blocks row */}
               {(() => {
                 const allTeamBlocks = timeBlocks.filter((b) => !b.memberId);
@@ -1882,13 +2098,15 @@ export default function TeamPage() {
                 );
               })()}
               {visibleMembers.map((member) => {
-                const memberEvents = calendarEvents.filter((e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email));
+                const memberEvents = member.id === "__owner__"
+                  ? calendarEvents.filter((e) => !e.photographerId || e.photographerId === "__owner__")
+                  : calendarEvents.filter((e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email));
                 return (
                   <div key={member.id} className="border-b last:border-b-0 border-gray-100">
                     <div className="flex items-center gap-2 px-3 py-2 bg-gray-50/50">
                       <div className="w-5 h-5 rounded-full flex-shrink-0" style={{ background: member.color || "#0b2a55" }} />
-                      <p className="text-xs font-semibold text-[#0F172A]">{member.name}</p>
-                      {(() => {
+                      <p className="text-xs font-semibold text-[#0F172A]">{member.id === "__owner__" ? `${member.name} (you)` : member.name}</p>
+                      {member.id !== "__owner__" && (() => {
                         const allProds = [...(products.services || []), ...(products.packages || []), ...(products.addons || [])];
                         const skillLabels = (member.skills || [])
                           .map((s) => SKILL_LABELS[s] || allProds.find((p) => p.id === s)?.name || null)
@@ -1987,8 +2205,7 @@ export default function TeamPage() {
                   </div>
                 </div>
               )}
-            </div>
-          )}
+          </div>
 
           {/* ── Availability recap ─────────────────────────────────────────── */}
           {visibleMembers.length > 0 && (
@@ -1996,7 +2213,9 @@ export default function TeamPage() {
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">This Week&apos;s Availability</p>
               <div className="space-y-2">
                 {visibleMembers.map((member) => {
-                  const memberEvents = calendarEvents.filter((e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email));
+                  const memberEvents = member.id === "__owner__"
+                    ? calendarEvents.filter((e) => !e.photographerId || e.photographerId === "__owner__")
+                    : calendarEvents.filter((e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email));
                   const bookedDays = new Set(
                     memberEvents
                       .filter((e) => weekDates.some((d) => isSameDay(e.shootDateObj, d)))
@@ -2052,11 +2271,13 @@ export default function TeamPage() {
                 const dayEvents = calendarEvents.filter((e) => isSameDay(e.shootDateObj, d));
                 const visibleDayEvents = filterMember === "all"
                   ? dayEvents
-                  : dayEvents.filter((e) => e.photographerId === filterMember);
+                  : filterMember === "__owner__"
+                    ? dayEvents.filter((e) => !e.photographerId || e.photographerId === "__owner__")
+                    : dayEvents.filter((e) => e.photographerId === filterMember);
                 const dayBlocks = timeBlocks.filter((b) => {
                   const startStr = (b.startDate || "").slice(0, 10);
                   const endStr   = (b.endDate || b.startDate || "").slice(0, 10);
-                  const memberMatch = filterMember === "all" ? true : (!b.memberId || b.memberId === filterMember);
+                  const memberMatch = (filterMember === "all" || filterMember === "__owner__") ? true : (!b.memberId || b.memberId === filterMember);
                   return dayStr >= startStr && dayStr <= endStr && memberMatch;
                 });
                 const hasBlocks = dayBlocks.length > 0;
@@ -2474,6 +2695,14 @@ export default function TeamPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Owner calendar sync modal */}
+      {showOwnerCalModal && (
+        <OwnerCalSyncModal
+          tenant={tenant}
+          onClose={() => setShowOwnerCalModal(false)}
+        />
       )}
 
       {/* Calendar sync modal */}

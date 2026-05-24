@@ -31,7 +31,7 @@ export default function ReviewStep() {
   const { tenant, onboarding, saveOnboarding, patch } = useOnboarding();
   const [finishing, setFinishing] = useState(false);
 
-  async function handleFinish() {
+  async function handleFinish(redirectTo = "/dashboard?welcome=1") {
     setFinishing(true);
     await saveOnboarding({
       completed:   { ...(onboarding?.completed || {}), review: true },
@@ -39,7 +39,7 @@ export default function ReviewStep() {
       currentStep: 5,
     });
     await patch({ onboardingCompleted: true, starterGuideCompleted: false }).catch(() => {});
-    router.push("/dashboard?welcome=1");
+    router.push(redirectTo);
   }
 
   // Build summary lines
@@ -104,21 +104,22 @@ export default function ReviewStep() {
             <span style={{ fontSize: 22 }}>✦</span>
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0F172A" }}>Create your first service</p>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0F172A" }}>Finish setting up your business</p>
             <p style={{ margin: "6px 0 16px", fontSize: 13, color: "#6B7280", lineHeight: 1.6 }}>
-              Define a package (e.g. Listing Premium) so clients can book you. Takes about 5 minutes.
+              Configure your booking preferences, pricing, and business details so everything is ready for clients.
             </p>
             <div style={{ display: "flex", gap: 10 }}>
               <button className="btn-ghost"
-                onClick={() => router.push("/dashboard/products?tour=1")}
+                onClick={() => handleFinish("/dashboard?welcome=1")}
+                disabled={finishing}
                 style={{ fontSize: 13 }}>
-                Take the tour first
+                {finishing ? "Finishing…" : "Skip to dashboard"}
               </button>
               <button
-                onClick={handleFinish}
+                onClick={() => handleFinish("/dashboard/settings")}
                 disabled={finishing}
                 style={{ height: 36, padding: "0 18px", background: "linear-gradient(135deg, #C9A96E, #A8843F)", color: "#fff", border: "none", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: finishing ? 0.7 : 1, boxShadow: "0 2px 8px rgba(168,132,63,0.28)" }}>
-                {finishing ? "Finishing…" : "Go to dashboard →"}
+                {finishing ? "Finishing…" : "Go to Settings →"}
               </button>
             </div>
           </div>

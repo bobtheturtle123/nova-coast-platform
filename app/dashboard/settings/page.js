@@ -117,7 +117,7 @@ function StaffAccessSection({ tenant }) {
       </p>
 
       {/* Invite form — hidden on solo plan */}
-      {isSolo || (seatLimit !== null && members.length >= seatLimit) ? (
+      {isSolo || (seatLimit !== null && (members.length + 1) >= seatLimit) ? (
         <div className="flex items-center gap-3 p-4 mb-4 border border-amber-200 bg-amber-50 rounded-xl">
           <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-amber-600">
@@ -750,6 +750,9 @@ export default function SettingsPage() {
           if (bc.deposit) {
             setDepositType(bc.deposit.type || "percent");
             setDepositValue(bc.deposit.value ?? 50);
+          } else if (bc.depositPercent !== undefined) {
+            setDepositType("percent");
+            setDepositValue(bc.depositPercent);
           }
           if (bc.timeSlots?.length) setTimeSlots(bc.timeSlots);
           if (bc.customFields?.length) setCustomFields(bc.customFields);
@@ -982,7 +985,8 @@ export default function SettingsPage() {
 
   function buildBookingConfig() {
     return {
-      deposit:      { type: depositType, value: Number(depositValue) || 0 },
+      deposit:        { type: depositType, value: Number(depositValue) || 0 },
+      depositPercent: depositType === "percent" ? (Number(depositValue) || 0) : undefined,
       timeSlots,
       customFields,
       enableApn,
@@ -1416,16 +1420,16 @@ export default function SettingsPage() {
               <div>
                 <label className="label-field">Number / Language Format</label>
                 <select value={form.locale} onChange={set("locale")} className="input-field w-full">
-                  <option value="en-US">English (US) — 1,234.56</option>
-                  <option value="en-GB">English (UK) — 1,234.56</option>
-                  <option value="en-AU">English (AU) — 1,234.56</option>
-                  <option value="en-CA">English (CA) — 1,234.56</option>
-                  <option value="en-ZA">English (ZA) — 1 234,56</option>
-                  <option value="fr-FR">French — 1 234,56</option>
-                  <option value="de-DE">German — 1.234,56</option>
-                  <option value="es-ES">Spanish — 1.234,56</option>
-                  <option value="pt-BR">Portuguese (BR) — 1.234,56</option>
-                  <option value="ja-JP">Japanese — 1,234.56</option>
+                  <option value="en-US">English (US)</option>
+                  <option value="en-GB">English (UK)</option>
+                  <option value="en-AU">English (AU)</option>
+                  <option value="en-CA">English (CA)</option>
+                  <option value="en-ZA">English (ZA)</option>
+                  <option value="fr-FR">French</option>
+                  <option value="de-DE">German</option>
+                  <option value="es-ES">Spanish</option>
+                  <option value="pt-BR">Portuguese (BR)</option>
+                  <option value="ja-JP">Japanese</option>
                 </select>
               </div>
             </div>

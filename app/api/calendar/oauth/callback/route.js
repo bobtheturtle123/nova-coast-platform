@@ -66,10 +66,17 @@ async function syncAfterConnect(tenantId, memberId, accessToken) {
       });
     }
 
-    batch.update(
-      adminDb.collection("tenants").doc(tenantId).collection("team").doc(memberId),
-      { "googleCalendar.lastSynced": new Date().toISOString() }
-    );
+    if (memberId === "__owner__") {
+      batch.update(
+        adminDb.collection("tenants").doc(tenantId),
+        { "ownerGoogleCalendar.lastSynced": new Date().toISOString() }
+      );
+    } else {
+      batch.update(
+        adminDb.collection("tenants").doc(tenantId).collection("team").doc(memberId),
+        { "googleCalendar.lastSynced": new Date().toISOString() }
+      );
+    }
 
     await batch.commit();
   } catch (e) {
@@ -96,7 +103,7 @@ export async function GET(req) {
     const nonceDoc = await adminDb.collection("oauthNonces").doc(nonce).get();
     if (!nonceDoc.exists) throw new Error("Invalid or expired OAuth state");
 
-    const { tenantId, memberId, expiresAt } = nonceDoc.data();
+    const { tenantId, memberId, isOwnerFlow, expiresAt } = nonceDoc.data();
     const expiry = expiresAt?.toDate?.() || new Date(expiresAt);
     if (new Date() > expiry) {
       await nonceDoc.ref.delete();
@@ -124,20 +131,24 @@ export async function GET(req) {
     const tokens = await tokenRes.json();
     if (tokens.error) throw new Error(tokens.error_description || tokens.error);
 
-    await adminDb
-      .collection("tenants").doc(tenantId)
-      .collection("team").doc(memberId)
-      .update({
-        googleCalendar: {
-          accessToken:  tokens.access_token,
-          refreshToken: tokens.refresh_token || null,
-          expiresAt:    tokens.expires_in ? Date.now() + tokens.expires_in * 1000 : null,
-          connectedAt:  new Date().toISOString(),
-        },
-      });
+    const calData = {
+      accessToken:  tokens.access_token,
+      refreshToken: tokens.refresh_token || null,
+      expiresAt:    tokens.expires_in ? Date.now() + tokens.expires_in * 1000 : null,
+      connectedAt:  new Date().toISOString(),
+    };
 
-    // Auto-sync immediately after connecting — fire and forget, don't block response
-    syncAfterConnect(tenantId, memberId, tokens.access_token);
+    if (isOwnerFlow) {
+      // Store owner's personal Google Calendar on the tenant doc
+      await adminDb.collection("tenants").doc(tenantId).update({ ownerGoogleCalendar: calData });
+      syncAfterConnect(tenantId, "__owner__", tokens.access_token);
+    } else {
+      await adminDb
+        .collection("tenants").doc(tenantId)
+        .collection("team").doc(memberId)
+        .update({ googleCalendar: calData });
+      syncAfterConnect(tenantId, memberId, tokens.access_token);
+    }
 
     return new Response(DONE_HTML(true), { headers: { "Content-Type": "text/html" } });
   } catch (err) {

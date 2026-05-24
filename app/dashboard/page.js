@@ -9,6 +9,7 @@ import { getAppUrl } from "@/lib/appUrl";
 import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 import { payLabel, paidAmount } from "@/lib/payment";
 import { avatarColor, initials } from "@/lib/avatar";
+import { getEffectivePlan } from "@/lib/plans";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 // Statuses that count as "in production" — excludes completed and cancelled
@@ -333,13 +334,13 @@ export default function DashboardHome() {
       .sort((a, b) => (a.shoots[0]?.shootTime || "99:99").localeCompare(b.shoots[0]?.shootTime || "99:99"));
   }, [scopeListings, teamMembers, zones, photographerZoneMap]);
 
-  // Starter guide steps
-  const planSupportsTeam = tenant && !["starter", "basic"].includes(tenant.plan);
+  // Starter guide steps — sequential: each step unlocks only after the previous is done
+  const isSoloTenant = getEffectivePlan(tenant) === "solo";
   const starterSteps = tenant ? [
-    { id: "pricing",  done: !!(tenant.pricingConfig?.tiers?.length || tenant.pricingConfig?.mode), label: "Configure pricing",    desc: "Set your rates, tiers, and deposit percentage",    href: "/dashboard/settings#settings-pricing" },
-    { id: "booking",  done: !!(tenant.bookingConfig),                                               label: "Booking settings",     desc: "Set availability, time slots, and booking policies", href: "/dashboard/settings#settings-booking" },
-    { id: "products", done: hasProducts,                                                            label: "Add products",          desc: "Create the packages and add-ons clients can book",   href: "/dashboard/products" },
-    ...(planSupportsTeam ? [{ id: "team", done: teamMembers.length > 0, label: "Add team members", desc: "Invite photographers, editors, and managers", href: "/dashboard/team" }] : []),
+    { id: "booking",     num: 1, done: !!(tenant.bookingConfig?.slotDuration || tenant.bookingConfig?.availableDays), label: "Booking settings",  desc: "Set your availability, time slots, and booking policies", href: "/dashboard/settings#settings-booking" },
+    { id: "serviceArea", num: 2, done: zones.length > 0,                                                              label: "Service area",       desc: "Draw the zones where you accept shoots",                  href: "/dashboard/service-areas" },
+    { id: "products",    num: 3, done: hasProducts,                                                                   label: "Add services",       desc: "Create the packages and add-ons clients can book",        href: "/dashboard/products" },
+    { id: "team",        num: 4, done: isSoloTenant || teamMembers.length > 0,                                        label: "Add team members",   desc: isSoloTenant ? "Upgrade to Studio to add teammates" : "Invite photographers, editors, and managers", href: isSoloTenant ? "/dashboard/billing" : "/dashboard/team", isSoloPlan: isSoloTenant },
   ] : [];
   const starterDone      = starterSteps.filter(s => s.done).length;
   const starterComplete  = starterDone === starterSteps.length;
@@ -521,31 +522,40 @@ export default function DashboardHome() {
             {!isSetupCollapsed && (
               <>
                 <div>
-                  {starterSteps.map((step, i) => (
-                    <div key={step.id} className="flex items-center gap-4 px-6 py-4"
-                      style={{ borderBottom: i < starterSteps.length - 1 ? "1px solid #F3F4F6" : "none" }}>
-                      <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all ${step.done ? "bg-[#3486cf]" : "border-2 border-gray-200"}`}>
-                        {step.done && (
-                          <svg width="10" height="10" fill="none" viewBox="0 0 12 12">
-                            <path d="M2.5 6L5 8.5 9.5 3.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
+                  {starterSteps.map((step, i) => {
+                    const prevDone = i === 0 || starterSteps[i - 1].done;
+                    const locked   = !prevDone;
+                    return (
+                      <div key={step.id} className="flex items-center gap-4 px-6 py-4"
+                        style={{ borderBottom: i < starterSteps.length - 1 ? "1px solid #F3F4F6" : "none", opacity: locked ? 0.4 : 1, transition: "opacity 0.2s" }}>
+                        <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all ${step.done ? "bg-[#3486cf]" : locked ? "bg-gray-100 border border-gray-200" : "border-2 border-gray-200"}`}>
+                          {step.done ? (
+                            <svg width="10" height="10" fill="none" viewBox="0 0 12 12">
+                              <path d="M2.5 6L5 8.5 9.5 3.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          ) : (
+                            <span className="text-[9px] font-bold" style={{ color: locked ? "#D1D5DB" : "#9CA3AF" }}>{step.num}</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className={`text-[14px] block font-medium ${step.done ? "line-through decoration-gray-300" : ""}`}
+                            style={{ color: step.done ? "#9CA3AF" : "#374151" }}>
+                            {step.label}
+                            {step.isSoloPlan && (
+                              <span className="ml-2 text-[10px] font-semibold bg-blue-50 text-[#3486cf] px-1.5 py-0.5 rounded-full align-middle">Solo plan</span>
+                            )}
+                          </span>
+                          {!step.done && <span className="text-[14px]" style={{ color: "#9CA3AF" }}>{step.desc}</span>}
+                        </div>
+                        {!step.done && !locked && step.href && (
+                          <Link href={step.href} className="text-xs font-semibold text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap flex-shrink-0">
+                            Go to →
+                          </Link>
                         )}
+                        {step.done && <span className="text-[14px] text-gray-300 font-medium flex-shrink-0">Done</span>}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <span className={`text-[14px] block font-medium ${step.done ? "line-through decoration-gray-300" : ""}`}
-                          style={{ color: step.done ? "#9CA3AF" : "#374151" }}>
-                          {step.label}
-                        </span>
-                        {!step.done && <span className="text-[14px]" style={{ color: "#9CA3AF" }}>{step.desc}</span>}
-                      </div>
-                      {!step.done && step.href && (
-                        <Link href={step.href} className="text-xs font-semibold text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap flex-shrink-0">
-                          Go to →
-                        </Link>
-                      )}
-                      {step.done && <span className="text-[14px] text-gray-300 font-medium flex-shrink-0">Done</span>}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <div className="px-6 py-3 flex justify-end" style={{ borderTop: "1px solid #F3F4F6" }}>
                   <button onClick={dismissStarterGuide} disabled={dismissingGuide}
