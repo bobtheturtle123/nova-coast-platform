@@ -7,7 +7,7 @@ export default function MarketingShell({ children }) {
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/">
-            <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-8 w-auto object-contain" />
+            <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-11 w-auto object-contain" />
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sm text-gray-600">
             <a href="/#how-it-works" className="hover:text-navy transition-colors">
@@ -45,7 +45,7 @@ export default function MarketingShell({ children }) {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-8">
             <div>
-              <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-7 w-auto object-contain mb-3 brightness-0 invert" />
+              <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-9 w-auto object-contain mb-3 brightness-0 invert" />
               <p className="text-white/35 text-xs max-w-xs leading-relaxed">
                 The complete operating system for real estate photography businesses.
               </p>

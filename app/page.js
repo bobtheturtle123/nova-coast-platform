@@ -14,7 +14,7 @@ export default function MarketingPage() {
       {/* NAV */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-8 w-auto object-contain" />
+          <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-11 w-auto object-contain" />
           <nav className="hidden md:flex items-center gap-8 text-sm text-gray-600">
             <a href="#how-it-works" className="hover:text-navy transition-colors">How it works</a>
             <a href="/features" className="hover:text-navy transition-colors">Features</a>
