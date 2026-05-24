@@ -7,7 +7,6 @@ import Link from "next/link";
 import { calculateTenantPrice, getSqftTier, getItemPrice, getFromPrice, formatPrice } from "@/lib/catalogUtils";
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 import { getPlan } from "@/lib/plans";
-import { WORKFLOW_STATUSES } from "@/lib/workflowStatus";
 import WeatherWidget from "@/components/dashboard/WeatherWidget";
 
 const TIME_SLOTS = [
@@ -555,7 +554,6 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
             photographerName:        form.photographerName,
             photographerPhone:       form.photographerPhone,
             additionalPhotographers: form.additionalPhotographers,
-            workflowStatus:          form.workflowStatus,
           }),
         });
         data = await res.json();
@@ -1215,21 +1213,6 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                 placeholder="Special instructions, access notes, lockbox code, etc."
                 className="input-field w-full text-sm" />
             </div>
-
-            {/* Workflow status (edit mode only) */}
-            {isEdit && (
-              <div className="card">
-                <h2 className="font-semibold text-[#0F172A] text-sm uppercase tracking-wide mb-3">Workflow Stage</h2>
-                <select
-                  value={form.workflowStatus}
-                  onChange={(e) => setForm((f) => ({ ...f, workflowStatus: e.target.value }))}
-                  className="input-field w-full">
-                  {WORKFLOW_STATUSES.map((s) => (
-                    <option key={s.id} value={s.id}>{s.label}</option>
-                  ))}
-                </select>
-              </div>
-            )}
 
             {/* Service Agreement */}
             {!isEdit && catalog?.bookingConfig?.serviceAgreement?.enabled && catalog.bookingConfig.serviceAgreement.text && (

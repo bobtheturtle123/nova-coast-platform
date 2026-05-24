@@ -1,6 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
-import { sendBookingCreatedNotifications, generateCalendarICS } from "@/lib/email";
+import { sendBookingCreatedNotifications, generateCalendarICS, sendServiceAgreementEmail } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendBookingConfirmedSms } from "@/lib/sms";
 
@@ -32,6 +32,7 @@ export async function POST(req) {
       additionalAppointments = [],
       additionalPhotographers = [],
       sendNotification = true,
+      sendAgreementEmail = false,
       zoneId = null,
     } = await req.json();
 
@@ -283,6 +284,16 @@ export async function POST(req) {
             tenant,
             reason: "booking",
           }).catch((err) => console.error("[agent-portal] email FAILED:", err?.message || err));
+
+          // ── Service agreement email ───────────────────────────────────────
+          const agreementText = tenantData.bookingConfig?.serviceAgreement?.text;
+          if (sendAgreementEmail && agreementText && clientEmail) {
+            sendServiceAgreementEmail({
+              booking: { ...bookingData, fullAddress },
+              agreementText,
+              tenant,
+            }).catch((err) => console.error("[agreement-email] FAILED:", err?.message || err));
+          }
 
         } // end: if (tenant)
       } catch (emailErr) {

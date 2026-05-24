@@ -2,6 +2,8 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
 import { sendPaymentReminder } from "@/lib/email";
 import { safeDate } from "@/lib/dateUtils";
+import { stripe } from "@/lib/stripe";
+import { getAppUrl } from "@/lib/appUrl";
 
 const EMAIL_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours between reminder sends
 
@@ -47,7 +49,7 @@ export async function POST(req, { params }) {
   const tenant = await getTenantById(ctx.tenantId);
   if (!tenant) return Response.json({ error: "Tenant not found" }, { status: 404 });
 
-  // Fetch gallery token for the payment link (optional — reminder sends even without gallery)
+  // Fetch gallery token (fallback CTA if Stripe checkout unavailable)
   let galleryToken = null;
   if (booking.galleryId) {
     const galleryDoc = await adminDb
@@ -59,7 +61,63 @@ export async function POST(req, { params }) {
     }
   }
 
-  await sendPaymentReminder({ booking, galleryToken, tenant });
+  // Create a Stripe checkout session so the client can pay directly from the email
+  const appUrl    = getAppUrl();
+  const address   = booking.fullAddress || booking.address || "Property";
+  const amountDue = booking.depositPaid
+    ? (booking.remainingBalance || 0)
+    : (booking.depositAmount || booking.totalPrice || 0);
+  const paymentType = booking.depositPaid ? "balance" : "deposit";
+
+  let paymentUrl = null;
+  if (amountDue > 0) {
+    try {
+      const sessionParams = {
+        mode: "payment",
+        payment_method_types: ["card"],
+        line_items: [{
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `${booking.depositPaid ? "Balance due" : "Deposit"} — ${address}`,
+              description: `${tenant.businessName || "Photography"} payment reminder`,
+            },
+            unit_amount: Math.round(amountDue * 100),
+          },
+          quantity: 1,
+        }],
+        customer_email: booking.clientEmail || undefined,
+        success_url: `${appUrl}/payment-success?bookingId=${params.id}&type=${paymentType}`,
+        cancel_url:  `${appUrl}/${tenant.slug || ""}/book/payment?cancelled=true`,
+        metadata: {
+          bookingId:  params.id,
+          tenantId:   ctx.tenantId,
+          type:       paymentType,
+          clientName: booking.clientName || "",
+        },
+      };
+
+      let session;
+      if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
+        const platformFee = Math.round(amountDue * 100 * (Number(process.env.PLATFORM_FEE_BPS || 150) / 10000));
+        session = await stripe.checkout.sessions.create({
+          ...sessionParams,
+          payment_intent_data: {
+            application_fee_amount: platformFee,
+            transfer_data: { destination: tenant.stripeConnectAccountId },
+          },
+        });
+      } else {
+        session = await stripe.checkout.sessions.create(sessionParams);
+      }
+
+      paymentUrl = session.url;
+    } catch (e) {
+      console.error("[send-reminder] Stripe checkout failed (non-fatal):", e?.message);
+    }
+  }
+
+  await sendPaymentReminder({ booking, galleryToken, paymentUrl, tenant });
 
   await adminDb
     .collection("tenants").doc(ctx.tenantId)
