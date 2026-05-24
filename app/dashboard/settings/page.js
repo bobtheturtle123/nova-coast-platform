@@ -1289,6 +1289,21 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Agent Portal Login URL */}
+      <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-4">
+        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Agent Portal Login</p>
+        <p className="text-xs text-gray-400 mb-2">
+          Add this link to your website so agents can sign in or create an account to access their delivered media, brochures, and QR codes.
+        </p>
+        <div className="flex items-center gap-2">
+          <code className="text-sm text-[#3486cf] flex-1 truncate">{APP_URL}/{tenant?.slug}/agent/login</code>
+          <button onClick={() => { navigator.clipboard.writeText(`${APP_URL}/${tenant?.slug}/agent/login`); showMsg("Agent login URL copied!"); }}
+            className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2 py-1 rounded hover:bg-[#3486cf]/5">Copy</button>
+          <a href={`/${tenant?.slug}/agent/login`} target="_blank" rel="noopener noreferrer"
+            className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2 py-1 rounded hover:bg-[#3486cf]/5">Open</a>
+        </div>
+      </div>
+
       {/* Embed Code */}
       <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-6">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Embed Booking Form</p>

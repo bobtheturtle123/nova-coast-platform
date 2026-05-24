@@ -58,6 +58,12 @@ export async function POST(req, { params }) {
       resolvedAt:  null,
     });
 
+    // Advance booking workflow status to "revisions"
+    adminDb.collection("tenants").doc(tenant.id)
+      .collection("bookings").doc(bookingId)
+      .update({ workflowStatus: "revisions" })
+      .catch((e) => console.error("[revision-request] workflowStatus update failed:", e?.message));
+
     // Notify admin (fire-and-forget) — respects team_revision_request notification preference
     try {
       const resendKey = process.env.RESEND_API_KEY;

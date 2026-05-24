@@ -88,6 +88,28 @@ export async function PATCH(req, { params }) {
     else update.paidInFull = false;
   }
 
+  // Auto-advance workflowStatus when payment is marked as complete
+  const nowPaid = update.paidInFull ?? (update.balancePaid || update.depositPaid
+    ? ((update.depositPaid ?? prev.depositPaid) && (update.balancePaid ?? prev.balancePaid))
+    : null);
+  if (nowPaid && (prev.workflowStatus === "delivered" || prev.workflowStatus === "appointment_confirmed" || prev.workflowStatus === "booked")) {
+    try {
+      let isDelivered = false;
+      if (prev.galleryId) {
+        const galSnap = await adminDb.collection("tenants").doc(ctx.tenantId)
+          .collection("galleries").doc(prev.galleryId).get();
+        isDelivered = !!galSnap.data()?.delivered;
+      }
+      // Only promote if delivered and no pending revisions
+      if (isDelivered) {
+        const pendRev = await adminDb.collection("tenants").doc(ctx.tenantId)
+          .collection("revisionRequests")
+          .where("bookingId", "==", params.id).where("status", "==", "pending").limit(1).get();
+        if (pendRev.empty) update.workflowStatus = "completed";
+      }
+    } catch (e) { console.error("[booking/PATCH] workflowStatus auto-complete failed (non-fatal):", e?.message); }
+  }
+
   await bookingRef.update(update);
 
   // Send photographer notification when photographer is newly assigned or changed

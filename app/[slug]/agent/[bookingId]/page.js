@@ -7,13 +7,12 @@ import AgentBookingClient from "./AgentBookingClient";
 export default async function AgentBookingPage({ params, searchParams }) {
   const { slug, bookingId } = params;
   const cookieStore = cookies();
-  const token = cookieStore.get(`agt_${slug}`)?.value || searchParams?.token;
+  const token = cookieStore.get(`agt_${slug}`)?.value;
 
   const tenant = await getTenantBySlug(slug);
   if (!tenant) return <ErrorScreen message="Business not found." />;
 
-  // Verify token
-  if (!token) return <ErrorScreen message="No access token. Sign in to your portal." />;
+  if (!token) return <LoginRedirect slug={slug} />;
 
   const agentsSnap = await adminDb
     .collection("tenants").doc(tenant.id)
@@ -170,6 +169,32 @@ function ErrorScreen({ message }) {
         <p className="text-4xl mb-4">🔒</p>
         <p className="text-gray-700 font-medium mb-2">Access Required</p>
         <p className="text-gray-400 text-sm">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+function LoginRedirect({ slug }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-6">
+      <div className="text-center max-w-sm">
+        <p className="text-4xl mb-4">🔒</p>
+        <p className="text-gray-700 font-medium mb-2">Sign in to view your listing</p>
+        <p className="text-gray-400 text-sm mb-6">
+          You need to be signed in to your agent portal to access this listing.
+        </p>
+        <a
+          href={`/${slug}/agent/login`}
+          className="inline-block bg-[#3486cf] text-white text-sm font-semibold px-6 py-3 rounded-xl hover:bg-[#2a72b8] transition-colors"
+        >
+          Sign In to Portal →
+        </a>
+        <p className="text-xs text-gray-400 mt-4">
+          New here?{" "}
+          <a href={`/${slug}/agent/register`} className="text-[#3486cf] hover:underline">
+            Create an account
+          </a>
+        </p>
       </div>
     </div>
   );

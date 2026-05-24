@@ -121,6 +121,14 @@ export async function GET(req) {
             doc.ref.update({ status: "sent", sentAt: now }),
           ]);
 
+          // Advance booking workflow status to "delivered"
+          if (booking.id || gallery.bookingId) {
+            adminDb.collection("tenants").doc(tenantId)
+              .collection("bookings").doc(booking.id || gallery.bookingId)
+              .update({ workflowStatus: "delivered" })
+              .catch((e) => console.error("[cron/gallery-deliveries] workflowStatus update failed:", e?.message));
+          }
+
           // Fire-and-forget side effects
           const appUrl     = getAppUrl();
           const galleryUrl = gallery.accessToken

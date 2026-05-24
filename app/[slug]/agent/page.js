@@ -10,8 +10,7 @@ import AgentSessionCheck from "@/components/AgentSessionCheck";
 export default async function AgentPortalPage({ params, searchParams }) {
   const { slug }    = params;
   const cookieStore = cookies();
-  // Prefer session cookie (set after login), fall back to invite-link token in URL
-  const token       = cookieStore.get(`agt_${slug}`)?.value || searchParams?.token;
+  const token       = cookieStore.get(`agt_${slug}`)?.value;
 
   const tenant = await getTenantBySlug(slug);
   if (!tenant) {

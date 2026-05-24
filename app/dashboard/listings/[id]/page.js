@@ -6,7 +6,7 @@ import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
-import { resolveWorkflowStatus, WORKFLOW_STATUSES } from "@/lib/workflowStatus";
+import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 import { getAppUrl } from "@/lib/appUrl";
 import WeatherWidget from "@/components/dashboard/WeatherWidget";
 
@@ -185,8 +185,6 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
   );
 }
 
-// Full pipeline options built from WORKFLOW_STATUSES (same order as booking pages)
-const STATUS_OPTIONS = WORKFLOW_STATUSES.map((s) => ({ value: s.id, label: s.label }));
 
 export default function ListingDetailPage() {
   const { id }  = useParams();
@@ -569,7 +567,7 @@ if (loading) return (
                 {!booking.paidInFull && !booking.balancePaid && booking.depositPaid && (
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-xl bg-blue-500 text-white">Deposit Paid</span>
                 )}
-                <WorkflowStatusBadge status={resolveWorkflowStatus(booking)} size="xs" />
+                <WorkflowStatusBadge status={resolveWorkflowStatus(booking, { gallery, revisions: revisions ?? undefined })} size="xs" />
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -746,14 +744,14 @@ if (loading) return (
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Workflow Stage</label>
-                  <select
-                    value={resolveWorkflowStatus(booking)}
-                    onChange={(e) => patchBooking({ workflowStatus: e.target.value })}
-                    className="input-field w-full">
-                    {STATUS_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
+                  <WorkflowStatusBadge
+                    status={resolveWorkflowStatus(booking, {
+                      gallery,
+                      revisions: revisions ?? undefined,
+                    })}
+                    size="sm"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">Auto-updated by app events</p>
                 </div>
                 {/* Client requested time */}
                 {(booking.preferredDate || booking.preferredTime) && (
@@ -1102,8 +1100,15 @@ if (loading) return (
                 {showWeather && (booking.shootDate || booking.preferredDate) && (booking.fullAddress || booking.address) && (
                   <div className="pt-1 -mx-1">
                     <WeatherWidget
-                      address={booking.fullAddress || booking.address}
+                      address={[
+                        booking.fullAddress || booking.address,
+                        booking.city,
+                        booking.state,
+                        booking.zip,
+                      ].filter(Boolean).join(", ")}
                       date={(booking.shootDate || booking.preferredDate).split("T")[0]}
+                      lat={booking.lat || undefined}
+                      lng={booking.lng || undefined}
                     />
                   </div>
                 )}

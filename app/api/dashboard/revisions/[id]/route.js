@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getAppUrl } from "@/lib/appUrl";
+import { computeWorkflowStatus } from "@/lib/workflowStatus";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -38,6 +39,47 @@ export async function PATCH(req, { params }) {
   if (status === "resolved") update.resolvedAt = new Date();
 
   await ref.update(update);
+
+  // When a revision is resolved, recompute booking workflow status
+  if (status === "resolved") {
+    try {
+      const revData = snap.data();
+      if (revData?.bookingId) {
+        // Check if any pending revisions remain for this booking
+        const remaining = await adminDb
+          .collection("tenants").doc(ctx.tenantId)
+          .collection("revisionRequests")
+          .where("bookingId", "==", revData.bookingId)
+          .where("status", "==", "pending")
+          .limit(1)
+          .get();
+
+        const hasPendingRevisions = !remaining.empty;
+        if (!hasPendingRevisions) {
+          // Read booking + gallery to compute new status
+          const bookingSnap = await adminDb
+            .collection("tenants").doc(ctx.tenantId)
+            .collection("bookings").doc(revData.bookingId)
+            .get();
+          const booking = bookingSnap.data() || {};
+
+          let isDelivered = false;
+          if (booking.galleryId) {
+            const galSnap = await adminDb
+              .collection("tenants").doc(ctx.tenantId)
+              .collection("galleries").doc(booking.galleryId)
+              .get();
+            isDelivered = !!galSnap.data()?.delivered;
+          }
+
+          const newStatus = computeWorkflowStatus(booking, { isDelivered, hasPendingRevisions: false });
+          await adminDb.collection("tenants").doc(ctx.tenantId)
+            .collection("bookings").doc(revData.bookingId)
+            .update({ workflowStatus: newStatus });
+        }
+      }
+    } catch (e) { console.error("[revision/resolve] workflowStatus recompute failed (non-fatal):", e?.message); }
+  }
 
   // Email agent when resolved
   if (status === "resolved") {

@@ -119,9 +119,14 @@ export default function AgentLoginPage() {
         </form>
       )}
 
-      <p className="text-xs text-gray-400 mt-10 text-center leading-relaxed">
-        Don&apos;t have an account? Use the invite link sent by your photographer.
-      </p>
+      <div className="mt-10 text-center">
+        <p className="text-xs text-gray-400 leading-relaxed">
+          New agent?{" "}
+          <a href={`/${slug}/agent/register`} className="text-[#3486cf] hover:underline font-medium">
+            Create an account
+          </a>
+        </p>
+      </div>
     </div>
   );
 }

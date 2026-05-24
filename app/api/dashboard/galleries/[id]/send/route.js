@@ -108,6 +108,14 @@ export async function POST(req, { params }) {
     ...(agentCanShare !== undefined ? { agentCanShare } : {}),
   });
 
+  // Advance booking workflow status to "delivered"
+  if (gallery.bookingId) {
+    adminDb.collection("tenants").doc(ctx.tenantId)
+      .collection("bookings").doc(gallery.bookingId)
+      .update({ workflowStatus: "delivered" })
+      .catch((e) => console.error("[send/gallery] workflowStatus update failed:", e?.message));
+  }
+
   // Cancel any pending scheduled delivery for this gallery since we just sent
   const pendingSnap = await adminDb
     .collection("scheduledDeliveries")
