@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import { getSqftTier, getItemPrice, calculateTenantPrice, getActiveTiers, formatPrice } from "@/lib/catalogUtils";
@@ -242,6 +243,7 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
 }
 
 export default function BookingsPage() {
+  const router = useRouter();
   const { permissions, userRole } = useDashboardPermissions();
   const canViewPricing    = userRole === "owner" || userRole === "admin" || !!permissions?.canViewRevenue;
   const canCreateBookings = userRole === "owner" || userRole === "admin" || !!permissions?.canCreateBookings;
@@ -278,6 +280,24 @@ export default function BookingsPage() {
   const [activeTab,          setActiveTab]          = useState("bookings");
   const [abandonedBookings,  setAbandonedBookings]  = useState([]);
   const [abandonedLoading,   setAbandonedLoading]   = useState(false);
+  const [creatingListing,    setCreatingListing]    = useState(null); // bookingId being converted
+
+  async function createListing(bookingId) {
+    setCreatingListing(bookingId);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch(`/api/dashboard/bookings/${bookingId}`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ isListing: true }),
+      });
+      if (res.ok) {
+        setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, isListing: true } : b));
+        router.push(`/dashboard/listings/${bookingId}`);
+      }
+    } catch { /* ignore */ }
+    setCreatingListing(null);
+  }
 
   useEffect(() => {
     loadBookings();
@@ -752,10 +772,12 @@ export default function BookingsPage() {
                       </Link>
                     )}
                     {b.isListing === false ? (
-                      <Link href={`/dashboard/listings/${b.id}`}
-                        className="text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">
-                        Create Listing
-                      </Link>
+                      <button
+                        onClick={() => createListing(b.id)}
+                        disabled={creatingListing === b.id}
+                        className="text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors disabled:opacity-60">
+                        {creatingListing === b.id ? "Creating…" : "Create Listing"}
+                      </button>
                     ) : (
                       <Link href={`/dashboard/listings/${b.id}`}
                         className="text-sm font-medium text-white bg-[#3486cf] hover:bg-[#2a72b8] px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">

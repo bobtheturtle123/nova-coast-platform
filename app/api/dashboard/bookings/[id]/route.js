@@ -58,6 +58,8 @@ export async function PATCH(req, { params }) {
     // Photographer assignment
     "photographerId", "photographerEmail", "photographerName", "photographerPhone",
     "additionalPhotographers",
+    // Listing flag
+    "isListing",
     // Notes & website
     "notes", "propertyWebsite",
     // Client info

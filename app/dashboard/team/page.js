@@ -817,14 +817,16 @@ function OwnerCalSyncModal({ tenant, onClose }) {
   const APP_URL = getAppUrl();
   const isGCalConnected = !!tenant?.ownerGoogleCalendar?.refreshToken;
 
-  const [connecting,   setConnecting]   = useState(false);
-  const [connectError, setConnectError] = useState("");
-  const [syncing,      setSyncing]      = useState(false);
-  const [syncResult,   setSyncResult]   = useState(null);
-  const [lastSynced,   setLastSynced]   = useState(tenant?.ownerGoogleCalendar?.lastSynced || null);
-  const [calToken,     setCalToken]     = useState(tenant?.ownerCalendarToken || null);
-  const [tokenLoading, setTokenLoading] = useState(false);
-  const [copied,       setCopied]       = useState(false);
+  const [connecting,    setConnecting]    = useState(false);
+  const [connectError,  setConnectError]  = useState("");
+  const [syncing,       setSyncing]       = useState(false);
+  const [syncResult,    setSyncResult]    = useState(null);
+  const [lastSynced,    setLastSynced]    = useState(tenant?.ownerGoogleCalendar?.lastSynced || null);
+  const [calToken,      setCalToken]      = useState(tenant?.ownerCalendarToken || null);
+  const [tokenLoading,  setTokenLoading]  = useState(false);
+  const [copied,        setCopied]        = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [gcalConnected, setGcalConnected] = useState(isGCalConnected);
 
   useEffect(() => {
     if (calToken) return;

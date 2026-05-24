@@ -543,6 +543,27 @@ if (loading) return (
     </div>
   );
 
+  if (booking.isListing === false) return (
+    <div className="min-h-screen flex items-center justify-center p-8" style={{ background: "var(--bg-base)" }}>
+      <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-md w-full text-center shadow-sm">
+        <div className="w-14 h-14 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto mb-4">
+          <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-amber-500">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+        </div>
+        <h2 className="text-lg font-semibold text-[#0F172A] mb-1">{booking.fullAddress || booking.address || "This booking"}</h2>
+        <p className="text-sm text-gray-500 mb-6">This booking hasn't been activated as a listing yet. Creating a listing enables the agent portal, gallery delivery, and client-facing features.</p>
+        <button
+          onClick={convertToListing}
+          disabled={convertingToListing}
+          className="w-full py-2.5 px-6 rounded-xl bg-[#3486cf] text-white font-semibold text-sm hover:bg-[#2a72b8] transition-colors disabled:opacity-60">
+          {convertingToListing ? "Creating listing…" : "Create Listing"}
+        </button>
+        <Link href="/dashboard/bookings" className="block mt-3 text-xs text-gray-400 hover:text-gray-600">← Back to bookings</Link>
+      </div>
+    </div>
+  );
+
   const coverUrl = gallery?.media?.find((m) => !m.fileType?.startsWith("video/"))?.url || null;
   const images   = (gallery?.media || []).filter((m) => !m.fileType?.startsWith("video/"));
   const videos   = (gallery?.media || []).filter((m) =>  m.fileType?.startsWith("video/"));
@@ -597,24 +618,6 @@ if (loading) return (
           </div>
         </div>
       </div>
-
-      {/* Not-yet-a-listing banner */}
-      {booking.isListing === false && (
-        <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 min-w-0">
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-amber-600 flex-shrink-0">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm text-amber-800">This booking hasn't been converted to a listing yet — it won't appear in the Listings tab or the agent portal.</p>
-          </div>
-          <button
-            onClick={convertToListing}
-            disabled={convertingToListing}
-            className="text-sm font-semibold px-4 py-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors flex-shrink-0 disabled:opacity-60">
-            {convertingToListing ? "Creating…" : "Create Listing"}
-          </button>
-        </div>
-      )}
 
       {/* Tabs + Upload Media inline */}
       <div className="bg-white border-b border-gray-200 px-6 sticky top-0 z-10">
