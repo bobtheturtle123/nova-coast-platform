@@ -120,6 +120,7 @@ export async function GET(req) {
         editingStartedAt:  b.editingStartedAt  || null,
         deliveredAt:       b.deliveredAt       || null,
         source:            b.source            || null,
+        hidden:            b.hidden            || false,
       };
     });
 

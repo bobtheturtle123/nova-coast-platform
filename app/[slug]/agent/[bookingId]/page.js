@@ -7,7 +7,7 @@ import AgentBookingClient from "./AgentBookingClient";
 export default async function AgentBookingPage({ params, searchParams }) {
   const { slug, bookingId } = params;
   const cookieStore = cookies();
-  const token = cookieStore.get(`agt_${slug}`)?.value;
+  const token = cookieStore.get(`agt_${slug}`)?.value || searchParams?.token;
 
   const tenant = await getTenantBySlug(slug);
   if (!tenant) return <ErrorScreen message="Business not found." />;

@@ -11,7 +11,12 @@ import { payLabel, paidAmount } from "@/lib/payment";
 import { avatarColor, initials } from "@/lib/avatar";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-const ACTIVE_STAGES = ["booked","appointment_confirmed","photographer_assigned","shot_completed","editing_complete","qa_review","postponed"];
+// Statuses that count as "in production" — excludes completed and cancelled
+const ACTIVE_STAGES = [
+  "booked", "appointment_confirmed", "photographer_assigned",
+  "shot_completed", "editing_complete", "qa_review",
+  "delivered", "revisions", "postponed",
+];
 
 // ── Sample data (shown when tenant has no real listings/team/zones yet) ───────
 
@@ -282,31 +287,31 @@ export default function DashboardHome() {
   const tomorrowStr = useMemo(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10), []);
   const nowWeek     = useMemo(() => isoWeek(todayStr), [todayStr]);
 
-  // Listings filtered by scope
+  // Listings filtered by scope — hidden bookings excluded from live view
   const scopeListings = useMemo(() => listings.filter(l => {
-    if (l.status === "cancelled" || !l.shootDate) return false;
+    if (l.hidden || l.status === "cancelled" || !l.shootDate) return false;
     if (todayScope === "today")    return l.shootDate === todayStr;
     if (todayScope === "tomorrow") return l.shootDate === tomorrowStr;
     const w = isoWeek(l.shootDate);
     return w.y === nowWeek.y && w.w === nowWeek.w;
   }), [listings, todayScope, todayStr, tomorrowStr, nowWeek]);
 
-  // KPIs
+  // KPIs — hidden bookings excluded from all counts
   const todayCount = useMemo(
-    () => listings.filter(l => l.shootDate === todayStr && l.status !== "cancelled").length,
+    () => listings.filter(l => !l.hidden && l.shootDate === todayStr && l.status !== "cancelled").length,
     [listings, todayStr]
   );
   const activeCount = useMemo(
-    () => listings.filter(l => ACTIVE_STAGES.includes(resolveWorkflowStatus(l))).length,
+    () => listings.filter(l => !l.hidden && ACTIVE_STAGES.includes(resolveWorkflowStatus(l))).length,
     [listings]
   );
   const thisWeekRev = useMemo(
-    () => listings.filter(l => { if (!l.shootDate) return false; const w = isoWeek(l.shootDate); return w.y === nowWeek.y && w.w === nowWeek.w; }).reduce((s, l) => s + paidAmount(l), 0),
+    () => listings.filter(l => !l.hidden && l.shootDate).filter(l => { const w = isoWeek(l.shootDate); return w.y === nowWeek.y && w.w === nowWeek.w; }).reduce((s, l) => s + paidAmount(l), 0),
     [listings, nowWeek]
   );
   const prevWeekRev = useMemo(() => {
     const prev = isoWeek(new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10));
-    return listings.filter(l => { if (!l.shootDate) return false; const w = isoWeek(l.shootDate); return w.y === prev.y && w.w === prev.w; }).reduce((s, l) => s + paidAmount(l), 0);
+    return listings.filter(l => !l.hidden && l.shootDate).filter(l => { const w = isoWeek(l.shootDate); return w.y === prev.y && w.w === prev.w; }).reduce((s, l) => s + paidAmount(l), 0);
   }, [listings]);
   const weekDelta = prevWeekRev > 0 ? Math.round(((thisWeekRev - prevWeekRev) / prevWeekRev) * 100) : null;
   const avgTurnaround = useMemo(() => {
@@ -325,11 +330,11 @@ export default function DashboardHome() {
       href: r.bookingId ? `/dashboard/listings/${r.bookingId}` : `/dashboard/revisions`,
       urgency: "high",
     })),
-    ...listings.filter(l => l.status === "requested" && !l.depositPaid)
+    ...listings.filter(l => !l.hidden && l.status === "requested" && !l.depositPaid)
       .map(l => ({ type: "booking_request", id: l.id, label: l.clientName, detail: l.address?.split(",")[0], href: `/dashboard/listings/${l.id}`, urgency: "high" })),
-    ...listings.filter(l => l.depositPaid && !l.balancePaid && !(l.paidInFull) && resolveWorkflowStatus(l) === "delivered")
+    ...listings.filter(l => !l.hidden && l.depositPaid && !l.balancePaid && !(l.paidInFull) && resolveWorkflowStatus(l) === "delivered")
       .map(l => ({ type: "balance_due", id: l.id, label: l.clientName, detail: `Balance $${((l.totalPrice || 0) - (l.depositAmount || 0)).toLocaleString()}`, href: `/dashboard/listings/${l.id}`, urgency: "medium" })),
-    ...listings.filter(l => ACTIVE_STAGES.includes(resolveWorkflowStatus(l)) && !l.shootDate && !l.preferredDate)
+    ...listings.filter(l => !l.hidden && ACTIVE_STAGES.includes(resolveWorkflowStatus(l)) && !l.shootDate && !l.preferredDate)
       .map(l => ({ type: "no_date", id: l.id, label: l.clientName, detail: l.address?.split(",")[0], href: `/dashboard/listings/${l.id}`, urgency: "medium" })),
   ].slice(0, 8), [pendingRevisions, listings]);
 

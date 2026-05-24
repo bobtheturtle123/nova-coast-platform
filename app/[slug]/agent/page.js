@@ -10,7 +10,7 @@ import AgentSessionCheck from "@/components/AgentSessionCheck";
 export default async function AgentPortalPage({ params, searchParams }) {
   const { slug }    = params;
   const cookieStore = cookies();
-  const token       = cookieStore.get(`agt_${slug}`)?.value;
+  const token       = cookieStore.get(`agt_${slug}`)?.value || searchParams?.token;
 
   const tenant = await getTenantBySlug(slug);
   if (!tenant) {
