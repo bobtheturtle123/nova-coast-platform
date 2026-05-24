@@ -255,14 +255,21 @@ const [listingUrl,       setListingUrl]        = useState("");
   async function convertToListing() {
     setConvertingToListing(true);
     try {
-      const token = await auth.currentUser.getIdToken();
-      const res = await fetch(`/api/dashboard/bookings/${id}`, {
-        method:  "PATCH",
+      const token = await auth.currentUser?.getIdToken(true);
+      const res = await fetch(`/api/dashboard/bookings/${id}/create-listing`, {
+        method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ isListing: true }),
       });
-      if (res.ok) setBooking((b) => ({ ...b, isListing: true }));
-    } catch { /* ignore */ }
+      if (res.ok) {
+        setBooking((b) => ({ ...b, isListing: true }));
+        setConvertingToListing(false);
+        return;
+      }
+      const d = await res.json().catch(() => ({}));
+      alert(d.error || `Failed to create listing (${res.status})`);
+    } catch (e) {
+      alert(e.message || "Unexpected error");
+    }
     setConvertingToListing(false);
   }
 

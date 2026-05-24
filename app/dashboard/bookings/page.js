@@ -281,21 +281,28 @@ export default function BookingsPage() {
   const [abandonedBookings,  setAbandonedBookings]  = useState([]);
   const [abandonedLoading,   setAbandonedLoading]   = useState(false);
   const [creatingListing,    setCreatingListing]    = useState(null); // bookingId being converted
+  const [createListingErr,   setCreateListingErr]   = useState("");
 
   async function createListing(bookingId) {
     setCreatingListing(bookingId);
+    setCreateListingErr("");
     try {
-      const token = await auth.currentUser?.getIdToken();
-      const res = await fetch(`/api/dashboard/bookings/${bookingId}`, {
-        method:  "PATCH",
+      const token = await auth.currentUser?.getIdToken(true);
+      if (!token) { setCreateListingErr("Not authenticated. Refresh and try again."); setCreatingListing(null); return; }
+      const res = await fetch(`/api/dashboard/bookings/${bookingId}/create-listing`, {
+        method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ isListing: true }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, isListing: true } : b));
         router.push(`/dashboard/listings/${bookingId}`);
+        return;
       }
-    } catch { /* ignore */ }
+      setCreateListingErr(data.error || `Error ${res.status} — please try again.`);
+    } catch (e) {
+      setCreateListingErr(e.message || "Unexpected error. Please try again.");
+    }
     setCreatingListing(null);
   }
 
@@ -732,6 +739,12 @@ export default function BookingsPage() {
           </div>
         ) : (
           <div className="card-section overflow-hidden">
+            {createListingErr && (
+              <div className="px-6 py-3 bg-red-50 border-b border-red-200 flex items-center justify-between gap-4">
+                <p className="text-sm text-red-700">{createListingErr}</p>
+                <button onClick={() => setCreateListingErr("")} className="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+              </div>
+            )}
             {filtered.map((b) => {
               const wfStatus    = resolveWorkflowStatus(b);
               const dateRaw = b.shootDate || b.preferredDate;
