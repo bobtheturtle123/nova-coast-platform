@@ -170,7 +170,7 @@ function BalanceForm({ clientSecret, balance, onSuccess, primary }) {
       redirect: "if_required",
     });
     if (stripeError) { setError(stripeError.message); setLoading(false); return; }
-    if (paymentIntent?.status === "succeeded") onSuccess();
+    if (paymentIntent?.status === "succeeded") onSuccess(paymentIntent.id);
   }
 
   return (
@@ -282,13 +282,19 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
     finally { setLoadingPay(false); }
   }
 
-  function handlePaySuccess() {
+  function handlePaySuccess(paymentIntentId) {
     setUnlocked(true);
     setClientSecret(null);
     setPayMsg("Payment successful! Downloads unlocked.");
-    // Reload after 3 s so the Stripe webhook has time to persist
-    // gallery.unlocked=true in Firestore; without this a hard refresh
-    // would show the gallery as locked until the webhook fires.
+    // Immediately confirm server-side so booking is marked paid without
+    // waiting for the Stripe webhook (belt-and-suspenders).
+    if (paymentIntentId && gallery.bookingId) {
+      fetch("/api/bookings/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: gallery.bookingId, paymentIntentId }),
+      }).catch(() => {});
+    }
     setTimeout(() => window.location.reload(), 3000);
   }
 

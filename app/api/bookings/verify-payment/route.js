@@ -82,6 +82,33 @@ export async function POST(req) {
       return Response.json({ ok: true, paidInFull: true });
     }
 
+    if (type === "balance") {
+      let shouldNotify = false;
+      let galleryId = null;
+      await adminDb.runTransaction(async (tx) => {
+        const snap = await tx.get(bookingRef);
+        if (!snap.exists || snap.data().balancePaid) return;
+        galleryId = snap.data().galleryId || null;
+        tx.update(bookingRef, {
+          balancePaid: true, paidInFull: true, remainingBalance: 0,
+          stripeBalanceIntentId: pi.id,
+        });
+        shouldNotify = true;
+      });
+      if (galleryId) {
+        await adminDb
+          .collection("tenants").doc(tenantId)
+          .collection("galleries").doc(galleryId)
+          .update({ unlocked: true }).catch(() => {});
+      }
+      if (shouldNotify) {
+        console.log(`[verify-payment] balance confirmed bookingId=${bookingId}`);
+      } else {
+        console.log(`[verify-payment] balance already recorded bookingId=${bookingId}`);
+      }
+      return Response.json({ ok: true, paidInFull: true });
+    }
+
     console.log(`[verify-payment] no update needed bookingId=${bookingId} type=${type}`);
     return Response.json({ ok: true, paidInFull: booking.paidInFull || false });
   } catch (err) {
