@@ -751,10 +751,17 @@ export default function BookingsPage() {
                         Edit Booking
                       </Link>
                     )}
-                    <Link href={`/dashboard/bookings/${b.id}`}
-                      className="text-sm font-medium text-white bg-[#3486cf] hover:bg-[#2a72b8] px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">
-                      Open Listing
-                    </Link>
+                    {b.isListing === false ? (
+                      <Link href={`/dashboard/listings/${b.id}`}
+                        className="text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">
+                        Create Listing
+                      </Link>
+                    ) : (
+                      <Link href={`/dashboard/listings/${b.id}`}
+                        className="text-sm font-medium text-white bg-[#3486cf] hover:bg-[#2a72b8] px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">
+                        Open Listing
+                      </Link>
+                    )}
                   </div>
                 </div>
               );

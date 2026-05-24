@@ -252,6 +252,20 @@ const [listingUrl,       setListingUrl]        = useState("");
   const [userRole, setUserRole] = useState("owner"); // "owner" | "admin" | "manager"
   const [convertingToListing, setConvertingToListing] = useState(false);
 
+  async function convertToListing() {
+    setConvertingToListing(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/bookings/${id}`, {
+        method:  "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ isListing: true }),
+      });
+      if (res.ok) setBooking((b) => ({ ...b, isListing: true }));
+    } catch { /* ignore */ }
+    setConvertingToListing(false);
+  }
+
   // Activity log
   const [activityLog,     setActivityLog]     = useState([]);
   const [activityLoading, setActivityLoading] = useState(false);
@@ -583,6 +597,24 @@ if (loading) return (
           </div>
         </div>
       </div>
+
+      {/* Not-yet-a-listing banner */}
+      {booking.isListing === false && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-amber-600 flex-shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm text-amber-800">This booking hasn't been converted to a listing yet — it won't appear in the Listings tab or the agent portal.</p>
+          </div>
+          <button
+            onClick={convertToListing}
+            disabled={convertingToListing}
+            className="text-sm font-semibold px-4 py-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors flex-shrink-0 disabled:opacity-60">
+            {convertingToListing ? "Creating…" : "Create Listing"}
+          </button>
+        </div>
+      )}
 
       {/* Tabs + Upload Media inline */}
       <div className="bg-white border-b border-gray-200 px-6 sticky top-0 z-10">
