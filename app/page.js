@@ -66,10 +66,10 @@ export default function MarketingPage() {
               <p className="text-white/30 text-xs mt-4">No credit card required · Live in under an hour · Cancel anytime</p>
             </div>
 
-            {/* Dashboard mockup */}
+            {/* Real product screenshot */}
             <div className="relative pb-0 hidden md:block">
-              <div className="bg-white/5 border border-white/10 rounded-t-2xl overflow-hidden shadow-2xl">
-                <div className="bg-white/8 px-4 py-2.5 flex items-center gap-2 border-b border-white/10">
+              <div className="rounded-t-2xl overflow-hidden shadow-2xl border border-white/10">
+                <div className="bg-white/8 px-4 py-2.5 flex items-center gap-2 border-b border-white/10" style={{ background: "rgba(255,255,255,0.07)" }}>
                   <div className="flex gap-1.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-white/15" />
                     <div className="w-2.5 h-2.5 rounded-full bg-white/15" />
@@ -79,45 +79,11 @@ export default function MarketingPage() {
                     app.kyoriaos.com/dashboard
                   </div>
                 </div>
-                <div className="p-4 space-y-3">
-                  <div className="grid grid-cols-4 gap-2">
-                    {[
-                      { label: "Active Jobs", value: "8",    cls: "bg-white/8 border-white/10",              val: "text-white" },
-                      { label: "Pending",     value: "3",    cls: "bg-amber-500/20 border-amber-400/20",     val: "text-amber-300" },
-                      { label: "Delivered",   value: "31",   cls: "bg-emerald-500/15 border-emerald-400/15", val: "text-emerald-300" },
-                      { label: "Revenue",     value: "$14k", cls: "bg-yellow-500/15 border-yellow-400/20",   val: "text-yellow-300" },
-                    ].map((s) => (
-                      <div key={s.label} className={`rounded-lg p-2.5 border ${s.cls}`}>
-                        <p className="text-white/35 text-[9px] uppercase tracking-wide mb-1">{s.label}</p>
-                        <p className={`font-semibold text-sm ${s.val}`}>{s.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="bg-white/8 rounded-xl border border-white/10 overflow-hidden">
-                    <div className="px-3 py-2 border-b border-white/8 flex items-center justify-between">
-                      <p className="text-white/45 text-[10px] font-semibold uppercase tracking-wide">Today&apos;s Shoots</p>
-                      <span className="text-[9px] text-white/25">2 scheduled</span>
-                    </div>
-                    {[
-                      { addr: "1842 Ocean View Dr, Coronado", time: "9:00 AM", photographer: "Marcus",  badge: "text-blue-300 bg-blue-500/20" },
-                      { addr: "3310 Maple Ave, La Jolla",     time: "2:30 PM", photographer: "Devon",   badge: "text-purple-300 bg-purple-500/20" },
-                    ].map((l) => (
-                      <div key={l.addr} className="px-3 py-2.5 flex items-center justify-between border-b border-white/5 last:border-0">
-                        <div>
-                          <p className="text-white/65 text-[11px] truncate max-w-[135px]">{l.addr}</p>
-                          <p className="text-white/25 text-[9px] mt-0.5">{l.time} · {l.photographer}</p>
-                        </div>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${l.badge}`}>Confirmed</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="bg-emerald-500/15 border border-emerald-400/20 rounded-xl px-3 py-2 flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-emerald-400/30 flex items-center justify-center flex-shrink-0">
-                      <svg width="8" height="8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" className="text-emerald-300"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    </div>
-                    <p className="text-emerald-300/75 text-[10px]">Gallery delivered · Balance collected automatically</p>
-                  </div>
-                </div>
+                <img
+                  src="/screenshots/schedule.png"
+                  alt="KyoriaOS — team schedule and bookings dashboard"
+                  className="w-full block"
+                />
               </div>
             </div>
           </div>
@@ -157,16 +123,16 @@ export default function MarketingPage() {
           <div className="grid md:grid-cols-2 gap-5">
             {[
               {
-                src: "/screenshots/schedule.png",
-                title: "Team Schedule & Calendar",
-                desc: "See every photographer's week at a glance. Assign shoots, track availability, block time off — week, month, or 2-week view.",
-                href: "/features/team-scheduling",
-              },
-              {
                 src: "/screenshots/customers.png",
                 title: "Customer & Agent CRM",
-                desc: "All your agents and clients in one place. Group by brokerage, track lifetime revenue, and surface your highest-value accounts.",
+                desc: "All your agents and clients in one place. Group by brokerage, track lifetime revenue, and surface your highest-value accounts instantly.",
                 href: "/features/client-crm",
+              },
+              {
+                src: "/screenshots/schedule.png",
+                title: "Team Schedule & Calendar",
+                desc: "See every photographer's week at a glance. Assign shoots, track availability, and block time off — week, month, or 2-week view.",
+                href: "/features/team-scheduling",
               },
               {
                 src: "/screenshots/service-areas.png",

@@ -37,11 +37,12 @@ export async function POST(req) {
 
     // Create Stripe Checkout session for subscription
     const session = await stripe.checkout.sessions.create({
-      mode:       "subscription",
-      customer:   customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${getAppUrl()}/dashboard/billing?subscribed=true`,
-      cancel_url:  `${getAppUrl()}/dashboard/billing`,
+      mode:                   "subscription",
+      customer:               customerId,
+      line_items:             [{ price: priceId, quantity: 1 }],
+      allow_promotion_codes:  true,
+      success_url:  `${getAppUrl()}/dashboard/billing?subscribed=true`,
+      cancel_url:   `${getAppUrl()}/dashboard/billing`,
       subscription_data: {
         metadata: { tenantId: ctx.tenantId, plan },
       },

@@ -23,6 +23,7 @@ const ADDON_CAPS = {
   scale:  { extraSeats: null, topupListings: null },
 };
 const NEXT_PLAN_NAME = { solo: "Studio", studio: "Pro Team", pro: "Scale", scale: null };
+const PLAN_ORDER     = { solo: 0, starter: 0, studio: 1, pro: 2, scale: 3 };
 
 const TOPUP_PACKS = [
   { pack: "pack25",  label: "+25 Credits",  price: "$175", credits: 25 },
@@ -43,7 +44,11 @@ export default function BillingPage() {
   const [loading,       setLoading]      = useState(true);
   const [working,       setWorking]      = useState(false);
   const [msg,           setMsg]          = useState({ text: "", type: "error" });
-  const [cancelModal,   setCancelModal]  = useState(false);
+  const [cancelStep,      setCancelStep]     = useState(null); // null | "feedback" | "discount"
+  const [cancelReason,    setCancelReason]   = useState("");
+  const [cancelNote,      setCancelNote]     = useState("");
+  const [discountSaving,  setDiscountSaving] = useState(false);
+  const [downgradeTarget, setDowngradeTarget] = useState(null); // { planId, seatBlock }
   const [agentProWorking, setAgentProWorking] = useState(false);
   const [isOwner,       setIsOwner]      = useState(true); // staff admins cannot manage billing
 
@@ -224,6 +229,41 @@ export default function BillingPage() {
   const seatsUsed      = teamMemberCount + 1; // +1 for owner
   const seatPct        = totalSeats === null ? 0 : Math.min(100, Math.round((seatsUsed / totalSeats) * 100));
 
+  function handlePlanChange(targetPlanId) {
+    const fromOrder = PLAN_ORDER[plan] ?? 0;
+    const toOrder   = PLAN_ORDER[targetPlanId] ?? 0;
+    if (toOrder >= fromOrder) { openPortal(); return; }
+    const targetSeats = BASE_SEATS[targetPlanId];
+    if (targetSeats !== null && seatsUsed > targetSeats) {
+      setDowngradeTarget({ planId: targetPlanId, seatBlock: true });
+    } else {
+      setDowngradeTarget({ planId: targetPlanId, seatBlock: false });
+    }
+  }
+
+  async function submitCancelFeedback(applyDiscount) {
+    setDiscountSaving(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      await fetch("/api/billing/cancel-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ reason: cancelReason, note: cancelNote, applyDiscount }),
+      });
+      if (applyDiscount) {
+        setMsg({ text: "$20/month discount applied for 3 months! It will appear on your next invoice.", type: "success" });
+        setCancelStep(null); setCancelReason(""); setCancelNote("");
+      } else {
+        setCancelStep(null); setCancelReason(""); setCancelNote("");
+        openPortal();
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setDiscountSaving(false);
+    }
+  }
+
   const msgStyles = {
     success: "bg-green-50 border border-green-300 text-green-800",
     error:   "bg-red-50 border border-red-300 text-red-800",
@@ -296,7 +336,7 @@ export default function BillingPage() {
                 <button onClick={openPortal} disabled={working} className="btn-outline">
                   {working ? "Loading…" : "Manage subscription →"}
                 </button>
-                <button onClick={() => setCancelModal(true)} disabled={working}
+                <button onClick={() => setCancelStep("feedback")} disabled={working}
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 text-red-600 text-[13px] font-medium hover:bg-red-50 transition-colors disabled:opacity-50">
                   Cancel subscription
                 </button>
@@ -508,7 +548,7 @@ export default function BillingPage() {
                   <span className={`text-sm font-bold ${isCurrent ? "text-[#0F172A]" : "text-gray-400"}`}>${p.price}<span className="text-xs font-normal">/mo</span></span>
                   {isCurrent && subscribed && <span className="tag-green">Active</span>}
                   {isOther && subscribed && (
-                    <button onClick={openPortal} disabled={working} className="btn-outline text-xs py-1.5">
+                    <button onClick={() => handlePlanChange(p.id)} disabled={working} className="btn-outline text-xs py-1.5">
                       {working ? "…" : "Change plan"}
                     </button>
                   )}
@@ -551,49 +591,191 @@ export default function BillingPage() {
         )}
       </div>
 
-      {/* Cancel confirmation modal */}
-      {cancelModal && (
+      {/* Cancel modal — multi-step churn prevention */}
+      {cancelStep && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.45)" }}
-          onClick={() => setCancelModal(false)}>
+          onClick={() => { setCancelStep(null); setCancelReason(""); setCancelNote(""); }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
             onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
-                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-red-500">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold text-[#0F172A] text-[15px]">Cancel subscription?</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{PLAN_NAMES[plan] || plan} · ${PLAN_PRICES[plan] || 0}/month</p>
-              </div>
-            </div>
 
-            <div className="space-y-2 mb-5 text-sm text-gray-600">
-              <p>You'll keep access until the end of your current billing period{renewalDateStr ? ` (${renewalDateStr})` : ""}, then your account will be downgraded.</p>
-              <ul className="mt-3 space-y-1.5 text-xs text-gray-500">
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
-                  Listing credit balance will not be refunded
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
-                  Team members will lose dashboard access
-                </li>
-              </ul>
-            </div>
+            {cancelStep === "feedback" && (
+              <>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-amber-500">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-[#0F172A] text-[15px]">Before you go...</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">Help us understand why you&apos;re leaving</p>
+                  </div>
+                </div>
+                <div className="space-y-4 mb-5">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">What&apos;s the main reason?</label>
+                    <select value={cancelReason} onChange={(e) => setCancelReason(e.target.value)}
+                      className="input-field w-full text-sm">
+                      <option value="">Select a reason…</option>
+                      <option value="too_expensive">Too expensive</option>
+                      <option value="not_using">Not using it enough</option>
+                      <option value="missing_features">Missing features I need</option>
+                      <option value="switching">Switching to another tool</option>
+                      <option value="business_closed">Closing my business</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Anything else you&apos;d like us to know?</label>
+                    <textarea value={cancelNote} onChange={(e) => setCancelNote(e.target.value)}
+                      rows={3} placeholder="Optional feedback…"
+                      className="input-field w-full text-sm resize-none" />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => { setCancelStep(null); setCancelReason(""); setCancelNote(""); }}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    Stay on KyoriaOS
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!cancelReason) return;
+                      if (tenant?.churnDiscountOffered) { submitCancelFeedback(false); } else { setCancelStep("discount"); }
+                    }}
+                    disabled={!cancelReason}
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-gray-800 text-white text-sm font-semibold hover:bg-gray-900 transition-colors disabled:opacity-40">
+                    Continue →
+                  </button>
+                </div>
+              </>
+            )}
 
-            <div className="flex gap-3">
-              <button onClick={() => setCancelModal(false)}
-                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                Keep subscription
-              </button>
-              <button onClick={() => { setCancelModal(false); openPortal(); }} disabled={working}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50">
-                {working ? "Loading…" : "Yes, cancel →"}
-              </button>
-            </div>
+            {cancelStep === "discount" && (
+              <>
+                <div className="text-center mb-5">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto mb-3">
+                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" className="text-emerald-600">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                  </div>
+                  <h3 className="font-semibold text-[#0F172A] text-lg">Here&apos;s a deal just for you</h3>
+                  <p className="text-sm text-gray-500 mt-1">We&apos;d love to keep you around.</p>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 mb-5 text-center">
+                  <p className="text-3xl font-bold text-emerald-700 mb-1">$20<span className="text-lg font-normal text-emerald-600">/month off</span></p>
+                  <p className="text-sm text-emerald-700 font-medium">for your next 3 months</p>
+                  <p className="text-xs text-emerald-600 mt-2 opacity-75">One-time offer · applied automatically · no commitment required</p>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  <button onClick={() => submitCancelFeedback(true)} disabled={discountSaving}
+                    className="w-full px-4 py-3 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50">
+                    {discountSaving ? "Applying…" : "Accept $20/month off →"}
+                  </button>
+                  <button onClick={() => submitCancelFeedback(false)} disabled={discountSaving}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-40">
+                    {discountSaving ? "…" : "No thanks, cancel anyway"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Downgrade warning / seat-block modal */}
+      {downgradeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.45)" }}
+          onClick={() => setDowngradeTarget(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}>
+
+            {downgradeTarget.seatBlock ? (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-red-500">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-[#0F172A] text-[15px]">Can&apos;t downgrade yet</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">Too many team members for {PLAN_NAMES[downgradeTarget.planId]}</p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">
+                  The <strong>{PLAN_NAMES[downgradeTarget.planId]}</strong> plan supports <strong>{BASE_SEATS[downgradeTarget.planId]} seat{BASE_SEATS[downgradeTarget.planId] !== 1 ? "s" : ""}</strong>, but you currently have <strong>{seatsUsed} seat{seatsUsed !== 1 ? "s" : ""} in use</strong> (including yourself).
+                </p>
+                <p className="text-sm text-gray-500 mb-5">
+                  Remove <strong>{seatsUsed - BASE_SEATS[downgradeTarget.planId]} team member{(seatsUsed - BASE_SEATS[downgradeTarget.planId]) !== 1 ? "s" : ""}</strong> from the Team page before downgrading.
+                </p>
+                <div className="flex gap-3">
+                  <button onClick={() => setDowngradeTarget(null)}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    Close
+                  </button>
+                  <a href="/dashboard/team"
+                    className="flex-1 text-center px-4 py-2.5 rounded-xl bg-[#0F172A] text-white text-sm font-semibold hover:bg-[#1e293b] transition-colors">
+                    Go to Team page →
+                  </a>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-amber-500">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-[#0F172A] text-[15px]">Downgrade to {PLAN_NAMES[downgradeTarget.planId]}?</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">Review what you&apos;ll lose</p>
+                  </div>
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                  <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-2.5">You&apos;ll lose access to:</p>
+                  <ul className="space-y-1.5">
+                    {(() => {
+                      const losses = [];
+                      const fromLimit = PLAN_LIMITS[plan] || 120;
+                      const toLimit   = PLAN_LIMITS[downgradeTarget.planId] || 120;
+                      if (fromLimit > toLimit) {
+                        losses.push(`${fromLimit.toLocaleString()} → ${toLimit.toLocaleString()} listing credits per year`);
+                      }
+                      const fromSeats = BASE_SEATS[plan];
+                      const toSeats   = BASE_SEATS[downgradeTarget.planId];
+                      if (fromSeats !== null && toSeats !== null && fromSeats > toSeats) {
+                        losses.push(`Team seats: ${fromSeats} → ${toSeats} (extra members will lose access)`);
+                      }
+                      const FEE_PCT = { solo: 2.0, starter: 2.0, studio: 1.5, pro: 1.25, scale: 1.0 };
+                      if ((FEE_PCT[plan] || 2.0) < (FEE_PCT[downgradeTarget.planId] || 2.0)) {
+                        losses.push(`Platform fee: ${FEE_PCT[plan]}% → ${FEE_PCT[downgradeTarget.planId]}% per transaction`);
+                      }
+                      if (losses.length === 0) losses.push("Lower listing credits and feature limits apply");
+                      return losses.map((l, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs text-amber-800">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0 mt-1" />
+                          {l}
+                        </li>
+                      ));
+                    })()}
+                  </ul>
+                </div>
+                <p className="text-xs text-gray-400 mb-5">Changes take effect at the end of your current billing period.</p>
+                <div className="flex gap-3">
+                  <button onClick={() => setDowngradeTarget(null)}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    Stay on {PLAN_NAMES[plan]}
+                  </button>
+                  <button onClick={() => { setDowngradeTarget(null); openPortal(); }} disabled={working}
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50">
+                    {working ? "Loading…" : `Downgrade to ${PLAN_NAMES[downgradeTarget.planId]} →`}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

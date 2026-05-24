@@ -7,8 +7,9 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
 const NAV = [
-  { href: "/superadmin",          label: "Overview",  icon: "⬛" },
-  { href: "/superadmin/tenants",  label: "Accounts",  icon: "🏢" },
+  { href: "/superadmin",               label: "Overview",     icon: "⬛" },
+  { href: "/superadmin/tenants",       label: "Accounts",     icon: "🏢" },
+  { href: "/superadmin/promo-codes",   label: "Promo Codes",  icon: "🎁" },
 ];
 
 export default function SuperadminLayout({ children }) {
