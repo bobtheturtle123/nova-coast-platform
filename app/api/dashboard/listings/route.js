@@ -85,6 +85,7 @@ export async function GET(req) {
       const d = doc.data();
       if (d.status === "pending_payment") return false;
       if (d.hidden) return false;
+      if (d.isListing === false) return false; // excluded when auto-convert is off
       return true;
     })
     .map((doc) => {

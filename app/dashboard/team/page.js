@@ -1210,6 +1210,83 @@ function CalendarSyncModal({ member, onClose, onRegenerate, onDisconnect }) {
   );
 }
 
+// ─── Event Detail Popover (Google-Calendar-style click-to-expand) ─────────────
+function EventDetailPopover({ event, members, onClose }) {
+  const member = members.find((m) => m.id === event.photographerId);
+  const color  = event.memberColor || member?.color || "#3486cf";
+
+  const displayDate = event.shootDate || event.preferredDate;
+  const displayTime = event.shootTime || event.preferredTime;
+
+  const dateLabel = displayDate
+    ? new Date(displayDate + "T12:00:00").toLocaleDateString("en-US", {
+        weekday: "long", month: "long", day: "numeric",
+      })
+    : null;
+
+  const timeLabel = displayTime && !["flexible","morning","afternoon","evening","twilight"].includes(displayTime?.toLowerCase())
+    ? displayTime
+    : displayTime
+      ? displayTime.charAt(0).toUpperCase() + displayTime.slice(1)
+      : null;
+
+  const ws = resolveWorkflowStatus(event);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/20" />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Photographer color bar */}
+        <div className="h-1.5" style={{ background: color }} />
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{event.fullAddress || event.address}</p>
+              {event.clientName && <p className="text-xs text-gray-500 mt-0.5">{event.clientName}</p>}
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-lg leading-none flex-shrink-0">×</button>
+          </div>
+
+          <div className="space-y-2">
+            {dateLabel && (
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="flex-shrink-0 text-gray-400">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span>{dateLabel}{timeLabel ? ` · ${timeLabel}` : ""}</span>
+              </div>
+            )}
+
+            {(member || event.photographerName) && (
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: color }} />
+                <span>{member?.name || event.photographerName}</span>
+              </div>
+            )}
+
+            {ws && (
+              <div className="pt-0.5">
+                <WorkflowStatusBadge status={ws} />
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 flex gap-2">
+            <Link href={`/dashboard/bookings/${event.id}`}
+              className="flex-1 text-center text-xs font-semibold bg-[#3486cf] text-white py-2 px-3 rounded-lg hover:bg-[#2a6eb5] transition-colors">
+              Open Booking
+            </Link>
+            <button onClick={onClose}
+              className="text-xs text-gray-500 hover:text-gray-700 py-2 px-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Block Time Modal ─────────────────────────────────────────────────────────
 const BLOCK_REASONS = ["Vacation", "Day Off", "Personal", "Holiday", "Sick Day", "Other"];
 
@@ -1374,6 +1451,7 @@ export default function TeamPage() {
   const [timeBlocks,    setTimeBlocks]    = useState([]);
   const [showBlockModal,    setShowBlockModal]    = useState(false);
   const [blockDetail,       setBlockDetail]       = useState(null); // { member, blocks, date }
+  const [eventDetail,       setEventDetail]       = useState(null); // booking event for popover
   const [showOwnerCalModal, setShowOwnerCalModal] = useState(false);
 
   const getToken = (forceRefresh = false) => auth.currentUser?.getIdToken(forceRefresh);
@@ -2059,9 +2137,10 @@ export default function TeamPage() {
                                   —
                                 </button>
                               ) : count > 0 ? (
-                                <a href={`/dashboard/bookings/${dayEvents[0].id}`}
+                                <button
+                                  onClick={() => setEventDetail({ ...dayEvents[0], memberColor: member.color || "#0b2a55" })}
                                   title={dayEvents.map((e) => e.address?.split(",")[0]).join(", ")}
-                                  className="inline-flex flex-col items-center gap-0.5">
+                                  className="inline-flex flex-col items-center gap-0.5 hover:opacity-80 transition-opacity">
                                   <span className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold mx-auto"
                                     style={{ background: member.color || "#0b2a55" }}>
                                     {count}
@@ -2073,7 +2152,7 @@ export default function TeamPage() {
                                       <span className="text-[10px] text-gray-400 capitalize leading-none">{t.slice(0, 3)}</span>
                                     ) : null;
                                   })()}
-                                </a>
+                                </button>
                               ) : isPast ? (
                                 <span className="block w-1.5 h-1.5 rounded-full bg-gray-200 mx-auto" />
                               ) : (
@@ -2229,13 +2308,15 @@ export default function TeamPage() {
                               const displayTime = ev.shootTime || ev.preferredTime;
                               const validTime = displayTime && /^(\d{1,2}:\d{2}|morning|afternoon|evening|flexible|twilight)$/i.test(displayTime.trim());
                               const line2 = [validTime ? displayTime : null, ev.address?.split(",")[0]].filter(Boolean).join(" · ");
+                              const color = member.color || "#0b2a55";
                               return (
-                              <Link key={ev.id} href={`/dashboard/bookings/${ev.id}`}
-                                style={{ background: member.color + "22", borderLeftColor: member.color }}
-                                className="shoot-pill">
-                                <p className="font-semibold truncate" style={{ color: member.color }}>{ev.clientName?.split(" ")[0] || ev.address?.split(",")[0] || "Booking"}</p>
-                                {line2 && <p className="truncate text-[10px] opacity-60" style={{ color: member.color }}>{line2}</p>}
-                              </Link>
+                                <button key={ev.id}
+                                  onClick={() => setEventDetail({ ...ev, memberColor: color })}
+                                  style={{ background: color + "22", borderLeftColor: color }}
+                                  className="shoot-pill w-full text-left hover:opacity-80 transition-opacity">
+                                  <p className="font-semibold truncate" style={{ color }}>{ev.clientName?.split(" ")[0] || ev.address?.split(",")[0] || "Booking"}</p>
+                                  {line2 && <p className="truncate text-[10px] opacity-60" style={{ color }}>{line2}</p>}
+                                </button>
                               );
                             })}
                             </div>
@@ -2367,20 +2448,25 @@ export default function TeamPage() {
                     ))}
                     {visibleDayEvents.slice(0, 3).map((ev) => {
                       const member = members.find((m) => m.id === ev.photographerId);
+                      const color  = member?.color || "#0b2a55";
                       const t = ev.shootTime || ev.preferredTime;
                       const validTime = t && /^\d{1,2}:\d{2}/.test(t.trim());
                       const label = [validTime ? t.slice(0,5) : null, ev.clientName?.split(" ")[0]].filter(Boolean).join(" ");
                       return (
-                        <Link key={ev.id} href={`/dashboard/bookings/${ev.id}`}
-                          style={{ background: (member?.color || "#0b2a55") + "22", borderLeftColor: member?.color || "#0b2a55" }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="shoot-pill relative z-10 truncate">
-                          <span style={{ color: member?.color || "#0b2a55" }} className="font-medium">{label || ev.address?.split(",")[0]}</span>
-                        </Link>
+                        <button key={ev.id}
+                          onClick={(e) => { e.stopPropagation(); setEventDetail({ ...ev, memberColor: color }); }}
+                          style={{ background: color + "22", borderLeftColor: color }}
+                          className="shoot-pill relative z-10 truncate w-full text-left hover:opacity-80 transition-opacity">
+                          <span style={{ color }} className="font-medium">{label || ev.address?.split(",")[0]}</span>
+                        </button>
                       );
                     })}
                     {visibleDayEvents.length > 3 && (
-                      <p className="text-xs text-gray-500 relative z-10">+{visibleDayEvents.length - 3} more</p>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEventDetail({ ...visibleDayEvents[0], memberColor: members.find((m) => m.id === visibleDayEvents[0].photographerId)?.color || "#0b2a55" }); }}
+                        className="text-xs text-[#3486cf] relative z-10 hover:underline">
+                        +{visibleDayEvents.length - 3} more
+                      </button>
                     )}
                   </div>
                 );
@@ -2468,13 +2554,23 @@ export default function TeamPage() {
                         <p className="px-4 py-3 text-sm text-gray-400">No shoots scheduled for this day.</p>
                       ) : (
                         <div className="divide-y divide-gray-50">
-                          {memberEvents.map((ev) => (
-                            <div key={ev.id} className="px-4 py-3">
-                              <p className="text-sm font-medium text-[#0F172A]">{ev.address}</p>
-                              <p className="text-xs text-gray-400 mt-0.5">{ev.clientName} · {ev.shootTime || ev.preferredTime || "Time TBD"}</p>
-                              <a href={`/dashboard/bookings/${ev.id}`} className="text-xs text-[#3486cf] hover:underline">View booking →</a>
-                            </div>
-                          ))}
+                          {memberEvents.map((ev) => {
+                            const color = member.color || "#0b2a55";
+                            return (
+                              <button key={ev.id}
+                                onClick={() => setEventDetail({ ...ev, memberColor: color })}
+                                className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors group">
+                                <div className="flex items-start gap-2">
+                                  <div className="w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0" style={{ background: color }} />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-[#0F172A] truncate">{ev.fullAddress || ev.address}</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">{ev.clientName} · {ev.shootTime || ev.preferredTime || "Time TBD"}</p>
+                                  </div>
+                                  <span className="text-xs text-[#3486cf] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">Details →</span>
+                                </div>
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -2797,6 +2893,15 @@ export default function TeamPage() {
             setMembers(data.members || []);
             if (updated) setCalModal(updated);
           }}
+        />
+      )}
+
+      {/* Event detail popover */}
+      {eventDetail && (
+        <EventDetailPopover
+          event={eventDetail}
+          members={members}
+          onClose={() => setEventDetail(null)}
         />
       )}
 
