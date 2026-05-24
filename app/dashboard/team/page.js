@@ -1398,7 +1398,7 @@ export default function TeamPage() {
   const planId = getEffectivePlan(tenant);
   const seatLimit = getSeatLimit(planId, tenant?.addonSeats || 0);
   const isSolo = planId === "solo";
-  const atSeatLimit = seatLimit !== null && members.length >= seatLimit;
+  const atSeatLimit = isSolo || (seatLimit !== null && (members.length + 1) >= seatLimit);
   const ownerLabel = tenant?.ownerName || tenant?.businessName || "You";
   const soloOwnerMember = { id: "__owner__", name: ownerLabel, color: "#3486cf" };
 
