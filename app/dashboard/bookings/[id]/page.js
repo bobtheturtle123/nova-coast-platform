@@ -69,40 +69,56 @@ export default function BookingDetailPage() {
 
   const address   = booking.fullAddress || booking.address || "Property";
   const shootDate = booking.shootDate
-    ? new Date(booking.shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+    ? new Date(booking.shootDate.includes("T") ? booking.shootDate : booking.shootDate + "T12:00:00")
+        .toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
     : null;
 
+  const shootTime12 = (() => {
+    const t = booking.shootTime;
+    if (!t) return null;
+    const [hStr, mStr] = t.split(":");
+    let h = parseInt(hStr, 10);
+    const m = mStr || "00";
+    const ampm = h >= 12 ? "PM" : "AM";
+    if (h > 12) h -= 12;
+    if (h === 0) h = 12;
+    return `${h}:${m} ${ampm}`;
+  })();
+
   // Resolve service names from catalog
-  const pkg        = catalog?.packages?.find(p => p.id === booking.packageId);
-  const services   = (booking.serviceIds  || []).map(sid => catalog?.services?.find(s => s.id === sid)?.name || sid).filter(Boolean);
-  const addons     = (booking.addonIds    || []).map(aid => catalog?.addons?.find(a => a.id === aid)?.name   || aid).filter(Boolean);
+  const pkg      = catalog?.packages?.find(p => p.id === booking.packageId);
+  const services = (booking.serviceIds  || []).map(sid => catalog?.services?.find(s => s.id === sid)?.name || sid).filter(Boolean);
+  const addons   = (booking.addonIds    || []).map(aid => catalog?.addons?.find(a => a.id === aid)?.name   || aid).filter(Boolean);
 
   const payStatus = booking.paidInFull || booking.balancePaid
-    ? { label: "Paid in Full", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" }
+    ? { label: "Paid in Full",  cls: "bg-emerald-50 text-emerald-700 border-emerald-200" }
     : booking.depositPaid
-    ? { label: "Deposit Paid", cls: "bg-blue-50 text-blue-700 border-blue-200" }
-    : { label: "Unpaid",       cls: "bg-gray-50 text-gray-500 border-gray-200" };
+    ? { label: "Deposit Paid",  cls: "bg-blue-50 text-blue-700 border-blue-200" }
+    : { label: "Unpaid",        cls: "bg-gray-50 text-gray-500 border-gray-200" };
 
   const wfStatus = resolveWorkflowStatus(booking);
+
+  const hasPhotographer = booking.photographerName || booking.photographerEmail;
+  const hasServices     = pkg || services.length > 0 || addons.length > 0;
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-4">
 
       {/* Back */}
       <div className="flex items-center justify-between">
-        <Link href="/dashboard" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
-          ← Dashboard
+        <Link href="/dashboard/bookings" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+          ← Bookings
         </Link>
         <Link href={`/dashboard/listings/${id}`} className="text-xs text-[#3486cf] hover:underline">
           Full listing details →
         </Link>
       </div>
 
-      {/* Header */}
+      {/* Header card */}
       <div className="card p-5">
-        <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-start justify-between gap-3 mb-4">
           <div className="min-w-0">
-            <h1 className="text-base font-semibold text-gray-900 leading-snug truncate">{address}</h1>
+            <h1 className="text-base font-semibold text-gray-900 leading-snug">{address}</h1>
             {(booking.city || booking.state) && (
               <p className="text-xs text-gray-400 mt-0.5">{[booking.city, booking.state].filter(Boolean).join(", ")}</p>
             )}
@@ -110,91 +126,123 @@ export default function BookingDetailPage() {
           <WorkflowStatusBadge status={wfStatus} size="xs" />
         </div>
 
-        {/* Shoot date + time */}
-        {(shootDate || booking.shootTime) && (
-          <div className="flex items-center gap-2 mb-3 p-3 bg-[#EEF5FC] rounded-xl">
-            <svg className="w-4 h-4 text-[#3486cf] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <div>
-              <p className="text-sm font-semibold text-[#1E5A8A]">
-                {shootDate || "Date TBD"}
-                {booking.shootTime && <span className="font-normal text-[#3486cf]"> · {booking.shootTime}</span>}
-              </p>
-              {booking.shootDuration && (
-                <p className="text-xs text-[#3486cf]/70">{booking.shootDuration} min estimated</p>
-              )}
-            </div>
+        {/* Shoot date/time — always prominent */}
+        <div className={`flex items-center gap-3 mb-4 p-3 rounded-xl ${shootDate ? "bg-[#EEF5FC]" : "bg-gray-50"}`}>
+          <svg className={`w-4 h-4 shrink-0 ${shootDate ? "text-[#3486cf]" : "text-gray-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <div>
+            {shootDate ? (
+              <>
+                <p className="text-sm font-semibold text-[#1E5A8A]">
+                  {shootDate}
+                  {shootTime12 && <span className="font-normal text-[#3486cf]"> · {shootTime12}</span>}
+                </p>
+                {booking.shootDuration && (
+                  <p className="text-xs text-[#3486cf]/70">{booking.shootDuration} min</p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-gray-400 font-medium">No shoot date scheduled</p>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Two-column grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0 text-sm">
+        {/* 4 info blocks — always visible */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 divide-y sm:divide-y-0 divide-gray-50">
 
           {/* Client */}
-          {(booking.clientName || booking.clientEmail || booking.clientPhone) && (
-            <Section label="Client">
-              {booking.clientName  && <Row v={booking.clientName} />}
-              {booking.clientEmail && <Row v={<a href={`mailto:${booking.clientEmail}`} className="text-[#3486cf] hover:underline">{booking.clientEmail}</a>} />}
-              {booking.clientPhone && <Row v={<a href={`tel:${booking.clientPhone}`} className="hover:underline">{booking.clientPhone}</a>} />}
-            </Section>
-          )}
+          <InfoBlock label="Client">
+            {(booking.clientName || booking.clientEmail || booking.clientPhone) ? (
+              <>
+                {booking.clientName  && <InfoRow v={booking.clientName} />}
+                {booking.clientEmail && <InfoRow v={<a href={`mailto:${booking.clientEmail}`} className="text-[#3486cf] hover:underline">{booking.clientEmail}</a>} />}
+                {booking.clientPhone && <InfoRow v={<a href={`tel:${booking.clientPhone}`} className="hover:underline">{booking.clientPhone}</a>} />}
+              </>
+            ) : (
+              <p className="text-xs text-gray-300 italic">No client info</p>
+            )}
+          </InfoBlock>
 
           {/* Photographer */}
-          {(booking.photographerName || booking.photographerEmail) && (
-            <Section label="Photographer">
-              {booking.photographerName  && <Row v={booking.photographerName} />}
-              {booking.photographerPhone && <Row v={<a href={`tel:${booking.photographerPhone}`} className="hover:underline">{booking.photographerPhone}</a>} />}
-              {booking.photographerEmail && <Row v={<a href={`mailto:${booking.photographerEmail}`} className="text-[#3486cf] hover:underline truncate">{booking.photographerEmail}</a>} />}
-            </Section>
-          )}
+          <InfoBlock label="Photographer">
+            {hasPhotographer ? (
+              <>
+                {booking.photographerName  && <InfoRow v={booking.photographerName} />}
+                {booking.photographerPhone && <InfoRow v={<a href={`tel:${booking.photographerPhone}`} className="hover:underline">{booking.photographerPhone}</a>} />}
+                {booking.photographerEmail && <InfoRow v={<a href={`mailto:${booking.photographerEmail}`} className="text-[#3486cf] hover:underline">{booking.photographerEmail}</a>} />}
+              </>
+            ) : (
+              <Link href={`/dashboard/bookings/${id}/edit`} className="text-xs text-amber-600 hover:underline font-medium">
+                Not assigned — assign →
+              </Link>
+            )}
+          </InfoBlock>
 
           {/* Services */}
-          {(pkg || services.length > 0 || addons.length > 0) && (
-            <Section label="Services">
-              {pkg       && <Row v={<span className="font-medium">{pkg.name}</span>} />}
-              {services.map((s, i) => <Row key={i} v={s} />)}
-              {addons.map((a, i)   => <Row key={i} v={<span className="text-gray-400">+ {a}</span>} />)}
-            </Section>
-          )}
+          <InfoBlock label="Services">
+            {hasServices ? (
+              <>
+                {pkg && <InfoRow v={<span className="font-medium">{pkg.name}</span>} label="Pkg" />}
+                {services.map((s, i) => <InfoRow key={i} v={s} />)}
+                {addons.map((a, i)   => <InfoRow key={i} v={<span className="text-gray-400">+ {a}</span>} />)}
+              </>
+            ) : (
+              <Link href={`/dashboard/bookings/${id}/edit`} className="text-xs text-gray-300 hover:underline italic">
+                None selected — edit →
+              </Link>
+            )}
+          </InfoBlock>
 
           {/* Payment */}
-          <Section label="Payment">
-            <div className="flex items-center gap-2 mb-1">
+          <InfoBlock label="Payment">
+            <div className="flex items-center gap-2 mb-1.5">
               <span className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-lg border ${payStatus.cls}`}>
                 {payStatus.label}
               </span>
             </div>
-            {booking.totalPrice > 0 && <Row label="Total"   v={`$${booking.totalPrice.toLocaleString()}`} />}
-            {booking.depositAmount > 0 && (
-              <Row label="Deposit" v={`$${booking.depositAmount.toLocaleString()} ${booking.depositPaid ? "✓" : "—"}`} />
+            {booking.totalPrice > 0     && <InfoRow label="Total"   v={`$${Number(booking.totalPrice).toLocaleString()}`} />}
+            {booking.depositAmount > 0  && <InfoRow label="Deposit" v={`$${Number(booking.depositAmount).toLocaleString()} ${booking.depositPaid ? "✓" : "—"}`} />}
+            {!booking.paidInFull && !booking.balancePaid && (booking.remainingBalance || 0) > 0 && (
+              <InfoRow label="Balance" v={`$${Number(booking.remainingBalance).toLocaleString()} due`} />
             )}
-            {!booking.paidInFull && !booking.balancePaid && booking.remainingBalance > 0 && (
-              <Row label="Balance" v={`$${booking.remainingBalance.toLocaleString()} due`} />
-            )}
-          </Section>
+          </InfoBlock>
 
         </div>
 
-        {/* Notes */}
-        {booking.notes && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Notes</p>
-            <p className="text-sm text-gray-600 italic">&ldquo;{booking.notes}&rdquo;</p>
-          </div>
-        )}
-
-        {/* Property */}
+        {/* Property chips */}
         {(booking.propertyType || booking.squareFootage) && (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 pt-3 border-t border-gray-50 flex flex-wrap gap-2">
             {booking.propertyType && (
               <span className="text-xs text-gray-500 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-lg">{booking.propertyType}</span>
             )}
             {booking.squareFootage && (
-              <span className="text-xs text-gray-500 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-lg">{Number(String(booking.squareFootage).replace(/,/g,'')).toLocaleString()} sq ft</span>
+              <span className="text-xs text-gray-500 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-lg">
+                {Number(String(booking.squareFootage).replace(/,/g, "")).toLocaleString()} sq ft
+              </span>
             )}
           </div>
         )}
+
+        {/* Notes */}
+        {booking.notes && (
+          <div className="mt-3 pt-3 border-t border-gray-50">
+            <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">Notes</p>
+            <p className="text-sm text-gray-600 italic">&ldquo;{booking.notes}&rdquo;</p>
+          </div>
+        )}
+      </div>
+
+      {/* Quick actions */}
+      <div className="flex gap-3">
+        <Link href={`/dashboard/bookings/${id}/edit`}
+          className="flex-1 text-center text-sm font-medium py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:border-[#3486cf]/40 hover:text-[#3486cf] transition-colors">
+          Edit Booking
+        </Link>
+        <Link href={`/dashboard/listings/${id}`}
+          className="flex-1 text-center text-sm font-medium py-2.5 rounded-xl bg-[#3486cf] text-white hover:bg-[#2a72b8] transition-colors">
+          Manage Listing
+        </Link>
       </div>
 
       {/* Cancel */}
@@ -222,20 +270,20 @@ export default function BookingDetailPage() {
   );
 }
 
-function Section({ label, children }) {
+function InfoBlock({ label, children }) {
   return (
-    <div className="py-3 border-b border-gray-50 last:border-0">
-      <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1.5">{label}</p>
+    <div className="py-3">
+      <p className="text-[10px] uppercase tracking-wide text-gray-400 mb-1.5 font-semibold">{label}</p>
       <div className="space-y-1">{children}</div>
     </div>
   );
 }
 
-function Row({ label, v }) {
+function InfoRow({ label, v }) {
   return (
     <div className="flex items-baseline gap-2 text-sm text-gray-700">
-      {label && <span className="text-gray-400 text-xs w-14 shrink-0">{label}</span>}
-      <span className="min-w-0">{v}</span>
+      {label && <span className="text-gray-400 text-xs w-12 shrink-0">{label}</span>}
+      <span className="min-w-0 truncate">{v}</span>
     </div>
   );
 }

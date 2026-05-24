@@ -101,7 +101,7 @@ export async function POST(req) {
       stripeDepositIntentId:  null,
       stripeBalanceIntentId:  null,
       galleryId:       null,
-      isListing:       autoConvert,
+      isListing:       true,
       zoneId:          zoneId || null,
     };
 
