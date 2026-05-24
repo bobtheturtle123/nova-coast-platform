@@ -3,6 +3,7 @@ import { getTenantById } from "@/lib/tenants";
 import { stripe } from "@/lib/stripe";
 import { getAppUrl } from "@/lib/appUrl";
 import { safeDate } from "@/lib/dateUtils";
+import { sendDepositRequestEmail } from "@/lib/email";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -99,5 +100,16 @@ export async function POST(req, { params }) {
       "emailCooldowns.deposit": new Date(),
     });
 
-  return Response.json({ url: session.url, sessionId: session.id });
+  // Send deposit request email to client (non-fatal — URL is still returned even if email fails)
+  let emailSent = false;
+  if (booking.clientEmail) {
+    try {
+      await sendDepositRequestEmail({ booking, depositUrl: session.url, tenant });
+      emailSent = true;
+    } catch (e) {
+      console.error("[send-deposit] email failed (non-fatal):", e?.message);
+    }
+  }
+
+  return Response.json({ url: session.url, sessionId: session.id, emailSent });
 }

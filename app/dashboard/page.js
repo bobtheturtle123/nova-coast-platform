@@ -363,16 +363,12 @@ export default function DashboardHome() {
     };
   }).sort((a, b) => Number(b.workingToday) - Number(a.workingToday)), [teamMembers, scopeListings, zones, photographerZoneMap]);
 
-  // Zones enriched with scope shoot counts
-  // Fallback to photographerZoneMap when booking predates zoneId tracking
+  // Zones enriched with scope shoot counts — only exact zoneId matches to avoid misattribution
   const zonesWithStatus = useMemo(() => zones.map(z => {
-    const zoneShots = scopeListings.filter(l =>
-      l.zoneId === z.id ||
-      (!l.zoneId && l.photographerId && photographerZoneMap[l.photographerId] === z.id)
-    );
+    const zoneShots = scopeListings.filter(l => l.zoneId === z.id);
     const names     = [...new Set(zoneShots.map(l => l.photographerName).filter(Boolean))];
     return { ...z, todayShootCount: zoneShots.length, todayPhotographerNames: names };
-  }).sort((a, b) => b.todayShootCount - a.todayShootCount || (a.name || "").localeCompare(b.name || "")), [zones, scopeListings, photographerZoneMap]);
+  }).sort((a, b) => b.todayShootCount - a.todayShootCount || (a.name || "").localeCompare(b.name || "")), [zones, scopeListings]);
 
   const activeZoneCount  = useMemo(() => zonesWithStatus.filter(z => z.type !== "exclude" && z.todayShootCount > 0).length, [zonesWithStatus]);
   const totalZoneCount   = useMemo(() => zonesWithStatus.filter(z => z.type === "include").length, [zonesWithStatus]);

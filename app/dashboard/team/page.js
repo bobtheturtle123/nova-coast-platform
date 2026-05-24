@@ -1709,7 +1709,7 @@ export default function TeamPage() {
                                   —
                                 </button>
                               ) : count > 0 ? (
-                                <a href={`/dashboard/listings/${dayEvents[0].id}`}
+                                <a href={`/dashboard/bookings/${dayEvents[0].id}`}
                                   title={dayEvents.map((e) => e.address?.split(",")[0]).join(", ")}
                                   className="inline-flex flex-col items-center gap-0.5">
                                   <span className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold mx-auto"
@@ -1885,7 +1885,7 @@ export default function TeamPage() {
                               const validTime = displayTime && /^(\d{1,2}:\d{2}|morning|afternoon|evening|flexible|twilight)$/i.test(displayTime.trim());
                               const line2 = [validTime ? displayTime : null, ev.address?.split(",")[0]].filter(Boolean).join(" · ");
                               return (
-                              <Link key={ev.id} href={`/dashboard/listings/${ev.id}`}
+                              <Link key={ev.id} href={`/dashboard/bookings/${ev.id}`}
                                 style={{ background: member.color + "22", borderLeftColor: member.color }}
                                 className="shoot-pill">
                                 <p className="font-semibold truncate" style={{ color: member.color }}>{ev.clientName?.split(" ")[0] || ev.address?.split(",")[0] || "Booking"}</p>
@@ -2023,7 +2023,7 @@ export default function TeamPage() {
                       const validTime = t && /^\d{1,2}:\d{2}/.test(t.trim());
                       const label = [validTime ? t.slice(0,5) : null, ev.clientName?.split(" ")[0]].filter(Boolean).join(" ");
                       return (
-                        <Link key={ev.id} href={`/dashboard/listings/${ev.id}`}
+                        <Link key={ev.id} href={`/dashboard/bookings/${ev.id}`}
                           style={{ background: (member?.color || "#0b2a55") + "22", borderLeftColor: member?.color || "#0b2a55" }}
                           onClick={(e) => e.stopPropagation()}
                           className="shoot-pill relative z-10 truncate">
@@ -2124,7 +2124,7 @@ export default function TeamPage() {
                             <div key={ev.id} className="px-4 py-3">
                               <p className="text-sm font-medium text-[#0F172A]">{ev.address}</p>
                               <p className="text-xs text-gray-400 mt-0.5">{ev.clientName} · {ev.shootTime || ev.preferredTime || "Time TBD"}</p>
-                              <a href={`/dashboard/listings/${ev.id}`} className="text-xs text-[#3486cf] hover:underline">View booking →</a>
+                              <a href={`/dashboard/bookings/${ev.id}`} className="text-xs text-[#3486cf] hover:underline">View booking →</a>
                             </div>
                           ))}
                         </div>

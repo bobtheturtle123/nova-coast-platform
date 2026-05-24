@@ -708,25 +708,6 @@ if (loading) return (
                 </div>
               )}
 
-              {/* Agent Agreement */}
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-2">Agreement</p>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => sendAgentAccess(true)} disabled={sendingAgentAccess || !booking.clientEmail}
-                    className="text-xs bg-[#3486cf] text-white px-3 py-1.5 rounded-lg hover:bg-[#3486cf]/90 disabled:opacity-40 transition-colors">
-                    {sendingAgentAccess ? "Sending…" : "Send Agreement to Agent"}
-                  </button>
-                  {agentAccessMsg && <p className="text-xs text-green-600">{agentAccessMsg}</p>}
-                </div>
-                {booking.emailCooldowns?.agentPortal && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    Last sent {new Date(booking.emailCooldowns.agentPortal?.seconds ? booking.emailCooldowns.agentPortal.seconds * 1000 : booking.emailCooldowns.agentPortal).toLocaleDateString()}
-                  </p>
-                )}
-                {!booking.clientEmail && (
-                  <p className="text-xs text-gray-400 mt-1">Add a client email to send the agreement.</p>
-                )}
-              </div>
 
             </div>
 
@@ -734,23 +715,26 @@ if (loading) return (
             <div className="card p-5">
               <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Shoot Details</p>
               <div className="space-y-4">
-                {/* Auto-derived status badges */}
+                {/* Payment status — editable select for owners/admins */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Payment Status</label>
-                  <div className="flex flex-wrap gap-2">
-                    {booking.paidInFull || booking.balancePaid ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        ✓ Paid in Full
-                      </span>
-                    ) : booking.depositPaid ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl bg-blue-50 text-blue-700 border border-blue-200">
-                        ◑ Deposit Paid
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl bg-gray-50 text-gray-500 border border-gray-200">
-                        ○ Unpaid
-                      </span>
-                    )}
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Payment Status</label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={booking.paidInFull || booking.balancePaid ? "paid_full" : booking.depositPaid ? "deposit_paid" : "unpaid"}
+                      disabled={userRole === "manager"}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "paid_full")         patchBooking({ depositPaid: true,  balancePaid: true  });
+                        else if (v === "deposit_paid") patchBooking({ depositPaid: true,  balancePaid: false });
+                        else                           patchBooking({ depositPaid: false, balancePaid: false });
+                      }}
+                      className="input-field disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ width: "auto", minWidth: 160 }}
+                    >
+                      <option value="unpaid">○ Unpaid</option>
+                      <option value="deposit_paid">◑ Deposit Paid</option>
+                      <option value="paid_full">✓ Paid in Full</option>
+                    </select>
                     <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl border ${
                       gallery?.delivered
                         ? "bg-green-50 text-green-700 border-green-200"
@@ -1332,12 +1316,13 @@ if (loading) return (
               <div className="card p-5">
                 <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Request Deposit</p>
                 <p className="text-sm text-gray-500 mb-4">
-                  Generate a Stripe payment link for the{" "}
-                  <strong>${(booking.depositAmount || 0).toLocaleString()}</strong> deposit and share it with the client.
+                  Send the client a deposit request email with a Stripe payment link for{" "}
+                  <strong>${(booking.depositAmount || 0).toLocaleString()}</strong>.
+                  {!booking.clientEmail && <span className="text-amber-600"> Add a client email first.</span>}
                 </p>
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
-                    disabled={sendingDeposit}
+                    disabled={sendingDeposit || !booking.clientEmail}
                     onClick={async () => {
                       setSendingDeposit(true);
                       setDepositLinkMsg("");
@@ -1351,16 +1336,22 @@ if (loading) return (
                         const d = await res.json();
                         if (res.ok && d.url) {
                           setDepositUrl(d.url);
-                          setDepositLinkMsg(d.cached ? "Using existing link (valid 4h)" : "Link generated");
+                          setDepositLinkMsg(
+                            d.cached
+                              ? "Link re-sent to client (same link, valid 4h)"
+                              : d.emailSent
+                              ? `Deposit request sent to ${booking.clientEmail}`
+                              : "Link generated (email delivery failed)"
+                          );
                         } else {
-                          setDepositLinkMsg(d.error || "Failed to generate link.");
+                          setDepositLinkMsg(d.error || "Failed to send deposit request.");
                         }
-                      } catch { setDepositLinkMsg("Failed to generate link."); }
+                      } catch { setDepositLinkMsg("Failed to send deposit request."); }
                       finally { setSendingDeposit(false); }
                     }}
-                    className="btn-outline text-sm px-5 py-2 disabled:opacity-50"
+                    className="btn-primary text-sm px-5 py-2 disabled:opacity-50"
                   >
-                    {sendingDeposit ? "Generating…" : "Get Deposit Link"}
+                    {sendingDeposit ? "Sending…" : "Send Deposit Request"}
                   </button>
                   {depositUrl && (
                     <button
@@ -1375,8 +1366,8 @@ if (loading) return (
                     <a href={depositUrl} target="_blank" rel="noreferrer" className="text-xs text-[#3486cf] underline">{depositUrl}</a>
                   </div>
                 )}
-                {depositLinkMsg && !depositUrl && (
-                  <p className={`mt-3 text-xs ${depositLinkMsg === "Copied!" || depositLinkMsg.startsWith("Link") || depositLinkMsg.startsWith("Using") ? "text-green-600" : "text-red-500"}`}>
+                {depositLinkMsg && (
+                  <p className={`mt-3 text-xs ${depositLinkMsg === "Copied!" || depositLinkMsg.includes("sent") || depositLinkMsg.includes("re-sent") || depositLinkMsg.startsWith("Link") ? "text-green-600" : "text-red-500"}`}>
                     {depositLinkMsg}
                   </p>
                 )}
@@ -1392,36 +1383,21 @@ if (loading) return (
               </div>
             )}
 
-            {/* Cancel / Hide Booking */}
+            {/* Hide Booking */}
             {(userRole === "owner" || userRole === "admin") && (
-              <div className="card p-5 border-red-100">
-                <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Booking Actions</p>
-                <div className="flex flex-wrap gap-2">
-                  {booking.status !== "cancelled" && (
-                    <button
-                      disabled={cancelling}
-                      onClick={async () => {
-                        if (!confirm("Cancel this booking? The client will not be notified automatically.")) return;
-                        setCancelling(true);
-                        await patchBooking({ status: "cancelled" });
-                        setCancelling(false);
-                      }}
-                      className="text-sm px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors">
-                      {cancelling ? "Cancelling…" : "Cancel Booking"}
-                    </button>
-                  )}
-                  <button
-                    disabled={hiding}
-                    onClick={async () => {
-                      const isHidden = booking.hidden;
-                      setHiding(true);
-                      await patchBooking({ hidden: !isHidden });
-                      setHiding(false);
-                    }}
-                    className="text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-colors">
-                    {hiding ? "Saving…" : booking.hidden ? "Unhide Booking" : "Hide Booking"}
-                  </button>
-                </div>
+              <div className="card p-5">
+                <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Visibility</p>
+                <button
+                  disabled={hiding}
+                  onClick={async () => {
+                    const isHidden = booking.hidden;
+                    setHiding(true);
+                    await patchBooking({ hidden: !isHidden });
+                    setHiding(false);
+                  }}
+                  className="text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                  {hiding ? "Saving…" : booking.hidden ? "Unhide Booking" : "Hide Booking"}
+                </button>
                 {booking.hidden && (
                   <p className="text-xs text-amber-600 mt-2">This booking is hidden from your main dashboard view.</p>
                 )}
