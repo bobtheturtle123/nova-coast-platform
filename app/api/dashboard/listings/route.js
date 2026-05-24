@@ -83,8 +83,8 @@ export async function GET(req) {
   const listings = docs
     .filter((doc) => {
       const d = doc.data();
-      // Exclude only public-form bookings that are still awaiting payment (never confirmed)
-      if (d.isListing === false && d.status === "pending_payment") return false;
+      if (d.status === "pending_payment") return false;
+      if (d.hidden) return false;
       return true;
     })
     .map((doc) => {

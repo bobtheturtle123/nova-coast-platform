@@ -93,24 +93,55 @@ function stripeInterval(billingInterval) {
 
 function sanitizeItem(body, type) {
   const base = {
-    name:         stripTags(body.name        || "").slice(0, 100),
-    description:  stripTags(body.description || "").slice(0, 1000),
-    price:        Number(body.price) || 0,
-    active:       body.active !== false,
-    thumbnailUrl: typeof body.thumbnailUrl === "string" && body.thumbnailUrl.startsWith("https://")
-      ? body.thumbnailUrl.slice(0, 500)
-      : "",
-    duration:     body.duration !== undefined ? Math.max(0, Math.round(Number(body.duration) || 0)) : undefined,
+    name:        stripTags(body.name        || "").slice(0, 100),
+    description: stripTags(body.description || "").slice(0, 1000),
+    price:       Number(body.price)  || 0,
+    active:      body.active !== false,
+    featured:    !!body.featured,
+    isTwilight:  !!(type !== "addons" && body.isTwilight),
+    mediaUrls: Array.isArray(body.mediaUrls)
+      ? body.mediaUrls.filter((u) => typeof u === "string" && u.startsWith("https://")).slice(0, 20)
+      : [],
+    thumbnailUrl: (
+      typeof body.thumbnailUrl === "string" && body.thumbnailUrl.startsWith("https://")
+        ? body.thumbnailUrl
+        : (Array.isArray(body.mediaUrls) && typeof body.mediaUrls[0] === "string" && body.mediaUrls[0].startsWith("https://")
+            ? body.mediaUrls[0]
+            : "")
+    ),
+    assignedPhotographers: Array.isArray(body.assignedPhotographers)
+      ? body.assignedPhotographers.map((s) => String(s).slice(0, 100)).slice(0, 50)
+      : [],
+    payRate: (body.payRate !== null && body.payRate !== undefined && body.payRate !== "")
+      ? Math.max(0, Number(body.payRate) || 0)
+      : null,
+    payRateTiers: (body.payRateTiers && typeof body.payRateTiers === "object" && Object.keys(body.payRateTiers).length > 0)
+      ? Object.fromEntries(
+          Object.entries(body.payRateTiers)
+            .filter(([k]) => typeof k === "string" && k.length <= 50)
+            .map(([k, v]) => [k, Math.max(0, Number(v) || 0)])
+        )
+      : null,
+    priceTiers: (body.priceTiers && typeof body.priceTiers === "object" && Object.keys(body.priceTiers).length > 0)
+      ? Object.fromEntries(
+          Object.entries(body.priceTiers)
+            .filter(([k]) => typeof k === "string" && k.length <= 50)
+            .map(([k, v]) => [k, Math.max(0, Number(v) || 0)])
+        )
+      : null,
   };
-  if (base.duration === undefined) delete base.duration;
 
-  if (body.priceTiers && typeof body.priceTiers === "object" && Object.keys(body.priceTiers).length > 0) {
-    base.priceTiers = Object.fromEntries(
-      Object.entries(body.priceTiers)
-        .filter(([k]) => typeof k === "string" && k.length <= 50)
-        .map(([k, v]) => [k, Math.max(0, Number(v) || 0)])
-    );
-  }
+  base.duration = (body.duration !== null && body.duration !== undefined && body.duration !== "")
+    ? Math.max(0, Math.round(Number(body.duration) || 0))
+    : null;
+
+  base.durationTiers = (body.durationTiers && typeof body.durationTiers === "object" && Object.keys(body.durationTiers).length > 0)
+    ? Object.fromEntries(
+        Object.entries(body.durationTiers)
+          .filter(([k]) => typeof k === "string" && k.length <= 50)
+          .map(([k, v]) => [k, Math.max(0, Math.round(Number(v) || 0))])
+      )
+    : null;
 
   // Package-specific
   if (type === "packages") {
@@ -119,7 +150,13 @@ function sanitizeItem(body, type) {
     base.includes     = Array.isArray(body.includes)
       ? body.includes.map((s) => stripTags(String(s)).slice(0, 100))
       : [];
-    base.featured = !!body.featured;
+  }
+
+  // Add-on specific
+  if (type === "addons") {
+    base.showWith = Array.isArray(body.showWith)
+      ? body.showWith.map((s) => String(s).slice(0, 100)).slice(0, 50)
+      : [];
   }
 
   // Retainer-specific

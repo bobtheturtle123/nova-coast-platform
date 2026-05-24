@@ -714,11 +714,11 @@ export default function BookingsPage() {
           <div className="card-section overflow-hidden">
             {filtered.map((b) => {
               const wfStatus    = resolveWorkflowStatus(b);
-              const dateStr = b.preferredDate
-                ? new Date(b.preferredDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              const dateRaw = b.shootDate || b.preferredDate;
+              const dateStr = dateRaw
+                ? new Date(dateRaw + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                 : "No date";
-              const timeStr = b.preferredTime && !["flexible","morning","afternoon"].includes(b.preferredTime)
-                ? ` · ${b.preferredTime}` : "";
+              const timeStr = b.shootTime || (b.preferredTime && !["flexible","morning","afternoon"].includes(b.preferredTime) ? b.preferredTime : "");
               return (
                 <div key={b.id} className="px-6 py-4 flex items-center gap-4 transition-colors"
                   style={{ borderBottom: "1px solid var(--border-subtle)" }}
@@ -732,7 +732,10 @@ export default function BookingsPage() {
                       )}
                     </div>
                     <p className="text-xs text-gray-400 truncate">{b.fullAddress || b.address}</p>
-                    <p className="text-xs text-gray-300">{dateStr}{timeStr}</p>
+                    <p className="text-xs text-gray-300">{dateStr}{timeStr ? ` · ${timeStr}` : ""}</p>
+                    {b.photographerName && (
+                      <p className="text-xs text-gray-400 truncate mt-0.5">📷 {b.photographerName}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
                     {canViewPricing && (

@@ -110,6 +110,17 @@ export async function PATCH(req, { params }) {
     } catch (e) { console.error("[booking/PATCH] workflowStatus auto-complete failed (non-fatal):", e?.message); }
   }
 
+  // Recalculate deposit and balance when totalPrice changes
+  if (update.totalPrice !== undefined && isPrivileged) {
+    const newTotal = Number(update.totalPrice) || 0;
+    const tenant = await getTenantById(ctx.tenantId);
+    const depositPct = Number(tenant?.bookingConfig?.depositPercent ?? 50) / 100;
+    const newDepositAmount = Math.round(newTotal * depositPct * 100) / 100;
+    const depositPaid = update.depositPaid ?? prev.depositPaid ?? false;
+    update.depositAmount = newDepositAmount;
+    update.remainingBalance = depositPaid ? Math.max(0, newTotal - newDepositAmount) : newTotal;
+  }
+
   await bookingRef.update(update);
 
   // Send photographer notification when photographer is newly assigned or changed
