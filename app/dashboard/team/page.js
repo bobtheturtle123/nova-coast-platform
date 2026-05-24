@@ -1018,14 +1018,15 @@ function OwnerCalSyncModal({ tenant, onClose }) {
 }
 
 // ─── Calendar sync modal — admin read-only status view ───────────────────────
-function CalendarSyncModal({ member, onClose, onRegenerate }) {
+function CalendarSyncModal({ member, onClose, onRegenerate, onDisconnect }) {
   const APP_URL = getAppUrl();
   const isGCalConnected = !!member.googleCalendar?.refreshToken;
 
-  const [syncError,  setSyncError]  = useState("");
-  const [syncing,    setSyncing]    = useState(false);
-  const [syncResult, setSyncResult] = useState(null);
-  const [lastSynced, setLastSynced] = useState(member.googleCalendar?.lastSynced || null);
+  const [syncError,      setSyncError]      = useState("");
+  const [syncing,        setSyncing]        = useState(false);
+  const [syncResult,     setSyncResult]     = useState(null);
+  const [lastSynced,     setLastSynced]     = useState(member.googleCalendar?.lastSynced || null);
+  const [disconnecting,  setDisconnecting]  = useState(false);
 
   async function syncNow() {
     setSyncing(true);
@@ -1047,6 +1048,31 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
       setSyncError(e.message);
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function disconnectGcal() {
+    if (!confirm(`Disconnect Google Calendar for ${member.name}? All synced busy blocks will be removed.`)) return;
+    setDisconnecting(true);
+    try {
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const token = await firebaseAuth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/team/google-sync", {
+        method:  "DELETE",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body:    JSON.stringify({ memberId: member.id }),
+      });
+      if (res.ok) {
+        onDisconnect?.(member.id);
+        onClose();
+      } else {
+        const d = await res.json();
+        setSyncError(d.error || "Disconnect failed");
+      }
+    } catch (e) {
+      setSyncError(e.message);
+    } finally {
+      setDisconnecting(false);
     }
   }
 
@@ -1096,12 +1122,20 @@ function CalendarSyncModal({ member, onClose, onRegenerate }) {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={syncNow}
-                  disabled={syncing}
-                  className="flex-shrink-0 text-xs bg-white border border-green-300 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-50 disabled:opacity-50 font-medium">
-                  {syncing ? "Syncing…" : "Sync Now"}
-                </button>
+                <div className="flex flex-col gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={syncNow}
+                    disabled={syncing}
+                    className="text-xs bg-white border border-green-300 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-50 disabled:opacity-50 font-medium">
+                    {syncing ? "Syncing…" : "Sync Now"}
+                  </button>
+                  <button
+                    onClick={disconnectGcal}
+                    disabled={disconnecting}
+                    className="text-xs bg-white border border-red-200 text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-50 font-medium">
+                    {disconnecting ? "Removing…" : "Disconnect"}
+                  </button>
+                </div>
               </div>
               {syncError && (
                 <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
@@ -1847,7 +1881,7 @@ export default function TeamPage() {
               ))}
             </div>
           </div>
-          {/* Row 2: stats + photographer chips */}
+          {/* Row 2: stats + photographer filter chips */}
           <div className="flex items-center justify-between px-4 pb-3 flex-wrap gap-2">
             <div className="flex items-center gap-3 text-xs text-gray-500">
               <span>{weekShootCount} shoot{weekShootCount !== 1 ? "s" : ""} this week</span>
@@ -1856,23 +1890,56 @@ export default function TeamPage() {
               )}
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <button onClick={() => setFilterMember("all")} className={`fchip${filterMember === "all" ? " fchip-active" : ""}`}>All</button>
-              <button onClick={() => setFilterMember("__owner__")} className={`fchip${filterMember === "__owner__" ? " fchip-active" : ""}`}>
-                <span className="w-4 h-4 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
-                  style={{ fontSize: 8, background: "#3486cf" }}>
-                  {ownerLabel[0]?.toUpperCase() || "Y"}
-                </span>
-                {ownerLabel.split(" ")[0]}
+              <span className="text-[11px] text-gray-400 font-medium mr-0.5">Filter:</span>
+              <button
+                onClick={() => setFilterMember("all")}
+                className={`fchip${filterMember === "all" ? " fchip-active" : ""}`}>
+                All
               </button>
-              {members.map((m, i) => (
-                <button key={m.id} onClick={() => setFilterMember(m.id)} className={`fchip${filterMember === m.id ? " fchip-active" : ""}`}>
-                  <span className="w-4 h-4 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
-                    style={{ fontSize: 8, background: ZONE_COLORS[i % ZONE_COLORS.length] }}>
-                    {initials(m.name).slice(0, 2)}
-                  </span>
-                  {m.name.split(" ")[0]}
+              {(() => {
+                const ownerActive = filterMember === "__owner__";
+                const ownerColor  = "#3486cf";
+                return (
+                  <button
+                    onClick={() => setFilterMember(ownerActive ? "all" : "__owner__")}
+                    className="fchip"
+                    style={ownerActive ? { background: ownerColor + "18", borderColor: ownerColor, color: ownerColor, fontWeight: 600 } : {}}>
+                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                      style={{ fontSize: 8, background: ownerColor }}>
+                      {ownerLabel[0]?.toUpperCase() || "Y"}
+                    </span>
+                    {ownerLabel.split(" ")[0]}
+                  </button>
+                );
+              })()}
+              {members.map((m) => {
+                const isActive = filterMember === m.id;
+                const color    = m.color || "#0b2a55";
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setFilterMember(isActive ? "all" : m.id)}
+                    className="fchip"
+                    style={isActive ? { background: color + "18", borderColor: color, color, fontWeight: 600 } : {}}>
+                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                      style={{ fontSize: 8, background: color }}>
+                      {initials(m.name).slice(0, 2)}
+                    </span>
+                    {m.name.split(" ")[0]}
+                  </button>
+                );
+              })}
+              {filterMember !== "all" && (
+                <button
+                  onClick={() => setFilterMember("all")}
+                  className="text-[11px] text-gray-400 hover:text-gray-600 flex items-center gap-0.5 ml-0.5"
+                  title="Clear filter">
+                  <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Clear
                 </button>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -1971,7 +2038,7 @@ export default function TeamPage() {
                             const endStr   = (b.endDate   || b.startDate || "").slice(0, 10);
                             return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
                           });
-                          const isBlocked  = dayBlocks.length > 0;
+                          const isBlocked  = dayBlocks.some((b) => b.allDay !== false);
                           const isPast     = d < today;
                           const isToday    = isSameDay(d, today);
                           const count      = dayEvents.length;
@@ -2073,7 +2140,7 @@ export default function TeamPage() {
                         const isToday = isSameDay(d, today);
                         return (
                           <div key={d.toISOString()} className={`p-1.5 border-r last:border-r-0 border-gray-100 min-h-14 relative ${isToday ? "bg-red-50/30" : ""}`}>
-                            {dayBlocks.length > 0 && (
+                            {dayBlocks.some((b) => b.allDay !== false) && (
                               <div className="absolute inset-0 pointer-events-none"
                                 style={{ background: "repeating-linear-gradient(-45deg, #fee2e2, #fee2e2 3px, transparent 3px, transparent 10px)", opacity: 0.6 }} />
                             )}
@@ -2133,10 +2200,11 @@ export default function TeamPage() {
                           const endStr   = (b.endDate || b.startDate || "").slice(0, 10);
                           return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
                         });
+                        const hasAllDayBlock = dayBlocks.some((b) => b.allDay !== false);
                         return (
                           <div key={d.toISOString()} className={`p-1.5 border-r last:border-r-0 border-gray-100 min-h-20 relative`}
                           style={isToday ? { background: "rgba(52,134,207,0.025)" } : undefined}>
-                            {dayBlocks.length > 0 && (
+                            {hasAllDayBlock && (
                               <div className="absolute inset-0 pointer-events-none"
                                 style={{ background: `repeating-linear-gradient(-45deg, ${hexWithAlpha(member.color || "#0b2a55", 0.12)}, ${hexWithAlpha(member.color || "#0b2a55", 0.12)} 3px, transparent 3px, transparent 10px)` }} />
                             )}
@@ -2280,7 +2348,7 @@ export default function TeamPage() {
                   const memberMatch = (filterMember === "all" || filterMember === "__owner__") ? true : (!b.memberId || b.memberId === filterMember);
                   return dayStr >= startStr && dayStr <= endStr && memberMatch;
                 });
-                const hasBlocks = dayBlocks.length > 0;
+                const hasBlocks = dayBlocks.some((b) => b.allDay !== false);
                 return (
                   <div key={d.toISOString()} className={`border-r last:border-r-0 border-b border-gray-100 p-1.5 relative ${isToday ? "bg-blue-50/30" : ""}`} style={{ minHeight: 110 }}>
                     {hasBlocks && (
@@ -2710,6 +2778,11 @@ export default function TeamPage() {
         <CalendarSyncModal
           member={calModal}
           onClose={() => setCalModal(null)}
+          onDisconnect={(memberId) => {
+            setMembers((prev) => prev.map((m) =>
+              m.id === memberId ? { ...m, googleCalendar: null } : m
+            ));
+          }}
           onRegenerate={async () => {
             if (!window.confirm("Regenerate the calendar link? Any existing subscriptions will stop working.")) return;
             const token = await getToken();

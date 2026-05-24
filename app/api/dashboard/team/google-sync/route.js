@@ -31,6 +31,41 @@ function formatTime(date) {
   return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
+function isAllDayBusy(start, end) {
+  return (
+    start.getUTCHours() === 0 && start.getUTCMinutes() === 0 && start.getUTCSeconds() === 0 &&
+    end.getUTCHours()   === 0 && end.getUTCMinutes()   === 0 && end.getUTCSeconds()   === 0
+  );
+}
+
+// DELETE { memberId } — admin removes a member's Google Calendar connection + clears google blocks
+export async function DELETE(req) {
+  const ctx = await getCtx(req);
+  if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { memberId } = await req.json().catch(() => ({}));
+  if (!memberId) return Response.json({ error: "memberId required" }, { status: 400 });
+
+  const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
+
+  const snap = await tenantRef.collection("timeBlocks")
+    .where("memberId", "==", memberId)
+    .where("source",   "==", "google")
+    .get();
+
+  const batch = adminDb.batch();
+  snap.docs.forEach((d) => batch.delete(d.ref));
+
+  if (memberId === "__owner__") {
+    batch.update(tenantRef, { ownerGoogleCalendar: null });
+  } else {
+    batch.update(tenantRef.collection("team").doc(memberId), { googleCalendar: null });
+  }
+
+  await batch.commit();
+  return Response.json({ ok: true });
+}
+
 // POST { memberId } — admin-triggered Google Calendar sync. Use memberId "__owner__" for the tenant owner.
 export async function POST(req) {
   const ctx = await getCtx(req);
@@ -73,6 +108,7 @@ export async function POST(req) {
   }
 
   accessToken = gcal.accessToken;
+  const calendarId = gcal.calendarId?.trim() || "primary";
 
   if (!accessToken || (gcal.expiresAt && Date.now() > gcal.expiresAt - 60000)) {
     try {
@@ -89,15 +125,8 @@ export async function POST(req) {
 
   const fbRes = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${accessToken}`,
-      "Content-Type":  "application/json",
-    },
-    body: JSON.stringify({
-      timeMin,
-      timeMax,
-      items: [{ id: "primary" }],
-    }),
+    headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ timeMin, timeMax, items: [{ id: calendarId }] }),
   });
 
   if (!fbRes.ok) {
@@ -105,8 +134,8 @@ export async function POST(req) {
     return Response.json({ error: err.error?.message || "Failed to fetch Google Calendar" }, { status: 502 });
   }
 
-  const fbData = await fbRes.json();
-  const busyIntervals = fbData.calendars?.primary?.busy || [];
+  const fbData        = await fbRes.json();
+  const busyIntervals = fbData.calendars?.[calendarId]?.busy || fbData.calendars?.primary?.busy || [];
 
   const existingSnap = await adminDb
     .collection("tenants").doc(ctx.tenantId)
@@ -120,14 +149,15 @@ export async function POST(req) {
 
   const newBlocks = [];
   for (const interval of busyIntervals) {
-    const start = new Date(interval.start);
-    const end   = new Date(interval.end);
+    const start       = new Date(interval.start);
+    const end         = new Date(interval.end);
     const durationMin = (end - start) / 60000;
     if (durationMin < 15) continue;
 
+    const allDay    = isAllDayBusy(start, end);
     const id        = uuidv4();
     const startDate = start.toISOString().slice(0, 10);
-    const endDate   = end.toISOString().slice(0, 10);
+    const endDate   = allDay ? new Date(end - 1).toISOString().slice(0, 10) : end.toISOString().slice(0, 10);
 
     const block = {
       id,
@@ -135,10 +165,11 @@ export async function POST(req) {
       tenantId:  ctx.tenantId,
       startDate,
       endDate,
-      startTime: interval.start,
-      endTime:   interval.end,
+      allDay,
+      startTime: allDay ? null : interval.start,
+      endTime:   allDay ? null : interval.end,
       reason:    "Busy",
-      note:      `${formatTime(start)} – ${formatTime(end)}`,
+      note:      allDay ? "" : `${formatTime(start)} – ${formatTime(end)}`,
       source:    "google",
       createdAt: new Date(),
     };
@@ -147,7 +178,7 @@ export async function POST(req) {
       adminDb.collection("tenants").doc(ctx.tenantId).collection("timeBlocks").doc(id),
       block
     );
-    newBlocks.push({ id, startDate, endDate, reason: block.reason, note: block.note });
+    newBlocks.push({ id, startDate, endDate, allDay, reason: block.reason, note: block.note });
   }
 
   // Record last sync time

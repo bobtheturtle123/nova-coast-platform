@@ -23,6 +23,13 @@ const DONE_HTML = (ok, msg = "") => `<!DOCTYPE html>
 </body>
 </html>`;
 
+function isAllDayBusy(start, end) {
+  return (
+    start.getUTCHours() === 0 && start.getUTCMinutes() === 0 && start.getUTCSeconds() === 0 &&
+    end.getUTCHours()   === 0 && end.getUTCMinutes()   === 0 && end.getUTCSeconds()   === 0
+  );
+}
+
 // Sync a member's Google Calendar immediately after connecting
 async function syncAfterConnect(tenantId, memberId, accessToken) {
   try {
@@ -45,22 +52,26 @@ async function syncAfterConnect(tenantId, memberId, accessToken) {
     const batch = adminDb.batch();
     existing.docs.forEach((d) => batch.delete(d.ref));
 
+    const fmt = (d) => d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
     for (const interval of busy) {
       const start = new Date(interval.start);
       const end   = new Date(interval.end);
       if ((end - start) / 60000 < 15) continue;
-      const id = uuidv4();
-      const fmt = (d) => d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+      const allDay    = isAllDayBusy(start, end);
+      const id        = uuidv4();
+      const startDate = start.toISOString().slice(0, 10);
+      const endDate   = allDay ? new Date(end - 1).toISOString().slice(0, 10) : end.toISOString().slice(0, 10);
       batch.set(blocksRef.doc(id), {
         id,
         memberId,
         tenantId,
-        startDate: interval.start.slice(0, 10),
-        endDate:   interval.end.slice(0, 10),
-        startTime: interval.start,
-        endTime:   interval.end,
+        startDate,
+        endDate,
+        allDay,
+        startTime: allDay ? null : interval.start,
+        endTime:   allDay ? null : interval.end,
         reason:    "Busy",
-        note:      `${fmt(start)} – ${fmt(end)}`,
+        note:      allDay ? "" : `${fmt(start)} – ${fmt(end)}`,
         source:    "google",
         createdAt: new Date(),
       });
