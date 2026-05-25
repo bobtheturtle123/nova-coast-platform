@@ -89,7 +89,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
     { id: "overview",  label: "Overview" },
     { id: "marketing", label: "Marketing" },
     ...(galleryUrl ? [{ id: "gallery", label: `Gallery${gallery?.imageCount > 0 ? ` (${gallery.imageCount})` : ""}` }] : []),
-    ...(pw?.published ? [{ id: "website", label: "Property Website" }] : []),
+    ...(pw?.published && gallery?.showPropertyWebsiteLink !== false ? [{ id: "website", label: "Property Website" }] : []),
     ...(booking.totalPrice > 0 ? [{ id: "invoice", label: "Invoice" }] : []),
     ...(allowRevisions ? [{ id: "revisions", label: pendingRevisions > 0 ? `Revisions (${pendingRevisions})` : "Revisions" }] : []),
   ];
@@ -163,7 +163,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
               </a>
             )}
 
-            {pw?.published && (
+            {pw?.published && gallery?.showPropertyWebsiteLink !== false && (
               <a href={listingUrl} target="_blank" rel="noopener noreferrer"
                 className="flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all text-center">
                 <div className="w-10 h-10 rounded-xl bg-[#3486cf]/8 flex items-center justify-center">
@@ -174,7 +174,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
               </a>
             )}
 
-            {pw?.published && (
+            {pw?.published && gallery?.showPropertyWebsiteLink !== false && (
               <a href={brochureUrl} target="_blank" rel="noopener noreferrer"
                 className="flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all text-center">
                 <div className="w-10 h-10 rounded-xl bg-[#3486cf]/8 flex items-center justify-center">
@@ -243,7 +243,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
       {tab === "marketing" && (
         <div className="space-y-5">
           {/* Listing URL — branded + unbranded */}
-          {pw?.published && (
+          {pw?.published && gallery?.showPropertyWebsiteLink !== false && (
             <div className="bg-white border border-gray-200 rounded-xl p-5">
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Property Website</p>
               <div className="space-y-2.5">
@@ -285,7 +285,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
           )}
 
           {/* QR Code */}
-          {pw?.published && (
+          {pw?.published && gallery?.showPropertyWebsiteLink !== false && (
             <div className="bg-white border border-gray-200 rounded-xl p-5">
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">QR Code</p>
               <div className="flex items-center gap-5">
@@ -302,7 +302,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
           )}
 
           {/* Brochure */}
-          {pw?.published && (
+          {pw?.published && gallery?.showPropertyWebsiteLink !== false && (
             <div className="bg-white border border-gray-200 rounded-xl p-5">
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Print Brochure</p>
               <p className="text-sm text-gray-500 mb-3">One-page printable PDF with photos, property details, and agent info.</p>
@@ -495,7 +495,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
       )}
 
       {/* ── PROPERTY WEBSITE TAB ───────────────────────────────────── */}
-      {tab === "website" && pw?.published && (
+      {tab === "website" && pw?.published && gallery?.showPropertyWebsiteLink !== false && (
         <div className="space-y-4">
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Your Property Website</p>

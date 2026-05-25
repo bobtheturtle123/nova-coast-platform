@@ -51,30 +51,30 @@ export default function DiscountPopup() {
 
         <div className="text-center">
           <div className="inline-block bg-gold/10 border border-gold/25 rounded-full px-3 py-1 text-xs font-semibold text-navy/70 tracking-wide mb-5">
-            First month offer
+            Limited time offer
           </div>
 
           <h2 className="font-serif text-[2rem] text-navy font-normal leading-tight mb-3">
-            Try it on your<br />next shoot.
+            Your first month,<br />on us.
           </h2>
 
           <p className="text-gray-500 text-sm leading-relaxed mb-1.5">
-            Get <span className="font-bold text-navy">$50 off</span> your first month.
+            Get your <span className="font-bold text-navy">first month free</span> — no catch.
           </p>
           <p className="text-gray-400 text-xs mb-7">
             Use code{" "}
             <span className="font-mono font-bold text-navy tracking-wider bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">
-              FIRST50
+              FREEMONTH
             </span>{" "}
             at checkout.
           </p>
 
           <Link
-            href="/auth/register?promo=FIRST50"
+            href="/auth/register?promo=FREEMONTH"
             onClick={() => setVisible(false)}
             className="block bg-navy text-white font-semibold py-3.5 px-6 rounded-xl hover:bg-navy/90 transition-colors text-sm mb-3"
           >
-            Get Started and Save $50
+            Get Started — First Month Free
           </Link>
 
           <button
