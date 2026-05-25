@@ -3,9 +3,9 @@ import PricingSection from "@/components/PricingSection";
 import DiscountPopup from "@/components/DiscountPopup";
 
 export const metadata = {
-  title: "KyoriaOS — Built for real estate media businesses",
+  title: "KyoriaOS: Built for real estate media businesses",
   description:
-    "Booking, scheduling, gallery delivery, and client portals — all connected. Replace the tools you're patching together.",
+    "Booking, scheduling, gallery delivery, and client portals, all connected. Replace the tools you're patching together.",
 };
 
 export default function MarketingPage() {
@@ -49,14 +49,14 @@ export default function MarketingPage() {
                   Stop running your<br />business out of a<br />group chat.
                 </h1>
                 <p className="text-white/60 text-lg max-w-lg leading-relaxed mb-10">
-                  KyoriaOS connects booking, scheduling, gallery delivery, and payments into one system — so you can stop patching tools together and start running a real business.
+                  KyoriaOS connects booking, scheduling, gallery delivery, and payments into one system, so you can stop patching tools together and start running a real business.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link
                     href="/auth/register"
                     className="bg-gold text-navy font-semibold px-8 py-4 rounded-xl hover:bg-gold/90 transition-colors text-center text-sm"
                   >
-                    Get Started →
+                    Start Today
                   </Link>
                   <a
                     href="#pricing"
@@ -65,7 +65,7 @@ export default function MarketingPage() {
                     See Pricing
                   </a>
                 </div>
-                <p className="text-white/30 text-xs mt-4">From $79/month · No contracts · Cancel anytime</p>
+                <p className="text-white/30 text-xs mt-4">From $79/month. No contracts. Cancel anytime.</p>
               </div>
 
               <div className="relative pb-0 hidden md:block">
@@ -82,7 +82,7 @@ export default function MarketingPage() {
                   </div>
                   <img
                     src="/screenshots/schedule.png"
-                    alt="KyoriaOS — team schedule and bookings dashboard"
+                    alt="KyoriaOS team schedule and bookings dashboard"
                     className="w-full block"
                   />
                 </div>
@@ -173,7 +173,7 @@ export default function MarketingPage() {
                 Four steps. Every job, handled.
               </h2>
               <p className="text-white/45 max-w-xl mx-auto text-base">
-                From first contact to final payment — the entire job cycle runs through one system.
+                From first contact to final payment. The entire job cycle runs through one system.
               </p>
             </div>
             <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8">
@@ -231,7 +231,7 @@ export default function MarketingPage() {
                   <div className="overflow-hidden bg-gray-100 aspect-[16/9]">
                     <img
                       src={s.src}
-                      alt={`${s.title} — KyoriaOS real estate photography software`}
+                      alt={`${s.title} in KyoriaOS`}
                       className="w-full h-full object-cover object-top"
                     />
                   </div>
@@ -255,7 +255,7 @@ export default function MarketingPage() {
                   Every agent gets a professional listing kit. Automatically.
                 </h2>
                 <p className="text-white/50 leading-relaxed mb-7">
-                  When you deliver a gallery, the agent gets everything they need to market the listing — with no extra work from you. It&apos;s a reason for them to keep booking you.
+                  When you deliver a gallery, the agent gets everything they need to market the listing, with no extra work from you. It&apos;s a reason for them to keep booking you.
                 </p>
                 <ul className="space-y-3 mb-8">
                   {[
@@ -263,7 +263,7 @@ export default function MarketingPage() {
                     "Print-ready brochure for open houses",
                     "QR code for print and signage",
                     "3D Matterport and video tour embedded",
-                    "Private link — no agent account required",
+                    "Private link, no agent account required",
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-3 text-sm text-white/70">
                       <span className="w-4 h-4 rounded-full bg-gold/20 border border-gold/30 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -279,7 +279,7 @@ export default function MarketingPage() {
                   href="/auth/register"
                   className="inline-block bg-gold text-navy font-semibold px-7 py-3 rounded-xl hover:bg-gold/90 transition-colors text-sm"
                 >
-                  Get started →
+                  Get started
                 </Link>
               </div>
               <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
@@ -372,17 +372,17 @@ export default function MarketingPage() {
                 {
                   label: "01",
                   title: "Purpose-built for real estate media",
-                  desc: "Not adapted from generic booking software. Designed around how real estate shoots actually work — MLS delivery, agent portals, and all.",
+                  desc: "Not adapted from generic booking software. Designed around how real estate shoots actually work: MLS delivery, agent portals, and shoot-day logistics.",
                 },
                 {
                   label: "02",
-                  title: "Replaces 4–6 separate tools",
+                  title: "Replaces 4 to 6 separate tools",
                   desc: "Calendly, Dropbox, HoneyBook, Wave, and your group chat. One platform. One monthly cost. Everything connected.",
                 },
                 {
                   label: "03",
                   title: "Designed for real workflows",
-                  desc: "Shoot cycles, photographer dispatch, gallery delivery, agent marketing — built in the right order, the way your business actually runs.",
+                  desc: "Shoot cycles, photographer dispatch, gallery delivery, and agent marketing, all built in the right order for the way your business actually runs.",
                 },
               ].map((item) => (
                 <div key={item.label}>
@@ -390,6 +390,32 @@ export default function MarketingPage() {
                   <h3 className="font-semibold text-navy text-sm mb-2">{item.title}</h3>
                   <p className="text-gray-500 text-xs leading-relaxed">{item.desc}</p>
                 </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* EXPLORE FEATURES */}
+        <section className="py-20 px-6 bg-gray-50 border-b border-gray-100">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-10">
+              <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">Platform overview</p>
+              <h2 className="font-serif text-3xl text-navy font-normal mb-2">Explore features</h2>
+              <p className="text-gray-500 text-sm max-w-md mx-auto">
+                Every tool your business needs, built into one platform.
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {FEATURE_LINKS.map((f) => (
+                <Link
+                  key={f.slug}
+                  href={`/features/${f.slug}`}
+                  className="group bg-white border border-gray-200 rounded-2xl p-6 hover:border-navy/25 hover:shadow-sm transition-all block"
+                >
+                  <h3 className="font-semibold text-navy text-sm mb-2">{f.title}</h3>
+                  <p className="text-xs text-gray-500 leading-relaxed mb-3">{f.desc}</p>
+                  <span className="text-xs text-gold font-medium group-hover:underline">Learn more</span>
+                </Link>
               ))}
             </div>
           </div>
@@ -406,15 +432,15 @@ export default function MarketingPage() {
               Run your entire media business<br />from one place.
             </h2>
             <p className="text-white/50 mb-8 text-lg leading-relaxed max-w-xl mx-auto">
-              Booking, scheduling, delivery, and payments — automated, connected, and built for real estate photographers.
+              Booking, scheduling, delivery, and payments. Automated, connected, and built for real estate photographers.
             </p>
             <Link
               href="/auth/register"
               className="inline-block bg-gold text-navy font-semibold px-10 py-4 rounded-xl hover:bg-gold/90 transition-colors text-base"
             >
-              Get Started →
+              Start Today
             </Link>
-            <p className="text-white/25 text-xs mt-5">From $79/month · No contract · Cancel anytime</p>
+            <p className="text-white/25 text-xs mt-5">From $79/month. No contract. Cancel anytime.</p>
           </div>
         </section>
 
@@ -441,7 +467,7 @@ export default function MarketingPage() {
 const HOW_IT_WORKS = [
   {
     title: "Client books online",
-    desc: "Package selection, property details, and deposit — all handled in one guided flow. No back-and-forth.",
+    desc: "Package selection, property details, and deposit, all handled in one guided flow. No back-and-forth.",
   },
   {
     title: "You schedule in seconds",
@@ -453,7 +479,7 @@ const HOW_IT_WORKS = [
   },
   {
     title: "Everyone gets everything",
-    desc: "Client portal, agent portal, and property website — all delivered automatically when photos go live.",
+    desc: "Client portal, agent portal, and property website, all delivered automatically when photos go live.",
   },
 ];
 
@@ -499,12 +525,12 @@ const BENEFITS = [
 const SCREENSHOTS = [
   {
     src: "/screenshots/customers.png",
-    title: "Agent & Client CRM",
+    title: "Agent and Client CRM",
     desc: "All your agents and clients in one place. Track orders, contact history, and lifetime value per account.",
   },
   {
     src: "/screenshots/schedule.png",
-    title: "Team Schedule & Calendar",
+    title: "Team Schedule and Calendar",
     desc: "Every photographer's week at a glance. Assign shoots, track availability, and manage your team from one view.",
   },
   {
@@ -537,5 +563,38 @@ const TESTIMONIALS = [
     role: "Solo photographer, Nashville TN",
     quote:
       "I was nervous it would take forever to set up. I had my booking page live, Stripe connected, and my first real booking confirmed within the same afternoon.",
+  },
+];
+
+const FEATURE_LINKS = [
+  {
+    title: "Booking and Scheduling",
+    slug: "booking-scheduling",
+    desc: "A guided online booking flow that collects deposits, schedules shoots, and confirms everything automatically.",
+  },
+  {
+    title: "Gallery Delivery",
+    slug: "gallery-delivery",
+    desc: "Upload your work and send it in one click. The gallery stays locked until the client pays their balance.",
+  },
+  {
+    title: "Team Management",
+    slug: "team-management",
+    desc: "See every photographer's availability, assign jobs, and keep your crew in sync without a group chat.",
+  },
+  {
+    title: "Client and Agent Portals",
+    slug: "client-portal",
+    desc: "Every client gets a portal. Every agent gets a branded listing kit with gallery, website, and brochure.",
+  },
+  {
+    title: "Payments and Automation",
+    slug: "payments-automation",
+    desc: "Deposits, balances, and reminders handled automatically. Get paid without chasing anyone.",
+  },
+  {
+    title: "Service Area Routing",
+    slug: "service-areas",
+    desc: "Draw coverage zones on a map, assign photographers per territory, and route bookings to the right person.",
   },
 ];

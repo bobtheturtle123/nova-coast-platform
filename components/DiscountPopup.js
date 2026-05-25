@@ -81,7 +81,7 @@ export default function DiscountPopup() {
             onClick={() => setVisible(false)}
             className="block bg-navy text-white font-semibold py-3.5 px-6 rounded-xl hover:bg-navy/90 transition-colors text-sm mb-3"
           >
-            Get Started — $20 Off
+            Get Started and Save $20
           </Link>
 
           <button

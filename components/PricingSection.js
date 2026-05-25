@@ -142,7 +142,7 @@ export default function PricingSection() {
         <div className="border border-gray-100 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/60">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h3 className="font-semibold text-navy text-sm">Scale — $449/month</h3>
+              <h3 className="font-semibold text-navy text-sm">Scale: $449/month</h3>
               <span className="text-[10px] text-gray-400 border border-gray-200 rounded-full px-2 py-0.5 bg-white">
                 For larger teams
               </span>
@@ -158,6 +158,10 @@ export default function PricingSection() {
             Get Started
           </Link>
         </div>
+
+        <p className="text-center text-gray-400 text-xs mt-8">
+          No contracts. Cancel anytime. Pricing is billed monthly.
+        </p>
 
       </div>
     </section>
