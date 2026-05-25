@@ -60,11 +60,13 @@ export async function POST(req) {
       : finalPrice;
     const isBalancePaid = isDepositPaid && remainingBalance === 0;
 
+    const normalizedEmail = clientEmail?.toLowerCase().trim() || "";
+
     const bookingData = {
       id:              bookingId,
       tenantId:        ctx.tenantId,
       clientName,
-      clientEmail,
+      clientEmail:     normalizedEmail,
       clientPhone,
       address,
       unit:            unit || null,
@@ -108,15 +110,15 @@ export async function POST(req) {
     await bookingRef.set(bookingData);
 
     // Upsert customer record
-    if (clientEmail) {
-      const agentKey = Buffer.from(clientEmail.toLowerCase().trim()).toString("base64").replace(/[+/=]/g, "");
+    if (normalizedEmail) {
+      const agentKey = Buffer.from(normalizedEmail).toString("base64").replace(/[+/=]/g, "");
       const agentRef = tenantRef.collection("agents").doc(agentKey);
       const agentSnap = await agentRef.get();
       if (!agentSnap.exists) {
         await agentRef.set({
           id: agentKey,
           name: clientName,
-          email: clientEmail,
+          email: normalizedEmail,
           phone: clientPhone,
           totalOrders: 1,
           totalSpent:  finalPrice,

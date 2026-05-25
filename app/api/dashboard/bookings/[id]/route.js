@@ -76,6 +76,7 @@ export async function PATCH(req, { params }) {
   for (const k of allowed) {
     if (body[k] !== undefined) update[k] = body[k];
   }
+  if (update.clientEmail) update.clientEmail = update.clientEmail.toLowerCase().trim();
   update.updatedAt = new Date();
 
   const bookingRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("bookings").doc(params.id);

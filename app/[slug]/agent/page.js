@@ -36,11 +36,13 @@ export default async function AgentPortalPage({ params, searchParams }) {
   const agentDoc  = agentsSnap.docs[0];
   const agent     = agentDoc.data();
 
-  // Fetch bookings that have an associated gallery (listing created)
+  // Fetch bookings — query with both the stored email and its lowercase form so existing
+  // mixed-case bookings (clientEmail entered before normalization was enforced) are found.
+  const emailVariants = [...new Set([agent.email, agent.email?.toLowerCase()])].filter(Boolean);
   const bookingsSnap = await adminDb
     .collection("tenants").doc(tenant.id)
     .collection("bookings")
-    .where("clientEmail", "==", agent.email)
+    .where("clientEmail", "in", emailVariants)
     .get();
 
   const bookings = bookingsSnap.docs
