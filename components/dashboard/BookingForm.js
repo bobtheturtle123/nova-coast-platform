@@ -520,6 +520,10 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
       setError("Client name, email, and address are required.");
       return;
     }
+    if (form.clientName && form.clientEmail && !clientIsKnown && !clientSaved) {
+      setError("This customer isn't in your system yet. Save them as a customer first, then create the booking.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -659,18 +663,23 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                 </div>
               </div>
               {form.clientName && form.clientEmail && !clientIsKnown && (
-                <div className="mt-2 flex items-center gap-2">
+                <div className="mt-3">
                   {clientSaved ? (
                     <span className="text-xs text-green-600 font-medium">✓ Saved to customers</span>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={saveNewClient}
-                      disabled={savingClient}
-                      className="text-xs text-[#3486cf] hover:underline disabled:opacity-50"
-                    >
-                      {savingClient ? "Saving..." : "+ Save as new customer"}
-                    </button>
+                    <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 flex items-center justify-between gap-3">
+                      <p className="text-xs text-amber-800 font-medium">
+                        This customer isn't in your system yet — save them before creating the booking.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={saveNewClient}
+                        disabled={savingClient}
+                        className="text-xs font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg px-3 py-1.5 flex-shrink-0 transition-colors disabled:opacity-50"
+                      >
+                        {savingClient ? "Saving…" : "Save customer"}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}

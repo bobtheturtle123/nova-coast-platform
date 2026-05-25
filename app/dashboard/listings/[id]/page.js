@@ -2589,6 +2589,19 @@ if (loading) return (
                 </div>
               )}
             </div>
+            <div className="px-6 pb-2">
+              <div className="rounded-lg bg-blue-50 border border-blue-100 px-3.5 py-3 flex items-start gap-2.5">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-blue-400 mt-0.5 flex-shrink-0">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-xs text-blue-700 leading-relaxed">
+                  <span className="font-medium">Tip:</span> Also send the agent portal so your client can revisit all their media, captions, and QR codes anytime — not just when the gallery email arrives.{" "}
+                  <button type="button" onClick={() => { setShowDeliver(false); sendAgentAccess(true); }} className="underline font-medium hover:text-blue-900 transition-colors">
+                    Send agent portal →
+                  </button>
+                </p>
+              </div>
+            </div>
             <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 sticky bottom-0 bg-white">
               <button onClick={() => setShowDeliver(false)} className="btn-outline px-4 py-2 text-sm">Cancel</button>
               <button

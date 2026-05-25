@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/firebase";
@@ -179,6 +179,22 @@ export default function DashboardLayout({ children }) {
     });
     return unsub;
   }, [router]);
+
+  const refreshSettings = useCallback(async () => {
+    const u = auth.currentUser;
+    if (!u) return;
+    const tok = await u.getIdToken();
+    fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${tok}` } })
+      .then((r) => r.json())
+      .then((d) => {
+        setTenantSettings({
+          tempUnit: d.tenant?.tempUnit || "F",
+          locale:   d.tenant?.locale   || "en-US",
+          currency: d.tenant?.currency || "USD",
+        });
+      })
+      .catch(() => {});
+  }, []);
 
   // Re-fetch permissions on every navigation so owner changes take effect immediately
   useEffect(() => {
@@ -369,7 +385,7 @@ export default function DashboardLayout({ children }) {
             <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-6 w-auto object-contain" />
           </div>
 
-          <TenantSettingsContext.Provider value={tenantSettings}>
+          <TenantSettingsContext.Provider value={{ ...tenantSettings, refresh: refreshSettings }}>
             <DashboardPermissionsContext.Provider value={{ permissions: permissions || {}, userRole }}>
               <main className="flex-1 overflow-x-hidden min-w-0">{children}</main>
             </DashboardPermissionsContext.Provider>

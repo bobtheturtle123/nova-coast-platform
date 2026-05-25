@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/components/Toast";
+import { useTenantSettings } from "@/lib/TenantSettingsContext";
 import { getAppUrl } from "@/lib/appUrl";
 import { getEffectivePlan, getSeatLimit } from "@/lib/plans";
 
@@ -562,6 +563,7 @@ const DEFAULT_TIERS = [
 
 export default function SettingsPage() {
   const toast = useToast();
+  const { refresh: refreshTenantSettings } = useTenantSettings();
   const [tenant,  setTenant]  = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
@@ -876,7 +878,7 @@ export default function SettingsPage() {
           },
         }),
       });
-      if (res.ok) showMsg("Settings saved.");
+      if (res.ok) { showMsg("Settings saved."); refreshTenantSettings(); }
       else showMsg("Failed to save.", "error");
     } catch { showMsg("Something went wrong.", "error"); }
     setSaving(false);
@@ -1415,21 +1417,6 @@ export default function SettingsPage() {
                   <option value="SGD">SGD — Singapore Dollar</option>
                   <option value="HKD">HKD — Hong Kong Dollar</option>
                   <option value="INR">INR — Indian Rupee</option>
-                </select>
-              </div>
-              <div>
-                <label className="label-field">Number / Language Format</label>
-                <select value={form.locale} onChange={set("locale")} className="input-field w-full">
-                  <option value="en-US">English (US)</option>
-                  <option value="en-GB">English (UK)</option>
-                  <option value="en-AU">English (AU)</option>
-                  <option value="en-CA">English (CA)</option>
-                  <option value="en-ZA">English (ZA)</option>
-                  <option value="fr-FR">French</option>
-                  <option value="de-DE">German</option>
-                  <option value="es-ES">Spanish</option>
-                  <option value="pt-BR">Portuguese (BR)</option>
-                  <option value="ja-JP">Japanese</option>
                 </select>
               </div>
             </div>

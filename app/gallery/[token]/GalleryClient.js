@@ -5,6 +5,23 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { formatPrice } from "@/lib/pricing";
 
+async function downloadFile(url, filename) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename || "download";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  } catch {
+    window.location.href = url;
+  }
+}
+
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
 // ── Premium Lightbox ──────────────────────────────────────────────────────────
@@ -266,9 +283,7 @@ export default function GalleryClient({ gallery, booking }) {
           photos.length > 0 && (
             <button
               onClick={() => photos.forEach((p, i) => {
-                const a = document.createElement("a");
-                a.href = p.url; a.download = p.fileName || `photo-${i + 1}.jpg`; a.target = "_blank";
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                setTimeout(() => downloadFile(p.url, p.fileName || `photo-${i + 1}.jpg`), i * 300);
               })}
               className="flex items-center gap-2 text-xs font-medium px-3.5 py-2 rounded-xl bg-white/8 border border-white/10 hover:bg-white/12 transition-all flex-shrink-0 text-white/70 hover:text-white">
               <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -410,13 +425,13 @@ export default function GalleryClient({ gallery, booking }) {
                         <p className="text-xs text-white/25 mt-0.5">PDF</p>
                       </div>
                       {isUnlocked ? (
-                        <a href={src} target="_blank" rel="noopener noreferrer" download
+                        <button onClick={() => downloadFile(src, label)}
                           className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-white/8 border border-white/10 hover:bg-white/12 transition-all text-white/60 hover:text-white flex-shrink-0">
                           <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                           </svg>
                           Download
-                        </a>
+                        </button>
                       ) : (
                         <button onClick={openPayment}
                           className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[#c9a96e]/15 border border-[#c9a96e]/20 text-[#c9a96e] hover:bg-[#c9a96e]/25 transition-all flex-shrink-0">
@@ -466,13 +481,13 @@ export default function GalleryClient({ gallery, booking }) {
                       <div className="px-4 py-3 border-t border-white/[0.06] flex items-center justify-between">
                         <p className="text-xs text-white/30 truncate">{label}</p>
                         {isUnlocked ? (
-                          <a href={src} target="_blank" rel="noopener noreferrer" download
+                          <button onClick={() => downloadFile(src, label)}
                             className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors flex-shrink-0 ml-4">
                             <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
                             Download
-                          </a>
+                          </button>
                         ) : (
                           <span className="text-[10px] text-white/20 flex-shrink-0 ml-4">Preview only</span>
                         )}

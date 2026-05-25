@@ -238,19 +238,19 @@ export default function DashboardHome() {
     [listings]
   );
   const thisWeekRev = useMemo(
-    () => listings.filter(l => !l.hidden && l.shootDate).filter(l => { const w = isoWeek(l.shootDate); return w.y === nowWeek.y && w.w === nowWeek.w; }).reduce((s, l) => s + paidAmount(l), 0),
+    () => listings.filter(l => !l.hidden && (l.shootDate || l.preferredDate)).filter(l => { const d = l.shootDate || l.preferredDate; const w = isoWeek(d); return w.y === nowWeek.y && w.w === nowWeek.w; }).reduce((s, l) => s + (l.totalPrice || 0), 0),
     [listings, nowWeek]
   );
   const prevWeekRev = useMemo(() => {
     const pw = new Date(Date.now() - 7 * 86400000); const prev = isoWeek(`${pw.getFullYear()}-${String(pw.getMonth()+1).padStart(2,'0')}-${String(pw.getDate()).padStart(2,'0')}`);
-    return listings.filter(l => !l.hidden && l.shootDate).filter(l => { const w = isoWeek(l.shootDate); return w.y === prev.y && w.w === prev.w; }).reduce((s, l) => s + paidAmount(l), 0);
+    return listings.filter(l => !l.hidden && (l.shootDate || l.preferredDate)).filter(l => { const d = l.shootDate || l.preferredDate; const w = isoWeek(d); return w.y === prev.y && w.w === prev.w; }).reduce((s, l) => s + (l.totalPrice || 0), 0);
   }, [listings]);
   const weekDelta = prevWeekRev > 0 ? Math.round(((thisWeekRev - prevWeekRev) / prevWeekRev) * 100) : null;
   const avgTurnaround = useMemo(() => {
     const cutoff = new Date(Date.now() - 30 * 86400000);
-    const eligible = listings.filter(l => l.editingStartedAt && l.deliveredAt && new Date(l.deliveredAt) >= cutoff);
+    const eligible = listings.filter(l => l.shootDate && l.deliveredAt && new Date(l.deliveredAt) >= cutoff);
     if (!eligible.length) return null;
-    return Math.round(eligible.reduce((s, l) => s + (new Date(l.deliveredAt) - new Date(l.editingStartedAt)) / 3600000, 0) / eligible.length);
+    return Math.round(eligible.reduce((s, l) => s + (new Date(l.deliveredAt) - new Date(l.shootDate + "T12:00:00")) / 3600000, 0) / eligible.length);
   }, [listings]);
 
   // Action items
