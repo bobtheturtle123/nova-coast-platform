@@ -33,12 +33,17 @@ export default function ReviewStep() {
 
   async function handleFinish(redirectTo = "/dashboard?welcome=1") {
     setFinishing(true);
-    await saveOnboarding({
-      completed:   { ...(onboarding?.completed || {}), review: true },
-      completedAt: new Date().toISOString(),
-      currentStep: 5,
-    });
-    await patch({ onboardingCompleted: true, starterGuideCompleted: false }).catch(() => {});
+    try {
+      await saveOnboarding({
+        completed:   { ...(onboarding?.completed || {}), review: true },
+        completedAt: new Date().toISOString(),
+        currentStep: 5,
+      });
+      await patch({ onboardingCompleted: true, starterGuideCompleted: false }).catch(() => {});
+    } catch {
+      setFinishing(false);
+      return;
+    }
     router.push(redirectTo);
   }
 

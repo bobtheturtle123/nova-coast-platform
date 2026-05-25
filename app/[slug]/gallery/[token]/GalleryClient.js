@@ -352,20 +352,18 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             {name?.toUpperCase()}
           </span>
           <div className="flex items-center gap-2">
-            {agentCheckDone && (
-              isAgentSignedIn ? (
-                <a href={`/${slug}/agent`}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white border border-white/40 hover:bg-white/10 transition-colors">
-                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                  My Portal
-                </a>
-              ) : (
-                <a href={`/${slug}/agent/login?returnTo=/${slug}/gallery/${token}`}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white border border-white/40 hover:bg-white/10 transition-colors">
-                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                  Agent Sign In
-                </a>
-              )
+            {agentCheckDone && isAgentSignedIn ? (
+              <a href={`/${slug}/agent`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white border border-white/40 hover:bg-white/10 transition-colors">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                My Portal
+              </a>
+            ) : (
+              <a href={`/${slug}/agent/login?returnTo=/${slug}/gallery/${token}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white border border-white/40 hover:bg-white/10 transition-colors">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                Agent Sign In
+              </a>
             )}
             {gallery.agentCanShare !== false && (
               <CopyLinkButton url={`${getAppUrl()}/${slug}/gallery/${token}`} />

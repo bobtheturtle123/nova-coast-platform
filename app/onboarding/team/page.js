@@ -109,7 +109,7 @@ export default function TeamStep() {
           <p style={{ margin: "0 0 20px", fontSize: 13, color: "#6B7280", lineHeight: 1.6 }}>
             The Solo plan is designed for individual photographers. Upgrade to Studio to invite photographers, assistants, and managers.
           </p>
-          <a href="/dashboard/billing"
+          <a href="/dashboard/billing" target="_blank" rel="noopener noreferrer"
             style={{ display: "inline-block", fontSize: 13, fontWeight: 600, color: "#3486cf", padding: "8px 20px", border: "1px solid #3486cf", borderRadius: 8, textDecoration: "none" }}>
             View upgrade options →
           </a>
