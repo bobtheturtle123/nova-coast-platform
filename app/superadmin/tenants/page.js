@@ -47,7 +47,7 @@ export default function SuperadminTenantsPage() {
                     t.subscriptionStatus === "trialing" ? "bg-blue-50 text-blue-700"   :
                     t.subscriptionStatus === "past_due" ? "bg-red-50 text-red-700"     :
                     "bg-gray-50 text-gray-600"}`}>
-                  {t.subscriptionStatus || "trialing"}
+                  {t.subscriptionStatus === "trialing" ? "trial" : (t.subscriptionStatus || "trial")}
                 </span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium bg-gray-50 text-gray-600`}>
                   {t.stripeConnectOnboarded ? "Stripe ✓" : "No Stripe"}

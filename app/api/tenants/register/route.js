@@ -27,7 +27,7 @@ export async function POST(req) {
     // Resolve trial length — check access code against env var
     // Format: SIGNUP_ACCESS_CODES=FRIENDS2025:60,BETA2025:30  (code:days)
     // or simply FRIENDS2025,BETA2025  (defaults to 60 days)
-    let trialDays = 14;
+    let trialDays = 3;
     if (accessCode) {
       const rawCodes = (process.env.SIGNUP_ACCESS_CODES || "").split(",").map((s) => s.trim()).filter(Boolean);
       const upper = accessCode.toUpperCase();
