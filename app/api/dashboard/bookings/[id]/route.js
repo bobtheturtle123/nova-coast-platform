@@ -94,22 +94,25 @@ export async function PATCH(req, { params }) {
   const nowPaid = update.paidInFull ?? (update.balancePaid || update.depositPaid
     ? ((update.depositPaid ?? prev.depositPaid) && (update.balancePaid ?? prev.balancePaid))
     : null);
-  if (nowPaid && (prev.workflowStatus === "delivered" || prev.workflowStatus === "appointment_confirmed" || prev.workflowStatus === "booked")) {
+  if (nowPaid && prev.galleryId) {
     try {
-      let isDelivered = false;
-      if (prev.galleryId) {
-        const galSnap = await adminDb.collection("tenants").doc(ctx.tenantId)
-          .collection("galleries").doc(prev.galleryId).get();
-        isDelivered = !!galSnap.data()?.delivered;
+      const galRef  = adminDb.collection("tenants").doc(ctx.tenantId)
+        .collection("galleries").doc(prev.galleryId);
+      const galSnap = await galRef.get();
+      if (galSnap.exists) {
+        // Unlock the gallery so the agent can download
+        if (!galSnap.data()?.unlocked) {
+          await galRef.update({ unlocked: true });
+        }
+        // Auto-advance workflowStatus to completed if delivered and no pending revisions
+        if (galSnap.data()?.delivered && (prev.workflowStatus === "delivered" || prev.workflowStatus === "appointment_confirmed" || prev.workflowStatus === "booked")) {
+          const pendRev = await adminDb.collection("tenants").doc(ctx.tenantId)
+            .collection("revisionRequests")
+            .where("bookingId", "==", params.id).where("status", "==", "pending").limit(1).get();
+          if (pendRev.empty) update.workflowStatus = "completed";
+        }
       }
-      // Only promote if delivered and no pending revisions
-      if (isDelivered) {
-        const pendRev = await adminDb.collection("tenants").doc(ctx.tenantId)
-          .collection("revisionRequests")
-          .where("bookingId", "==", params.id).where("status", "==", "pending").limit(1).get();
-        if (pendRev.empty) update.workflowStatus = "completed";
-      }
-    } catch (e) { console.error("[booking/PATCH] workflowStatus auto-complete failed (non-fatal):", e?.message); }
+    } catch (e) { console.error("[booking/PATCH] payment unlock failed (non-fatal):", e?.message); }
   }
 
   // Recalculate deposit and balance when totalPrice changes
@@ -121,6 +124,30 @@ export async function PATCH(req, { params }) {
     const depositPaid = update.depositPaid ?? prev.depositPaid ?? false;
     update.depositAmount = newDepositAmount;
     update.remainingBalance = depositPaid ? Math.max(0, newTotal - newDepositAmount) : newTotal;
+  }
+
+  // Re-lock gallery when a new service is added post-delivery and raises the total
+  if (update.totalPrice !== undefined && isPrivileged && prev.galleryId) {
+    const prevTotal = Number(prev.totalPrice) || 0;
+    const newTotal  = Number(update.totalPrice) || 0;
+    if (newTotal > prevTotal) {
+      try {
+        const galRef  = adminDb.collection("tenants").doc(ctx.tenantId)
+          .collection("galleries").doc(prev.galleryId);
+        const galSnap = await galRef.get();
+        if (galSnap.exists && galSnap.data()?.unlocked && galSnap.data()?.delivered) {
+          await galRef.update({ unlocked: false });
+          // If they already paid the previous total, they only owe the difference
+          if (prev.balancePaid || prev.paidInFull) {
+            update.remainingBalance = Math.round((newTotal - prevTotal) * 100) / 100;
+            update.balancePaid = false;
+            update.paidInFull = false;
+          }
+        }
+      } catch (e) {
+        console.error("[booking/PATCH] gallery re-lock failed (non-fatal):", e?.message);
+      }
+    }
   }
 
   await bookingRef.update(update);

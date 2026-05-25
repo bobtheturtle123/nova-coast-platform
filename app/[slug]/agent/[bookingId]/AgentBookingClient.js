@@ -91,7 +91,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
     ...(galleryUrl ? [{ id: "gallery", label: `Gallery${gallery?.imageCount > 0 ? ` (${gallery.imageCount})` : ""}` }] : []),
     ...(pw?.published ? [{ id: "website", label: "Property Website" }] : []),
     ...(booking.totalPrice > 0 ? [{ id: "invoice", label: "Invoice" }] : []),
-    ...(allowRevisions ? [{ id: "revisions", label: pendingRevisions > 0 ? `Revisions (${pendingRevisions})` : "Revisions" }] : []),
+    { id: "revisions", label: pendingRevisions > 0 ? `Revisions (${pendingRevisions})` : "Revisions" },
   ];
 
   return (
@@ -484,8 +484,17 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
       )}
 
       {/* ── REVISIONS TAB ────────────────────────────────────────────── */}
-      {tab === "revisions" && allowRevisions && (
+      {tab === "revisions" && (
         <div className="space-y-5">
+          {!allowRevisions ? (
+            <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+              </div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Revision requests not enabled</p>
+              <p className="text-sm text-gray-400">Contact your photographer directly to request changes.</p>
+            </div>
+          ) : (<>
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Submit a Revision Request</p>
             <textarea
@@ -563,6 +572,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
               <p className="text-sm">No revision requests yet.</p>
             </div>
           )}
+          </>)}
         </div>
       )}
     </div>
