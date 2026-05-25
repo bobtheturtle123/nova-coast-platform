@@ -271,7 +271,9 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
 
   const requireAgentPortal = !!tenant.bookingConfig?.requireAgentPortal;
   const canDownload        = unlocked && (!requireAgentPortal || isAgentSignedIn);
-  const showSignupCallout  = agentCheckDone && !isAgentSignedIn;
+  // Show callout immediately (before fetch completes) so it appears on first render.
+  // It disappears once we confirm the agent is signed in.
+  const showSignupCallout  = !isAgentSignedIn;
 
   const allMedia  = (gallery.media || []).filter((m) => !m.hidden);
   const images    = allMedia.filter((m) => !m.fileType?.startsWith("video/"));
@@ -414,11 +416,17 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                   : "Save this gallery, access marketing tools, captions, and QR codes anytime — free."}
               </p>
             </div>
-            <a href={`/${slug}/agent/register`}
-              className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
-              style={{ background: primary }}>
-              {requireAgentPortal ? "Create Account to Download →" : "Create Free Account →"}
-            </a>
+            <div className="flex-shrink-0 flex items-center gap-2">
+              <a href={`/${slug}/agent/login?returnTo=/${slug}/gallery/${token}`}
+                className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors whitespace-nowrap">
+                Sign in
+              </a>
+              <a href={`/${slug}/agent/register?returnTo=/${slug}/gallery/${token}`}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
+                style={{ background: primary }}>
+                {requireAgentPortal ? "Create Account to Download →" : "Create Free Account →"}
+              </a>
+            </div>
           </div>
         )}
 
@@ -486,7 +494,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 ↓ Download Everything
               </a>
             ) : requireAgentPortal ? (
-              <a href={`/${slug}/agent/register`}
+              <a href={`/${slug}/agent/register?returnTo=/${slug}/gallery/${token}`}
                 className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
                 style={{ background: primary }}>
                 Sign up to Download →
@@ -524,7 +532,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                     </a>
                   </div>
                 ) : requireAgentPortal ? (
-                  <a href={`/${slug}/agent/register`}
+                  <a href={`/${slug}/agent/register?returnTo=/${slug}/gallery/${token}`}
                     className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90"
                     style={{ background: primary }}>
                     Sign up to Download →
@@ -574,7 +582,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                             download onClick={(e) => e.stopPropagation()}>Web</a>
                         </div>
                       ) : requireAgentPortal ? (
-                        <a href={`/${slug}/agent/register`}
+                        <a href={`/${slug}/agent/register?returnTo=/${slug}/gallery/${token}`}
                           className="px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide text-white bg-[#3486cf]"
                           onClick={(e) => e.stopPropagation()}>
                           Sign Up to Download
@@ -859,24 +867,6 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           </section>
         )}
 
-        {/* ── Agent portal signup CTA ──────────────────────────────────── */}
-        {unlocked && (
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
-            <div>
-              <p className="font-semibold text-gray-900 mb-1">Track all your listings in one place</p>
-              <p className="text-sm text-gray-500">
-                Create a free agent account to access all your media, property websites, and order history — anytime.
-              </p>
-            </div>
-            <a
-              href={`/${slug}/agent/login`}
-              className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap border transition-colors hover:opacity-90"
-              style={{ background: primary, color: "#fff" }}>
-              Create Free Account →
-            </a>
-          </div>
-        )}
-
         {/* ── Agent portal signup callout (bottom) ────────────────────── */}
         {showSignupCallout && (
           <div className="rounded-2xl border border-gray-200 bg-white px-5 py-5 text-center">
@@ -888,14 +878,14 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 ? "Create your free agent account to download full-resolution files for this listing."
                 : "Sign up for a free agent portal to revisit this gallery, get social captions, a QR code, and more."}
             </p>
-            <a href={`/${slug}/agent/register`}
+            <a href={`/${slug}/agent/register?returnTo=/${slug}/gallery/${token}`}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
               style={{ background: primary }}>
               {requireAgentPortal ? "Create Account →" : "Sign Up Free →"}
             </a>
             <p className="text-xs text-gray-400 mt-3">
               Already have an account?{" "}
-              <a href={`/${slug}/agent/login`} className="hover:underline" style={{ color: primary }}>Sign in</a>
+              <a href={`/${slug}/agent/login?returnTo=/${slug}/gallery/${token}`} className="hover:underline" style={{ color: primary }}>Sign in</a>
             </p>
           </div>
         )}

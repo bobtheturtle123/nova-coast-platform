@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged } from "firebase/auth";
 
-export default function AgentLoginPage() {
-  const { slug }  = useParams();
-  const router    = useRouter();
+function LoginInner() {
+  const { slug }      = useParams();
+  const searchParams  = useSearchParams();
+  const router        = useRouter();
+  const returnTo      = searchParams.get("returnTo");
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
   const [error,    setError]    = useState("");
@@ -25,7 +27,7 @@ export default function AgentLoginPage() {
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
             body:    JSON.stringify({}),
           });
-          if (res.ok) { router.replace(`/${slug}/agent`); return; }
+          if (res.ok) { router.replace(returnTo || `/${slug}/agent`); return; }
         } catch {}
       }
       setLoading(false);
@@ -51,7 +53,7 @@ export default function AgentLoginPage() {
         setLoading(false);
         return;
       }
-      router.replace(`/${slug}/agent`);
+      router.replace(returnTo || `/${slug}/agent`);
     } catch (err) {
       const msg = err.code === "auth/invalid-credential" || err.code === "auth/wrong-password"
         ? "Invalid email or password."
@@ -122,11 +124,23 @@ export default function AgentLoginPage() {
       <div className="mt-10 text-center">
         <p className="text-xs text-gray-400 leading-relaxed">
           New agent?{" "}
-          <a href={`/${slug}/agent/register`} className="text-[#3486cf] hover:underline font-medium">
+          <a href={`/${slug}/agent/register${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`} className="text-[#3486cf] hover:underline font-medium">
             Create an account
           </a>
         </p>
       </div>
     </div>
+  );
+}
+
+export default function AgentLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
+      </div>
+    }>
+      <LoginInner />
+    </Suspense>
   );
 }

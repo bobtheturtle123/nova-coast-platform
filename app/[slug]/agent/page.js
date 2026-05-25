@@ -44,7 +44,6 @@ export default async function AgentPortalPage({ params, searchParams }) {
     .get();
 
   const bookings = bookingsSnap.docs
-    .filter((d) => !!d.data().galleryId)   // only show bookings where a gallery exists
     .sort((a, b) => {
       const aTime = a.data().createdAt?.toMillis?.() ?? 0;
       const bTime = b.data().createdAt?.toMillis?.() ?? 0;

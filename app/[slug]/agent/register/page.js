@@ -11,6 +11,7 @@ function RegisterInner() {
   const searchParams  = useSearchParams();
   const router        = useRouter();
   const inviteToken   = searchParams.get("token");
+  const returnTo      = searchParams.get("returnTo");
 
   const [name,     setName]     = useState("");
   const [email,    setEmail]    = useState("");
@@ -59,7 +60,7 @@ function RegisterInner() {
         setLoading(false);
         return;
       }
-      router.replace(`/${slug}/agent`);
+      router.replace(returnTo || `/${slug}/agent`);
     } catch (err) {
       const msg =
         err.code === "auth/email-already-in-use"
@@ -117,7 +118,7 @@ function RegisterInner() {
 
       <p className="text-xs text-gray-400 mt-8 text-center">
         Already have an account?{" "}
-        <Link href={`/${slug}/agent/login`} className="text-[#3486cf] hover:underline">Sign in</Link>
+        <Link href={`/${slug}/agent/login${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`} className="text-[#3486cf] hover:underline">Sign in</Link>
       </p>
     </div>
   );
