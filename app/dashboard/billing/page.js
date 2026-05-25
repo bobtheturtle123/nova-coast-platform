@@ -304,15 +304,7 @@ export default function BillingPage() {
           </span>
         </div>
 
-        {status === "trialing" && tenant?.trialEndsAt && (
-          <p className="text-xs text-amber-600 mt-3 font-medium">
-            Trial ends {(() => {
-              const raw = tenant.trialEndsAt;
-              const d = raw?.seconds ? new Date(raw.seconds * 1000) : new Date(raw);
-              return isNaN(d) ? "in 14 days" : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-            })()}
-          </p>
-        )}
+
         {status === "active" && renewalDateStr && (
           <p className="text-xs text-gray-400 mt-3">
             Renews <span className="font-medium text-gray-600">{renewalDateStr}</span>
