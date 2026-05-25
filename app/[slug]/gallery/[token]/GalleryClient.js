@@ -271,9 +271,8 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
 
   const requireAgentPortal = !!tenant.bookingConfig?.requireAgentPortal;
   const canDownload        = unlocked && (!requireAgentPortal || isAgentSignedIn);
-  // Show callout immediately (before fetch completes) so it appears on first render.
-  // It disappears once we confirm the agent is signed in.
-  const showSignupCallout  = !isAgentSignedIn;
+  // Wait for the session check before showing the callout — avoids a flash for signed-in agents.
+  const showSignupCallout  = agentCheckDone && !isAgentSignedIn;
 
   const allMedia  = (gallery.media || []).filter((m) => !m.hidden);
   const images    = allMedia.filter((m) => !m.fileType?.startsWith("video/"));
@@ -352,9 +351,26 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           <span className="font-display text-white text-base tracking-widest drop-shadow opacity-90">
             {name?.toUpperCase()}
           </span>
-          {gallery.agentCanShare !== false && (
-            <CopyLinkButton url={`${getAppUrl()}/${slug}/gallery/${token}`} />
-          )}
+          <div className="flex items-center gap-2">
+            {agentCheckDone && (
+              isAgentSignedIn ? (
+                <a href={`/${slug}/agent`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white border border-white/40 hover:bg-white/10 transition-colors">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  My Portal
+                </a>
+              ) : (
+                <a href={`/${slug}/agent/login?returnTo=/${slug}/gallery/${token}`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white border border-white/40 hover:bg-white/10 transition-colors">
+                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  Agent Sign In
+                </a>
+              )
+            )}
+            {gallery.agentCanShare !== false && (
+              <CopyLinkButton url={`${getAppUrl()}/${slug}/gallery/${token}`} />
+            )}
+          </div>
         </div>
         <div className="absolute bottom-6 left-5 right-5">
           <h1 className="font-display text-white text-2xl md:text-4xl drop-shadow mb-2">{address}</h1>
@@ -469,6 +485,30 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         {payMsg && unlocked && (
           <div className="bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3 rounded-xl">
             {payMsg}
+          </div>
+        )}
+
+        {/* ── Property website link ──────────────────────────────────── */}
+        {booking?.propertyWebsite?.published && gallery.showPropertyWebsiteLink !== false && (
+          <div className="bg-white border border-gray-200 rounded-2xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: primary + "18" }}>
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke={primary} strokeWidth="1.8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-900 text-sm">Property Website</p>
+                <p className="text-xs text-gray-400">View full listing details, floor plans, and more</p>
+              </div>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <a href={`/${slug}/property/${booking.id || gallery.bookingId}`} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ background: primary }}>
+                View Listing ↗
+              </a>
+            </div>
           </div>
         )}
 

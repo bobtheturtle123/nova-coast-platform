@@ -58,6 +58,13 @@ export async function POST(req, { params }) {
         agentDoc = await agentRef.get();
       } else {
         agentDoc = snap.docs[0];
+        // Backfill missing accessToken on legacy agent docs
+        if (!agentDoc.data().accessToken) {
+          const { randomUUID } = await import("crypto");
+          const newToken = randomUUID().replace(/-/g, "");
+          await agentDoc.ref.update({ accessToken: newToken });
+          agentDoc = await agentDoc.ref.get();
+        }
       }
     } catch {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

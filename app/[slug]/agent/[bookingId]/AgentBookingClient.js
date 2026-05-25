@@ -26,9 +26,10 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
   const [revSending,   setRevSending]   = useState(false);
   const [revText,      setRevText]      = useState("");
 
-  const pw          = booking.propertyWebsite || {};
-  const listingUrl  = `${getAppUrl()}/${slug}/property/${booking.id}`;
-  const brochureUrl = `/${slug}/property/${booking.id}/brochure`;
+  const pw             = booking.propertyWebsite || {};
+  const listingUrl     = `${getAppUrl()}/${slug}/property/${booking.id}`;
+  const unbrandedUrl   = `${listingUrl}?unbranded=1`;
+  const brochureUrl    = `/${slug}/property/${booking.id}/brochure`;
   const galleryUrl  = gallery?.accessToken ? `/${slug}/gallery/${gallery.accessToken}` : null;
   const qrUrl       = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(listingUrl)}&size=200x200&color=${branding.primary.replace("#", "")}&bgcolor=FFFFFF`;
 
@@ -241,18 +242,44 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
       {/* ── MARKETING TAB ──────────────────────────────────────────── */}
       {tab === "marketing" && (
         <div className="space-y-5">
-          {/* Listing URL */}
+          {/* Listing URL — branded + unbranded */}
           {pw?.published && (
             <div className="bg-white border border-gray-200 rounded-xl p-5">
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Listing URL</p>
-              <div className="flex items-center gap-2">
-                <code className="text-sm text-[#3486cf] flex-1 truncate bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
-                  {listingUrl}
-                </code>
-                <button onClick={() => copy(listingUrl, "url")}
-                  className="text-xs px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0">
-                  {copied === "url" ? "✓ Copied" : "Copy"}
-                </button>
+              <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Property Website</p>
+              <div className="space-y-2.5">
+                <div>
+                  <p className="text-[11px] text-gray-400 mb-1.5 font-medium uppercase tracking-wide">Branded (with photographer info)</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-sm text-[#3486cf] flex-1 truncate bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                      {listingUrl}
+                    </code>
+                    <button onClick={() => copy(listingUrl, "url")}
+                      className="text-xs px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0">
+                      {copied === "url" ? "✓ Copied" : "Copy"}
+                    </button>
+                    <a href={listingUrl} target="_blank" rel="noopener noreferrer"
+                      className="text-xs px-3 py-2 rounded-lg text-white flex-shrink-0 transition-opacity hover:opacity-80"
+                      style={{ background: branding.primary }}>
+                      Open ↗
+                    </a>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[11px] text-gray-400 mb-1.5 font-medium uppercase tracking-wide">Unbranded (agent use / MLS)</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-sm text-gray-500 flex-1 truncate bg-gray-50 px-3 py-2 rounded-lg border border-gray-100">
+                      {unbrandedUrl}
+                    </code>
+                    <button onClick={() => copy(unbrandedUrl, "unbranded")}
+                      className="text-xs px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0">
+                      {copied === "unbranded" ? "✓ Copied" : "Copy"}
+                    </button>
+                    <a href={unbrandedUrl} target="_blank" rel="noopener noreferrer"
+                      className="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 flex-shrink-0 transition-colors">
+                      Open ↗
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
           )}

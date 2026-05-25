@@ -26,7 +26,7 @@ export async function generateMetadata({ params }) {
   };
 }
 
-export default async function PropertyWebsitePage({ params }) {
+export default async function PropertyWebsitePage({ params, searchParams }) {
   let tenant;
   try {
     tenant = await getTenantBySlug(params.slug);
@@ -117,9 +117,13 @@ export default async function PropertyWebsitePage({ params }) {
     logo:     tenant.branding?.logoUrl       || null,
   };
 
+  // ?unbranded=1 strips photographer branding and agent contact info
+  const isUnbranded = searchParams?.unbranded === "1" || searchParams?.unbranded === "true";
+  const pwForClient = isUnbranded ? { ...pw, branded: false } : pw;
+
   return (
     <PropertyWebsiteClient
-      pw={pw}
+      pw={pwForClient}
       booking={{
         fullAddress: booking.fullAddress,
         address:     booking.address,

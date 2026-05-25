@@ -326,7 +326,8 @@ export default function GalleryDetailPage() {
   const [scheduledAt,   setScheduledAt]   = useState(""); // datetime-local value
 
   // Gallery access
-  const [agentCanShare, setAgentCanShare] = useState(true);
+  const [agentCanShare,          setAgentCanShare]          = useState(true);
+  const [showPropertyWebsiteLink, setShowPropertyWebsiteLink] = useState(true);
   const [extraAccessEmail, setExtraAccessEmail] = useState("");
   const [showAccessPanel, setShowAccessPanel] = useState(false);
   const [collapsedCats,   setCollapsedCats]   = useState(new Set());
@@ -418,6 +419,7 @@ export default function GalleryDetailPage() {
 
         // Gallery access settings
         if (data.gallery.agentCanShare !== undefined) setAgentCanShare(data.gallery.agentCanShare);
+        if (data.gallery.showPropertyWebsiteLink !== undefined) setShowPropertyWebsiteLink(data.gallery.showPropertyWebsiteLink);
 
         // Load extras
         if (data.gallery.matterportUrl)    setMatterportUrl(data.gallery.matterportUrl);
@@ -1231,6 +1233,26 @@ export default function GalleryDetailPage() {
                   className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${gallery.agentCanShare !== false ? "bg-[#3486cf]" : "bg-gray-300"}`}>
                   <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${gallery.agentCanShare !== false ? "translate-x-4" : "translate-x-0.5"}`} />
                 </button>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-[#0F172A]">Show property website link in gallery</p>
+                  <p className="text-xs text-gray-400">Displays a "View Listing" button when a property website is published</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    const newVal = !showPropertyWebsiteLink;
+                    setShowPropertyWebsiteLink(newVal);
+                    setGallery((g) => ({ ...g, showPropertyWebsiteLink: newVal }));
+                    const token = await auth.currentUser.getIdToken();
+                    await fetch(`/api/dashboard/galleries/${id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                      body: JSON.stringify({ showPropertyWebsiteLink: newVal }),
+                    });
+                  }}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${showPropertyWebsiteLink ? "bg-[#3486cf]" : "bg-gray-300"}`}>
+                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${showPropertyWebsiteLink ? "translate-x-4" : "translate-x-0.5"}`} />
               </div>
             </div>
           )}
