@@ -21,7 +21,7 @@ export async function GET(req) {
 
   try {
     // Query all tenants
-    const tenantsSnap = await adminDb.collection("tenants").get();
+    const tenantsSnap = await adminDb.collection("tenants").limit(2000).get();
 
     await Promise.allSettled(
       tenantsSnap.docs.map(async (tenantDoc) => {

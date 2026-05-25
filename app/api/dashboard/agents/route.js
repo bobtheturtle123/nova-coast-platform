@@ -27,6 +27,7 @@ export async function GET(req) {
     .collection("tenants").doc(ctx.tenantId)
     .collection("agents")
     .orderBy("totalOrders", "desc")
+    .limit(2000)
     .get();
 
   const agents = snap.docs.map((d) => ({ id: d.id, ...serialize(d.data()) }));

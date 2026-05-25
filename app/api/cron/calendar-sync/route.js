@@ -92,7 +92,7 @@ export async function GET(req) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const tenantsSnap = await adminDb.collection("tenants").get();
+  const tenantsSnap = await adminDb.collection("tenants").limit(2000).get();
   let synced = 0;
   let errors = 0;
 
@@ -123,7 +123,7 @@ export async function GET(req) {
       }
 
       // Sync team members
-      const membersSnap = await tenantRef.collection("team").get();
+      const membersSnap = await tenantRef.collection("team").limit(500).get();
       await Promise.allSettled(
         membersSnap.docs.map(async (memberDoc) => {
           const gcal = memberDoc.data().googleCalendar;
