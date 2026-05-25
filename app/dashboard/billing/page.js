@@ -195,7 +195,7 @@ export default function BillingPage() {
   );
 
   const plan       = tenant?.permanentPlan || tenant?.subscriptionPlan || "starter";
-  const status     = tenant?.subscriptionStatus || "trialing";
+  const status     = tenant?.subscriptionStatus || "inactive";
   const subscribed = !!tenant?.stripeSubscriptionId;
 
   function formatRenewalDate(raw) {
@@ -297,10 +297,9 @@ export default function BillingPage() {
           </div>
           <span className={`text-xs px-3 py-1.5 rounded-full font-semibold
             ${status === "active"   ? "bg-emerald-50 text-emerald-700" :
-              status === "trialing" ? "bg-blue-50 text-blue-700"       :
               status === "past_due" ? "bg-red-50 text-red-700"         :
               "bg-gray-100 text-gray-600"}`}>
-            {status === "trialing" ? "Free trial" : status}
+            {status}
           </span>
         </div>
 
@@ -337,7 +336,7 @@ export default function BillingPage() {
           </div>
         ) : (
           <p className="text-xs text-gray-400 mt-3">
-            No active subscription. Select a plan below to get started after your trial.
+            No active subscription. Select a plan below to get started.
           </p>
         )}
       </div>

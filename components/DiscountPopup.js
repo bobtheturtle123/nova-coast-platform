@@ -17,19 +17,12 @@ export default function DiscountPopup() {
       setTimeout(() => setVisible(true), 350);
     }
 
-    function onScroll() {
-      const pct = window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight);
-      if (pct >= 0.5) fire();
-    }
-
     function onMouseLeave(e) {
       if (e.clientY <= 0) fire();
     }
 
-    window.addEventListener("scroll", onScroll, { passive: true });
     document.addEventListener("mouseleave", onMouseLeave);
     return () => {
-      window.removeEventListener("scroll", onScroll);
       document.removeEventListener("mouseleave", onMouseLeave);
     };
   }, []);
@@ -66,22 +59,22 @@ export default function DiscountPopup() {
           </h2>
 
           <p className="text-gray-500 text-sm leading-relaxed mb-1.5">
-            Get <span className="font-bold text-navy">$20 off</span> your first month.
+            Get <span className="font-bold text-navy">$50 off</span> your first month.
           </p>
           <p className="text-gray-400 text-xs mb-7">
             Use code{" "}
             <span className="font-mono font-bold text-navy tracking-wider bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">
-              FIRST20
+              FIRST50
             </span>{" "}
             at checkout.
           </p>
 
           <Link
-            href="/auth/register?promo=FIRST20"
+            href="/auth/register?promo=FIRST50"
             onClick={() => setVisible(false)}
             className="block bg-navy text-white font-semibold py-3.5 px-6 rounded-xl hover:bg-navy/90 transition-colors text-sm mb-3"
           >
-            Get Started and Save $20
+            Get Started and Save $50
           </Link>
 
           <button

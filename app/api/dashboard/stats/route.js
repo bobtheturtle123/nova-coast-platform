@@ -21,11 +21,12 @@ export async function GET(req) {
   const thisYearStart = new Date(new Date().getFullYear(), 0, 1);
 
   // COUNT aggregation queries — read 0 documents, just return counts
-  const [totalSnap, pendingSnap, confirmedSnap, thisYearSnap] = await Promise.all([
+  const [totalSnap, pendingSnap, confirmedSnap, thisYearSnap, thisYearNotListingSnap] = await Promise.all([
     bookingsRef.count().get(),
     bookingsRef.where("status", "==", "requested").count().get(),
     bookingsRef.where("status", "==", "confirmed").count().get(),
     bookingsRef.where("createdAt", ">=", thisYearStart).count().get(),
+    bookingsRef.where("createdAt", ">=", thisYearStart).where("isListing", "==", false).count().get(),
   ]);
 
   // Revenue/outstanding: scan most recent 200 bookings (accurate for active pipeline)
@@ -40,7 +41,7 @@ export async function GET(req) {
     total:            totalSnap.data().count,
     pending:          pendingSnap.data().count,
     confirmed:        confirmedSnap.data().count,
-    listingsThisYear: thisYearSnap.data().count,
+    listingsThisYear: thisYearSnap.data().count - thisYearNotListingSnap.data().count,
     revenue:          recentData.reduce((s, b) => s + (b.depositPaid ? (b.depositAmount || 0) : 0), 0),
     outstanding:      recentData.reduce((s, b) => s + (!b.balancePaid ? (b.remainingBalance || 0) : 0), 0),
   };
