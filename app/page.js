@@ -3,9 +3,9 @@ import PricingSection from "@/components/PricingSection";
 import DiscountPopup from "@/components/DiscountPopup";
 
 export const metadata = {
-  title: "KyoriaOS: Built for real estate media businesses",
+  title: "Kyoria OS: The Complete System for Real Estate Media Businesses",
   description:
-    "Booking, scheduling, gallery delivery, and client portals, all connected. Replace the tools you're patching together.",
+    "Booking, scheduling, gallery delivery, and client portals, all connected. Kyoria OS replaces the tools real estate photographers patch together.",
 };
 
 export default function MarketingPage() {
@@ -17,10 +17,11 @@ export default function MarketingPage() {
         {/* NAV */}
         <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
           <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-            <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-11 w-auto object-contain" />
+            <img src="/kyoriaos-logo.png" alt="Kyoria OS" className="h-11 w-auto object-contain" />
             <nav className="hidden md:flex items-center gap-8 text-sm text-gray-600">
               <a href="#how-it-works" className="hover:text-navy transition-colors">How it works</a>
               <a href="#pricing" className="hover:text-navy transition-colors">Pricing</a>
+              <Link href="/blog" className="hover:text-navy transition-colors">Blog</Link>
             </nav>
             <div className="flex items-center gap-3">
               <Link href="/auth/login" className="text-sm text-gray-600 hover:text-navy px-3 py-2 transition-colors">
@@ -45,27 +46,30 @@ export default function MarketingPage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
                   <span className="text-white/75 text-xs">Built for real estate media teams</span>
                 </div>
-                <h1 className="font-serif text-5xl md:text-[3.25rem] leading-[1.1] mb-6 font-normal text-white">
-                  Stop running your<br />business out of a<br />group chat.
+                <h1 className="font-serif text-5xl md:text-[3.15rem] leading-[1.1] mb-5 font-normal text-white">
+                  Stop juggling bookings,<br />messages, and files<br />across different tools.
                 </h1>
-                <p className="text-white/60 text-lg max-w-lg leading-relaxed mb-10">
-                  KyoriaOS connects booking, scheduling, gallery delivery, and payments into one system, so you can stop patching tools together and start running a real business.
+                <p className="text-white/60 text-lg max-w-lg leading-relaxed mb-3">
+                  Kyoria OS connects booking, scheduling, gallery delivery, and payments into one system, so you can stop patching tools together and start running a real business.
+                </p>
+                <p className="text-white/45 text-sm max-w-lg leading-relaxed mb-8">
+                  Replace your booking tools, delivery platforms, and client communication with one system.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link
                     href="/auth/register"
                     className="bg-gold text-navy font-semibold px-8 py-4 rounded-xl hover:bg-gold/90 transition-colors text-center text-sm"
                   >
-                    Start Today
+                    Get Started
                   </Link>
                   <a
                     href="#pricing"
                     className="border border-white/20 text-white/75 px-8 py-4 rounded-xl hover:bg-white/5 transition-colors text-center text-sm"
                   >
-                    See Pricing
+                    See Plans
                   </a>
                 </div>
-                <p className="text-white/30 text-xs mt-4">From $79/month. No contracts. Cancel anytime.</p>
+                <p className="text-white/30 text-xs mt-4">Set up in under an hour.</p>
               </div>
 
               <div className="relative pb-0 hidden md:block">
@@ -82,7 +86,7 @@ export default function MarketingPage() {
                   </div>
                   <img
                     src="/screenshots/schedule.png"
-                    alt="KyoriaOS team schedule and bookings dashboard"
+                    alt="Kyoria OS team schedule and bookings dashboard"
                     className="w-full block"
                   />
                 </div>
@@ -95,12 +99,12 @@ export default function MarketingPage() {
         <div className="bg-cream border-y border-gray-100 py-4 px-6">
           <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-x-8 gap-y-2">
             {[
-              "Online booking + deposits",
-              "Team scheduling",
-              "Gallery delivery",
-              "Payment-gated downloads",
-              "Agent portal",
-              "Calendar sync",
+              "Collect deposits automatically",
+              "Schedule your team in seconds",
+              "Deliver galleries instantly",
+              "Get paid before downloads",
+              "Give agents a full portal",
+              "Sync your calendar",
             ].map((f) => (
               <span key={f} className="flex items-center gap-2 text-xs text-gray-500">
                 <span className="text-gold">✓</span>{f}
@@ -113,7 +117,7 @@ export default function MarketingPage() {
         <section className="py-24 px-6 bg-white">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-14">
-              <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">Sound familiar?</p>
+              <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">If this feels familiar, you&apos;re not alone</p>
               <h2 className="font-serif text-4xl text-navy mb-4 font-normal">
                 You&apos;re running a media business<br />out of duct tape and iMessage.
               </h2>
@@ -123,7 +127,7 @@ export default function MarketingPage() {
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-7">
-                <p className="text-xs font-semibold text-red-400 uppercase tracking-widest mb-5">Without KyoriaOS</p>
+                <p className="text-xs font-semibold text-red-400 uppercase tracking-widest mb-5">Without Kyoria OS</p>
                 <ul className="space-y-3">
                   {[
                     "Chase deposits over iMessage",
@@ -142,7 +146,7 @@ export default function MarketingPage() {
                 </ul>
               </div>
               <div className="bg-navy text-white rounded-2xl p-7">
-                <p className="text-xs font-semibold text-gold uppercase tracking-widest mb-5">With KyoriaOS</p>
+                <p className="text-xs font-semibold text-gold uppercase tracking-widest mb-5">With Kyoria OS</p>
                 <ul className="space-y-3">
                   {[
                     "Deposit collected the moment they book",
@@ -231,7 +235,7 @@ export default function MarketingPage() {
                   <div className="overflow-hidden bg-gray-100 aspect-[16/9]">
                     <img
                       src={s.src}
-                      alt={`${s.title} in KyoriaOS`}
+                      alt={`${s.title} in Kyoria OS`}
                       className="w-full h-full object-cover object-top"
                     />
                   </div>
@@ -402,7 +406,7 @@ export default function MarketingPage() {
               <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">Platform overview</p>
               <h2 className="font-serif text-3xl text-navy font-normal mb-2">Explore features</h2>
               <p className="text-gray-500 text-sm max-w-md mx-auto">
-                Every tool your business needs, built into one platform.
+                Everything you need to run your business, in one place.
               </p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -429,30 +433,65 @@ export default function MarketingPage() {
           <div className="max-w-2xl mx-auto">
             <p className="text-gold text-xs tracking-[0.2em] uppercase mb-4">One system. Every job.</p>
             <h2 className="font-serif text-4xl text-white mb-4 font-normal">
-              Run your entire media business<br />from one place.
+              Run your entire media business<br />from one system.
             </h2>
             <p className="text-white/50 mb-8 text-lg leading-relaxed max-w-xl mx-auto">
-              Booking, scheduling, delivery, and payments. Automated, connected, and built for real estate photographers.
+              Booking, scheduling, delivery, and payments. Everything connected and automated.
             </p>
             <Link
               href="/auth/register"
               className="inline-block bg-gold text-navy font-semibold px-10 py-4 rounded-xl hover:bg-gold/90 transition-colors text-base"
             >
-              Start Today
+              Get Started
             </Link>
             <p className="text-white/25 text-xs mt-5">From $79/month. No contract. Cancel anytime.</p>
           </div>
         </section>
 
         {/* FOOTER */}
-        <footer className="bg-navy border-t border-white/10 py-8 px-6">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-white/35 text-xs">
-            <span>© {new Date().getFullYear()} KyoriaOS. All rights reserved.</span>
-            <div className="flex gap-6">
-              <a href="/privacy" className="hover:text-white/65 transition-colors">Privacy Policy</a>
-              <a href="/terms" className="hover:text-white/65 transition-colors">Terms of Service</a>
-              <a href="/sms-consent" className="hover:text-white/65 transition-colors">SMS Consent</a>
-              <a href="mailto:contact@kyoriaos.com" className="hover:text-white/65 transition-colors">Support</a>
+        <footer className="bg-navy border-t border-white/10 py-10 px-6">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-8">
+              <div>
+                <img src="/kyoriaos-logo.png" alt="Kyoria OS" className="h-9 w-auto object-contain mb-3 brightness-0 invert" />
+                <p className="text-white/35 text-xs max-w-xs leading-relaxed">
+                  The complete system for real estate photography businesses.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 text-xs">
+                <div>
+                  <p className="text-white/60 font-semibold uppercase tracking-widest mb-3 text-[10px]">Features</p>
+                  <ul className="space-y-2">
+                    <li><Link href="/features/booking-scheduling" className="text-white/35 hover:text-white/65 transition-colors">Booking and Scheduling</Link></li>
+                    <li><Link href="/features/team-management" className="text-white/35 hover:text-white/65 transition-colors">Team Management</Link></li>
+                    <li><Link href="/features/gallery-delivery" className="text-white/35 hover:text-white/65 transition-colors">Gallery Delivery</Link></li>
+                    <li><Link href="/features/service-areas" className="text-white/35 hover:text-white/65 transition-colors">Service Areas</Link></li>
+                    <li><Link href="/features/client-portal" className="text-white/35 hover:text-white/65 transition-colors">Client and Agent Portal</Link></li>
+                    <li><Link href="/features/payments-automation" className="text-white/35 hover:text-white/65 transition-colors">Payments and Automation</Link></li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-white/60 font-semibold uppercase tracking-widest mb-3 text-[10px]">Compare</p>
+                  <ul className="space-y-2">
+                    <li><Link href="/compare/aryeo-vs-kyoria-os" className="text-white/35 hover:text-white/65 transition-colors">vs Aryeo</Link></li>
+                    <li><Link href="/compare/honeybook-vs-kyoria-os" className="text-white/35 hover:text-white/65 transition-colors">vs HoneyBook</Link></li>
+                    <li><Link href="/compare/spiro-vs-kyoria-os" className="text-white/35 hover:text-white/65 transition-colors">vs Spiro</Link></li>
+                    <li><Link href="/blog" className="text-white/35 hover:text-white/65 transition-colors">Blog</Link></li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-white/60 font-semibold uppercase tracking-widest mb-3 text-[10px]">Legal</p>
+                  <ul className="space-y-2">
+                    <li><a href="/privacy" className="text-white/35 hover:text-white/65 transition-colors">Privacy Policy</a></li>
+                    <li><a href="/terms" className="text-white/35 hover:text-white/65 transition-colors">Terms of Service</a></li>
+                    <li><a href="/sms-consent" className="text-white/35 hover:text-white/65 transition-colors">SMS Consent</a></li>
+                    <li><a href="mailto:contact@kyoriaos.com" className="text-white/35 hover:text-white/65 transition-colors">Support</a></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-white/10 pt-6 text-white/25 text-xs">
+              <span>&copy; {new Date().getFullYear()} Kyoria OS. All rights reserved.</span>
             </div>
           </div>
         </footer>
@@ -583,7 +622,7 @@ const FEATURE_LINKS = [
     desc: "See every photographer's availability, assign jobs, and keep your crew in sync without a group chat.",
   },
   {
-    title: "Client and Agent Portals",
+    title: "Client and Agent Portal",
     slug: "client-portal",
     desc: "Every client gets a portal. Every agent gets a branded listing kit with gallery, website, and brochure.",
   },

@@ -160,7 +160,7 @@ export default function PricingSection() {
         </div>
 
         <p className="text-center text-gray-400 text-xs mt-8">
-          No contracts. Cancel anytime. Pricing is billed monthly.
+          No contracts. Cancel anytime.
         </p>
 
       </div>
