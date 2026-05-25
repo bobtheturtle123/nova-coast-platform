@@ -64,9 +64,9 @@ export default function PlanSelectionPage() {
         const res   = await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } });
         if (res.ok) {
           const { tenant } = await res.json();
-          // Already paid — skip straight to onboarding
-          if (tenant?.stripeSubscriptionId) {
-            router.replace("/onboarding");
+          // Already paid — skip to dashboard if onboarding done, otherwise continue onboarding
+          if (tenant?.stripeSubscriptionId || tenant?.permanentPlan) {
+            router.replace(tenant?.onboardingCompleted ? "/dashboard" : "/onboarding");
             return;
           }
         }

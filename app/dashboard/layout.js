@@ -160,13 +160,15 @@ export default function DashboardLayout({ children }) {
         } catch {}
         if (!repaired) { router.push("/onboarding"); return; }
       }
-      setUser(u);
       const role = tokenResult.claims.role || "owner";
-      setUserRole(role);
       const tok = await u.getIdToken();
-      fetch("/api/dashboard/tenant", {
-        headers: { Authorization: `Bearer ${tok}` },
-      }).then((r) => r.json()).then((d) => {
+
+      // Fetch tenant and enforce subscription gate before rendering any dashboard page
+      try {
+        const res = await fetch("/api/dashboard/tenant", {
+          headers: { Authorization: `Bearer ${tok}` },
+        });
+        const d = await res.json();
         if (d.tenant?.businessName) setTenantName(d.tenant.businessName);
         if (d.tenant?.branding?.logoUrl) setTenantLogo(d.tenant.branding.logoUrl);
         setTenantPlan(d.tenant?.permanentPlan || d.tenant?.subscriptionPlan || "starter");
@@ -175,7 +177,17 @@ export default function DashboardLayout({ children }) {
           locale:   d.tenant?.locale   || "en-US",
           currency: d.tenant?.currency || "USD",
         });
-      }).catch(() => {});
+        const hasSub = !!(d.tenant?.stripeSubscriptionId || d.tenant?.permanentPlan);
+        if (!hasSub) {
+          router.push("/auth/plan");
+          return;
+        }
+      } catch {
+        // Network error — don't hard-block on a failed fetch
+      }
+
+      setUser(u);
+      setUserRole(role);
     });
     return unsub;
   }, [router]);

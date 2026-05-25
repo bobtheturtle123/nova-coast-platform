@@ -1253,6 +1253,7 @@ export default function GalleryDetailPage() {
                   }}
                   className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${showPropertyWebsiteLink ? "bg-[#3486cf]" : "bg-gray-300"}`}>
                   <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${showPropertyWebsiteLink ? "translate-x-4" : "translate-x-0.5"}`} />
+                </button>
               </div>
             </div>
           )}
