@@ -39,8 +39,26 @@ export async function POST(req, { params }) {
         .limit(1)
         .get();
 
-      if (snap.empty) return NextResponse.json({ error: "No agent account for this email" }, { status: 404 });
-      agentDoc = snap.docs[0];
+      if (snap.empty) {
+        // New user — auto-create an agent doc so anyone can sign up
+        const { randomUUID } = await import("crypto");
+        const newToken = randomUUID().replace(/-/g, "");
+        const agentKey = Buffer.from(email).toString("base64").replace(/[+/=]/g, "");
+        const agentRef = adminDb.collection("tenants").doc(tenant.id).collection("agents").doc(agentKey);
+        await agentRef.set({
+          id: agentKey,
+          name: decoded.name || "",
+          email,
+          phone: "",
+          accessToken: newToken,
+          totalOrders: 0,
+          totalSpent: 0,
+          createdAt: new Date(),
+        });
+        agentDoc = await agentRef.get();
+      } else {
+        agentDoc = snap.docs[0];
+      }
     } catch {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

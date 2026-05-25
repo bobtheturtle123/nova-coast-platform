@@ -241,11 +241,20 @@ function CopyUrlButton({ url }) {
 }
 
 export default function GalleryClient({ gallery, booking, tenant, slug, token }) {
-  const [unlocked,     setUnlocked]     = useState(gallery.unlocked);
-  const [clientSecret, setClientSecret] = useState(null);
-  const [loadingPay,   setLoadingPay]   = useState(false);
-  const [payMsg,       setPayMsg]       = useState("");
-  const [lightboxIdx,  setLightboxIdx]  = useState(null);
+  const [unlocked,        setUnlocked]        = useState(gallery.unlocked);
+  const [clientSecret,    setClientSecret]    = useState(null);
+  const [loadingPay,      setLoadingPay]      = useState(false);
+  const [payMsg,          setPayMsg]          = useState("");
+  const [lightboxIdx,     setLightboxIdx]     = useState(null);
+  const [isAgentSignedIn, setIsAgentSignedIn] = useState(false);
+  const [agentCheckDone,  setAgentCheckDone]  = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/${slug}/agent/session`)
+      .then(r => r.json())
+      .then(d => { setIsAgentSignedIn(!!d.agent); setAgentCheckDone(true); })
+      .catch(() => setAgentCheckDone(true));
+  }, [slug]);
 
   // Block right-click on the entire page before payment
   useEffect(() => {
@@ -259,6 +268,10 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const primary = tenant.branding?.primaryColor || "#3486cf";
   const accent  = tenant.branding?.accentColor  || "#c9a96e";
   const name    = tenant.branding?.businessName || tenant.businessName;
+
+  const requireAgentPortal = !!tenant.bookingConfig?.requireAgentPortal;
+  const canDownload        = unlocked && (!requireAgentPortal || isAgentSignedIn);
+  const showSignupCallout  = agentCheckDone && !isAgentSignedIn;
 
   const allMedia  = (gallery.media || []).filter((m) => !m.hidden);
   const images    = allMedia.filter((m) => !m.fileType?.startsWith("video/"));
@@ -384,6 +397,31 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-5">
 
+        {/* ── Agent portal signup callout (top) ───────────────────────── */}
+        {showSignupCallout && (
+          <div className={`rounded-2xl border px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between ${
+            requireAgentPortal
+              ? "bg-blue-50 border-blue-200"
+              : "bg-white border-gray-200"
+          }`}>
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-900 text-sm">
+                {requireAgentPortal ? "Sign up to download your media" : "Access your agent portal"}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {requireAgentPortal
+                  ? "Create a free account to download your full-resolution photos, floor plans, and marketing files."
+                  : "Save this gallery, access marketing tools, captions, and QR codes anytime — free."}
+              </p>
+            </div>
+            <a href={`/${slug}/agent/register`}
+              className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
+              style={{ background: primary }}>
+              {requireAgentPortal ? "Create Account to Download →" : "Create Free Account →"}
+            </a>
+          </div>
+        )}
+
         {/* Preview notice */}
         {!unlocked && balance <= 0 && (
           <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-center gap-2">
@@ -439,13 +477,21 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 {attachedFiles.length > 0 && <><span className="text-gray-300">·</span><span>{attachedFiles.length} document{attachedFiles.length !== 1 ? "s" : ""}</span></>}
               </div>
             </div>
-            <a
-              href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`}
-              download
-              className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
-              style={{ background: primary }}>
-              ↓ Download Everything
-            </a>
+            {canDownload ? (
+              <a
+                href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`}
+                download
+                className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
+                style={{ background: primary }}>
+                ↓ Download Everything
+              </a>
+            ) : requireAgentPortal ? (
+              <a href={`/${slug}/agent/register`}
+                className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
+                style={{ background: primary }}>
+                Sign up to Download →
+              </a>
+            ) : null}
           </div>
         )}
 
@@ -463,19 +509,27 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">{images.length}</span>
               </div>
               {unlocked && (
-                <div className="flex gap-2">
-                  <a href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=print`}
-                    download
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
-                    ↓ Print
-                  </a>
-                  <a href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web`}
-                    download
+                canDownload ? (
+                  <div className="flex gap-2">
+                    <a href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=print`}
+                      download
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+                      ↓ Print
+                    </a>
+                    <a href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web`}
+                      download
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90"
+                      style={{ background: primary }}>
+                      ↓ Web / MLS
+                    </a>
+                  </div>
+                ) : requireAgentPortal ? (
+                  <a href={`/${slug}/agent/register`}
                     className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90"
                     style={{ background: primary }}>
-                    ↓ Web / MLS
+                    Sign up to Download →
                   </a>
-                </div>
+                ) : null
               )}
             </div>
             <div className="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -510,14 +564,22 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                   {unlocked && m.key && (
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
                       <p className="text-white text-[11px] font-medium text-center truncate w-full px-2">{m.fileName}</p>
-                      <div className="flex gap-1.5">
-                        <a href={downloadUrl(m.key, "print", m.fileName)}
-                          className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide text-white bg-[#3486cf]"
-                          download onClick={(e) => e.stopPropagation()}>Print</a>
-                        <a href={downloadUrl(m.key, "web", m.fileName)}
-                          className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide text-white bg-[#c4974a]"
-                          download onClick={(e) => e.stopPropagation()}>Web</a>
-                      </div>
+                      {canDownload ? (
+                        <div className="flex gap-1.5">
+                          <a href={downloadUrl(m.key, "print", m.fileName)}
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide text-white bg-[#3486cf]"
+                            download onClick={(e) => e.stopPropagation()}>Print</a>
+                          <a href={downloadUrl(m.key, "web", m.fileName)}
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide text-white bg-[#c4974a]"
+                            download onClick={(e) => e.stopPropagation()}>Web</a>
+                        </div>
+                      ) : requireAgentPortal ? (
+                        <a href={`/${slug}/agent/register`}
+                          className="px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide text-white bg-[#3486cf]"
+                          onClick={(e) => e.stopPropagation()}>
+                          Sign Up to Download
+                        </a>
+                      ) : null}
                     </div>
                   )}
                 </div>
@@ -812,6 +874,29 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
               style={{ background: primary, color: "#fff" }}>
               Create Free Account →
             </a>
+          </div>
+        )}
+
+        {/* ── Agent portal signup callout (bottom) ────────────────────── */}
+        {showSignupCallout && (
+          <div className="rounded-2xl border border-gray-200 bg-white px-5 py-5 text-center">
+            <p className="font-semibold text-gray-900 mb-1">
+              {requireAgentPortal ? "Ready to download?" : "Keep this gallery at your fingertips"}
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              {requireAgentPortal
+                ? "Create your free agent account to download full-resolution files for this listing."
+                : "Sign up for a free agent portal to revisit this gallery, get social captions, a QR code, and more."}
+            </p>
+            <a href={`/${slug}/agent/register`}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ background: primary }}>
+              {requireAgentPortal ? "Create Account →" : "Sign Up Free →"}
+            </a>
+            <p className="text-xs text-gray-400 mt-3">
+              Already have an account?{" "}
+              <a href={`/${slug}/agent/login`} className="hover:underline" style={{ color: primary }}>Sign in</a>
+            </p>
           </div>
         )}
 

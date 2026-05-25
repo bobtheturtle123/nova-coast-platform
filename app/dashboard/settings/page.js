@@ -608,6 +608,7 @@ export default function SettingsPage() {
   const [autoConvertToListing,    setAutoConvertToListing]    = useState(false);
   const [allowRevisionRequests,   setAllowRevisionRequests]   = useState(false);
   const [requireScheduleApproval, setRequireScheduleApproval] = useState(false);
+  const [requireAgentPortal,      setRequireAgentPortal]      = useState(false);
   const [savingBooking, setSavingBooking] = useState(false);
 
   // Global job cost rates
@@ -763,6 +764,7 @@ export default function SettingsPage() {
           if (bc.autoConvertToListing !== undefined) setAutoConvertToListing(bc.autoConvertToListing);
           if (bc.allowRevisionRequests !== undefined) setAllowRevisionRequests(bc.allowRevisionRequests);
           if (bc.requireScheduleApproval !== undefined) setRequireScheduleApproval(bc.requireScheduleApproval);
+          if (bc.requireAgentPortal !== undefined) setRequireAgentPortal(bc.requireAgentPortal);
           if (bc.serviceAgreement) {
             setServiceAgreementEnabled(bc.serviceAgreement.enabled || false);
             setServiceAgreementText(bc.serviceAgreement.text || "");
@@ -996,6 +998,7 @@ export default function SettingsPage() {
       autoConvertToListing,
       allowRevisionRequests,
       requireScheduleApproval,
+      requireAgentPortal,
       serviceAgreement: { enabled: serviceAgreementEnabled, text: serviceAgreementText },
       terms:        termsText,
       privacy:      privacyText,
@@ -1838,6 +1841,23 @@ export default function SettingsPage() {
                 When ON, the time an agent selects during booking is a preference, not a confirmed appointment.
                 You review and confirm (or propose a new time) from the booking detail page.
                 The agent is notified by email once the time is confirmed or changed.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 py-3 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setRequireAgentPortal((v) => !v)}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors mt-0.5 ${requireAgentPortal ? "bg-[#3486cf]" : "bg-gray-200"}`}
+            >
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${requireAgentPortal ? "translate-x-4" : "translate-x-0"}`} />
+            </button>
+            <div>
+              <p className="text-sm font-medium text-[#0F172A]">Require agent portal signup to download</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                When ON, clients can view their gallery freely but must create a free agent portal account before downloading any files.
+                When OFF, a subtle sign-up callout is shown at the top and bottom of the gallery instead.
               </p>
             </div>
           </div>

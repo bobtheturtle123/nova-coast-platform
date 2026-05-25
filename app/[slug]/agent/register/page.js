@@ -80,21 +80,6 @@ function RegisterInner() {
     );
   }
 
-  if (!inviteToken && !verified) {
-    return (
-      <div className="max-w-sm mx-auto px-4 py-16 text-center">
-        <p className="text-4xl mb-4">🔗</p>
-        <p className="text-gray-700 font-medium mb-2">Invite Link Required</p>
-        <p className="text-gray-400 text-sm mb-6">
-          You need an invite link from your photographer to create an account. Check your email.
-        </p>
-        <Link href={`/${slug}/agent/login`} className="text-sm text-[#3486cf] hover:underline">
-          Already have an account? Sign in
-        </Link>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-sm mx-auto px-4 py-16">
       <h1 className="text-2xl font-semibold text-gray-900 mb-1">Create Account</h1>
