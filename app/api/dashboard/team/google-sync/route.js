@@ -1,4 +1,5 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
 
 async function getCtx(req) {
@@ -57,9 +58,9 @@ export async function DELETE(req) {
   snap.docs.forEach((d) => batch.delete(d.ref));
 
   if (memberId === "__owner__") {
-    batch.update(tenantRef, { ownerGoogleCalendar: null });
+    batch.update(tenantRef, { ownerGoogleCalendar: FieldValue.delete() });
   } else {
-    batch.update(tenantRef.collection("team").doc(memberId), { googleCalendar: null });
+    batch.update(tenantRef.collection("team").doc(memberId), { googleCalendar: FieldValue.delete() });
   }
 
   await batch.commit();
