@@ -42,6 +42,7 @@ export default function PhotographerSchedulePage() {
   const [calIdInput,     setCalIdInput]     = useState("");
   const [savingCalId,    setSavingCalId]    = useState(false);
   const [disconnecting,  setDisconnecting]  = useState(false);
+  const [connecting,     setConnecting]     = useState(false);
 
   const getToken = () => auth.currentUser?.getIdToken();
 
@@ -112,6 +113,35 @@ export default function PhotographerSchedulePage() {
     setSavingCalId(false);
   }
 
+  async function connectGoogleCalendar() {
+    setConnecting(true);
+    setSyncMsg("");
+    try {
+      const token = await getToken();
+      const popup = window.open(
+        `/api/calendar/oauth/start?token=${encodeURIComponent(token)}`,
+        "gcal-oauth",
+        "width=500,height=620,left=200,top=100"
+      );
+      await new Promise((resolve, reject) => {
+        let poll;
+        const cleanup = () => { clearInterval(poll); window.removeEventListener("message", handler); };
+        const handler = (e) => {
+          if (e.data?.type === "gcal-connected") { cleanup(); resolve(); }
+          if (e.data?.type === "gcal-error")     { cleanup(); reject(new Error(e.data.error || "Connection failed")); }
+        };
+        window.addEventListener("message", handler);
+        poll = setInterval(() => { if (popup?.closed) { cleanup(); resolve(); } }, 600);
+      });
+      setHasGcal(true);
+      setSyncMsg("Google Calendar connected!");
+      setTimeout(() => setSyncMsg(""), 4000);
+    } catch (e) {
+      setSyncMsg(e.message || "Connection failed");
+    }
+    setConnecting(false);
+  }
+
   async function disconnectGoogleCalendar() {
     if (!confirm("Disconnect Google Calendar? All synced busy blocks will be removed.")) return;
     setDisconnecting(true);
@@ -133,7 +163,8 @@ export default function PhotographerSchedulePage() {
       .filter((b) => (b.shootDate || b.preferredDate) && b.status !== "cancelled")
       .map((b) => {
         const ds = b.shootDate || b.preferredDate;
-        const dateObj = new Date(ds.length === 10 ? ds + "T12:00:00" : ds);
+        const datePart = ds.length >= 10 ? ds.slice(0, 10) : ds;
+        const dateObj = new Date(datePart + "T12:00:00");
         return { ...b, dateObj };
       });
   }, [bookings]);
@@ -205,6 +236,13 @@ export default function PhotographerSchedulePage() {
           <p className="text-gray-400 text-sm mt-0.5">Your upcoming shoots and blocked time</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
+          {!hasGcal && (
+            <button onClick={connectGoogleCalendar} disabled={connecting}
+              className="btn-outline text-sm px-4 py-2 flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="2" fill="#4285F4"/><path d="M18 12c0-3.31-2.69-6-6-6s-6 2.69-6 6 2.69 6 6 6 6-2.69 6-6z" fill="white"/><path d="M14.5 12c0-1.38-1.12-2.5-2.5-2.5S9.5 10.62 9.5 12s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5z" fill="#4285F4"/></svg>
+              {connecting ? "Connecting…" : "Connect Google Cal"}
+            </button>
+          )}
           {hasGcal && (
             <>
               <button onClick={syncGoogleCalendar} disabled={syncing}

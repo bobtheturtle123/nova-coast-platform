@@ -39,6 +39,26 @@ function isAllDayBusy(start, end) {
   );
 }
 
+// PATCH { memberId, calendarId } — save which Google Calendar to sync
+export async function PATCH(req) {
+  const ctx = await getCtx(req);
+  if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { memberId, calendarId } = await req.json().catch(() => ({}));
+  if (!memberId) return Response.json({ error: "memberId required" }, { status: 400 });
+
+  const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
+  const id = (calendarId || "").trim() || "primary";
+
+  if (memberId === "__owner__") {
+    await tenantRef.update({ "ownerGoogleCalendar.calendarId": id });
+  } else {
+    await tenantRef.collection("team").doc(memberId).update({ "googleCalendar.calendarId": id });
+  }
+
+  return Response.json({ ok: true, calendarId: id });
+}
+
 // DELETE { memberId } — admin removes a member's Google Calendar connection + clears google blocks
 export async function DELETE(req) {
   const ctx = await getCtx(req);

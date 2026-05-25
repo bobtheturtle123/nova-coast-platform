@@ -813,7 +813,7 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
 }
 
 // ─── Owner Calendar Sync Modal ────────────────────────────────────────────────
-function OwnerCalSyncModal({ tenant, onClose }) {
+function OwnerCalSyncModal({ tenant, onClose, onConnected }) {
   const APP_URL = getAppUrl();
   const isGCalConnected = !!tenant?.ownerGoogleCalendar?.refreshToken;
 
@@ -827,6 +827,9 @@ function OwnerCalSyncModal({ tenant, onClose }) {
   const [copied,        setCopied]        = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [gcalConnected, setGcalConnected] = useState(isGCalConnected);
+  const [calIdInput,    setCalIdInput]    = useState(tenant?.ownerGoogleCalendar?.calendarId && tenant.ownerGoogleCalendar.calendarId !== "primary" ? tenant.ownerGoogleCalendar.calendarId : "");
+  const [savingCalId,   setSavingCalId]   = useState(false);
+  const [currentCalId,  setCurrentCalId]  = useState(tenant?.ownerGoogleCalendar?.calendarId || "primary");
 
   useEffect(() => {
     if (calToken) return;
@@ -871,7 +874,8 @@ function OwnerCalSyncModal({ tenant, onClose }) {
           if (popup?.closed) { cleanup(); resolve(); }
         }, 600);
       });
-      onClose();
+      setGcalConnected(true);
+      onConnected?.();
     } catch (e) {
       setConnectError(e.message || "Connection failed");
     } finally {
@@ -926,6 +930,28 @@ function OwnerCalSyncModal({ tenant, onClose }) {
     } finally {
       setDisconnecting(false);
     }
+  }
+
+  async function saveCalendarId() {
+    setSavingCalId(true);
+    try {
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const idToken = await firebaseAuth.currentUser.getIdToken();
+      const id = calIdInput.trim() || "primary";
+      const res = await fetch("/api/dashboard/team/google-sync", {
+        method:  "PATCH",
+        headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
+        body:    JSON.stringify({ memberId: "__owner__", calendarId: id }),
+      });
+      if (res.ok) {
+        setCurrentCalId(id);
+        setConnectError("");
+      } else {
+        const d = await res.json();
+        setConnectError(d.error || "Failed to save calendar ID");
+      }
+    } catch (e) { setConnectError(e.message); }
+    setSavingCalId(false);
   }
 
   const feedUrl    = calToken ? `${APP_URL}/api/calendar/owner/${calToken}` : null;
@@ -984,6 +1010,29 @@ function OwnerCalSyncModal({ tenant, onClose }) {
               {connectError && (
                 <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">{connectError}</div>
               )}
+              <div className="mt-3 pt-3 border-t border-green-200">
+                <p className="text-xs font-semibold text-green-800 mb-1.5">Which calendar to sync</p>
+                <p className="text-[11px] text-green-700 mb-2 leading-relaxed">
+                  By default your primary calendar is synced. Paste a Calendar ID to sync a specific calendar —
+                  find it in Google Calendar › Settings › [Calendar name] › Integrate calendar.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={calIdInput}
+                    onChange={(e) => setCalIdInput(e.target.value)}
+                    placeholder="primary (default) or paste calendar ID"
+                    className="input-field flex-1 text-xs py-1.5"
+                  />
+                  <button onClick={saveCalendarId} disabled={savingCalId}
+                    className="text-xs bg-white border border-green-300 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-50 disabled:opacity-50 font-medium flex-shrink-0">
+                    {savingCalId ? "Saving…" : "Save"}
+                  </button>
+                </div>
+                {currentCalId !== "primary" && (
+                  <p className="text-[11px] text-green-700 mt-1">Currently syncing: {currentCalId}</p>
+                )}
+              </div>
             </div>
           ) : (
             <div className="border border-gray-200 rounded-xl p-4 space-y-3">
@@ -1560,6 +1609,15 @@ export default function TeamPage() {
       }
     } catch { toast("Something went wrong.", "error"); }
     setEditing(null);
+  }
+
+  async function refreshTenant() {
+    try {
+      const token = await getToken();
+      const res  = await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setTenant(data.tenant || null);
+    } catch { /* non-fatal */ }
   }
 
   async function deleteMember() {
@@ -2900,6 +2958,7 @@ export default function TeamPage() {
         <OwnerCalSyncModal
           tenant={tenant}
           onClose={() => setShowOwnerCalModal(false)}
+          onConnected={refreshTenant}
         />
       )}
 
