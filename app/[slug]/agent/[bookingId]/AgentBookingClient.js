@@ -91,7 +91,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
     ...(galleryUrl ? [{ id: "gallery", label: `Gallery${gallery?.imageCount > 0 ? ` (${gallery.imageCount})` : ""}` }] : []),
     ...(pw?.published ? [{ id: "website", label: "Property Website" }] : []),
     ...(booking.totalPrice > 0 ? [{ id: "invoice", label: "Invoice" }] : []),
-    { id: "revisions", label: pendingRevisions > 0 ? `Revisions (${pendingRevisions})` : "Revisions" },
+    ...(allowRevisions ? [{ id: "revisions", label: pendingRevisions > 0 ? `Revisions (${pendingRevisions})` : "Revisions" }] : []),
   ];
 
   return (
@@ -397,9 +397,10 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
       {/* ── INVOICE TAB ────────────────────────────────────────────── */}
       {tab === "invoice" && (
         <div className="space-y-4">
+          {/* Services */}
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-4">Invoice Summary</p>
-            <div className="space-y-3">
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-4">Services</p>
+            <div className="space-y-2.5">
               {booking.packageId && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Package — {booking.packageId}</span>
@@ -412,19 +413,84 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
                   <span className="text-gray-400">—</span>
                 </div>
               ))}
-              <div className="pt-3 border-t border-gray-100 flex justify-between font-semibold">
+              <div className="pt-3 border-t border-gray-100 flex justify-between font-semibold text-sm">
                 <span className="text-gray-800">Total</span>
-                <span className="text-gray-900">${Number(booking.totalPrice).toLocaleString()}</span>
+                <span className="text-gray-900">${Number(booking.totalPrice).toFixed(2)}</span>
               </div>
-              {booking.remainingBalance > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-amber-700 font-medium">Balance Due</span>
-                  <span className="text-amber-700 font-medium">${Number(booking.remainingBalance).toLocaleString()}</span>
-                </div>
-              )}
             </div>
           </div>
-          <p className="text-xs text-gray-400">For payment questions, contact your provider directly.</p>
+
+          {/* Payment breakdown */}
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-4">Payment Status</p>
+            <div className="space-y-3">
+              {/* Deposit row */}
+              {booking.depositAmount > 0 && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${booking.depositPaid ? "bg-emerald-500" : "bg-amber-400"}`} />
+                    <span className="text-sm text-gray-600">Deposit</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-900">${Number(booking.depositAmount).toFixed(2)}</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${booking.depositPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                      {booking.depositPaid ? "Paid" : "Pending"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Balance row */}
+              {booking.totalPrice > 0 && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${booking.balancePaid ? "bg-emerald-500" : "bg-amber-400"}`} />
+                    <span className="text-sm text-gray-600">Remaining balance</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-900">
+                      ${Number(booking.depositAmount > 0 ? (booking.totalPrice - booking.depositAmount) : booking.totalPrice).toFixed(2)}
+                    </span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${booking.balancePaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                      {booking.balancePaid ? "Paid" : "Pending"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Total paid / outstanding summary */}
+              <div className="pt-3 mt-1 border-t border-gray-100 space-y-2">
+                {(() => {
+                  const total    = Number(booking.totalPrice) || 0;
+                  const deposit  = Number(booking.depositAmount) || 0;
+                  const paid     = (booking.depositPaid ? deposit : 0) + (booking.balancePaid ? (total - deposit) : 0);
+                  const outstanding = Math.max(0, total - paid);
+                  return (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Total paid</span>
+                        <span className="font-semibold text-emerald-700">${paid.toFixed(2)}</span>
+                      </div>
+                      {outstanding > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-amber-700 font-medium">Outstanding balance</span>
+                          <span className="font-bold text-amber-700">${outstanding.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {outstanding === 0 && total > 0 && (
+                        <div className="flex items-center gap-2 text-sm text-emerald-700 font-semibold">
+                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          Paid in full
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-400">For payment questions, contact your photographer directly.</p>
         </div>
       )}
 
@@ -484,17 +550,9 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
       )}
 
       {/* ── REVISIONS TAB ────────────────────────────────────────────── */}
-      {tab === "revisions" && (
+      {tab === "revisions" && allowRevisions && (
         <div className="space-y-5">
-          {!allowRevisions ? (
-            <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-              </div>
-              <p className="text-sm font-medium text-gray-700 mb-1">Revision requests not enabled</p>
-              <p className="text-sm text-gray-400">Contact your photographer directly to request changes.</p>
-            </div>
-          ) : (<>
+          <>
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Submit a Revision Request</p>
             <textarea
@@ -572,7 +630,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
               <p className="text-sm">No revision requests yet.</p>
             </div>
           )}
-          </>)}
+          </>
         </div>
       )}
     </div>
