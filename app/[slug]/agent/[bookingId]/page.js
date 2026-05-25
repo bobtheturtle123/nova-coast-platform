@@ -131,15 +131,16 @@ export default async function AgentBookingPage({ params, searchParams }) {
       const images = media.filter((m) => !m.fileType?.startsWith("video/"));
       const videos = media.filter((m) =>  m.fileType?.startsWith("video/"));
       gallery = {
-        id:           bookingData.galleryId,
-        delivered:    gd.delivered    || false,
-        unlocked:     gd.unlocked     || false,
-        accessToken:  gd.accessToken  || null,
-        matterportUrl: gd.matterportUrl || null,
-        videoUrl:     gd.videoUrl     || null,
-        imageCount:   images.length,
-        videoCount:   videos.length,
-        coverUrl:     images[0]?.url || null,
+        id:                    bookingData.galleryId,
+        delivered:             gd.delivered              || false,
+        unlocked:              gd.unlocked               || false,
+        accessToken:           gd.accessToken            || null,
+        matterportUrl:         gd.matterportUrl          || null,
+        videoUrl:              gd.videoUrl               || null,
+        showPropertyWebsiteLink: gd.showPropertyWebsiteLink !== false,
+        imageCount:            images.length,
+        videoCount:            videos.length,
+        coverUrl:              images[0]?.url            || null,
       };
     }
   }
