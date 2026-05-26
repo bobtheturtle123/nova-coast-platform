@@ -71,34 +71,47 @@ export async function GET(req) {
       });
 
       try {
-        // ── Photos ──────────────────────────────────────────────────────────
+        // ── Photos (grouped by category into folders) ────────────────────────
         const MAX_PHOTOS = 300;
-        for (const img of photos.slice(0, MAX_PHOTOS)) {
-          try {
-            const res = await fetch(`${r2Url}/${img.key}`);
-            if (!res.ok) continue;
-            const buffer   = Buffer.from(await res.arrayBuffer());
-            const baseName = (img.fileName || "photo").replace(/\.[^.]+$/, "");
+        const photoSlice = photos.slice(0, MAX_PHOTOS);
 
-            if (extras) {
-              const webBuf = await sharp(buffer)
-                .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
-                .jpeg({ quality: WEB_QUALITY, progressive: true })
-                .toBuffer();
-              archive.append(buffer,  { name: `Photos/Print/${img.fileName || "photo.jpg"}` });
-              archive.append(webBuf,  { name: `Photos/Web-MLS/${baseName}-MLS.jpg` });
-            } else if (format === "web") {
-              const webBuf = await sharp(buffer)
-                .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
-                .jpeg({ quality: WEB_QUALITY, progressive: true })
-                .toBuffer();
-              archive.append(webBuf, { name: `${baseName}-MLS.jpg` });
-            } else {
-              // Print: use the already-fetched buffer (no resize)
-              archive.append(buffer, { name: img.fileName || "photo.jpg" });
+        // Build an ordered map: category → items (preserving insertion order)
+        const catMap = new Map();
+        for (const img of photoSlice) {
+          const cat = (img.category || "").trim() || "Photos";
+          if (!catMap.has(cat)) catMap.set(cat, []);
+          catMap.get(cat).push(img);
+        }
+
+        for (const [cat, items] of catMap) {
+          // Sanitise the folder name for ZIP path safety
+          const folder = cat.replace(/[/\\?%*:|"<>]/g, "-").trim();
+          for (const img of items) {
+            try {
+              const res = await fetch(`${r2Url}/${img.key}`);
+              if (!res.ok) continue;
+              const buffer   = Buffer.from(await res.arrayBuffer());
+              const baseName = (img.fileName || "photo").replace(/\.[^.]+$/, "");
+
+              if (extras) {
+                const webBuf = await sharp(buffer)
+                  .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
+                  .jpeg({ quality: WEB_QUALITY, progressive: true })
+                  .toBuffer();
+                archive.append(buffer,  { name: `Photos/Print/${folder}/${img.fileName || "photo.jpg"}` });
+                archive.append(webBuf,  { name: `Photos/Web-MLS/${folder}/${baseName}-MLS.jpg` });
+              } else if (format === "web") {
+                const webBuf = await sharp(buffer)
+                  .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
+                  .jpeg({ quality: WEB_QUALITY, progressive: true })
+                  .toBuffer();
+                archive.append(webBuf, { name: `${folder}/${baseName}-MLS.jpg` });
+              } else {
+                archive.append(buffer, { name: `${folder}/${img.fileName || "photo.jpg"}` });
+              }
+            } catch (e) {
+              console.warn("[download-zip] photo failed:", img.key, e?.message);
             }
-          } catch (e) {
-            console.warn("[download-zip] photo failed:", img.key, e?.message);
           }
         }
 

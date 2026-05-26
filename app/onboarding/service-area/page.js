@@ -660,7 +660,7 @@ export default function ServiceAreaStep() {
               <p style={{ fontSize: 12, color: "#9CA3AF", textAlign: "center" }}>You can set up service areas later from the dashboard. Use <strong>Skip for now</strong> below to continue.</p>
             </div>
           )}
-          <div ref={mapContainerRef} style={{ width: "100%", height: "100%" }} />
+          <div ref={mapContainerRef} style={{ width: "100%", height: "100%", display: mapError ? "none" : undefined }} />
 
           {/* Address search */}
           <AddressSearch mapRef={mapRef} mapReady={mapInitialized} onFirstSelect={handleFirstSelect} />

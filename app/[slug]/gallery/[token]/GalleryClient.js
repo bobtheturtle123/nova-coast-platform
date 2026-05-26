@@ -486,31 +486,33 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           </div>
         )}
 
-        {/* ── Property website link ──────────────────────────────────── */}
-        {booking?.propertyWebsite?.published && gallery.showPropertyWebsiteLink !== false && (
+        {/* ── Brochure (always visible when unlocked and property website exists) ── */}
+        {unlocked && booking?.propertyWebsite?.published && (
           <div className="bg-white border border-gray-200 rounded-2xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: primary + "18" }}>
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke={primary} strokeWidth="1.8">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
               <div className="min-w-0">
-                <p className="font-semibold text-gray-900 text-sm">Property Website</p>
-                <p className="text-xs text-gray-400">View full listing details, floor plans, and more</p>
+                <p className="font-semibold text-gray-900 text-sm">Property Brochure</p>
+                <p className="text-xs text-gray-400">Download or share the listing brochure</p>
               </div>
             </div>
             <div className="flex gap-2 flex-shrink-0 flex-wrap">
               <a href={`/${slug}/property/${booking.id || gallery.bookingId}/brochure`} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Brochure
+                Download Brochure
               </a>
-              <a href={`/${slug}/property/${booking.id || gallery.bookingId}`} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ background: primary }}>
-                View Listing ↗
-              </a>
+              {gallery.showPropertyWebsiteLink !== false && (
+                <a href={`/${slug}/property/${booking.id || gallery.bookingId}`} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                  style={{ background: primary }}>
+                  View Listing ↗
+                </a>
+              )}
             </div>
           </div>
         )}

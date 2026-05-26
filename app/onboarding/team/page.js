@@ -23,6 +23,27 @@ export default function TeamStep() {
   const [sending, setSending] = useState(false);
   const [sent,    setSent]    = useState(false);
   const [error,   setError]  = useState("");
+  const [upgrading, setUpgrading] = useState(false);
+
+  async function handleUpgrade() {
+    setUpgrading(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      if (tenant?.stripeSubscriptionId) {
+        const res  = await fetch("/api/billing/portal", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (data.url) { window.location.href = data.url; return; }
+      }
+      const res  = await fetch("/api/billing/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan: "studio" }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch {}
+    setUpgrading(false);
+  }
 
   const filledRows = rows.filter(r => r.name.trim() && r.email.trim());
 
@@ -110,10 +131,12 @@ export default function TeamStep() {
           <p style={{ margin: "0 0 20px", fontSize: 13, color: "#6B7280", lineHeight: 1.6 }}>
             The Solo plan is designed for individual photographers. Upgrade to Studio to invite photographers, assistants, and managers.
           </p>
-          <a href="/dashboard/billing" target="_blank" rel="noopener noreferrer"
-            style={{ display: "inline-block", fontSize: 13, fontWeight: 600, color: "#3486cf", padding: "8px 20px", border: "1px solid #3486cf", borderRadius: 8, textDecoration: "none" }}>
-            View upgrade options →
-          </a>
+          <button
+            onClick={handleUpgrade}
+            disabled={upgrading}
+            style={{ display: "inline-block", fontSize: 13, fontWeight: 600, color: "#3486cf", padding: "8px 20px", border: "1px solid #3486cf", borderRadius: 8, background: "none", cursor: upgrading ? "not-allowed" : "pointer", opacity: upgrading ? 0.6 : 1 }}>
+            {upgrading ? "Opening…" : "Upgrade plan →"}
+          </button>
         </div>
       ) : (
         <>

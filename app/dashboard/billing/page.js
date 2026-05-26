@@ -78,9 +78,27 @@ export default function BillingPage() {
         fetch("/api/dashboard/stats",  { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/dashboard/team",   { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      if (tenantRes.ok) { const data = await tenantRes.json(); setTenant(data.tenant); }
+      let tenantData = null;
+      if (tenantRes.ok) { const data = await tenantRes.json(); tenantData = data.tenant; }
       if (statsRes.ok)  { const data = await statsRes.json();  setListingsThisYear(data.stats?.listingsThisYear || 0); }
       if (teamRes.ok)   { const data = await teamRes.json();   setTeamMemberCount(data.members?.length || 0); }
+
+      // If no subscription recorded but we have a Stripe customer, sync from Stripe to recover
+      // missed webhooks before rendering the billing UI (prevents showing "Get started" for already-paid users).
+      if (tenantData && !tenantData.stripeSubscriptionId && !tenantData.permanentPlan && tenantData.stripeCustomerId) {
+        try {
+          const syncRes = await fetch("/api/billing/sync", { headers: { Authorization: `Bearer ${token}` } });
+          if (syncRes.ok) {
+            const syncData = await syncRes.json();
+            if (syncData.synced) {
+              const refreshed = await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } });
+              if (refreshed.ok) { const d = await refreshed.json(); tenantData = d.tenant || tenantData; }
+            }
+          }
+        } catch {}
+      }
+
+      setTenant(tenantData);
       setLoading(false);
     });
   }, []);

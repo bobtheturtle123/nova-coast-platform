@@ -175,11 +175,26 @@ function CalendarTab({ listings, blocks, loading, onDeleteBlock }) {
     setWeekAnchor(d);
   }
 
-  function isBlockedDay(dateKey) {
-    return blocks.some((b) => dateKey >= b.startDate?.slice(0,10) && dateKey <= b.endDate?.slice(0,10));
+  // Derive a YYYY-MM-DD key in the browser's local timezone from an ISO timestamp.
+  function localDayKey(iso) {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   }
+  function fmtBlockTime(iso) {
+    if (!iso) return "";
+    return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  }
+  // Only all-day blocks visually "block" the whole day cell.
+  function isBlockedDay(dateKey) {
+    return blocks.some((b) => b.allDay && dateKey >= b.startDate?.slice(0,10) && dateKey <= b.endDate?.slice(0,10));
+  }
+  // For timed blocks, match on the local date derived from startTime so timezone is respected.
   function getBlocksForDay(dateKey) {
-    return blocks.filter((b) => dateKey >= b.startDate?.slice(0,10) && dateKey <= b.endDate?.slice(0,10));
+    return blocks.filter((b) => {
+      if (b.allDay) return dateKey >= b.startDate?.slice(0,10) && dateKey <= b.endDate?.slice(0,10);
+      return localDayKey(b.startTime) === dateKey;
+    });
   }
 
   if (loading) return (
@@ -277,6 +292,11 @@ function CalendarTab({ listings, blocks, loading, onDeleteBlock }) {
                                   className="opacity-0 group-hover:opacity-100 text-red-500 flex-shrink-0 leading-none">×</button>
                               )}
                             </div>
+                            {!bl.allDay && bl.startTime && (
+                              <span className="text-red-400 block">
+                                {fmtBlockTime(bl.startTime)}{bl.endTime ? ` – ${fmtBlockTime(bl.endTime)}` : ""}
+                              </span>
+                            )}
                             {bl.memberName && <span className="text-red-400 block">{bl.memberName}</span>}
                           </div>
                         ))}
@@ -341,8 +361,12 @@ function CalendarTab({ listings, blocks, loading, onDeleteBlock }) {
                         </div>
                         <div className="space-y-0.5">
                           {dayBlockList.map((bl) => (
-                            <div key={bl.id} className="flex items-center gap-0.5 text-[9px] font-semibold text-red-500 bg-red-100 px-1 py-0.5 rounded group">
-                              <span className="truncate flex-1">🚫 {bl.reason}{bl.memberName ? ` · ${bl.memberName}` : ""}</span>
+                            <div key={bl.id} className={`flex items-center gap-0.5 text-[9px] font-semibold px-1 py-0.5 rounded group ${bl.allDay ? "text-red-500 bg-red-100" : "text-orange-600 bg-orange-50 border border-orange-200"}`}>
+                              <span className="truncate flex-1">
+                                {bl.allDay ? "🚫 " : "⏰ "}{bl.reason}
+                                {!bl.allDay && bl.startTime ? ` ${fmtBlockTime(bl.startTime)}` : ""}
+                                {bl.memberName ? ` · ${bl.memberName}` : ""}
+                              </span>
                               {onDeleteBlock && (
                                 <button onClick={(e) => { e.stopPropagation(); onDeleteBlock(bl.id); }}
                                   className="opacity-0 group-hover:opacity-100 flex-shrink-0 ml-0.5 leading-none">×</button>
