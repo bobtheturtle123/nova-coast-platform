@@ -154,7 +154,21 @@ export async function POST(req) {
 
       case "checkout.session.completed": {
         const session = event.data.object;
-        const { bookingId, tenantId, type, pack } = session.metadata || {};
+        const { bookingId, tenantId, type, pack, plan } = session.metadata || {};
+
+        // Subscription checkout — write to Firestore immediately as a backup to
+        // customer.subscription.created (which may fire late or be missed if webhook
+        // is misconfigured). This dual-write ensures the tenant is unblocked right away.
+        if (session.mode === "subscription" && session.subscription && tenantId) {
+          await adminDb.collection("tenants").doc(tenantId).update({
+            stripeSubscriptionId: session.subscription,
+            subscriptionStatus:   "active",
+            subscriptionPlan:     plan || "solo",
+          });
+          console.log(`[stripe/webhook] subscription checkout completed — tenant=${tenantId} plan=${plan || "solo"}`);
+          break;
+        }
+
         if (!tenantId) {
           console.warn(`[stripe/webhook] checkout.session.completed missing tenantId — session=${session.id}`);
           break;

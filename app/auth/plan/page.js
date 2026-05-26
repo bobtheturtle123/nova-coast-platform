@@ -65,9 +65,21 @@ export default function PlanSelectionPage() {
         if (res.ok) {
           const { tenant } = await res.json();
           // Already paid — skip to dashboard if onboarding done, otherwise continue onboarding
-          if (tenant?.stripeSubscriptionId || tenant?.permanentPlan) {
+          if (tenant?.stripeSubscriptionId || tenant?.permanentPlan || tenant?.subscriptionPlan) {
             router.replace(tenant?.onboardingCompleted ? "/dashboard" : "/onboarding");
             return;
+          }
+          // Has a Stripe customer but no subscription recorded — webhook may have been missed.
+          // Try to sync from Stripe before showing the plan selection screen.
+          if (tenant?.stripeCustomerId) {
+            try {
+              const syncRes  = await fetch("/api/billing/sync", { headers: { Authorization: `Bearer ${token}` } });
+              const syncData = await syncRes.json();
+              if (syncData.synced) {
+                router.replace(tenant?.onboardingCompleted ? "/dashboard" : "/onboarding");
+                return;
+              }
+            } catch {}
           }
         }
       } catch {}

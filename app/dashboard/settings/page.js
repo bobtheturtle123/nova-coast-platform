@@ -1664,9 +1664,11 @@ export default function SettingsPage() {
               { value: "none",    label: "No deposit",   desc: "Clients pay in full" },
             ].map((m) => (
               <button key={m.value} type="button" onClick={() => {
-                setDepositType(m.value);
-                if (m.value === "percent") setDepositValue(50);
-                else if (m.value === "fixed") setDepositValue(200);
+                if (m.value !== depositType) {
+                  setDepositType(m.value);
+                  if (m.value === "percent") setDepositValue(50);
+                  else if (m.value === "fixed") setDepositValue(200);
+                }
               }}
                 className={`p-3 border rounded-xl text-left transition-colors ${
                   depositType === m.value ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-[#3486cf]/30"

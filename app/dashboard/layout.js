@@ -177,7 +177,7 @@ export default function DashboardLayout({ children }) {
           locale:   d.tenant?.locale   || "en-US",
           currency: d.tenant?.currency || "USD",
         });
-        const hasSub = !!(d.tenant?.stripeSubscriptionId || d.tenant?.permanentPlan);
+        const hasSub = !!(d.tenant?.stripeSubscriptionId || d.tenant?.permanentPlan || d.tenant?.subscriptionPlan);
         if (!hasSub) {
           router.push("/auth/plan");
           return;

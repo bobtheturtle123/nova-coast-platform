@@ -41,6 +41,8 @@ export async function POST(req) {
       customer:               customerId,
       line_items:             [{ price: priceId, quantity: 1 }],
       allow_promotion_codes:  true,
+      // Session-level metadata lets checkout.session.completed update the tenant immediately
+      metadata: { tenantId: ctx.tenantId, plan },
       success_url:  successPath ? `${getAppUrl()}${successPath}` : `${getAppUrl()}/dashboard/billing?subscribed=true`,
       cancel_url:   successPath ? `${getAppUrl()}${successPath.split("?")[0]}` : `${getAppUrl()}/dashboard/billing`,
       subscription_data: {

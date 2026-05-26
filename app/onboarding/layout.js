@@ -32,6 +32,12 @@ export default function OnboardingLayout({ children }) {
           const d = await res.json();
           setTenant(d.tenant || null);
           setOnboarding(d.tenant?.onboarding || null);
+
+          // Tenant already finished onboarding — send them to dashboard, not back here
+          if (d.tenant?.onboardingCompleted) {
+            router.replace("/dashboard");
+            return;
+          }
         }
       } catch {}
       setLoading(false);

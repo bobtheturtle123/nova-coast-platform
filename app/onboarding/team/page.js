@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { useOnboarding, StepCard } from "../ctx";
 import { avatarColor, initials } from "@/lib/avatar";
-import { getEffectivePlan } from "@/lib/plans";
+import { getEffectivePlan, getSeatLimit } from "@/lib/plans";
 
 const ROLES = ["photographer", "editor", "coordinator", "admin"];
 
@@ -16,7 +16,7 @@ function emptyRow() {
 export default function TeamStep() {
   const router = useRouter();
   const { tenant, onboarding, saveOnboarding } = useOnboarding();
-  const isSolo = getEffectivePlan(tenant) === "solo";
+  const isSolo = getSeatLimit(getEffectivePlan(tenant)) <= 1;
 
   const [rows,   setRows]   = useState([emptyRow()]);
   const [sending, setSending] = useState(false);
