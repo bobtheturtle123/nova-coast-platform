@@ -65,7 +65,7 @@ export default function PlanSelectionPage() {
         if (res.ok) {
           const { tenant } = await res.json();
           // Already paid — skip to dashboard if onboarding done, otherwise continue onboarding
-          if (tenant?.stripeSubscriptionId || tenant?.permanentPlan || tenant?.subscriptionPlan) {
+          if (tenant?.stripeSubscriptionId || tenant?.permanentPlan) {
             router.replace(tenant?.onboardingCompleted ? "/dashboard" : "/onboarding");
             return;
           }

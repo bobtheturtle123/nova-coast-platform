@@ -16,7 +16,8 @@ function emptyRow() {
 export default function TeamStep() {
   const router = useRouter();
   const { tenant, onboarding, saveOnboarding } = useOnboarding();
-  const isSolo = getSeatLimit(getEffectivePlan(tenant)) <= 1;
+  const seatLimit = getSeatLimit(getEffectivePlan(tenant));
+  const isSolo = seatLimit !== null && seatLimit <= 1;
 
   const [rows,   setRows]   = useState([emptyRow()]);
   const [sending, setSending] = useState(false);

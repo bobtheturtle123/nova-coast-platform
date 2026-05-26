@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { auth } from "@/lib/firebase";
 import { useOnboarding, StepCard } from "../ctx";
 
 function SummaryRow({ icon, title, summary, editHref }) {
@@ -40,6 +41,15 @@ export default function ReviewStep() {
         currentStep: 5,
       });
       await patch({ onboardingCompleted: true, starterGuideCompleted: false }).catch(() => {});
+      // Pre-sync subscription so the dashboard gate doesn't bounce them to /auth/plan.
+      // This recovers cases where the Stripe webhook fired late or was missed entirely.
+      try {
+        const u = auth.currentUser;
+        if (u) {
+          const tok = await u.getIdToken();
+          await fetch("/api/billing/sync", { headers: { Authorization: `Bearer ${tok}` } });
+        }
+      } catch {}
     } catch {
       setFinishing(false);
       return;

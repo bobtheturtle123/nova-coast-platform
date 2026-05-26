@@ -563,7 +563,7 @@ export default function ServiceAreaStep() {
 
   const visibleZones = filterPhotog === "all" ? sortedZones : sortedZones.filter(z => z.assignedTo?.includes(filterPhotog));
 
-  const canContinue = zones.length > 0;
+  const canContinue = zones.length > 0 || mapError || !MAPBOX_TOKEN;
 
   return (
     <StepCard
@@ -652,8 +652,12 @@ export default function ServiceAreaStep() {
             </div>
           )}
           {mapError && (
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#F8F7F4", flexDirection: "column", gap: 8 }}>
-              <p style={{ fontSize: 13, color: "#9CA3AF" }}>Map failed to load.</p>
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#F8F7F4", flexDirection: "column", gap: 10, padding: "24px" }}>
+              <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#D1D5DB" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              <p style={{ fontSize: 13, color: "#9CA3AF", textAlign: "center" }}>Map failed to load.</p>
+              <p style={{ fontSize: 12, color: "#9CA3AF", textAlign: "center" }}>You can set up service areas later from the dashboard. Use <strong>Skip for now</strong> below to continue.</p>
             </div>
           )}
           <div ref={mapContainerRef} style={{ width: "100%", height: "100%" }} />
