@@ -12,11 +12,13 @@ export default function BookingDetailPage() {
   const { id }   = useParams();
   const router   = useRouter();
 
-  const [booking,    setBooking]    = useState(null);
-  const [catalog,    setCatalog]    = useState(null);
-  const [loading,    setLoading]    = useState(true);
-  const [cancelling,   setCancelling]   = useState(false);
-  const [error,        setError]        = useState("");
+  const [booking,     setBooking]     = useState(null);
+  const [catalog,     setCatalog]     = useState(null);
+  const [tenantCfg,   setTenantCfg]   = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [cancelling,  setCancelling]  = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [error,        setError]      = useState("");
   const [promoInput,   setPromoInput]   = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoMsg,     setPromoMsg]     = useState(null); // { text, ok }
@@ -24,16 +26,23 @@ export default function BookingDetailPage() {
   const fetchAll = useCallback(async (user) => {
     try {
       const token = await user.getIdToken();
-      const [bRes, cRes] = await Promise.all([
-        fetch(`/api/dashboard/bookings/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`/api/dashboard/catalog`,         { headers: { Authorization: `Bearer ${token}` } }),
+      const h = { Authorization: `Bearer ${token}` };
+      const [bRes, cRes, tRes] = await Promise.all([
+        fetch(`/api/dashboard/bookings/${id}`, { headers: h }),
+        fetch(`/api/dashboard/catalog`,         { headers: h }),
+        fetch(`/api/dashboard/tenant`,          { headers: h }),
       ]);
       if (!bRes.ok) { setError("Booking not found."); return; }
       const bData = await bRes.json();
       setBooking(bData.booking);
-      if (cRes.ok) {
-        const cData = await cRes.json();
-        setCatalog(cData);
+      if (cRes.ok) { const cData = await cRes.json(); setCatalog(cData); }
+      if (tRes.ok) {
+        const tData = await tRes.json();
+        const slug = tData.tenant?.slug;
+        if (slug) {
+          const catRes = await fetch(`/api/tenant-public/${slug}/catalog`);
+          if (catRes.ok) { const full = await catRes.json(); setTenantCfg(full.bookingConfig || null); }
+        }
       }
     } catch { setError("Failed to load booking."); }
     finally   { setLoading(false); }
@@ -92,7 +101,6 @@ export default function BookingDetailPage() {
   }
 
   async function cancelBooking() {
-    if (!confirm("Cancel this booking? The client will not be notified automatically.")) return;
     setCancelling(true);
     try {
       const token = await auth.currentUser.getIdToken();
@@ -102,7 +110,7 @@ export default function BookingDetailPage() {
         body:    JSON.stringify({ status: "cancelled" }),
       });
       if (res.ok) setBooking((b) => ({ ...b, status: "cancelled" }));
-    } finally { setCancelling(false); }
+    } finally { setCancelling(false); setShowCancelModal(false); }
   }
 
   if (loading) return (
@@ -351,14 +359,54 @@ export default function BookingDetailPage() {
           <p className="text-xs uppercase tracking-wide text-gray-400 mb-2">Cancel Booking</p>
           <p className="text-xs text-gray-400 mb-3">The client will not be notified automatically.</p>
           <button
-            disabled={cancelling}
-            onClick={cancelBooking}
-            className="text-sm px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+            onClick={() => setShowCancelModal(true)}
+            className="text-sm px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
           >
-            {cancelling ? "Cancelling…" : "Cancel Booking"}
+            Cancel Booking
           </button>
         </div>
       )}
+
+      {/* Cancel confirmation modal */}
+      {showCancelModal && (() => {
+        const cancCfg   = tenantCfg?.cancellation;
+        const feeEnabled  = cancCfg?.feeEnabled;
+        const feePct      = cancCfg?.feePercent    || 0;
+        const feeWindowHrs = cancCfg?.feeWindowHrs || 0;
+        let cancelFee = 0;
+        if (feeEnabled && feePct > 0 && feeWindowHrs > 0 && booking.shootDate) {
+          const shootDt    = new Date(`${booking.shootDate.split("T")[0]}T${booking.shootTime || "12:00:00"}`);
+          const hoursUntil = (shootDt - new Date()) / (1000 * 60 * 60);
+          if (hoursUntil >= 0 && hoursUntil <= feeWindowHrs) {
+            cancelFee = Math.round((booking.totalPrice || 0) * feePct) / 100;
+          }
+        }
+        return (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setShowCancelModal(false)}>
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-base font-semibold text-gray-900 mb-2">Cancel this booking?</h3>
+              <p className="text-sm text-gray-500 mb-4">The client will not be notified automatically.</p>
+              {cancelFee > 0 && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-0.5">Late Cancellation Fee</p>
+                  <p className="text-xl font-bold text-amber-700">${cancelFee.toFixed(2)}</p>
+                  <p className="text-xs text-amber-600 mt-0.5">{feePct}% of booking total — within {feeWindowHrs}hr window. Apply manually from the booking.</p>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button onClick={() => setShowCancelModal(false)}
+                  className="flex-1 text-sm py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50">
+                  Keep Booking
+                </button>
+                <button onClick={cancelBooking} disabled={cancelling}
+                  className="flex-1 text-sm py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
+                  {cancelling ? "Cancelling…" : "Confirm Cancel"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {booking.status === "cancelled" && (
         <div className="rounded-xl p-4 bg-red-50 border border-red-200">

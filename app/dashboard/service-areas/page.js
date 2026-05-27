@@ -378,7 +378,8 @@ export default function ServiceAreasPage() {
   useEffect(() => {
     if (!mapsReady || !mapContainerRef.current || mapLoadedRef.current) return;
     if (!window.mapboxgl || !window.MapboxDraw) return;
-    if (!window.mapboxgl.supported()) { setMapError(true); return; }
+    // Allow software WebGL fallback (works in VMs / browsers with hardware acceleration off)
+    if (!window.mapboxgl.supported({ failIfMajorPerformanceCaveat: false })) { setMapError(true); return; }
 
     mapLoadedRef.current = true;
     window.mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -401,11 +402,12 @@ export default function ServiceAreasPage() {
       let map;
       try {
         map = new window.mapboxgl.Map({
-          container: mapContainerRef.current,
-          style:     "mapbox://styles/mapbox/streets-v11",
-          center:    initCenter,
-          zoom:      initZoom,
-          attributionControl: true,
+          container:                  mapContainerRef.current,
+          style:                      "mapbox://styles/mapbox/streets-v11",
+          center:                     initCenter,
+          zoom:                       initZoom,
+          attributionControl:         true,
+          failIfMajorPerformanceCaveat: false,
         });
       } catch (err) {
         console.error("[service-areas] Map init failed:", err?.message);

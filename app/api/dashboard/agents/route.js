@@ -45,7 +45,17 @@ export async function PUT(req) {
   const agentId = Buffer.from(email.toLowerCase()).toString("base64").replace(/[^a-zA-Z0-9]/g, "").slice(0, 32);
   const ref = adminDb.collection("tenants").doc(ctx.tenantId).collection("agents").doc(agentId);
   const existing = await ref.get();
-  if (existing.exists) return Response.json({ error: "A customer with this email already exists." }, { status: 409 });
+
+  if (existing.exists) {
+    // Email matches — update the existing record (don't create a duplicate)
+    const updates = {};
+    if (name)    updates.name    = name;
+    if (phone)   updates.phone   = phone;
+    if (company) updates.company = company;
+    if (notes)   updates.notes   = notes;
+    if (Object.keys(updates).length > 0) await ref.update(updates);
+    return Response.json({ ok: true, agentId, updated: true });
+  }
 
   await ref.set({
     id: agentId,

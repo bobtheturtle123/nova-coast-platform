@@ -2302,8 +2302,8 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Per-photographer ZIP toggle */}
-            <div className="border border-gray-200 rounded-lg p-4">
+            {/* Per-photographer ZIP toggle — only relevant when calculating by distance (not flat fee or zones) */}
+            {travelMode === "perMile" && <div className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-[#0F172A]">Calculate from photographer's home ZIP</p>
@@ -2321,7 +2321,7 @@ export default function SettingsPage() {
                   A photographer in LA shooting in LA, and one in San Diego shooting in San Diego, will each be charged travel from their own home ZIP — not yours. Set home ZIPs under Team → edit member.
                 </p>
               )}
-            </div>
+            </div>}
           </div>
         )}
 

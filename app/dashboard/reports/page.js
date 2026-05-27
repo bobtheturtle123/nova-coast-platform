@@ -84,10 +84,11 @@ function exportCSV(bookings, period) {
   const rows = [
     ["Booking ID","Client","Address","Status","Total Price","Deposit Paid","Balance Paid","Revenue Collected","Total Cost","Net Profit","Margin %","Created At","Shoot Date"],
     ...bookings.map((b) => {
+      const effPrice  = Math.max(0, (b.totalPrice || 0) - (b.promoDiscount || 0));
       const revenue   = (b.depositPaid ? (b.depositAmount || 0) : 0) + (b.balancePaid ? (b.remainingBalance || 0) : 0);
       const totalCost = b.costs?.totalCost || 0;
-      const profit    = (b.totalPrice || 0) - totalCost;
-      const margin    = b.totalPrice > 0 ? Math.round((profit / b.totalPrice) * 100) : "";
+      const profit    = effPrice - totalCost;
+      const margin    = effPrice > 0 ? Math.round((profit / effPrice) * 100) : "";
       return [
         b.id || "",
         b.clientName || "",
@@ -131,8 +132,8 @@ export default function ReportsPage() {
     user.getIdToken().then(async (token) => {
 
       const [bookRes, tenantRes] = await Promise.all([
-        fetch("/api/dashboard/bookings", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/tenant",   { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/bookings?limit=200", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/dashboard/tenant",              { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       if (bookRes.ok) {
         const d = await bookRes.json();
@@ -162,16 +163,21 @@ export default function ReportsPage() {
   );
 
   // ── Revenue stats ─────────────────────────────────────────────────────────
-  const totalRevenue  = filtered.filter((b) => b.depositPaid).reduce((s, b) => s + (b.depositAmount || 0), 0)
+  // effectivePrice accounts for promo discounts so free/discounted shoots don't inflate revenue
+  function effectivePrice(b) {
+    return Math.max(0, (b.totalPrice || 0) - (b.promoDiscount || 0));
+  }
+  const totalRevenue  = filtered.filter((b) => b.depositPaid).reduce((s, b) => s + (b.depositAmount  || 0), 0)
                       + filtered.filter((b) => b.balancePaid).reduce((s, b) => s + (b.remainingBalance || 0), 0);
   const totalBookings = filtered.length;
   const paidDeposit   = filtered.filter((b) => b.depositPaid).length;
-  const avgOrder      = totalBookings > 0 ? Math.round(filtered.reduce((s, b) => s + (b.totalPrice || 0), 0) / totalBookings) : 0;
-  const delivered     = filtered.filter((b) => b.gallery?.delivered).length;
+  const avgOrder      = totalBookings > 0 ? Math.round(filtered.reduce((s, b) => s + effectivePrice(b), 0) / totalBookings) : 0;
+  // workflowStatus is set to "delivered" when a gallery is sent to the client
+  const delivered     = filtered.filter((b) => b.workflowStatus === "delivered").length;
 
   // ── Profit stats ──────────────────────────────────────────────────────────
   const totalCostAll  = filtered.reduce((s, b) => s + (b.costs?.totalCost || 0), 0);
-  const totalPriceAll = filtered.reduce((s, b) => s + (b.totalPrice || 0), 0);
+  const totalPriceAll = filtered.reduce((s, b) => s + effectivePrice(b), 0);
   const netProfit     = totalPriceAll - totalCostAll;
   const marginPct     = totalPriceAll > 0 ? Math.round((netProfit / totalPriceAll) * 100) : 0;
   const withCosts     = filtered.filter((b) => b.costs?.totalCost > 0).length;
@@ -212,10 +218,10 @@ export default function ReportsPage() {
       const d   = new Date(b.createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,"0")}`;
       if (!map[key]) map[key] = { label: `${MONTHS[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`, profit: 0 };
-      map[key].profit += (b.totalPrice || 0) - (b.costs?.totalCost || 0);
+      map[key].profit += effectivePrice(b) - (b.costs?.totalCost || 0);
     });
     return Object.entries(map).sort(([a],[b]) => a.localeCompare(b)).map(([,v]) => v);
-  }, [filtered]);
+  }, [filtered]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Revenue by service ────────────────────────────────────────────────────
   const byService = useMemo(() => {
@@ -228,7 +234,7 @@ export default function ReportsPage() {
       const rawKey = b.packageId || (b.serviceIds?.[0]) || "custom";
       const label  = nameMap[rawKey] || (rawKey === "custom" ? "Custom / A la carte" : rawKey);
       if (!map[rawKey]) map[rawKey] = { label, revenue: 0, count: 0 };
-      map[rawKey].revenue += b.totalPrice || 0;
+      map[rawKey].revenue += effectivePrice(b);
       map[rawKey].count++;
     });
     return Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 8);
