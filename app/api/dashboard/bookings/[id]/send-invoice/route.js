@@ -41,16 +41,38 @@ export async function POST(req, { params }) {
   const tenant  = await getTenantById(ctx.tenantId);
   if (!tenant) return Response.json({ error: "Tenant not found" }, { status: 404 });
 
+  // Body is optional (older callers send no body)
+  const body    = await req.json().catch(() => ({}));
+  const payFull = body?.payFull === true;
+
   const appUrl = getAppUrl();
   const address = booking.fullAddress || booking.address || "Property";
 
-  // Determine amount due and build a Stripe Checkout link if applicable
-  const paidInFull   = booking.paidInFull || booking.balancePaid;
-  const depositPaid  = booking.depositPaid;
-  const amountDue    = paidInFull ? 0 : depositPaid
-    ? (booking.remainingBalance || 0)
-    : (booking.depositAmount || booking.totalPrice || 0);
-  const paymentLabel = depositPaid ? "Balance due" : "Deposit";
+  // Determine amount due and build a Stripe Checkout link
+  const paidInFull  = booking.paidInFull || booking.balancePaid;
+  const depositPaid = booking.depositPaid;
+
+  const promoDiscount = Number(booking.promoDiscount) || 0;
+
+  let amountDue, paymentLabel, paymentType;
+  if (paidInFull) {
+    amountDue    = 0;
+    paymentLabel = "Paid";
+    paymentType  = "balance";
+  } else if (payFull && !depositPaid) {
+    // Tenant chose "pay full invoice" — charge total in one shot
+    amountDue    = Math.max(0, (booking.totalPrice || 0) - promoDiscount);
+    paymentLabel = "Full invoice";
+    paymentType  = "full";
+  } else if (depositPaid) {
+    amountDue    = Math.max(0, (booking.remainingBalance || 0) - promoDiscount);
+    paymentLabel = "Balance due";
+    paymentType  = "balance";
+  } else {
+    amountDue    = Math.max(0, (booking.depositAmount || booking.totalPrice || 0) - promoDiscount);
+    paymentLabel = "Deposit";
+    paymentType  = "deposit";
+  }
 
   let paymentUrl = null;
 
@@ -71,19 +93,19 @@ export async function POST(req, { params }) {
           quantity: 1,
         }],
         customer_email: booking.clientEmail || undefined,
-        success_url: `${appUrl}/payment-success?bookingId=${params.id}&type=${depositPaid ? "balance" : "deposit"}&session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${appUrl}/payment-success?bookingId=${params.id}&type=${paymentType}&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url:  `${appUrl}/${tenant.slug || ""}/book/payment?cancelled=true`,
         metadata: {
           bookingId:  params.id,
           tenantId:   ctx.tenantId,
-          type:       depositPaid ? "balance" : "deposit",
+          type:       paymentType,
           clientName: booking.clientName || "",
         },
         payment_intent_data: {
           metadata: {
             bookingId: params.id,
             tenantId:  ctx.tenantId,
-            type:      depositPaid ? "balance" : "deposit",
+            type:      paymentType,
           },
         },
       };

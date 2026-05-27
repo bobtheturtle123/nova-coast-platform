@@ -15,8 +15,11 @@ export default function BookingDetailPage() {
   const [booking,    setBooking]    = useState(null);
   const [catalog,    setCatalog]    = useState(null);
   const [loading,    setLoading]    = useState(true);
-  const [cancelling, setCancelling] = useState(false);
-  const [error,      setError]      = useState("");
+  const [cancelling,   setCancelling]   = useState(false);
+  const [error,        setError]        = useState("");
+  const [promoInput,   setPromoInput]   = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoMsg,     setPromoMsg]     = useState(null); // { text, ok }
 
   const fetchAll = useCallback(async (user) => {
     try {
@@ -43,6 +46,50 @@ export default function BookingDetailPage() {
     });
     return unsub;
   }, [fetchAll, router]);
+
+  async function applyPromo() {
+    if (!promoInput.trim()) return;
+    setPromoLoading(true);
+    setPromoMsg(null);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/bookings/${id}/apply-promo`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({ code: promoInput.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setBooking((b) => ({ ...b, promoCode: data.code, promoDiscount: data.discount }));
+        setPromoInput("");
+        setPromoMsg({ text: `Code applied — $${data.discount.toFixed(2)} off`, ok: true });
+      } else {
+        setPromoMsg({ text: data.error || "Invalid code", ok: false });
+      }
+    } catch {
+      setPromoMsg({ text: "Failed to apply code", ok: false });
+    } finally {
+      setPromoLoading(false);
+    }
+  }
+
+  async function removePromo() {
+    setPromoLoading(true);
+    setPromoMsg(null);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      await fetch(`/api/dashboard/bookings/${id}/apply-promo`, {
+        method:  "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setBooking((b) => ({ ...b, promoCode: null, promoDiscount: null }));
+      setPromoMsg({ text: "Promo code removed", ok: true });
+    } catch {
+      setPromoMsg({ text: "Failed to remove code", ok: false });
+    } finally {
+      setPromoLoading(false);
+    }
+  }
 
   async function cancelBooking() {
     if (!confirm("Cancel this booking? The client will not be notified automatically.")) return;
@@ -202,6 +249,9 @@ export default function BookingDetailPage() {
               </span>
             </div>
             {booking.totalPrice > 0     && <InfoRow label="Total"   v={`$${Number(booking.totalPrice).toLocaleString()}`} />}
+            {booking.promoCode && booking.promoDiscount > 0 && (
+              <InfoRow label="Promo" v={<span className="text-emerald-600">−${Number(booking.promoDiscount).toFixed(2)} ({booking.promoCode})</span>} />
+            )}
             {booking.depositAmount > 0  && <InfoRow label="Deposit" v={`$${Number(booking.depositAmount).toLocaleString()} ${booking.depositPaid ? "✓" : "—"}`} />}
             {!booking.paidInFull && !booking.balancePaid && (booking.remainingBalance || 0) > 0 && (
               <InfoRow label="Balance" v={`$${Number(booking.remainingBalance).toLocaleString()} due`} />
@@ -243,6 +293,56 @@ export default function BookingDetailPage() {
           className="flex-1 text-center text-sm font-medium py-2.5 rounded-xl bg-[#3486cf] text-white hover:bg-[#2a72b8] transition-colors">
           Manage Listing
         </Link>
+      </div>
+
+      {/* Promo code */}
+      <div className="card p-5">
+        <p className="text-xs uppercase tracking-wide text-gray-400 mb-3 font-semibold">Promo Code</p>
+        {booking.promoCode ? (
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <span className="font-mono text-sm bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                {booking.promoCode}
+              </span>
+              {booking.promoDiscount > 0 && (
+                <span className="ml-2 text-sm text-emerald-600 font-medium">
+                  −${Number(booking.promoDiscount).toFixed(2)} off
+                </span>
+              )}
+            </div>
+            <button
+              onClick={removePromo}
+              disabled={promoLoading}
+              className="text-xs text-red-500 hover:text-red-700 hover:underline disabled:opacity-40"
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Enter code"
+              value={promoInput}
+              onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+              onKeyDown={(e) => e.key === "Enter" && applyPromo()}
+              className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#3486cf]/30 focus:border-[#3486cf] uppercase font-mono"
+              maxLength={32}
+            />
+            <button
+              onClick={applyPromo}
+              disabled={promoLoading || !promoInput.trim()}
+              className="text-sm font-medium px-4 py-2 rounded-xl bg-[#3486cf] text-white hover:bg-[#2a72b8] disabled:opacity-40 transition-colors"
+            >
+              {promoLoading ? "…" : "Apply"}
+            </button>
+          </div>
+        )}
+        {promoMsg && (
+          <p className={`mt-2 text-xs ${promoMsg.ok ? "text-emerald-600" : "text-red-500"}`}>
+            {promoMsg.text}
+          </p>
+        )}
       </div>
 
       {/* Cancel */}

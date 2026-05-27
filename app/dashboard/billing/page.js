@@ -247,16 +247,38 @@ export default function BillingPage() {
   const seatsUsed      = teamMemberCount + 1; // +1 for owner
   const seatPct        = totalSeats === null ? 0 : Math.min(100, Math.round((seatsUsed / totalSeats) * 100));
 
+  async function changePlan(targetPlanId) {
+    setWorking(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/billing/upgrade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan: targetPlanId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMsg({ text: `Plan changed to ${PLAN_NAMES[targetPlanId]}. Proration applied automatically.`, type: "success" });
+        setTenant((t) => t ? { ...t, subscriptionPlan: targetPlanId } : t);
+      } else {
+        setError(data.error || "Could not change plan.");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
   function handlePlanChange(targetPlanId) {
     const fromOrder = PLAN_ORDER[plan] ?? 0;
     const toOrder   = PLAN_ORDER[targetPlanId] ?? 0;
-    if (toOrder >= fromOrder) { openPortal(); return; }
     const targetSeats = BASE_SEATS[targetPlanId];
-    if (targetSeats !== null && seatsUsed > targetSeats) {
+    if (toOrder < fromOrder && targetSeats !== null && seatsUsed > targetSeats) {
       setDowngradeTarget({ planId: targetPlanId, seatBlock: true });
-    } else {
-      setDowngradeTarget({ planId: targetPlanId, seatBlock: false });
+      return;
     }
+    setDowngradeTarget({ planId: targetPlanId, seatBlock: false });
   }
 
   async function submitCancelFeedback(applyDiscount) {
@@ -432,7 +454,7 @@ export default function BillingPage() {
               {nextPlanName && ` Upgrading to ${nextPlanName} significantly increases your capacity.`}
             </p>
             {nextPlanName && (
-              <button onClick={openPortal} disabled={working} className="btn-primary text-xs">
+              <button onClick={() => changePlan(Object.keys(PLAN_ORDER).find((k) => PLAN_ORDER[k] === (PLAN_ORDER[plan] ?? 0) + 1))} disabled={working} className="btn-primary text-xs">
                 {working ? "…" : `Upgrade to ${nextPlanName} →`}
               </button>
             )}
@@ -487,7 +509,7 @@ export default function BillingPage() {
               Solo is for individual owner-operators. Upgrade to Studio to add team members.
             </p>
             {nextPlanName && (
-              <button onClick={openPortal} disabled={working} className="btn-primary text-xs">
+              <button onClick={() => changePlan("studio")} disabled={working} className="btn-primary text-xs">
                 {working ? "…" : `Upgrade to ${nextPlanName} →`}
               </button>
             )}
@@ -500,7 +522,7 @@ export default function BillingPage() {
               {nextPlanName && ` ${nextPlanName} includes more built-in seats.`}
             </p>
             {nextPlanName && (
-              <button onClick={openPortal} disabled={working} className="btn-primary text-xs">
+              <button onClick={() => changePlan(Object.keys(PLAN_ORDER).find((k) => PLAN_ORDER[k] === (PLAN_ORDER[plan] ?? 0) + 1))} disabled={working} className="btn-primary text-xs">
                 {working ? "…" : `Upgrade to ${nextPlanName} →`}
               </button>
             )}
@@ -556,9 +578,9 @@ export default function BillingPage() {
                 <div className="flex items-center gap-3 shrink-0 ml-4">
                   <span className={`text-sm font-bold ${isCurrent ? "text-[#0F172A]" : "text-gray-400"}`}>${p.price}<span className="text-xs font-normal">/mo</span></span>
                   {isCurrent && subscribed && <span className="tag-green">Active</span>}
-                  {isOther && subscribed && (
+                  {isOther && subscribed && isOwner && (
                     <button onClick={() => handlePlanChange(p.id)} disabled={working} className="btn-outline text-xs py-1.5">
-                      {working ? "…" : "Change plan"}
+                      {working ? "…" : PLAN_ORDER[p.id] > PLAN_ORDER[plan] ? `Upgrade →` : "Downgrade"}
                     </button>
                   )}
                   {!subscribed && (
@@ -778,7 +800,7 @@ export default function BillingPage() {
                     className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                     Stay on {PLAN_NAMES[plan]}
                   </button>
-                  <button onClick={() => { setDowngradeTarget(null); openPortal(); }} disabled={working}
+                  <button onClick={() => { setDowngradeTarget(null); changePlan(downgradeTarget.planId); }} disabled={working}
                     className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50">
                     {working ? "Loading…" : `Downgrade to ${PLAN_NAMES[downgradeTarget.planId]} →`}
                   </button>

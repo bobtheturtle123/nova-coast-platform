@@ -68,6 +68,8 @@ export async function PATCH(req, { params }) {
     "address", "unit", "addressLine", "city", "state", "zip", "fullAddress", "squareFootage", "propertyType",
     // Services
     "packageId", "serviceIds", "addonIds", "totalPrice",
+    // Promo
+    "promoCode", "promoDiscount",
     // Payment overrides (privileged only — enforced above)
     "depositPaid", "depositAmount", "balancePaid", "paidInFull", "remainingBalance",
     "offlinePaymentAmount", "offlinePaymentMethod", "offlinePaymentNote",

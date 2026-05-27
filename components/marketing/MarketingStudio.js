@@ -445,7 +445,7 @@ const DRAWERS = {
   promo_card:  drawPromoCard,
 };
 
-export default function MarketingStudio({ booking, branding, coverUrl }) {
+export default function MarketingStudio({ booking, branding, coverUrl, paid = true }) {
   const canvasRef = useRef(null);
   const imgRef    = useRef(null);
 
@@ -502,6 +502,7 @@ export default function MarketingStudio({ booking, branding, coverUrl }) {
   }, [coverUrl]);
 
   async function downloadFullRes() {
+    if (!paid) return;
     setRendering(true);
     try {
       const canvas = document.createElement("canvas");
@@ -509,7 +510,25 @@ export default function MarketingStudio({ booking, branding, coverUrl }) {
       canvas.height = H_full;
       const ctx = canvas.getContext("2d");
 
-      const img = imgRef.current || null;
+      // Load the cover image through our proxy so canvas isn't CORS-tainted
+      let img = null;
+      if (coverUrl) {
+        try {
+          const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(coverUrl)}`;
+          const resp = await fetch(proxyUrl);
+          if (resp.ok) {
+            const blob = await resp.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            img = await new Promise((resolve) => {
+              const i = new Image();
+              i.onload  = () => resolve(i);
+              i.onerror = () => resolve(null);
+              i.src = blobUrl;
+            });
+          }
+        } catch {}
+      }
+
       DRAWERS[template](ctx, W_full, H_full, img, {
         headline, sub, price, beds, baths, sqft, showPrice,
         primary, accent, bizName,
@@ -589,10 +608,16 @@ export default function MarketingStudio({ booking, branding, coverUrl }) {
       </div>
 
       {/* Download full-res */}
-      <button onClick={downloadFullRes} disabled={rendering}
-        className="w-full py-3 text-sm font-semibold rounded-xl text-white bg-[#3486cf] hover:bg-[#2a72b8] transition-colors disabled:opacity-50">
-        {rendering ? "Generating…" : `↓ Download PNG  (${W_full}×${H_full})`}
-      </button>
+      {paid ? (
+        <button onClick={downloadFullRes} disabled={rendering}
+          className="w-full py-3 text-sm font-semibold rounded-xl text-white bg-[#3486cf] hover:bg-[#2a72b8] transition-colors disabled:opacity-50">
+          {rendering ? "Generating…" : `↓ Download PNG  (${W_full}×${H_full})`}
+        </button>
+      ) : (
+        <div className="w-full py-3 text-sm font-semibold rounded-xl text-gray-400 bg-gray-100 border border-gray-200 text-center cursor-not-allowed select-none">
+          🔒 Download available after payment
+        </div>
+      )}
     </div>
   );
 }

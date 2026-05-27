@@ -516,8 +516,10 @@ export default function SchedulePage() {
   const [blocks,    setBlocks]    = useState([]);
   const [loading,   setLoading]   = useState(true);
 
-  useEffect(() => {
-    auth.currentUser?.getIdToken(true).then(async (token) => {
+  async function fetchData() {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return;
       const headers = { Authorization: `Bearer ${token}` };
       const [listRes, blocksRes] = await Promise.all([
         fetch("/api/dashboard/listings", { headers }),
@@ -525,9 +527,18 @@ export default function SchedulePage() {
       ]);
       if (listRes.ok)   { const d = await listRes.json();   setListings(d.listings || []); }
       if (blocksRes.ok) { const d = await blocksRes.json(); setBlocks(d.blocks || []); }
+    } finally {
       setLoading(false);
-    });
-  }, []);
+    }
+  }
+
+  useEffect(() => {
+    fetchData();
+    // Re-fetch when the user returns to this tab (e.g. after creating a booking in another tab)
+    function onVisible() { if (document.visibilityState === "visible") fetchData(); }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function deleteBlock(id) {
     setBlocks((prev) => prev.filter((b) => b.id !== id));

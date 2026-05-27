@@ -64,10 +64,14 @@ export default function InvoicePage() {
   const remaining     = booking.remainingBalance ?? (total - depositAmt);
   const paidInFull    = balancePaid || booking.paidInFull;
 
+  // Use human-readable names when available (stored at booking creation time),
+  // falling back to IDs for older bookings.
   const services = [
-    booking.packageId && `Package: ${booking.packageId}`,
-    ...(booking.serviceIds || []),
-    ...(booking.addonIds   || []).map((a) => `Add-on: ${a}`),
+    (booking.packageName || booking.packageId) && `Package: ${booking.packageName || booking.packageId}`,
+    ...(booking.serviceNames?.length ? booking.serviceNames : booking.serviceIds || []),
+    ...(booking.addonNames?.length
+      ? booking.addonNames.map((a) => `Add-on: ${a}`)
+      : (booking.addonIds || []).map((a) => `Add-on: ${a}`)),
   ].filter(Boolean);
 
   const invoiceNum = `INV-${id.slice(-6).toUpperCase()}`;
@@ -133,8 +137,14 @@ export default function InvoicePage() {
                 {fmt(booking.shootDate || booking.preferredDate)}
               </p>
             )}
-            {booking.preferredTime && (
-              <p className="text-sm text-gray-500 capitalize">{booking.preferredTime}</p>
+            {(booking.shootTime || booking.preferredTime) && (
+              <p className="text-sm text-gray-500 capitalize">{booking.shootTime || booking.preferredTime}</p>
+            )}
+            {booking.propertyType && (
+              <p className="text-xs text-gray-400 mt-1 capitalize">{booking.propertyType}</p>
+            )}
+            {booking.squareFootage && (
+              <p className="text-xs text-gray-400">{Number(booking.squareFootage).toLocaleString()} sqft</p>
             )}
           </div>
         </div>
@@ -171,10 +181,16 @@ export default function InvoicePage() {
               <span className="text-gray-500">Subtotal</span>
               <span className="font-medium text-gray-900">${total.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
             </div>
+            {booking.promoCode && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Promo: <span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded">{booking.promoCode}</span></span>
+                <span className="text-green-600">–${(booking.promoDiscount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+              </div>
+            )}
             {depositAmt > 0 && (
               <div className="flex justify-between">
                 <span className="text-gray-500">Deposit{depositPaid ? " (paid)" : " (unpaid)"}</span>
-                <span className={depositPaid ? "text-green-600" : "text-gray-400"}>
+                <span className={depositPaid ? "text-green-600" : "text.gray-400"}>
                   {depositPaid ? "–" : ""}${depositAmt.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                 </span>
               </div>

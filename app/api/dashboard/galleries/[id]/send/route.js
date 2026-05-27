@@ -1,6 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
-import { sendGalleryDelivery } from "@/lib/email";
+import { sendGalleryDelivery, sendGalleryDeliveryStatusEmail } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendMediaDeliveredSms } from "@/lib/sms";
 import { getAppUrl } from "@/lib/appUrl";
@@ -96,7 +96,21 @@ export async function POST(req, { params }) {
     : null);
   const resolvedTourUrl = tourUrl || booking.propertyWebsite?.matterportUrl || null;
 
-  await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken, tenant, subject, note, to, cc, websiteUrl: resolvedWebsiteUrl, tourUrl: resolvedTourUrl });
+  let deliveryError = null;
+  try {
+    await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken, tenant, subject, note, to, cc, websiteUrl: resolvedWebsiteUrl, tourUrl: resolvedTourUrl });
+  } catch (err) {
+    deliveryError = err?.message || "Unknown delivery error";
+    console.error("[send/gallery] sendGalleryDelivery failed:", deliveryError);
+  }
+
+  // Notify the tenant regardless of success/failure
+  sendGalleryDeliveryStatusEmail({ tenant, booking, success: !deliveryError, errorMessage: deliveryError }).catch(() => {});
+
+  if (deliveryError) {
+    return Response.json({ error: `Gallery delivery failed: ${deliveryError}` }, { status: 500 });
+  }
+
   const allRecipients = [...new Set([...(to || []), ...(cc || [])])];
   const existingAuth  = gallery.authorizedEmails || [];
   const mergedAuth    = [...new Set([...existingAuth, ...allRecipients])];

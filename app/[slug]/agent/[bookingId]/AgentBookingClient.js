@@ -320,7 +320,10 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
             <MarketingStudio
               booking={booking}
               branding={branding}
-              coverUrl={gallery?.coverUrl || null}
+              coverUrl={gallery?.coverUrl || (gallery?.media?.find((m) => !m.hidden && m.key)
+                ? `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${gallery.media.find((m) => !m.hidden && m.key).key}`
+                : null)}
+              paid={!!(booking.depositPaid || booking.paidInFull || booking.balancePaid)}
             />
           </div>
         </div>
