@@ -1,4 +1,4 @@
-import { stripe } from "@/lib/stripe";
+import { stripe, ADDON_PRICE_IDS } from "@/lib/stripe";
 import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { getTenantById } from "@/lib/tenants";
@@ -327,8 +327,6 @@ export async function POST(req) {
 
         // Regular platform subscription
         if (!tenantId) break;
-
-        const { ADDON_PRICE_IDS } = await import("@/lib/stripe");
 
         // Count seat add-ons from subscription line items
         let addonSeats = 0;

@@ -58,6 +58,10 @@ export default function BrandingStep() {
       const { uploadUrl, publicUrl } = await res.json();
       await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
       setLogoUrl(publicUrl);
+      // Persist immediately so the logo survives navigation without clicking Continue
+      if (name.trim()) {
+        patch({ businessName: name.trim(), branding: { name: name.trim(), primaryColor, logoUrl: publicUrl } }).catch(() => {});
+      }
     } catch { setError("Logo upload failed."); }
     setUploading(false);
   }

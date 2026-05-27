@@ -9,6 +9,7 @@ import { auth } from "@/lib/firebase";
 export default function RegisterPage() {
   const router = useRouter();
   const [form, setForm] = useState({
+    ownerName: "",
     businessName: "",
     email: "",
     phone: "",
@@ -67,6 +68,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           uid:          cred.user.uid,
           email:        form.email,
+          ownerName:    form.ownerName.trim() || undefined,
           businessName: form.businessName,
           phone:        form.phone || undefined,
           accessCode:   form.accessCode.trim() || undefined,
@@ -113,6 +115,19 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">
+                Your Name
+              </label>
+              <input
+                type="text"
+                value={form.ownerName}
+                onChange={set("ownerName")}
+                required
+                className="input-field w-full"
+                placeholder="Jane Smith"
+              />
+            </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1.5">
                 Business Name
