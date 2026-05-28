@@ -895,8 +895,8 @@ function OwnerCalSyncModal({ tenant, onClose, onConnected }) {
         headers: { Authorization: `Bearer ${idToken}`, "Content-Type": "application/json" },
         body:    JSON.stringify({ memberId: "__owner__" }),
       });
-      const d = await res.json();
-      if (!res.ok) { setConnectError(d.error || "Sync failed"); return; }
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setConnectError(d.error || `Sync failed (${res.status})`); return; }
       setSyncResult(d.synced);
       setLastSynced(new Date().toISOString());
     } catch (e) {
@@ -1123,8 +1123,8 @@ function CalendarSyncModal({ member, onClose, onRegenerate, onDisconnect }) {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body:    JSON.stringify({ memberId: member.id }),
       });
-      const d = await res.json();
-      if (!res.ok) { setSyncError(d.error || "Sync failed"); return; }
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setSyncError(d.error || `Sync failed (${res.status})`); return; }
       setSyncResult(d.synced);
       setLastSynced(new Date().toISOString());
     } catch (e) {

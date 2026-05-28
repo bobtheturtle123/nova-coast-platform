@@ -92,6 +92,7 @@ const SYNC_WINDOW_MS    = 60 * 60 * 1000;
 
 // POST { memberId } — admin-triggered Google Calendar sync. Use memberId "__owner__" for the tenant owner.
 export async function POST(req) {
+  try {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -228,4 +229,8 @@ export async function POST(req) {
   await batch.commit();
 
   return Response.json({ ok: true, synced: newBlocks.length, blocks: newBlocks });
+  } catch (err) {
+    console.error("[google-sync] POST error:", err);
+    return Response.json({ error: err?.message || "Sync failed unexpectedly" }, { status: 500 });
+  }
 }
