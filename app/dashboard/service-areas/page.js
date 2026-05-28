@@ -41,8 +41,8 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="absolute inset-0" onClick={onClose} />
+    <div style={{ position: "fixed", inset: 0, zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,23,42,0.45)", backdropFilter: "blur(2px)", padding: "0 16px" }}>
+      <div style={{ position: "absolute", inset: 0 }} onClick={onClose} />
       <div className="relative" style={{
         background: "#fff", borderRadius: 18, width: "100%", maxWidth: 480,
         boxShadow: "0 24px 64px rgba(0,0,0,0.24), 0 0 0 1px rgba(0,0,0,0.05)",
