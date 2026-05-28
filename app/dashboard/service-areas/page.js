@@ -177,7 +177,7 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose }) {
   );
 }
 
-// ── Address search (OpenStreetMap Nominatim — no API key needed) ──────────────
+// ── Address search (Nominatim — no API key needed) ────────────────────────────
 
 function AddressSearch({ mapRef, mapReady }) {
   const [query,     setQuery]     = useState("");
@@ -212,8 +212,9 @@ function AddressSearch({ mapRef, mapReady }) {
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       try {
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=6`;
-        const data = await fetch(url).then(r => r.json());
+        const data = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=6`
+        ).then(r => r.json());
         setResults(data || []);
         setOpen(true);
       } catch {}
@@ -222,11 +223,8 @@ function AddressSearch({ mapRef, mapReady }) {
   }
 
   function selectResult(r) {
-    const lat = parseFloat(r.lat);
-    const lon = parseFloat(r.lon);
-    mapRef.current?.setView([lat, lon], 13, { animate: true });
-    const parts = (r.display_name || "").split(",");
-    setQuery(parts.slice(0, 2).join(",").trim());
+    mapRef.current?.setView([parseFloat(r.lat), parseFloat(r.lon)], 13, { animate: true });
+    setQuery((r.display_name || "").split(",").slice(0, 2).join(",").trim());
     setOpen(false);
     setResults([]);
   }
@@ -261,15 +259,13 @@ function AddressSearch({ mapRef, mapReady }) {
         <div style={{ marginTop: 4, background: "#fff", border: "1px solid #E9ECF0", borderRadius: 10, boxShadow: "0 8px 24px rgba(15,23,42,0.10)", overflow: "hidden" }}>
           {results.map((r, i) => {
             const parts = (r.display_name || "").split(",");
-            const title = parts[0]?.trim() || "";
-            const sub   = parts.slice(1, 3).join(",").trim();
             return (
               <button key={r.place_id || i} onClick={() => selectResult(r)}
                 style={{ width: "100%", padding: "9px 14px", borderBottom: i < results.length - 1 ? "1px solid #F3F4F6" : "none", display: "block", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
                 onMouseEnter={e => e.currentTarget.style.background = "#F9FAFB"}
                 onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</p>
-                <p style={{ margin: "2px 0 0", fontSize: 11.5, color: "#9CA3AF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub}</p>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{parts[0]?.trim()}</p>
+                <p style={{ margin: "2px 0 0", fontSize: 11.5, color: "#9CA3AF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{parts.slice(1, 3).join(",").trim()}</p>
               </button>
             );
           })}
@@ -284,12 +280,19 @@ function AddressSearch({ mapRef, mapReady }) {
 export default function ServiceAreasPage() {
   const mapContainerRef = useRef(null);
   const mapRef          = useRef(null);
-  const drawHandlerRef  = useRef(null);
   const zoneLayersRef   = useRef([]);
   const pendingLayerRef = useRef(null);
   const mapLoadedRef    = useRef(false);
   const zonesRef        = useRef([]);
   const fileInputRef    = useRef(null);
+
+  // Drawing state — all in refs so handlers don't capture stale values
+  const drawVertsRef   = useRef([]);   // [[lat,lng], ...]
+  const drawPolyRef    = useRef(null); // growing polyline
+  const drawPrevRef    = useRef(null); // preview line cursor→last vertex
+  const drawMkrsRef    = useRef([]);   // vertex dot markers
+  const drawCleanupRef = useRef(null); // teardown fn set by startDrawing
+  const finishDrawRef  = useRef(null); // finish fn set by startDrawing
 
   const [zones,          setZones]          = useState([]);
   const [teamMembers,    setTeamMembers]    = useState([]);
@@ -299,6 +302,7 @@ export default function ServiceAreasPage() {
   const [mapInitialized, setMapInitialized] = useState(false);
   const [editing,        setEditing]        = useState(null);
   const [drawingMode,    setDrawingMode]    = useState(false);
+  const [drawVertCount,  setDrawVertCount]  = useState(0);
   const [pendingPaths,   setPendingPaths]   = useState(null);
   const [msg,            setMsg]            = useState({ text: "", type: "success" });
   const [filterPhotog,   setFilterPhotog]   = useState("all");
@@ -323,9 +327,9 @@ export default function ServiceAreasPage() {
     });
   }, []);
 
-  // Load Leaflet + Leaflet.draw (no WebGL required)
+  // Load Leaflet (only — no Leaflet.draw, drawing is implemented manually)
   useEffect(() => {
-    if (window.L?.Draw) { setMapsReady(true); return; }
+    if (window.L) { setMapsReady(true); return; }
 
     function injectLink(href, id) {
       if (document.getElementById(id)) return;
@@ -335,36 +339,28 @@ export default function ServiceAreasPage() {
     }
     function injectScript(src, id, isReady, onReady) {
       if (isReady()) { onReady(); return; }
-      const existing = document.getElementById(id);
-      if (existing) { existing.addEventListener("load", onReady, { once: true }); return; }
+      const ex = document.getElementById(id);
+      if (ex) { ex.addEventListener("load", onReady, { once: true }); return; }
       const s = document.createElement("script");
       s.id = id; s.src = src; s.async = true;
       s.addEventListener("load", onReady, { once: true });
       document.head.appendChild(s);
     }
 
-    injectLink("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",                                          "leaflet-css");
-    injectLink("https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.14/leaflet.draw.css",               "leafletdraw-css");
-
+    injectLink("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css", "leaflet-css");
     injectScript(
       "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", "leaflet-js",
       () => !!window.L,
-      () => injectScript(
-        "https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.14/leaflet.draw.js", "leafletdraw-js",
-        () => !!(window.L?.Draw),
-        () => setMapsReady(true)
-      )
+      () => setMapsReady(true)
     );
   }, []);
 
-  // renderZones — redraws all zone polygons on the Leaflet map
+  // renderZones — redraws saved zones on the Leaflet map
   const renderZones = useCallback(() => {
     const map = mapRef.current;
     if (!map || !window.L) return;
-
     zoneLayersRef.current.forEach(l => { try { map.removeLayer(l); } catch {} });
     zoneLayersRef.current = [];
-
     zonesRef.current.forEach(zone => {
       if (!zone.paths?.length) return;
       const color   = zone.type === "exclude" ? "#EF4444" : (zone.color || "#3B82F6");
@@ -381,7 +377,7 @@ export default function ServiceAreasPage() {
   // Init Leaflet map
   useEffect(() => {
     if (!mapsReady || !mapContainerRef.current || mapLoadedRef.current) return;
-    if (!window.L?.Draw) return;
+    if (!window.L) return;
 
     mapLoadedRef.current = true;
 
@@ -394,44 +390,14 @@ export default function ServiceAreasPage() {
     }
 
     const map = window.L.map(mapContainerRef.current, {
-      center:      initCenter,
-      zoom:        initZoom,
-      zoomControl: false,
+      center: initCenter, zoom: initZoom, zoomControl: false,
     });
-
     window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 19,
     }).addTo(map);
 
     mapRef.current = map;
-
-    // Customize draw tooltips
-    if (window.L.drawLocal) {
-      window.L.drawLocal.draw.handlers.polygon.tooltip.start = "Click to place the first point";
-      window.L.drawLocal.draw.handlers.polygon.tooltip.cont  = "Click to continue drawing the zone";
-      window.L.drawLocal.draw.handlers.polygon.tooltip.end   = "Click the first point to close the shape";
-    }
-
-    // Draw handler — enabled/disabled programmatically
-    const drawHandler = new window.L.Draw.Polygon(map, {
-      allowIntersection: false,
-      shapeOptions: { color: "#3486cf", fillColor: "#3486cf", fillOpacity: 0.15, weight: 2 },
-    });
-    drawHandlerRef.current = drawHandler;
-
-    // Fired when the user closes a polygon
-    map.on("draw:created", e => {
-      const layer   = e.layer;
-      const latlngs = layer.getLatLngs()[0];
-      const paths   = latlngs.map(ll => ({ lat: ll.lat, lng: ll.lng }));
-      layer.addTo(map);
-      pendingLayerRef.current = layer;
-      setPendingPaths(paths);
-      setEditing({ isNew: true, paths });
-      setDrawingMode(false);
-    });
-
     setMapInitialized(true);
     renderZones();
 
@@ -449,27 +415,124 @@ export default function ServiceAreasPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapsReady]);
 
-  // Keep zonesRef in sync and re-render on change
   zonesRef.current = zones;
   useEffect(() => {
     if (mapInitialized) renderZones();
   }, [zones, mapInitialized, renderZones]);
 
-  function recenterMap() {
-    const allCoords = zones.flatMap(z => (z.paths || []).map(p => [p.lat, p.lng]));
-    if (allCoords.length >= 2 && mapRef.current) {
-      try { mapRef.current.fitBounds(allCoords, { padding: [60, 60], maxZoom: 13 }); } catch {}
-    }
-  }
+  // Escape cancels drawing
+  useEffect(() => {
+    if (!drawingMode) return;
+    const handler = (e) => { if (e.key === "Escape") cancelDrawing(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawingMode]);
 
   function startDrawing() {
-    if (!drawHandlerRef.current) return;
-    drawHandlerRef.current.enable();
+    const map = mapRef.current;
+    if (!map || !window.L) return;
+
+    // Clear any previous draw state
+    drawVertsRef.current = [];
+    setDrawVertCount(0);
+
+    // Dashed polyline showing the shape so far
+    const poly = window.L.polyline([], {
+      color: "#3486cf", weight: 2.5, dashArray: "6,4", interactive: false,
+    });
+    poly.addTo(map);
+    drawPolyRef.current = poly;
+
+    // Thin preview line from last vertex to cursor
+    const prev = window.L.polyline([], {
+      color: "#3486cf", weight: 1.5, dashArray: "4,3", opacity: 0.55, interactive: false,
+    });
+    prev.addTo(map);
+    drawPrevRef.current = prev;
+
+    map.getContainer().style.cursor = "crosshair";
+
+    // ── inner handlers (closures capture map + refs correctly) ──
+
+    function addVertex(latlng) {
+      const pt = [latlng.lat, latlng.lng];
+      drawVertsRef.current = [...drawVertsRef.current, pt];
+      setDrawVertCount(drawVertsRef.current.length);
+
+      // Small white-outlined dot for each placed vertex
+      const m = window.L.circleMarker(pt, {
+        radius: 5, color: "#fff", fillColor: "#3486cf",
+        fillOpacity: 1, weight: 2, interactive: false,
+      });
+      m.addTo(map);
+      drawMkrsRef.current.push(m);
+      drawPolyRef.current?.setLatLngs(drawVertsRef.current);
+    }
+
+    function onClickMap(e) {
+      const verts = drawVertsRef.current;
+
+      // ≥3 vertices: check if click is near the first vertex (close shape)
+      if (verts.length >= 3) {
+        const p0 = map.latLngToContainerPoint(verts[0]);
+        const pC = map.latLngToContainerPoint(e.latlng);
+        if (Math.hypot(p0.x - pC.x, p0.y - pC.y) <= 15) {
+          finish();
+          return;
+        }
+      }
+
+      addVertex(e.latlng);
+    }
+
+    function onMoveMap(e) {
+      const verts = drawVertsRef.current;
+      if (!verts.length) return;
+      drawPrevRef.current?.setLatLngs([
+        verts[verts.length - 1],
+        [e.latlng.lat, e.latlng.lng],
+      ]);
+    }
+
+    function cleanup() {
+      map.off("click", onClickMap);
+      map.off("mousemove", onMoveMap);
+      map.getContainer().style.cursor = "";
+      if (drawPolyRef.current) { try { map.removeLayer(drawPolyRef.current); } catch {} drawPolyRef.current = null; }
+      if (drawPrevRef.current) { try { map.removeLayer(drawPrevRef.current); } catch {} drawPrevRef.current = null; }
+      drawMkrsRef.current.forEach(m => { try { map.removeLayer(m); } catch {} });
+      drawMkrsRef.current = [];
+      drawVertsRef.current = [];
+      setDrawVertCount(0);
+    }
+
+    function finish() {
+      const verts = drawVertsRef.current;
+      if (verts.length < 3) { cleanup(); setDrawingMode(false); return; }
+      cleanup();
+      const paths   = verts.map(([lat, lng]) => ({ lat, lng }));
+      const polygon = window.L.polygon(verts, {
+        color: "#3486cf", fillColor: "#3486cf", fillOpacity: 0.15, weight: 2,
+      });
+      polygon.addTo(map);
+      pendingLayerRef.current = polygon;
+      setPendingPaths(paths);
+      setEditing({ isNew: true, paths });
+      setDrawingMode(false);
+    }
+
+    drawCleanupRef.current = cleanup;
+    finishDrawRef.current  = finish;
+
+    map.on("click",     onClickMap);
+    map.on("mousemove", onMoveMap);
+
     setDrawingMode(true);
   }
 
   function cancelDrawing() {
-    try { drawHandlerRef.current?.disable(); } catch {}
+    drawCleanupRef.current?.();
     if (pendingLayerRef.current && mapRef.current) {
       try { mapRef.current.removeLayer(pendingLayerRef.current); } catch {}
       pendingLayerRef.current = null;
@@ -477,6 +540,13 @@ export default function ServiceAreasPage() {
     setPendingPaths(null);
     setDrawingMode(false);
     setEditing(null);
+  }
+
+  function recenterMap() {
+    const allCoords = zones.flatMap(z => (z.paths || []).map(p => [p.lat, p.lng]));
+    if (allCoords.length >= 2 && mapRef.current) {
+      try { mapRef.current.fitBounds(allCoords, { padding: [60, 60], maxZoom: 13 }); } catch {}
+    }
   }
 
   async function saveZone(formData) {
@@ -537,7 +607,6 @@ export default function ServiceAreasPage() {
       const geojson  = JSON.parse(text);
       const features = (geojson.type === "FeatureCollection" ? geojson.features : [geojson])
         .filter(f => f?.geometry?.type === "Polygon");
-
       if (!features.length) { showMsg("No Polygon features found in file.", "warn"); setImporting(false); return; }
 
       const token = await auth.currentUser.getIdToken();
@@ -555,9 +624,7 @@ export default function ServiceAreasPage() {
         if (res.ok) { const data = await res.json(); setZones(prev => [...prev, data.zone]); count++; }
       }
       showMsg(`Imported ${count} zone${count !== 1 ? "s" : ""} from ${file.name}.`, "success");
-    } catch {
-      showMsg("Failed to parse GeoJSON.", "warn");
-    }
+    } catch { showMsg("Failed to parse GeoJSON.", "warn"); }
     setImporting(false);
     e.target.value = "";
   }
@@ -649,12 +716,24 @@ export default function ServiceAreasPage() {
 
         {/* Map column */}
         <div>
+          {/* Drawing instructions banner */}
           {drawingMode && (
-            <div style={{ marginBottom: 10, background: "#DBEAFE", border: "1px solid #93C5FD", color: "#1D4ED8", padding: "9px 14px", borderRadius: 9, fontSize: 12.5, fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Click to place points. Click the first point to close the shape.
+            <div style={{ marginBottom: 10, background: "#DBEAFE", border: "1px solid #93C5FD", color: "#1D4ED8", padding: "9px 14px", borderRadius: 9, fontSize: 12.5, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {drawVertCount < 3
+                  ? `Click on the map to place points. (${drawVertCount} placed)`
+                  : `${drawVertCount} points placed — click the first point to close, or finish below.`}
+              </div>
+              {drawVertCount >= 3 && (
+                <button
+                  onClick={() => finishDrawRef.current?.()}
+                  style={{ height: 28, padding: "0 12px", border: "1px solid #3B82F6", background: "#3B82F6", color: "#fff", borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
+                  Finish Shape
+                </button>
+              )}
             </div>
           )}
 
@@ -662,17 +741,14 @@ export default function ServiceAreasPage() {
           <div style={{ position: "relative", height: 640, borderRadius: 14, overflow: "hidden", border: "1px solid #E9ECF0", background: "#E8E5DC" }}
             className="h-[380px] sm:h-[520px] lg:h-[640px]">
 
-            {/* Loading spinner */}
             {!mapsReady && (
               <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
                 <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
               </div>
             )}
 
-            {/* Address search overlay */}
             <AddressSearch mapRef={mapRef} mapReady={mapInitialized} />
 
-            {/* Floating map controls */}
             {mapInitialized && !drawingMode && (
               <div style={{ position: "absolute", top: 14, right: 14, display: "flex", flexDirection: "column", gap: 6, zIndex: 1001 }}>
                 {[
@@ -682,7 +758,7 @@ export default function ServiceAreasPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   )},
-                  { title: "Zoom in",  onClick: () => mapRef.current?.zoomIn(),  icon: (
+                  { title: "Zoom in",  onClick: () => mapRef.current?.zoomIn(), icon: (
                     <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
                     </svg>
@@ -703,7 +779,6 @@ export default function ServiceAreasPage() {
               </div>
             )}
 
-            {/* Leaflet map container */}
             <div ref={mapContainerRef} style={{ width: "100%", height: "100%" }} />
           </div>
         </div>
@@ -786,7 +861,6 @@ export default function ServiceAreasPage() {
         </div>
       </div>
 
-      {/* Zone modal */}
       {editing && (
         <ZoneModal
           zone={editing.isNew ? null : editing}
