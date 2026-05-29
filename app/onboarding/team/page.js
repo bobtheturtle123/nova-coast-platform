@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { useOnboarding, StepCard } from "../ctx";
@@ -15,9 +15,30 @@ function emptyRow() {
 
 export default function TeamStep() {
   const router = useRouter();
-  const { tenant, onboarding, saveOnboarding } = useOnboarding();
-  const seatLimit = getSeatLimit(getEffectivePlan(tenant));
-  const isSolo = seatLimit !== null && seatLimit <= 1;
+  const { tenant, setTenant, onboarding, saveOnboarding } = useOnboarding();
+
+  // Re-fetch tenant on mount so we always have the latest subscription plan.
+  // The onboarding layout loads tenant once; if the Stripe webhook fires after
+  // that initial load, the plan change won't be reflected without this refresh.
+  useEffect(() => {
+    async function refresh() {
+      try {
+        const token = await auth.currentUser?.getIdToken(true);
+        if (!token) return;
+        const res = await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) { const d = await res.json(); if (d.tenant) setTenant(d.tenant); }
+      } catch {}
+    }
+    refresh();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const effectivePlan = getEffectivePlan(tenant);
+  const seatLimit = getSeatLimit(effectivePlan, tenant?.addonSeats || 0);
+  // Only block team invites when the tenant is provably on a solo-tier active subscription.
+  // Trial users and free-trial tenants without a subscription yet should be able to invite.
+  const isActiveSolo = seatLimit !== null && seatLimit <= 1 &&
+    (tenant?.subscriptionStatus === "active" || tenant?.subscriptionStatus === "past_due");
+  const isSolo = isActiveSolo;
 
   const [rows,   setRows]   = useState([emptyRow()]);
   const [sending, setSending] = useState(false);

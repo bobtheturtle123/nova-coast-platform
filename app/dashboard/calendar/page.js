@@ -27,7 +27,12 @@ function avatarColor(str) {
 
 function toDateKey(dateStr) {
   if (!dateStr) return null;
-  return dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+  if (dateStr.includes("T")) {
+    // Use local timezone so UTC timestamps don't drift to the wrong date
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  }
+  return dateStr.slice(0, 10);
 }
 
 function formatDate(iso) {
@@ -361,15 +366,21 @@ function CalendarTab({ listings, blocks, loading, onDeleteBlock }) {
                         </div>
                         <div className="space-y-0.5">
                           {dayBlockList.map((bl) => (
-                            <div key={bl.id} className={`flex items-center gap-0.5 text-[9px] font-semibold px-1 py-0.5 rounded group ${bl.allDay ? "text-red-500 bg-red-100" : "text-orange-600 bg-orange-50 border border-orange-200"}`}>
-                              <span className="truncate flex-1">
-                                {bl.allDay ? "🚫 " : "⏰ "}{bl.reason}
-                                {!bl.allDay && bl.startTime ? ` ${fmtBlockTime(bl.startTime)}` : ""}
-                                {bl.memberName ? ` · ${bl.memberName}` : ""}
-                              </span>
-                              {onDeleteBlock && (
-                                <button onClick={(e) => { e.stopPropagation(); onDeleteBlock(bl.id); }}
-                                  className="opacity-0 group-hover:opacity-100 flex-shrink-0 ml-0.5 leading-none">×</button>
+                            <div key={bl.id} className={`text-[9px] font-semibold px-1 py-0.5 rounded group ${bl.allDay ? "text-red-500 bg-red-100" : "text-orange-600 bg-orange-50 border border-orange-200"}`}>
+                              <div className="flex items-center gap-0.5">
+                                <span className="truncate flex-1">
+                                  {bl.allDay ? "🚫 " : "⏰ "}{bl.reason}
+                                  {bl.memberName ? ` · ${bl.memberName}` : ""}
+                                </span>
+                                {onDeleteBlock && (
+                                  <button onClick={(e) => { e.stopPropagation(); onDeleteBlock(bl.id); }}
+                                    className="opacity-0 group-hover:opacity-100 flex-shrink-0 ml-0.5 leading-none">×</button>
+                                )}
+                              </div>
+                              {!bl.allDay && (bl.note || bl.startTime) && (
+                                <span className="block truncate font-normal opacity-75">
+                                  {bl.note || fmtBlockTime(bl.startTime)}
+                                </span>
                               )}
                             </div>
                           ))}
