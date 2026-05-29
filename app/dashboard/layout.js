@@ -127,15 +127,16 @@ const NAV = [
 export default function DashboardLayout({ children }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const [user,            setUser]           = useState(undefined);
-  const [userRole,        setUserRole]        = useState("owner");
-  const [permissions,     setPermissions]     = useState(null);
-  const [tenantName,      setTenantName]      = useState("");
-  const [tenantLogo,      setTenantLogo]      = useState("");
-  const [sidebarOpen,     setSidebarOpen]     = useState(false);
-  const [pendingRevCount, setPendingRevCount] = useState(0);
-  const [tenantPlan,      setTenantPlan]      = useState("starter");
-  const [tenantSettings,  setTenantSettings]  = useState({ tempUnit: "F", locale: "en-US", currency: "USD" });
+  const [user,               setUser]              = useState(undefined);
+  const [userRole,           setUserRole]           = useState("owner");
+  const [permissions,        setPermissions]        = useState(null);
+  const [tenantName,         setTenantName]         = useState("");
+  const [tenantLogo,         setTenantLogo]         = useState("");
+  const [sidebarOpen,        setSidebarOpen]        = useState(false);
+  const [pendingRevCount,    setPendingRevCount]    = useState(0);
+  const [tenantPlan,         setTenantPlan]         = useState("starter");
+  const [tenantSettings,     setTenantSettings]     = useState({ tempUnit: "F", locale: "en-US", currency: "USD" });
+  const [subscriptionLapsed, setSubscriptionLapsed] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -182,6 +183,7 @@ export default function DashboardLayout({ children }) {
           router.push("/auth/plan");
           return;
         }
+        setSubscriptionLapsed(d.tenant?.subscriptionStatus === "canceled");
       } catch {
         // Network error — don't hard-block on a failed fetch
       }
@@ -398,7 +400,18 @@ export default function DashboardLayout({ children }) {
           </div>
 
           <TenantSettingsContext.Provider value={{ ...tenantSettings, refresh: refreshSettings }}>
-            <DashboardPermissionsContext.Provider value={{ permissions: permissions || {}, userRole }}>
+            <DashboardPermissionsContext.Provider value={{ permissions: permissions || {}, userRole, subscriptionLapsed }}>
+              {subscriptionLapsed && (
+                <div style={{ background: "#FEF2F2", borderBottom: "1px solid #FECACA", padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                  <p style={{ fontSize: 13, color: "#B91C1C", margin: 0, lineHeight: 1.5 }}>
+                    <strong>Subscription ended.</strong> Your existing listings stay live and bookable. Reactivate to add team members, schedule shoots, and manage your account.
+                  </p>
+                  <Link href="/dashboard/billing"
+                    style={{ fontSize: 12, fontWeight: 600, color: "#B91C1C", border: "1px solid #B91C1C", borderRadius: 6, padding: "4px 14px", whiteSpace: "nowrap", textDecoration: "none", flexShrink: 0 }}>
+                    Reactivate →
+                  </Link>
+                </div>
+              )}
               <main className="flex-1 overflow-x-hidden min-w-0">{children}</main>
             </DashboardPermissionsContext.Provider>
           </TenantSettingsContext.Provider>

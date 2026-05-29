@@ -7,7 +7,8 @@ async function getCtx(req) {
   if (!auth) return null;
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
-    if (!decoded.tenantId || !["owner", "admin", "manager"].includes(decoded.role)) return null;
+    const role = decoded.role || (decoded.memberId ? "photographer" : "owner");
+    if (!decoded.tenantId || !["owner", "admin", "manager"].includes(role)) return null;
     return { tenantId: decoded.tenantId };
   } catch { return null; }
 }

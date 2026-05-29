@@ -899,6 +899,8 @@ function OwnerCalSyncModal({ tenant, onClose, onConnected }) {
       if (!res.ok) { setConnectError(d.error || `Sync failed (${res.status})`); return; }
       setSyncResult(d.synced);
       setLastSynced(new Date().toISOString());
+      window.dispatchEvent(new CustomEvent("kyoria:blocks-updated"));
+      try { localStorage.setItem("kyoria_blocks_ts", Date.now().toString()); } catch {}
     } catch (e) {
       setConnectError(e.message);
     } finally {
@@ -1127,6 +1129,8 @@ function CalendarSyncModal({ member, onClose, onRegenerate, onDisconnect }) {
       if (!res.ok) { setSyncError(d.error || `Sync failed (${res.status})`); return; }
       setSyncResult(d.synced);
       setLastSynced(new Date().toISOString());
+      window.dispatchEvent(new CustomEvent("kyoria:blocks-updated"));
+      try { localStorage.setItem("kyoria_blocks_ts", Date.now().toString()); } catch {}
     } catch (e) {
       setSyncError(e.message);
     } finally {
@@ -1712,6 +1716,11 @@ export default function TeamPage() {
     }
   }
 
+  function notifyBlocksChanged() {
+    window.dispatchEvent(new CustomEvent("kyoria:blocks-updated"));
+    try { localStorage.setItem("kyoria_blocks_ts", Date.now().toString()); } catch {}
+  }
+
   async function createBlock(blockData) {
     const token = await getToken();
     const res = await fetch("/api/dashboard/team/blocks", {
@@ -1720,7 +1729,7 @@ export default function TeamPage() {
       body: JSON.stringify(blockData),
     });
     const data = await res.json();
-    if (res.ok) setTimeBlocks((prev) => [...prev, data.block]);
+    if (res.ok) { setTimeBlocks((prev) => [...prev, data.block]); notifyBlocksChanged(); }
     return res.ok;
   }
 
@@ -1735,6 +1744,8 @@ export default function TeamPage() {
       if (!res.ok) {
         setTimeBlocks((prev) => prev); // no rollback needed; reload will restore
         toast("Failed to remove block.", "error");
+      } else {
+        notifyBlocksChanged();
       }
     } catch {
       toast("Failed to remove block.", "error");

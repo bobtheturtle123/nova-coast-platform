@@ -7,7 +7,7 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId, role: decoded.role || "member" };
+    return { tenantId: decoded.tenantId, role: decoded.role || (decoded.memberId ? "photographer" : "owner") };
   } catch { return null; }
 }
 

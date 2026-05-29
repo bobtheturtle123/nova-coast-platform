@@ -545,10 +545,18 @@ export default function SchedulePage() {
 
   useEffect(() => {
     fetchData();
-    // Re-fetch when the user returns to this tab (e.g. after creating a booking in another tab)
+    // Re-fetch when tab regains focus or when blocks change in another part of the app
     function onVisible() { if (document.visibilityState === "visible") fetchData(); }
+    function onBlocksUpdated() { fetchData(); }
+    function onStorage(e) { if (e.key === "kyoria_blocks_ts") fetchData(); }
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    window.addEventListener("kyoria:blocks-updated", onBlocksUpdated);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("kyoria:blocks-updated", onBlocksUpdated);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function deleteBlock(id) {

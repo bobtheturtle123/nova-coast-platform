@@ -18,7 +18,7 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId, uid: decoded.uid, role: decoded.role || "member" };
+    return { tenantId: decoded.tenantId, uid: decoded.uid, role: decoded.role || (decoded.memberId ? "photographer" : "owner") };
   } catch { return null; }
 }
 
@@ -54,6 +54,11 @@ export async function POST(req) {
 
   if (ctx.role !== "owner" && ctx.role !== "admin") {
     return Response.json({ error: "Insufficient permissions to invite staff" }, { status: 403 });
+  }
+
+  const tenantSnap = await adminDb.collection("tenants").doc(ctx.tenantId).get();
+  if (tenantSnap.exists && tenantSnap.data().subscriptionStatus === "canceled") {
+    return Response.json({ error: "Your subscription has ended. Reactivate to invite team members." }, { status: 403 });
   }
 
   const { email, role, permissions } = await req.json();

@@ -32,6 +32,9 @@ export async function POST(req) {
 
   const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
   const tenant    = tenantDoc.exists ? tenantDoc.data() : {};
+  if (tenant.subscriptionStatus === "canceled") {
+    return Response.json({ error: "Your subscription has ended. Reactivate to invite team members." }, { status: 403 });
+  }
   const company   = tenant.businessName || "Your media company";
 
   const token     = uuidv4();

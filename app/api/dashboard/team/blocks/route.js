@@ -87,6 +87,11 @@ export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+  const tenantSnap = await adminDb.collection("tenants").doc(ctx.tenantId).get();
+  if (tenantSnap.exists && tenantSnap.data().subscriptionStatus === "canceled") {
+    return Response.json({ error: "Your subscription has ended. Reactivate to schedule time blocks." }, { status: 403 });
+  }
+
   const body = await req.json();
   const { memberId, memberName, startDate, endDate, startTime, endTime, reason, note } = body;
 
