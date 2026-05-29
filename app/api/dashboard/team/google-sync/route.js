@@ -102,8 +102,10 @@ export async function POST(req) {
 
   // Rate-limit manual syncs (skip for cron-triggered calls)
   if (!_cron) {
-    const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
-    const rateRef   = tenantRef.collection("syncRateLimits").doc(memberId);
+    const tenantRef  = adminDb.collection("tenants").doc(ctx.tenantId);
+    // Firestore rejects doc IDs matching __.*__ — sanitize "__owner__" → "owner"
+    const rateDocId  = memberId.replace(/^__(.+)__$/, "$1");
+    const rateRef    = tenantRef.collection("syncRateLimits").doc(rateDocId);
     const rateSnap  = await rateRef.get();
     const now       = Date.now();
     const recent    = (rateSnap.data()?.timestamps || []).filter((t) => now - t < SYNC_WINDOW_MS);
