@@ -46,6 +46,9 @@ export async function POST(req) {
 
     const tenantSnap   = await tenantRef.get();
     const tenantData   = tenantSnap.data() || {};
+    if (tenantData.subscriptionStatus === "canceled") {
+      return Response.json({ error: "Your subscription has ended. Reactivate to create new bookings." }, { status: 403 });
+    }
     const autoConvert  = tenantData.bookingConfig?.autoConvertToListing === true;
 
     const fullAddress = [address, unit, city, state, zip].filter(Boolean).join(", ");

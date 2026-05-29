@@ -10,7 +10,7 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId, role: decoded.role || "member" };
+    return { tenantId: decoded.tenantId, role: decoded.role || (decoded.memberId ? "photographer" : "owner") };
   } catch { return null; }
 }
 
@@ -81,8 +81,12 @@ export async function PATCH(req, { params }) {
   if (update.clientEmail) update.clientEmail = update.clientEmail.toLowerCase().trim();
   update.updatedAt = new Date();
 
-  const bookingRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("bookings").doc(params.id);
-  const prevSnap = await bookingRef.get();
+  const tenantRef  = adminDb.collection("tenants").doc(ctx.tenantId);
+  const bookingRef = tenantRef.collection("bookings").doc(params.id);
+  const [tenantSnap, prevSnap] = await Promise.all([tenantRef.get(), bookingRef.get()]);
+  if (tenantSnap.exists && tenantSnap.data().subscriptionStatus === "canceled") {
+    return Response.json({ error: "Your subscription has ended. Reactivate to modify bookings." }, { status: 403 });
+  }
   const prev = prevSnap.data() || {};
 
   // Auto-compute paidInFull when both deposit and balance are marked paid
