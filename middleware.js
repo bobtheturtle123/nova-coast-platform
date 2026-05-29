@@ -23,9 +23,12 @@ export function middleware(request) {
   const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
   const isVercel    = hostname.endsWith(".vercel.app");
   const isPlatform  = PLATFORM_HOST && (hostname === PLATFORM_HOST || hostname.endsWith(`.${PLATFORM_HOST}`));
+  // Always pass through the canonical production domain and all its subdomains,
+  // regardless of what NEXT_PUBLIC_APP_DOMAIN is set to.
+  const isCanonical = hostname === "kyoriaos.com" || hostname.endsWith(".kyoriaos.com");
 
   // If no custom domain env var is set, or we're on a known platform host — skip entirely.
-  if (isLocalhost || isVercel || isPlatform || !PLATFORM_HOST) {
+  if (isLocalhost || isVercel || isCanonical || isPlatform || !PLATFORM_HOST) {
     return NextResponse.next();
   }
 

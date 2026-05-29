@@ -1,15 +1,16 @@
 import { adminDb } from "@/lib/firebase-admin";
 
-const BASE = "https://app.kyoriaos.com";
+const BASE = "https://kyoriaos.com";
 
 export default async function sitemap() {
   const staticPages = [
-    { url: BASE,                     lastModified: new Date(), changeFrequency: "monthly", priority: 1.0 },
-    { url: `${BASE}/legal/privacy`,  lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
-    { url: `${BASE}/legal/terms`,    lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
-    { url: `${BASE}/legal/cookies`,  lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
+    { url: BASE,                    lastModified: new Date(), changeFrequency: "monthly", priority: 1.0 },
+    { url: `${BASE}/legal/privacy`, lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${BASE}/legal/terms`,   lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${BASE}/legal/cookies`, lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
   ];
 
+  // Tenant booking pages — canonical URL is /{slug}/book, NOT /{slug} which redirects
   let tenantPages = [];
   try {
     const snap = await adminDb.collection("tenants").get();
@@ -17,12 +18,47 @@ export default async function sitemap() {
       .map((doc) => doc.data().slug)
       .filter(Boolean)
       .map((slug) => ({
-        url: `${BASE}/${slug}`,
+        url: `${BASE}/${slug}/book`,
         lastModified: new Date(),
         changeFrequency: "weekly",
         priority: 0.8,
       }));
   } catch {}
 
-  return [...staticPages, ...tenantPages];
+  // Published property listing pages
+  let propertyPages = [];
+  try {
+    const bookingSnap = await adminDb
+      .collectionGroup("bookings")
+      .where("propertyWebsite.published", "==", true)
+      .limit(500)
+      .get();
+
+    const tenantIds = [...new Set(
+      bookingSnap.docs.map((d) => d.data().tenantId).filter(Boolean)
+    )];
+
+    const tenantSnaps = await Promise.all(
+      tenantIds.map((id) => adminDb.collection("tenants").doc(id).get())
+    );
+    const slugMap = Object.fromEntries(
+      tenantSnaps.filter((d) => d.exists).map((d) => [d.id, d.data().slug])
+    );
+
+    propertyPages = bookingSnap.docs
+      .map((d) => {
+        const slug = slugMap[d.data().tenantId];
+        if (!slug) return null;
+        const publishedAt = d.data().propertyWebsite?.publishedAt;
+        return {
+          url: `${BASE}/${slug}/property/${d.id}`,
+          lastModified: publishedAt ? new Date(publishedAt) : new Date(),
+          changeFrequency: "weekly",
+          priority: 0.7,
+        };
+      })
+      .filter(Boolean);
+  } catch {}
+
+  return [...staticPages, ...tenantPages, ...propertyPages];
 }

@@ -14,6 +14,6 @@ export default function robots() {
         ],
       },
     ],
-    sitemap: "https://app.kyoriaos.com/sitemap.xml",
+    sitemap: "https://kyoriaos.com/sitemap.xml",
   };
 }

@@ -71,7 +71,7 @@ export async function POST(req, { params }) {
   // Push to photographer's Google Calendar if connected (fire-and-forget)
   if (action === "confirm" && booking.photographerId && finalDate) {
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.kyoriaos.com";
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://kyoriaos.com";
       const token  = req.headers.get("Authorization")?.replace("Bearer ", "");
       fetch(`${appUrl}/api/dashboard/bookings/${params.id}/push-gcal`, {
         method:  "POST",

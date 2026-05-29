@@ -12,7 +12,7 @@ export default function PrivacyPolicyPage() {
       <p className="text-sm text-gray-400 mb-8">Last updated: {updated}</p>
 
       <Section title="1. Who We Are">
-        <p>KyoriaOS ("we", "us", or "our") is a business management platform for real estate photographers and their clients. We operate at <strong>app.kyoriaos.com</strong>. This Privacy Policy explains how we collect, use, disclose, and protect information when you use our platform.</p>
+        <p>KyoriaOS ("we", "us", or "our") is a business management platform for real estate photographers and their clients. We operate at <strong>kyoriaos.com</strong>. This Privacy Policy explains how we collect, use, disclose, and protect information when you use our platform.</p>
       </Section>
 
       <Section title="2. Information We Collect">

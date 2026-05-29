@@ -233,7 +233,7 @@ export default function CookiesPage() {
           We may update this Cookie Policy when we add new features or integrations that
           use cookies. Material changes will be communicated via email to active
           Subscribers. The updated policy will always be available at{" "}
-          <strong>app.kyoriaos.com/cookies</strong>.
+          <strong>kyoriaos.com/cookies</strong>.
         </p>
       </Section>
 
@@ -242,7 +242,7 @@ export default function CookiesPage() {
           Questions about our use of cookies can be sent to:{" "}
           <a href="mailto:privacy@kyoriaos.com" className="text-[#3486cf] underline underline-offset-2">privacy@kyoriaos.com</a>
         </p>
-        <p className="text-gray-400 text-xs mt-2">KyoriaOS · app.kyoriaos.com</p>
+        <p className="text-gray-400 text-xs mt-2">KyoriaOS · kyoriaos.com</p>
       </Section>
     </LegalLayout>
   );

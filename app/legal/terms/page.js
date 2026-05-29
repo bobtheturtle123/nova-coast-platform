@@ -13,7 +13,7 @@ export default function TermsPage() {
 
       <Section title="1. About KyoriaOS">
         <p>KyoriaOS is a business management software platform operated by <strong>Rick Ryan Photography LLC</strong> ("Company", "we", "us", or "our"). The platform provides booking management, payment processing, media delivery, and client communication tools for real estate photography businesses and their clients.</p>
-        <p>By accessing or using KyoriaOS at <strong>app.kyoriaos.com</strong>, you agree to be bound by these Terms of Service. If you do not agree, do not use the platform.</p>
+        <p>By accessing or using KyoriaOS at <strong>kyoriaos.com</strong>, you agree to be bound by these Terms of Service. If you do not agree, do not use the platform.</p>
       </Section>
 
       <Section title="2. Accounts and Access">

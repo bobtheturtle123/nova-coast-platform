@@ -5,22 +5,25 @@ import PropertyWebsiteClient from "./PropertyWebsiteClient";
 
 export async function generateMetadata({ params }) {
   const tenant = await getTenantBySlug(params.slug);
-  if (!tenant) return {};
+  if (!tenant) return { robots: { index: false } };
   const bookingDoc = await adminDb
     .collection("tenants").doc(tenant.id)
     .collection("bookings").doc(params.bookingId)
     .get();
-  if (!bookingDoc.exists) return {};
+  if (!bookingDoc.exists) return { robots: { index: false } };
   const booking = bookingDoc.data();
   const pw = booking.propertyWebsite;
-  if (!pw?.published) return {};
+  if (!pw?.published) return { robots: { index: false, follow: false } };
   const address = pw.customName || pw.address || booking.fullAddress || booking.address || "Property";
   const biz = tenant.branding?.businessName || tenant.businessName;
+  const canonical = `https://kyoriaos.com/${params.slug}/property/${params.bookingId}`;
   return {
     title: `${address} | ${biz}`,
     description: pw.description?.slice(0, 160) || `View photos and details for ${address}`,
+    alternates: { canonical },
     openGraph: {
       title: address,
+      url: canonical,
       images: pw.heroImageUrl ? [{ url: pw.heroImageUrl }] : [],
     },
   };
