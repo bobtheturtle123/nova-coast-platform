@@ -122,10 +122,10 @@ export async function GET(req) {
     }
     await nonceDoc.ref.delete();
 
-    const appUrl       = getAppUrl();
     const clientId     = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri  = `${appUrl}/api/calendar/oauth/callback`;
+    // Must exactly match the value used in /start AND registered in Google Cloud Console.
+    const redirectUri  = process.env.GOOGLE_OAUTH_REDIRECT_URI || `${getAppUrl()}/api/calendar/oauth/callback`;
 
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method:  "POST",

@@ -198,6 +198,8 @@ export default function ListingDetailPage() {
   const [catalog,    setCatalog]   = useState(null);
   const [loading,    setLoading]   = useState(true);
   const [saving,     setSaving]    = useState(false);
+  const [teamMembers,   setTeamMembers]   = useState([]);
+  const [showAssignPicker, setShowAssignPicker] = useState(false);
   const [tab,        setTab]       = useState("overview");
   const [showDeliver,  setShowDeliver]  = useState(false);
   const [delivering,   setDelivering]  = useState(false);
@@ -340,10 +342,11 @@ const [listingUrl,       setListingUrl]        = useState("");
     const result = await auth.currentUser.getIdTokenResult();
     setUserRole(result.claims?.role || "owner");
 
-    const [bRes, gRes, tRes] = await Promise.all([
+    const [bRes, gRes, tRes, mRes] = await Promise.all([
       fetch(`/api/dashboard/bookings/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
       fetch(`/api/dashboard/listings/${id}/gallery`, { headers: { Authorization: `Bearer ${token}` } }),
       fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } }),
+      fetch("/api/dashboard/team", { headers: { Authorization: `Bearer ${token}` } }),
     ]);
     if (tRes.ok) {
       const { tenant } = await tRes.json();
@@ -366,6 +369,10 @@ const [listingUrl,       setListingUrl]        = useState("");
     if (gRes.ok) {
       const { gallery: g } = await gRes.json();
       setGallery(g);
+    }
+    if (mRes.ok) {
+      const { members } = await mRes.json();
+      setTeamMembers(members || []);
     }
     setLoading(false);
   }
@@ -934,15 +941,47 @@ if (loading) return (
                   </span>
                 </div>
                 {/* photographer row */}
-                <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
-                  <span className="text-[12.5px] text-gray-500 flex items-center gap-2">
-                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                    Photographer
-                  </span>
-                  <span className="font-semibold text-[#0F172A] text-[13px] flex items-center gap-2">
-                    {booking.photographerName || <span className="text-gray-400 font-normal">Unassigned</span>}
-                    <Link href={`/dashboard/bookings/${id}/edit`} className="text-[11px] text-[#3486cf] font-semibold">Reassign</Link>
-                  </span>
+                <div className="py-2.5 border-b border-gray-50">
+                  {showAssignPicker ? (
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="input-field flex-1 text-xs"
+                        defaultValue={booking.photographerId || ""}
+                        onChange={async (e) => {
+                          const val = e.target.value;
+                          if (val === "__me__") {
+                            const u = auth.currentUser;
+                            await patchBooking({ photographerId: u?.uid || "", photographerName: u?.displayName || u?.email || "Me", photographerEmail: u?.email || "" });
+                          } else if (val === "") {
+                            await patchBooking({ photographerId: "", photographerName: "", photographerEmail: "" });
+                          } else {
+                            const m = teamMembers.find((x) => x.id === val);
+                            if (m) await patchBooking({ photographerId: m.id, photographerName: m.name, photographerEmail: m.email || "" });
+                          }
+                          setShowAssignPicker(false);
+                        }}>
+                        <option value="">Unassigned (skip for now)</option>
+                        <option value="__me__">Assign me ({auth.currentUser?.email})</option>
+                        {teamMembers.filter((m) => m.active !== false).map((m) => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </select>
+                      <button onClick={() => setShowAssignPicker(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12.5px] text-gray-500 flex items-center gap-2">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        Photographer
+                      </span>
+                      <span className="font-semibold text-[#0F172A] text-[13px] flex items-center gap-2">
+                        {booking.photographerName || <span className="text-gray-400 font-normal">Unassigned</span>}
+                        <button type="button" onClick={() => setShowAssignPicker(true)} className="text-[11px] text-[#3486cf] font-semibold">
+                          {booking.photographerName ? "Reassign" : "Assign"}
+                        </button>
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {/* payment status row */}
                 {canViewRevenue && (
@@ -1408,7 +1447,12 @@ if (loading) return (
                           } catch { setDepositLinkMsg("Failed."); } finally { setSendingDeposit(false); }
                         }}
                         className="w-full btn-primary text-sm py-2 disabled:opacity-50">
-                        {sendingDeposit ? "Sending…" : `Send 50% deposit request${booking.depositAmount ? ` · ${formatCurrency(booking.depositAmount, currency, locale)}` : ""}`}
+                        {sendingDeposit ? "Sending…" : (() => {
+                          const pct = booking.totalPrice > 0 && booking.depositAmount > 0
+                            ? Math.round((booking.depositAmount / booking.totalPrice) * 100)
+                            : (catalog?.bookingConfig?.depositPercent ?? 50);
+                          return `Send ${pct}% deposit request${booking.depositAmount ? ` · ${formatCurrency(booking.depositAmount, currency, locale)}` : ""}`;
+                        })()}
                       </button>
                     )}
                     <button

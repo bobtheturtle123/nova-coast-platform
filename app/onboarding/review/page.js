@@ -41,15 +41,11 @@ export default function ReviewStep() {
         currentStep: 5,
       });
       await patch({ onboardingCompleted: true, starterGuideCompleted: false }).catch(() => {});
-      // Pre-sync subscription so the dashboard gate doesn't bounce them to /auth/plan.
-      // This recovers cases where the Stripe webhook fired late or was missed entirely.
-      try {
-        const u = auth.currentUser;
-        if (u) {
-          const tok = await u.getIdToken();
-          await fetch("/api/billing/sync", { headers: { Authorization: `Bearer ${tok}` } });
-        }
-      } catch {}
+      // Fire-and-forget billing sync — do NOT await this; it can be slow and
+      // must never block navigation to the dashboard.
+      auth.currentUser?.getIdToken().then(tok =>
+        fetch("/api/billing/sync", { headers: { Authorization: `Bearer ${tok}` } })
+      ).catch(() => {});
     } catch {
       setFinishing(false);
       return;
@@ -91,9 +87,9 @@ export default function ReviewStep() {
       lede="Here's what you've set up. You can change any of it from Settings later."
       footer={
         <>
-          <button className="btn-ghost" onClick={() => router.push("/onboarding/service-area")}>← Back to Service Area</button>
-          <button className="btn-primary" onClick={handleFinish} disabled={finishing}>
-            {finishing ? "Finishing…" : "Finish setup"}
+          <button className="btn-ghost" onClick={() => router.push("/onboarding/service-area")}>← Back</button>
+          <button className="btn-primary" onClick={() => handleFinish("/dashboard?welcome=1")} disabled={finishing}>
+            {finishing ? "Opening dashboard…" : "Go to dashboard →"}
           </button>
         </>
       }
@@ -108,36 +104,20 @@ export default function ReviewStep() {
         </div>
       </div>
 
-      {/* "Next step" gold card */}
+      {/* Tip card */}
       <div style={{
-        padding: "24px 28px", borderRadius: 16,
-        background: "linear-gradient(135deg, rgba(201,169,110,0.12) 0%, rgba(168,132,63,0.08) 100%)",
+        padding: "18px 22px", borderRadius: 14,
+        background: "linear-gradient(135deg, rgba(201,169,110,0.10) 0%, rgba(168,132,63,0.06) 100%)",
         border: "1.5px solid #E8C97A",
+        display: "flex", alignItems: "flex-start", gap: 14,
       }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg, #C9A96E, #A8843F)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <span style={{ fontSize: 22 }}>✦</span>
-          </div>
-          <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0F172A" }}>Finish setting up your business</p>
-            <p style={{ margin: "6px 0 16px", fontSize: 13, color: "#6B7280", lineHeight: 1.6 }}>
-              Configure your booking preferences, pricing, and business details so everything is ready for clients.
-            </p>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button className="btn-ghost"
-                onClick={() => handleFinish("/dashboard?welcome=1")}
-                disabled={finishing}
-                style={{ fontSize: 13 }}>
-                {finishing ? "Finishing…" : "Skip to dashboard"}
-              </button>
-              <button
-                onClick={() => handleFinish("/dashboard/settings")}
-                disabled={finishing}
-                style={{ height: 36, padding: "0 18px", background: "linear-gradient(135deg, #C9A96E, #A8843F)", color: "#fff", border: "none", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", opacity: finishing ? 0.7 : 1, boxShadow: "0 2px 8px rgba(168,132,63,0.28)" }}>
-                {finishing ? "Finishing…" : "Go to Settings →"}
-              </button>
-            </div>
-          </div>
+        <span style={{ fontSize: 20, flexShrink: 0 }}>✦</span>
+        <div>
+          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: "#0F172A" }}>Ready to go</p>
+          <p style={{ margin: "4px 0 0", fontSize: 12.5, color: "#6B7280", lineHeight: 1.6 }}>
+            Your workspace is configured. Hit "Go to dashboard" below to start managing bookings.
+            You can tweak branding, pricing, and availability any time from Settings.
+          </p>
         </div>
       </div>
     </StepCard>

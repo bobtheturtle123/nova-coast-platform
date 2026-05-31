@@ -48,7 +48,10 @@ export async function GET(req) {
     }
 
     const clientId   = process.env.GOOGLE_CLIENT_ID;
-    const redirectUri = `${getAppUrl()}/api/calendar/oauth/callback`;
+    // GOOGLE_OAUTH_REDIRECT_URI must match exactly what is registered in
+    // Google Cloud Console → APIs & Services → Credentials → Authorized redirect URIs.
+    // Set this env var in Vercel to the registered value (e.g. https://kyoriaos.com/api/calendar/oauth/callback).
+    const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI || `${getAppUrl()}/api/calendar/oauth/callback`;
 
     if (!clientId) {
       return Response.json({ error: "GOOGLE_CLIENT_ID not configured" }, { status: 500 });

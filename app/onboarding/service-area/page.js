@@ -612,8 +612,10 @@ export default function ServiceAreaStep() {
   }
 
   async function handleContinue() {
+    // Save under both keys: "service-area" matches step id in stepper,
+    // serviceArea (camelCase) kept for review page summary backwards compat.
     await saveOnboarding({
-      completed: { ...(onboarding?.completed || {}), serviceArea: true },
+      completed: { ...(onboarding?.completed || {}), serviceArea: true, "service-area": true },
       currentStep: 5,
     });
     router.push("/onboarding/review");
@@ -621,8 +623,8 @@ export default function ServiceAreaStep() {
 
   async function handleSkipConfirm() {
     await saveOnboarding({
-      completed: { ...(onboarding?.completed || {}), serviceArea: true },
-      skipped:   { ...(onboarding?.skipped   || {}), serviceArea: true },
+      completed: { ...(onboarding?.completed || {}), serviceArea: true, "service-area": true },
+      skipped:   { ...(onboarding?.skipped   || {}), serviceArea: true, "service-area": true },
       currentStep: 5,
     });
     router.push("/onboarding/review");
