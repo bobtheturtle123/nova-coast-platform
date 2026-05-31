@@ -1154,9 +1154,9 @@ if (loading) return (
                     </div>
                   );
                 })()}
-              </div>{/* close p-[18px] */}
-              </div>{/* close card */}
+              </div>
             )}
+            </div>
 
             </div>{/* end main column */}
 
