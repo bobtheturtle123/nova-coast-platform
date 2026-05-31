@@ -252,6 +252,11 @@ const [listingUrl,       setListingUrl]        = useState("");
   const [userRole, setUserRole] = useState("owner"); // "owner" | "admin" | "manager"
   const [convertingToListing, setConvertingToListing] = useState(false);
 
+  // Autofill (MLS / Redfin)
+  const [autofillSource, setAutofillSource] = useState("");
+  const [autofilling,    setAutofilling]    = useState(false);
+  const [autofillMsg,    setAutofillMsg]    = useState("");
+
   async function convertToListing() {
     setConvertingToListing(true);
     try {
@@ -526,6 +531,31 @@ const [listingUrl,       setListingUrl]        = useState("");
     setPropSite((p) => ({ ...p, [field]: value }));
   }
 
+  async function handleAutofill() {
+    if (!autofillSource.trim()) return;
+    setAutofilling(true);
+    setAutofillMsg("");
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch(`/api/dashboard/listings/${id}/autofill`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ source: autofillSource.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.fields && Object.keys(data.fields).length > 0) {
+        Object.entries(data.fields).forEach(([k, v]) => setPropField(k, v));
+        setAutofillMsg("Fields filled in — review and save.");
+      } else {
+        setAutofillMsg(data.message || "No data found for that source.");
+      }
+    } catch {
+      setAutofillMsg("Auto-fill failed. Enter details manually.");
+    } finally {
+      setAutofilling(false);
+    }
+  }
+
   async function loadAnalytics() {
     setAnalyticsLoading(true);
     try {
@@ -580,64 +610,180 @@ if (loading) return (
         weekday: "short", month: "short", day: "numeric", year: "numeric",
       })
     : null;
+  const canViewRevenue = userRole !== "manager";
+  const balanceDue = !booking.paidInFull && !booking.balancePaid;
+
+  // Stepper state computation
+  const wfStatus   = resolveWorkflowStatus(booking, { gallery, revisions: revisions ?? undefined });
+  const isShootPast = booking.shootDate && new Date((booking.shootDate.split("T")[0]) + "T23:59:00") < new Date();
+  const hasPhotog   = !!(booking.photographerId || booking.photographerName);
+  const hasMedia    = (gallery?.media?.length || 0) > 0;
+  const isDelivered = !!gallery?.delivered;
+
+  const STEPS = [
+    { label: "Booked",     sub: null },
+    { label: "Confirmed",  sub: booking.shootDate ? new Date((booking.shootDate.split("T")[0]) + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null },
+    { label: "Assigned",   sub: booking.photographerName || null },
+    { label: "Shot",       sub: isShootPast ? "Complete" : null },
+    { label: "Editing",    sub: null },
+    { label: "QA",         sub: null },
+    { label: "Delivered",  sub: null },
+  ];
+
+  function stepState(i) {
+    if (isDelivered)  return i < 7 ? "done" : "done";
+    if (i === 0)      return "done";
+    if (i === 1)      return (booking.shootDate || booking.scheduleApprovalStatus === "confirmed") ? "done" : "none";
+    if (i === 2)      return hasPhotog ? "done" : "none";
+    if (i === 3)      return isShootPast ? "done" : "none";
+    if (i === 4)      return (isShootPast && hasMedia) ? "active" : (isShootPast ? "none" : "none");
+    if (i === 5)      return wfStatus === "revisions" ? "active" : "none";
+    if (i === 6)      return "none";
+    return "none";
+  }
+
+  // Determine first non-done step as active if no explicit active step
+  const firstActive = STEPS.findIndex((_, i) => stepState(i) === "active");
+  const firstNone   = STEPS.findIndex((_, i) => stepState(i) === "none");
+  const activeIdx   = firstActive >= 0 ? firstActive : (isDelivered ? 6 : firstNone >= 0 ? firstNone : 0);
+
+  const nextHint = isDelivered ? (wfStatus === "completed" ? "Listing complete and paid" : "Listing delivered") :
+    wfStatus === "revisions" ? "Address revision requests then re-deliver" :
+    !booking.shootDate ? "Confirm the shoot date and time" :
+    !hasPhotog ? "Assign a photographer" :
+    !isShootPast ? `Complete the shoot on ${STEPS[1].sub || "scheduled date"}` :
+    !hasMedia ? "Upload media to the gallery" :
+    "Review and deliver the gallery";
+
+  // Deliver readiness checklist
+  const readinessItems = [
+    { label: "Media uploaded",      done: hasMedia },
+    { label: "Payment on file",     done: !!(booking.depositPaid || booking.paidInFull) },
+    { label: "Property site saved", done: !!(propSite.address && propSite.beds) },
+  ];
+  const readinessPct = Math.round((readinessItems.filter((x) => x.done).length / readinessItems.length) * 100);
 
   return (
-    <div>
+    <div className="min-h-screen" style={{ background: "#F7F8FA" }}>
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 px-7 pt-4 pb-0" style={{ fontSize: 12, color: "#9CA3AF" }}>
+        <Link href="/dashboard/listings" className="hover:text-[#3486cf] transition-colors">Listings</Link>
+        <span style={{ color: "#D1D5DB" }}>/</span>
+        <span className="text-[#0F172A] font-medium truncate max-w-xs">{address}</span>
+      </div>
+
       {/* Hero */}
-      <div className="relative h-72 bg-[#0F172A] overflow-hidden">
-        {coverUrl ? (
-          <img src={coverUrl} alt={address} className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#1e5a8a] to-[#3486cf]" />
+      <div className="mx-7 mt-3.5 rounded-[18px] overflow-hidden relative" style={{ height: 240, background: "#1f2733" }}>
+        {coverUrl
+          ? <img src={coverUrl} alt={address} className="absolute inset-0 w-full h-full object-cover" />
+          : <div className="absolute inset-0" style={{ background: "linear-gradient(135deg,#2c3a4d,#1a2230)" }} />}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,rgba(15,23,42,.12) 0%,rgba(15,23,42,.75) 100%)" }} />
+
+        {/* Balance strip */}
+        {balanceDue && booking.remainingBalance > 0 && (
+          <div className="absolute top-0 left-0 right-0 z-10 text-center text-white font-semibold" style={{ fontSize: 11.5, padding: "6px 12px", background: "rgba(217,119,6,0.95)", backdropFilter: "blur(4px)" }}>
+            Balance due {formatCurrency(booking.remainingBalance, currency, locale)} · collected automatically when you deliver
+          </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-        <div className="absolute bottom-4 left-6 right-6">
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-white/60 text-xs mb-1">
-                <Link href="/dashboard/listings" className="hover:text-white">← All Listings</Link>
-              </p>
-              <h1 className="font-semibold text-white text-2xl leading-tight">{address}</h1>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {gallery?.delivered && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-xl bg-green-500 text-white">Listing Delivered</span>
-                )}
-                {booking.paidInFull && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-xl bg-emerald-500 text-white">Paid in Full</span>
-                )}
-                {!booking.paidInFull && booking.balancePaid && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-xl bg-emerald-500 text-white">Fully Paid</span>
-                )}
-                {!booking.paidInFull && !booking.balancePaid && booking.depositPaid && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-xl bg-blue-500 text-white">Deposit Paid</span>
-                )}
-                <WorkflowStatusBadge status={resolveWorkflowStatus(booking, { gallery, revisions: revisions ?? undefined })} size="xs" />
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {booking.status === "requested" && (
-                <button onClick={() => patchBooking({ status: "confirmed" })} disabled={saving}
-                  className="px-4 py-2 text-sm font-semibold rounded-xl bg-green-500 text-white hover:bg-green-600 transition-colors">
-                  ✓ Confirm
-                </button>
+
+        <div className="absolute inset-0 flex flex-col justify-between p-6" style={{ paddingTop: (balanceDue && booking.remainingBalance > 0) ? 36 : 22 }}>
+          {/* Top row: badges + quick actions */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              {booking.id && (
+                <span className="text-white font-semibold rounded-full" style={{ fontSize: 11, padding: "4px 11px", background: "rgba(255,255,255,0.16)", backdropFilter: "blur(8px)" }}>
+                  #{booking.id.slice(-6).toUpperCase()}
+                </span>
               )}
+              <span className="font-semibold rounded-full" style={{ fontSize: 11, padding: "4px 11px", background: "#C9A96E", color: "#1a1205" }}>
+                <WorkflowStatusBadge status={wfStatus} size="xs" className="inline" />
+              </span>
+              {balanceDue && booking.remainingBalance > 0 && (
+                <span className="font-semibold rounded-full text-white" style={{ fontSize: 11, padding: "4px 11px", background: "rgba(217,119,6,0.92)" }}>
+                  Balance due {formatCurrency(booking.remainingBalance, currency, locale)}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button onClick={() => setShowDeliver(true)}
+                className="btn-primary text-xs font-semibold rounded-[9px] h-9 px-4" style={{ fontSize: 13 }}>
+                Deliver →
+              </button>
+              <a href={`mailto:${booking.clientEmail}`} title="Message client"
+                className="w-9 h-9 rounded-[9px] flex items-center justify-center border border-white/20 text-white hover:bg-white/20 transition-colors" style={{ background: "rgba(255,255,255,0.14)", backdropFilter: "blur(8px)" }}>
+                <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              </a>
+              {propSite.published && tenantSlug && (
+                <a href={`/${tenantSlug}/property/${id}`} target="_blank" rel="noopener noreferrer" title="Open public site"
+                  className="w-9 h-9 rounded-[9px] flex items-center justify-center border border-white/20 text-white hover:bg-white/20 transition-colors" style={{ background: "rgba(255,255,255,0.14)", backdropFilter: "blur(8px)" }}>
+                  <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom: address + meta */}
+          <div>
+            <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 30, fontWeight: 700, color: "#fff", margin: 0, letterSpacing: "-0.4px", lineHeight: 1.1 }}>
+              {address}
+            </h1>
+            <div className="flex items-center gap-3 mt-1.5 flex-wrap" style={{ color: "rgba(255,255,255,0.82)", fontSize: 13 }}>
+              {(booking.squareFootage || booking.sqft) && <span>{(booking.squareFootage || booking.sqft).toLocaleString()} sqft</span>}
+              {propSite.beds && <><span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(255,255,255,0.5)", display: "inline-block" }} /><span>{propSite.beds} BD</span></>}
+              {propSite.baths && <><span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(255,255,255,0.5)", display: "inline-block" }} /><span>{propSite.baths} BA</span></>}
+              {(() => {
+                const allItems = [...(catalog?.packages||[]),...(catalog?.services||[]),...(catalog?.addons||[])];
+                const pkgIds = booking.packageIds?.length > 0 ? booking.packageIds : (booking.packageId ? [booking.packageId] : []);
+                const pkgName = pkgIds[0] ? (allItems.find((x) => x.id === pkgIds[0])?.name || null) : null;
+                return pkgName ? <><span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(255,255,255,0.5)", display: "inline-block" }} /><span>{pkgName}</span></> : null;
+              })()}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tabs + Upload Media inline */}
-      <div className="bg-white border-b border-gray-200 px-6 sticky top-0 z-10">
+      {/* Workflow Stepper */}
+      <div className="mx-7 mt-4 bg-white rounded-2xl border border-gray-200" style={{ padding: "18px 22px" }}>
+        <div className="flex items-center justify-between mb-4">
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#6B7280", letterSpacing: "0.08em", textTransform: "uppercase" }}>Workflow</span>
+          <span style={{ fontSize: 12, color: "#6B7280" }}>Next: <b style={{ color: "#0F172A" }}>{nextHint}</b></span>
+        </div>
+        <div className="flex items-start">
+          {STEPS.map((step, i) => {
+            const state = isDelivered ? "done" : i < activeIdx ? "done" : i === activeIdx ? "active" : "none";
+            return (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1.5 relative">
+                {i > 0 && (
+                  <div className="absolute" style={{ left: "-50%", right: "50%", top: 14, height: 1.6, background: (state === "done" || (i <= activeIdx)) ? "#059669" : "#E5E7EB", zIndex: 1 }} />
+                )}
+                <div className="w-7 h-7 rounded-full flex items-center justify-center relative z-10 text-xs font-bold" style={{
+                  background: state === "done" ? "#059669" : state === "active" ? "#fff" : "#fff",
+                  border: state === "done" ? "1.6px solid #059669" : state === "active" ? "1.6px solid #3486cf" : "1.6px solid #E5E7EB",
+                  color: state === "done" ? "#fff" : state === "active" ? "#3486cf" : "#9CA3AF",
+                  boxShadow: state === "active" ? "0 0 0 4px #EEF4FA" : "none",
+                }}>
+                  {state === "done" ? "✓" : i + 1}
+                </div>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: state === "done" ? "#0F172A" : state === "active" ? "#3486cf" : "#9CA3AF", textAlign: "center" }}>{step.label}</span>
+                {step.sub && <span style={{ fontSize: 10, color: "#9CA3AF" }}>{step.sub}</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Sticky Tabs */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 mt-4" style={{ paddingLeft: 28, paddingRight: 28 }}>
         <div className="flex items-center justify-between">
           <div className="flex gap-0">
             {[
-              { id: "overview",   label: "Overview" },
-              { id: "orders",     label: "Payments" },
-              { id: "gallery",    label: "Gallery" },
-              { id: "property",   label: "Property Site" },
-              { id: "marketing",  label: "Marketing" },
-              { id: "revisions",  label: "Revisions", badge: revisions ? revisions.filter((r) => r.status === "pending").length : 0 },
-              { id: "activity",   label: "Activity" },
+              { id: "overview",  label: "Overview" },
+              { id: "orders",    label: "Payments" },
+              { id: "gallery",   label: "Gallery" },
+              { id: "property",  label: "Property Site" },
+              { id: "marketing", label: "Marketing" },
+              { id: "revisions", label: "Revisions", badge: revisions ? revisions.filter((r) => r.status === "pending").length : 0 },
+              { id: "activity",  label: "Activity" },
             ].map((t) => (
               <button key={t.id} onClick={() => {
                 setTab(t.id);
@@ -645,32 +791,21 @@ if (loading) return (
                 if (t.id === "activity" && activityLog.length === 0) loadActivity(gallery?.id);
                 if (t.id === "revisions" && revisions === null) loadRevisions();
               }}
-                className={`px-4 py-3.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
-                  tab === t.id
-                    ? "border-[#3486cf] text-[#0F172A]"
-                    : "border-transparent text-gray-400 hover:text-gray-600"
-                }`}>
+                className={`px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${tab === t.id ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-400 hover:text-gray-600"}`}>
                 {t.label}
-                {t.badge > 0 && (
-                  <span style={{ background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 9999, padding: "1px 5px", lineHeight: "16px" }}>
-                    {t.badge}
-                  </span>
-                )}
+                {t.badge > 0 && <span style={{ background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 9999, padding: "1px 6px" }}>{t.badge}</span>}
               </button>
             ))}
           </div>
-          <button
-            onClick={openGalleryEditor}
+          <button onClick={openGalleryEditor}
             className="flex-shrink-0 inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[#3486cf] text-white hover:bg-[#2a6dab] transition-colors my-2">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
             Upload Media
           </button>
         </div>
       </div>
 
-      <div className="p-6 max-w-5xl">
+      <div className="px-7 py-5 max-w-[1200px]">
         {/* Scheduled delivery banner */}
         {gallery?.scheduledDelivery && ["pending", "processing", "error"].includes(gallery.scheduledDelivery.status) && (() => {
           const status = gallery.scheduledDelivery.status;
@@ -727,40 +862,92 @@ if (loading) return (
 
         {/* ── OVERVIEW TAB ─────────────────────────────────────────────────── */}
         {tab === "overview" && (
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid gap-4" style={{ gridTemplateColumns: "1fr 340px", alignItems: "start" }}>
+            {/* ── Main column ── */}
+            <div className="space-y-4">
             {/* Client / Agent */}
-            <div className="card p-5">
-              <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Agent / Client</p>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-[#3486cf]/10 flex items-center justify-center text-[#3486cf] font-bold">
-                  {booking.clientName?.[0]?.toUpperCase() || "?"}
-                </div>
-                <div>
-                  <p className="font-medium text-[#0F172A]">{booking.clientName}</p>
-                  <p className="text-sm text-gray-500">{booking.clientEmail}</p>
-                  {booking.clientPhone && <p className="text-sm text-gray-500">{booking.clientPhone}</p>}
-                </div>
+            <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
+              <div className="px-[18px] py-3.5 border-b border-gray-100 flex items-center justify-between">
+                <span className="text-[13.5px] font-bold text-[#0F172A]">Agent / Client</span>
+                <Link href={`/dashboard/bookings/${id}/edit`} className="text-xs text-[#3486cf] font-semibold">Edit</Link>
               </div>
-              {(booking.sqft || booking.squareFootage) && (
-                <p className="text-xs text-gray-400">{(booking.sqft || booking.squareFootage).toLocaleString()} sq ft{booking.propertyType ? ` · ${booking.propertyType}` : ""}</p>
-              )}
-              {booking.notes && (
-                <div className="mt-3 p-3 bg-gray-50 rounded-xl">
-                  <p className="text-xs text-gray-500 italic">"{booking.notes}"</p>
+              <div className="p-[18px]">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0" style={{ background: "#3486cf", fontSize: 15 }}>
+                    {(booking.clientName || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-[#0F172A]" style={{ fontSize: 15 }}>{booking.clientName}</p>
+                    <p className="text-gray-500" style={{ fontSize: 12.5 }}>{booking.clientEmail}</p>
+                    {booking.clientPhone && <p className="text-gray-500" style={{ fontSize: 12.5 }}>{booking.clientPhone}</p>}
+                  </div>
                 </div>
-              )}
-
-
+                <div className="flex gap-2 mt-3.5">
+                  {booking.clientEmail && (
+                    <a href={`mailto:${booking.clientEmail}`}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+                      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                      Email
+                    </a>
+                  )}
+                  {booking.clientPhone && (
+                    <a href={`tel:${booking.clientPhone}`}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+                      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                      Call
+                    </a>
+                  )}
+                  <button onClick={() => sendAgentAccess(true)} disabled={sendingAgentAccess}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                    {sendingAgentAccess ? "Sending…" : "Portal access"}
+                  </button>
+                </div>
+                {agentAccessMsg && <p className="text-xs text-green-600 mt-2">{agentAccessMsg}</p>}
+                {booking.notes && (
+                  <div className="mt-3.5 p-3 rounded-[10px]" style={{ background: "#FAFAFA", borderLeft: "3px solid #C9A96E" }}>
+                    <p className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "#A8843F" }}>Note</p>
+                    <p className="text-[#4B5261] italic leading-relaxed" style={{ fontSize: 12.5 }}>"{booking.notes}"</p>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Shoot management */}
-            <div className="card p-5">
-              <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Shoot Details</p>
-              <div className="space-y-4">
-                {/* Payment status — editable select for owners/admins */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Payment Status</label>
-                  <div className="flex flex-wrap items-center gap-2">
+            {/* Shoot Details */}
+            <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
+              <div className="px-[18px] py-3.5 border-b border-gray-100">
+                <span className="text-[13.5px] font-bold text-[#0F172A]">Shoot Details</span>
+              </div>
+              <div className="p-[18px] space-y-0">
+                {/* shoot date row */}
+                <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                  <span className="text-[12.5px] text-gray-500 flex items-center gap-2">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Shoot date
+                  </span>
+                  <span className="font-semibold text-[#0F172A] text-[13px] flex items-center gap-2">
+                    {booking.shootDate ? <>{shootDateDisplay}{booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}</> : <span className="text-gray-400 font-normal">Not set</span>}
+                    {booking.shootDate && (
+                      <button type="button" onClick={() => { setReschedApptIdx(null); setReschedDate(booking.shootDate?.split?.("T")?.[0] || ""); setReschedTime(booking.shootTime || ""); setShowReschedModal(true); }}
+                        className="text-[11px] text-[#3486cf] font-semibold">Reschedule</button>
+                    )}
+                  </span>
+                </div>
+                {/* photographer row */}
+                <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                  <span className="text-[12.5px] text-gray-500 flex items-center gap-2">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    Photographer
+                  </span>
+                  <span className="font-semibold text-[#0F172A] text-[13px] flex items-center gap-2">
+                    {booking.photographerName || <span className="text-gray-400 font-normal">Unassigned</span>}
+                    <Link href={`/dashboard/bookings/${id}/edit`} className="text-[11px] text-[#3486cf] font-semibold">Reassign</Link>
+                  </span>
+                </div>
+                {/* payment status row */}
+                {canViewRevenue && (
+                  <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                    <span className="text-[12.5px] text-gray-500">Payment</span>
                     <select
                       value={booking.paidInFull || booking.balancePaid ? "paid_full" : booking.depositPaid ? "deposit_paid" : "unpaid"}
                       disabled={userRole === "manager"}
@@ -770,36 +957,36 @@ if (loading) return (
                         else if (v === "deposit_paid") patchBooking({ depositPaid: true,  balancePaid: false });
                         else                           patchBooking({ depositPaid: false, balancePaid: false });
                       }}
-                      className="input-field disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ width: "auto", minWidth: 160 }}
-                    >
+                      className="input-field text-xs disabled:opacity-50 disabled:cursor-not-allowed" style={{ width: "auto", minWidth: 150, height: 30 }}>
                       <option value="unpaid">○ Unpaid</option>
                       <option value="deposit_paid">◑ Deposit Paid</option>
                       <option value="paid_full">✓ Paid in Full</option>
                     </select>
-                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-xl border ${
-                      gallery?.delivered
-                        ? "bg-green-50 text-green-700 border-green-200"
-                        : "bg-amber-50 text-amber-600 border-amber-200"
-                    }`}>
-                      {gallery?.delivered ? "✓ Delivered" : "— Undelivered"}
-                    </span>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Workflow Stage</label>
-                  <WorkflowStatusBadge
-                    status={resolveWorkflowStatus(booking, {
-                      gallery,
-                      revisions: revisions ?? undefined,
-                    })}
-                    size="sm"
-                  />
-                  <p className="text-[10px] text-gray-400 mt-1">Auto-updated by app events</p>
-                </div>
-                {/* Client requested time */}
-                {(booking.preferredDate || booking.preferredTime) && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs">
+                )}
+                {/* weather */}
+                {showWeather && (booking.shootDate || booking.preferredDate) && (booking.fullAddress || booking.address) && (
+                  <div className="pt-2.5">
+                    <WeatherWidget
+                      address={[booking.fullAddress || booking.address, booking.city, booking.state, booking.zip].filter(Boolean).join(", ")}
+                      date={(booking.shootDate || booking.preferredDate).split("T")[0]}
+                      lat={booking.lat || undefined} lng={booking.lng || undefined} unit={tempUnit} />
+                  </div>
+                )}
+                {/* Additional appointments */}
+                {(booking.additionalAppointments || []).length > 0 && (
+                  <div className="pt-2.5 space-y-1.5">
+                    {(booking.additionalAppointments || []).map((appt, i) => (
+                      <div key={i} className="flex items-center justify-between py-1">
+                        <span className="text-[12px] text-gray-500">Appt {i + 2}: {appt.date ? new Date(appt.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "TBD"}{appt.time ? ` · ${valToLabel(appt.time)}` : ""}</span>
+                        <button type="button" onClick={() => { setReschedApptIdx(i); setReschedDate(""); setReschedTime(""); setShowReschedModal(true); }} className="text-[11px] text-[#3486cf] font-semibold">Reschedule</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* LEGACY: kept for schedule-approval flow */}
+                {(booking.preferredDate || booking.preferredTime) && false && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs hidden">
                     <p className="font-semibold text-amber-800 mb-0.5">Client Requested</p>
                     <p className="text-amber-700">
                       {booking.preferredDate
@@ -919,67 +1106,14 @@ if (loading) return (
                   );
                 })()}
 
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      Scheduled Shoot
-                    </label>
-                    {booking.shootDate && (
-                      <button type="button"
-                        onClick={() => {
-                          setReschedApptIdx(null);
-                          setReschedDate(booking.shootDate?.split?.("T")?.[0] || "");
-                          setReschedTime(booking.shootTime || "");
-                          setShowReschedModal(true);
-                        }}
-                        className="text-xs text-[#3486cf] hover:underline">
-                        Reschedule
-                      </button>
-                    )}
-                  </div>
-                  {booking.shootDate ? (
-                    <p className="text-sm font-medium text-[#0F172A] flex items-center gap-1.5">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500 flex-shrink-0">
-                        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                      </svg>
-                      {shootDateDisplay}{booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-gray-400">No shoot date set — manage in Bookings</p>
-                  )}
-                  {/* Additional appointments */}
-                  {(booking.additionalAppointments || []).length > 0 && (
-                    <div className="mt-2 space-y-1.5">
-                      {(booking.additionalAppointments || []).map((appt, i) => (
-                        <div key={i} className="flex items-center justify-between">
-                          <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
-                              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                            </svg>
-                            Appt {i + 2}: {appt.date ? new Date(appt.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "TBD"}{appt.time ? ` · ${valToLabel(appt.time)}` : ""}
-                          </p>
-                          <button type="button"
-                            onClick={() => {
-                              setReschedApptIdx(i);
-                              setReschedDate("");
-                              setReschedTime("");
-                              setShowReschedModal(true);
-                            }}
-                            className="text-[11px] text-[#3486cf] hover:underline ml-2 flex-shrink-0">
-                            Reschedule
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
 
             {/* Services */}
             {((booking.packageIds?.length > 0 || booking.packageId) || booking.serviceIds?.length > 0 || booking.customLineItems?.length > 0) && (
-              <div className="card p-5">
-                <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Services Booked</p>
+              <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
+                <div className="px-[18px] py-3.5 border-b border-gray-100"><span className="text-[13.5px] font-bold text-[#0F172A]">Services Ordered</span></div>
+                <div className="p-[18px]">
                 {(() => {
                   const allItems = [
                     ...(catalog?.packages || []),
@@ -1020,177 +1154,170 @@ if (loading) return (
                     </div>
                   );
                 })()}
-              </div>
+              </div>{/* close p-[18px] */}
+              </div>{/* close card */}
             )}
 
-            {/* Gallery quick links */}
-            <div className="card p-5">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs uppercase tracking-wide text-gray-400">Gallery</p>
-                {gallery && (
-                  <button onClick={toggleUnlock} className="text-xs text-[#3486cf] hover:underline">
-                    {gallery.unlocked ? "Lock" : "Unlock"}
-                  </button>
-                )}
+            </div>{/* end main column */}
+
+            {/* ── Right Rail ── */}
+            <div className="space-y-4">
+
+              {/* Deliver Readiness */}
+              <div className="rounded-2xl border p-[18px]" style={{ background: "linear-gradient(160deg,#fff,#EEF4FA)", borderColor: "#DAE6F4" }}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0" style={{
+                    background: `conic-gradient(#3486cf ${readinessPct}%,#E3EAF2 0)`,
+                  }}>
+                    <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-[11px] font-bold" style={{ color: "#3486cf" }}>{readinessPct}%</div>
+                  </div>
+                  <div>
+                    <p className="font-bold text-[#0F172A]" style={{ fontSize: 14 }}>Ready to Deliver</p>
+                    <p className="text-gray-500" style={{ fontSize: 11.5 }}>{readinessItems.filter((x) => x.done).length} of {readinessItems.length} checks complete</p>
+                  </div>
+                </div>
+                <div className="space-y-2 mb-4">
+                  {readinessItems.map((item, i) => (
+                    <div key={i} className="flex items-center gap-2.5" style={{ fontSize: 12.5, color: item.done ? "#374151" : "#9CA3AF" }}>
+                      <div className="w-4 h-4 rounded-[5px] flex items-center justify-center flex-shrink-0 text-[10px]" style={{
+                        background: item.done ? "#059669" : "transparent",
+                        border: item.done ? "none" : "1.5px solid #D1D5DB",
+                        color: "#fff",
+                      }}>{item.done ? "✓" : ""}</div>
+                      {item.label}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setShowDeliver(true)}
+                  className="w-full btn-primary text-sm font-semibold py-2 rounded-xl mb-2">
+                  Deliver Gallery →
+                </button>
+                <button onClick={() => { setDeliveryMode("later"); setShowDeliver(true); }}
+                  className="w-full text-xs text-[#3486cf] font-semibold py-1.5 rounded-xl border border-[#3486cf]/20 hover:bg-[#3486cf]/5 transition-colors">
+                  Schedule for later
+                </button>
               </div>
 
-              {gallery ? (
-                <>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      gallery.delivered ? "bg-green-50 text-green-700" :
-                      gallery.unlocked  ? "bg-blue-50 text-blue-700"  :
-                      "bg-amber-50 text-amber-700"
-                    }`}>
-                      {gallery.delivered ? "Delivered" : gallery.unlocked ? "Unlocked" : "Locked"}
-                    </span>
-                    <span className="text-xs text-gray-400">{images.length} photos · {videos.length} videos</span>
+              {/* Gallery Summary */}
+              <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
+                <div className="px-[18px] py-3.5 border-b border-gray-100 flex items-center justify-between">
+                  <span className="text-[13.5px] font-bold text-[#0F172A]">Gallery</span>
+                  <button onClick={() => setTab("gallery")} className="text-xs text-[#3486cf] font-semibold">View →</button>
+                </div>
+                <div className="p-[18px]">
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    {[
+                      { v: images.length,                                            l: "Photos" },
+                      { v: videos.length,                                            l: "Videos" },
+                      { v: (gallery?.floorPlans || []).length,                       l: "Floor Plans" },
+                      { v: (gallery?.attachedFiles || []).length,                    l: "Docs" },
+                    ].map((s) => (
+                      <div key={s.l} className="rounded-[10px] p-2.5" style={{ background: "#FAFAFA" }}>
+                        <p className="font-bold text-[#0F172A]" style={{ fontSize: 18 }}>{s.v}</p>
+                        <p className="text-gray-500 mt-0.5" style={{ fontSize: 10.5 }}>{s.l}</p>
+                      </div>
+                    ))}
                   </div>
-
-                  {/* Cover preview strip */}
-                  {images.length > 0 && (
-                    <div className="flex gap-1.5 mb-3 overflow-hidden rounded-lg">
-                      {images.slice(0, 4).map((img, i) => (
-                        <div key={i} className="relative flex-1 h-14 bg-gray-100 overflow-hidden rounded">
-                          <img src={img.url} alt="" className="w-full h-full object-cover" />
-                          {i === 3 && images.length > 4 && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                              <span className="text-white text-xs font-bold">+{images.length - 4}</span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 flex-wrap">
+                  <div className={`flex items-center gap-2 p-2.5 rounded-[10px] mb-3 ${gallery?.delivered ? "bg-green-50 border border-green-200" : gallery?.unlocked ? "bg-blue-50 border border-blue-200" : "bg-amber-50 border border-amber-200"}`}>
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${gallery?.delivered ? "bg-green-500" : gallery?.unlocked ? "bg-blue-500" : "bg-amber-400"}`} />
+                    <span className={`text-xs font-semibold ${gallery?.delivered ? "text-green-700" : gallery?.unlocked ? "text-blue-700" : "text-amber-700"}`}>
+                      {gallery?.delivered ? "Delivered to client" : gallery?.unlocked ? "Unlocked for preview" : "Ready, not yet delivered"}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
                     <button onClick={openGalleryEditor}
-                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#3486cf] text-white hover:bg-[#2a6dab] transition-colors">
-                      <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Open Gallery
+                      className="flex-1 text-xs font-semibold py-1.5 rounded-lg bg-[#3486cf] text-white hover:bg-[#2a6dab] transition-colors">
+                      Open editor
                     </button>
-                    {gallery.accessToken && tenantSlug && (
-                      <a href={`${getAppUrl()}/${tenantSlug}/gallery/${gallery.accessToken}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
-                        Agent View ↗
-                      </a>
+                    {gallery?.accessToken && tenantSlug && (
+                      <button onClick={() => { navigator.clipboard.writeText(`${getAppUrl()}/${tenantSlug}/gallery/${gallery.accessToken}`); toast("Link copied."); }}
+                        className="flex-1 text-xs font-semibold py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+                        Copy link
+                      </button>
                     )}
                   </div>
-                </>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-xs text-gray-400 mb-2">No gallery yet</p>
-                  <button onClick={openGalleryEditor}
-                    className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded-lg hover:bg-[#3486cf]/5 transition-colors">
-                    Create Gallery
-                  </button>
+                </div>
+              </div>
+
+              {/* Payment Summary */}
+              {canViewRevenue && (
+                <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
+                  <div className="px-[18px] py-3.5 border-b border-gray-100 flex items-center justify-between">
+                    <span className="text-[13.5px] font-bold text-[#0F172A]">Payment</span>
+                    <button onClick={() => setTab("orders")} className="text-xs text-[#3486cf] font-semibold">Details →</button>
+                  </div>
+                  <div className="p-[18px]">
+                    <div className="space-y-0">
+                      {[
+                        { k: "Total", v: formatCurrency(booking.totalPrice, currency, locale), color: "#0F172A" },
+                        { k: "Deposit", v: booking.depositPaid ? `${formatCurrency(booking.depositAmount, currency, locale)} paid` : `${formatCurrency(booking.depositAmount, currency, locale)} due`, color: booking.depositPaid ? "#059669" : "#D97706" },
+                        { k: "Balance", v: (booking.paidInFull || booking.balancePaid) ? "Paid" : formatCurrency(booking.remainingBalance, currency, locale), color: (booking.paidInFull || booking.balancePaid) ? "#059669" : "#D97706" },
+                      ].map((row) => (
+                        <div key={row.k} className="flex items-baseline justify-between py-1.5 border-b last:border-b-0" style={{ borderColor: "#F4F0E3" }}>
+                          <span style={{ fontSize: 12.5, color: "#6B7280" }}>{row.k}</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: row.color }}>{row.v}</span>
+                        </div>
+                      ))}
+                      {booking.tipAmount > 0 && (
+                        <div className="flex items-baseline justify-between py-1.5">
+                          <span style={{ fontSize: 12.5, color: "#6B7280" }}>Tip</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "#059669" }}>+{formatCurrency(booking.tipAmount, currency, locale)}</span>
+                        </div>
+                      )}
+                    </div>
+                    {balanceDue && booking.remainingBalance > 0 && (
+                      <div className="mt-3 p-2.5 rounded-[10px]" style={{ background: "#FEF3C7", border: "1px solid #FCD34D" }}>
+                        <p className="font-bold" style={{ fontSize: 12, color: "#92400E" }}>Balance outstanding</p>
+                        <p style={{ fontSize: 11, color: "#92400E", marginTop: 2 }}>Collected automatically on delivery</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-            </div>
+
+            </div>{/* end right rail */}
           </div>
         )}
 
-        {/* ── BOOKING DETAILS TAB ─────────────────────────────────────────── */}
+        {/* ── PAYMENTS TAB ─────────────────────────────────────────── */}
         {tab === "orders" && (
-          <div className="space-y-4 max-w-lg">
-
-            <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-wide font-semibold text-gray-400">Booking Details</p>
-              <Link href={`/dashboard/bookings/${booking.id}/edit`}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#3486cf] text-[#3486cf] hover:bg-[#3486cf]/5 transition-colors">
-                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.536-6.536a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H8v-2.414A2 2 0 018.586 12.5L9 13z" />
-                </svg>
-                Edit Booking
-              </Link>
-            </div>
-
+          <div className="grid gap-4" style={{ gridTemplateColumns: "1fr 1fr", alignItems: "start", maxWidth: 900 }}>
+            {/* Left col */}
+            <div className="space-y-4">
             {/* Appointment Record */}
-            <div className="card p-5">
-              <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Appointment Record</p>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Client</span>
-                  <span className="font-medium text-[#0F172A]">{booking.clientName}</span>
-                </div>
-                {booking.clientEmail && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Email</span>
-                    <a href={`mailto:${booking.clientEmail}`} className="text-[#3486cf] hover:underline">{booking.clientEmail}</a>
+            <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
+              <div className="px-[17px] py-3 border-b border-gray-100"><span className="text-[13px] font-bold text-[#0F172A]">Appointment Record</span></div>
+              <div style={{ paddingTop: 2 }}>
+                {[
+                  { k: "Client",       v: booking.clientName },
+                  { k: "Email",        v: booking.clientEmail, link: `mailto:${booking.clientEmail}` },
+                  { k: "Phone",        v: booking.clientPhone },
+                  { k: "Property",     v: booking.fullAddress || booking.address },
+                  { k: "Shoot date",   v: booking.shootDate ? `${new Date(booking.shootDate + "T12:00:00").toLocaleDateString(locale, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}${booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}` : null },
+                  { k: "Photographer", v: booking.photographerName },
+                  { k: "Source",       v: booking.source, muted: true },
+                ].filter((r) => r.v).map((row) => (
+                  <div key={row.k} className="flex justify-between py-2.5 border-b last:border-b-0" style={{ borderColor: "#F4F0E3", fontSize: 13 }}>
+                    <span style={{ color: "#6B7280" }}>{row.k}</span>
+                    {row.link
+                      ? <a href={row.link} style={{ color: "#3486cf", fontWeight: 600 }}>{row.v}</a>
+                      : <span style={{ fontWeight: row.muted ? 400 : 600, color: row.muted ? "#9CA3AF" : "#0F172A", textAlign: "right", maxWidth: "60%" }}>{row.v}</span>}
                   </div>
-                )}
-                {booking.clientPhone && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Phone</span>
-                    <span className="text-[#0F172A]">{booking.clientPhone}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Property</span>
-                  <span className="text-[#0F172A] text-right max-w-[60%]">{booking.fullAddress || booking.address}</span>
-                </div>
-                {booking.shootDate && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Shoot Date</span>
-                    <span className="font-medium text-[#0F172A]">
-                      {new Date(booking.shootDate + "T12:00:00").toLocaleDateString(locale, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
-                      {booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}
-                    </span>
-                  </div>
-                )}
-                {showWeather && (booking.shootDate || booking.preferredDate) && (booking.fullAddress || booking.address) && (
-                  <div className="pt-1 -mx-1">
-                    <WeatherWidget
-                      address={[
-                        booking.fullAddress || booking.address,
-                        booking.city,
-                        booking.state,
-                        booking.zip,
-                      ].filter(Boolean).join(", ")}
-                      date={(booking.shootDate || booking.preferredDate).split("T")[0]}
-                      lat={booking.lat || undefined}
-                      lng={booking.lng || undefined}
-                      unit={tempUnit}
-                    />
-                  </div>
-                )}
-                {!booking.shootDate && booking.preferredDate && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Requested</span>
-                    <span className="text-amber-700">
-                      {new Date(booking.preferredDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      {booking.preferredTime ? ` · ${booking.preferredTime}` : ""}
-                    </span>
-                  </div>
-                )}
-                {booking.photographerName && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Photographer</span>
-                    <span className="text-[#0F172A]">{booking.photographerName}</span>
-                  </div>
-                )}
-                {booking.source && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Source</span>
-                    <span className="text-gray-400 capitalize">{booking.source}</span>
-                  </div>
-                )}
+                ))}
                 {booking.notes && (
-                  <div className="pt-2 border-t border-gray-100">
+                  <div className="pt-2.5">
                     <p className="text-xs text-gray-400 mb-1">Notes</p>
-                    <p className="text-gray-600 italic">"{booking.notes}"</p>
+                    <p className="text-gray-600 italic text-sm">"{booking.notes}"</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Services Ordered */}
+            {/* Services Ordered — payments tab */}
+            <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
+              <div className="px-[17px] py-3 border-b border-gray-100"><span className="text-[13px] font-bold text-[#0F172A]">Services Ordered</span></div>
             {(booking.packageId || booking.serviceIds?.length > 0 || booking.customLineItems?.length > 0) && (
-              <div className="card p-5">
-                <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Services Ordered</p>
+              <div className="px-[17px] py-3">
                 {(() => {
                   const allItems = [
                     ...(catalog?.packages || []),
@@ -1233,226 +1360,135 @@ if (loading) return (
                 })()}
               </div>
             )}
+            </div>{/* end services card */}
+            </div>{/* end left col */}
 
-            {userRole === "manager" ? (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-800">
-                Pricing details are visible to account owners and admins only.
-              </div>
-            ) : null}
-            {userRole !== "manager" && (
-              <div className="card p-5">
-                <p className="text-xs uppercase tracking-wide text-gray-400 mb-4">Payment Summary</p>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Total</span>
-                    <span className="font-semibold">{formatCurrency(booking.totalPrice, currency, locale)}</span>
+            {/* Right col */}
+            <div className="space-y-4">
+
+              {/* Payment Summary */}
+              {canViewRevenue && (
+                <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
+                  <div className="px-[17px] py-3 border-b border-gray-100"><span className="text-[13px] font-bold text-[#0F172A]">Payment Summary</span></div>
+                  <div className="px-[17px] py-3">
+                    {[
+                      { k: "Total",       v: formatCurrency(booking.totalPrice, currency, locale),       bold: true },
+                      { k: "Deposit",     v: booking.depositPaid ? `${formatCurrency(booking.depositAmount, currency, locale)} paid` : `${formatCurrency(booking.depositAmount, currency, locale)} — unpaid`,  color: booking.depositPaid ? "#059669" : "#D97706" },
+                      { k: "Balance due", v: (booking.paidInFull || booking.balancePaid) ? "Paid" : formatCurrency(booking.remainingBalance, currency, locale), color: (booking.paidInFull || booking.balancePaid) ? "#059669" : "#D97706" },
+                      ...(booking.tipAmount > 0 ? [{ k: "Tip", v: `+${formatCurrency(booking.tipAmount, currency, locale)}`, color: "#059669" }] : []),
+                    ].map((r) => (
+                      <div key={r.k} className="flex justify-between py-2 border-b last:border-b-0" style={{ borderColor: "#F4F0E3", fontSize: 13 }}>
+                        <span style={{ color: "#6B7280" }}>{r.k}</span>
+                        <span style={{ fontWeight: r.bold ? 700 : 600, color: r.color || "#0F172A" }}>{r.v}</span>
+                      </div>
+                    ))}
                   </div>
-
-                  {booking.paidInFull ? (
-                    <div className="flex justify-between text-green-700 font-medium">
-                      <span>Paid in full</span>
-                      <span>{formatCurrency(booking.totalPrice, currency, locale)} ✓</span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Deposit</span>
-                        <span className={booking.depositPaid ? "text-green-600 font-medium" : "text-gray-400"}>
-                          {formatCurrency(booking.depositAmount, currency, locale)}
-                          {booking.depositPaid ? " ✓ Paid" : " — Unpaid"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between border-t border-gray-100 pt-3">
-                        <span className="text-gray-500">Balance due</span>
-                        <span className={booking.balancePaid ? "text-green-600 font-medium" : "text-amber-600 font-medium"}>
-                          {formatCurrency(booking.remainingBalance, currency, locale)}
-                          {booking.balancePaid ? " ✓ Paid" : " — Due at delivery"}
-                        </span>
-                      </div>
-                    </>
-                  )}
-
-                  {booking.tipAmount > 0 && (
-                    <div className="flex justify-between text-gray-500">
-                      <span>Tip</span>
-                      <span className="text-green-600 font-medium">+{formatCurrency(booking.tipAmount, currency, locale)}</span>
-                    </div>
-                  )}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Send Invoice button */}
-            {userRole !== "manager" && !booking.paidInFull && !booking.balancePaid && (
-              <div className="card p-5">
-                <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Send Invoice</p>
-                <p className="text-sm text-gray-500 mb-4">
-                  Email the client a payment link for their {booking.depositPaid ? "remaining balance" : "deposit"}.
-                </p>
-                <button
-                  disabled={sendingInvoice}
-                  onClick={async () => {
-                    setSendingInvoice(true);
-                    setInvoiceMsg("");
-                    try {
-                      const token = await auth.currentUser?.getIdToken(true);
-                      const res = await fetch(`/api/dashboard/bookings/${id}/send-invoice`, {
-                        method: "POST",
-                        headers: { Authorization: `Bearer ${token}` },
-                      });
-                      if (res.ok) {
-                        setInvoiceMsg("Invoice sent to " + booking.clientEmail);
-                      } else {
-                        const d = await res.json();
-                        setInvoiceMsg(d.error || "Failed to send invoice.");
-                      }
-                    } catch { setInvoiceMsg("Failed to send invoice."); }
-                    finally { setSendingInvoice(false); }
-                  }}
-                  className="btn-primary text-sm px-5 py-2 disabled:opacity-50"
-                >
-                  {sendingInvoice ? "Sending…" : "Send Invoice Email"}
-                </button>
-                {invoiceMsg && (
-                  <p className={`mt-3 text-xs ${invoiceMsg.startsWith("Invoice sent") ? "text-green-600" : "text-red-500"}`}>
-                    {invoiceMsg}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Send Payment Reminder button — only when gallery delivered and balance outstanding */}
-            {userRole !== "manager" && !booking.paidInFull && !booking.balancePaid && (
-              <div className="card p-5">
-                <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Payment Reminder</p>
-                <p className="text-sm text-gray-500 mb-4">
-                  Send the client a reminder about their outstanding {booking.depositPaid ? "balance" : "deposit"} of{" "}
-                  <strong>{formatCurrency(booking.depositPaid ? booking.remainingBalance : booking.depositAmount, currency, locale)}</strong>.
-                </p>
-                <button
-                  disabled={sendingReminder}
-                  onClick={async () => {
-                    setSendingReminder(true);
-                    setReminderMsg("");
-                    try {
-                      const token = await auth.currentUser?.getIdToken(true);
-                      const res = await fetch(`/api/dashboard/bookings/${id}/send-reminder`, {
-                        method: "POST",
-                        headers: { Authorization: `Bearer ${token}` },
-                      });
-                      if (res.ok) {
-                        setReminderMsg("Reminder sent to " + booking.clientEmail);
-                      } else {
-                        const d = await res.json();
-                        setReminderMsg(d.error || "Failed to send reminder.");
-                      }
-                    } catch { setReminderMsg("Failed to send reminder."); }
-                    finally { setSendingReminder(false); }
-                  }}
-                  className="btn-secondary text-sm px-5 py-2 disabled:opacity-50"
-                >
-                  {sendingReminder ? "Sending…" : "Send Payment Reminder"}
-                </button>
-                {reminderMsg && (
-                  <p className={`mt-3 text-xs ${reminderMsg.startsWith("Reminder sent") ? "text-green-600" : "text-red-500"}`}>
-                    {reminderMsg}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Request Deposit — only when deposit not yet paid */}
-            {userRole !== "manager" && !booking.depositPaid && !booking.paidInFull && (
-              <div className="card p-5">
-                <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Request Deposit</p>
-                <p className="text-sm text-gray-500 mb-4">
-                  Send the client a deposit request email with a Stripe payment link for{" "}
-                  <strong>{formatCurrency(booking.depositAmount, currency, locale)}</strong>.
-                  {!booking.clientEmail && <span className="text-amber-600"> Add a client email first.</span>}
-                </p>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    disabled={sendingDeposit || !booking.clientEmail}
-                    onClick={async () => {
-                      setSendingDeposit(true);
-                      setDepositLinkMsg("");
-                      setDepositUrl("");
-                      try {
-                        const token = await auth.currentUser?.getIdToken(true);
-                        const res = await fetch(`/api/dashboard/bookings/${id}/send-deposit`, {
-                          method: "POST",
-                          headers: { Authorization: `Bearer ${token}` },
-                        });
-                        const d = await res.json();
-                        if (res.ok && d.url) {
-                          setDepositUrl(d.url);
-                          setDepositLinkMsg(
-                            d.cached
-                              ? "Link re-sent to client (same link, valid 4h)"
-                              : d.emailSent
-                              ? `Deposit request sent to ${booking.clientEmail}`
-                              : "Link generated (email delivery failed)"
-                          );
-                        } else {
-                          setDepositLinkMsg(d.error || "Failed to send deposit request.");
-                        }
-                      } catch { setDepositLinkMsg("Failed to send deposit request."); }
-                      finally { setSendingDeposit(false); }
-                    }}
-                    className="btn-primary text-sm px-5 py-2 disabled:opacity-50"
-                  >
-                    {sendingDeposit ? "Sending…" : "Send Deposit Request"}
-                  </button>
-                  {depositUrl && (
+              {/* Collect Payment */}
+              {canViewRevenue && (
+                <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
+                  <div className="px-[17px] py-3 border-b border-gray-100 flex items-center justify-between">
+                    <span className="text-[13px] font-bold text-[#0F172A]">Collect Payment</span>
+                    {booking.source === "phone" && <span className="text-[10.5px] font-semibold px-2.5 py-0.5 rounded-full" style={{ background: "#FEF3C7", color: "#92400E", border: "1px solid #FCD34D" }}>Manual / phone</span>}
+                  </div>
+                  <div className="px-[17px] py-4 space-y-2">
+                    {!booking.depositPaid && (
+                      <button
+                        disabled={sendingDeposit || !booking.clientEmail}
+                        onClick={async () => {
+                          setSendingDeposit(true); setDepositLinkMsg(""); setDepositUrl("");
+                          try {
+                            const token = await auth.currentUser?.getIdToken(true);
+                            const res = await fetch(`/api/dashboard/bookings/${id}/send-deposit`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+                            const d = await res.json();
+                            if (res.ok && d.url) { setDepositUrl(d.url); setDepositLinkMsg(d.emailSent ? `Deposit request sent to ${booking.clientEmail}` : "Link generated"); }
+                            else setDepositLinkMsg(d.error || "Failed.");
+                          } catch { setDepositLinkMsg("Failed."); } finally { setSendingDeposit(false); }
+                        }}
+                        className="w-full btn-primary text-sm py-2 disabled:opacity-50">
+                        {sendingDeposit ? "Sending…" : `Send 50% deposit request${booking.depositAmount ? ` · ${formatCurrency(booking.depositAmount, currency, locale)}` : ""}`}
+                      </button>
+                    )}
                     <button
-                      onClick={() => { navigator.clipboard.writeText(depositUrl); setDepositLinkMsg("Copied!"); }}
-                      className="text-xs text-[#3486cf] border border-[#3486cf]/25 px-3 py-2 rounded-lg hover:bg-[#3486cf]/5 transition-colors">
-                      Copy Link
+                      disabled={sendingInvoice || !booking.clientEmail}
+                      onClick={async () => {
+                        setSendingInvoice(true); setInvoiceMsg("");
+                        try {
+                          const token = await auth.currentUser?.getIdToken(true);
+                          const res = await fetch(`/api/dashboard/bookings/${id}/send-invoice`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+                          if (res.ok) setInvoiceMsg(`Invoice sent to ${booking.clientEmail}`);
+                          else { const d = await res.json(); setInvoiceMsg(d.error || "Failed."); }
+                        } catch { setInvoiceMsg("Failed."); } finally { setSendingInvoice(false); }
+                      }}
+                      className="w-full text-sm py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                      {sendingInvoice ? "Sending…" : `Send full payment link${booking.totalPrice ? ` · ${formatCurrency(booking.totalPrice, currency, locale)}` : ""}`}
                     </button>
-                  )}
-                </div>
-                {depositUrl && (
-                  <div className="mt-3 p-3 bg-gray-50 rounded-xl break-all">
-                    <a href={depositUrl} target="_blank" rel="noreferrer" className="text-xs text-[#3486cf] underline">{depositUrl}</a>
+                    <div className="flex gap-2">
+                      <button
+                        disabled={sendingReminder || !booking.clientEmail}
+                        onClick={async () => {
+                          setSendingReminder(true); setReminderMsg("");
+                          try {
+                            const token = await auth.currentUser?.getIdToken(true);
+                            const res = await fetch(`/api/dashboard/bookings/${id}/send-reminder`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+                            if (res.ok) setReminderMsg(`Reminder sent to ${booking.clientEmail}`);
+                            else { const d = await res.json(); setReminderMsg(d.error || "Failed."); }
+                          } catch { setReminderMsg("Failed."); } finally { setSendingReminder(false); }
+                        }}
+                        className="flex-1 text-sm py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50" style={{ fontSize: 12 }}>
+                        {sendingReminder ? "Sending…" : "Send reminder"}
+                      </button>
+                      {tenantSlug && (
+                        <a href={`/${tenantSlug}/property/${id}/brochure`} target="_blank" rel="noopener noreferrer"
+                          className="flex-1 text-center text-sm py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors" style={{ fontSize: 12 }}>
+                          Invoice PDF
+                        </a>
+                      )}
+                    </div>
+                    <div className="pt-2 border-t border-gray-100 flex items-center gap-2 flex-wrap">
+                      <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wide flex-1">Or record manually</span>
+                      {!booking.depositPaid && (
+                        <button onClick={() => patchBooking({ depositPaid: true })} disabled={saving}
+                          className="text-xs py-1.5 px-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                          Mark deposit paid
+                        </button>
+                      )}
+                      {!booking.paidInFull && !booking.balancePaid && (
+                        <button onClick={() => patchBooking({ depositPaid: true, balancePaid: true })} disabled={saving}
+                          className="text-xs py-1.5 px-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                          Mark paid in full
+                        </button>
+                      )}
+                    </div>
+                    {(depositLinkMsg || invoiceMsg || reminderMsg) && (
+                      <p className="text-xs text-green-600 mt-1">{depositLinkMsg || invoiceMsg || reminderMsg}</p>
+                    )}
+                    {depositUrl && (
+                      <div className="p-2 bg-gray-50 rounded-lg break-all">
+                        <a href={depositUrl} target="_blank" rel="noreferrer" className="text-xs text-[#3486cf] underline">{depositUrl}</a>
+                      </div>
+                    )}
+                    {booking.stripeDepositIntentId && (
+                      <p className="text-[10px] text-gray-300 mt-1 font-mono truncate">{booking.stripeDepositIntentId}</p>
+                    )}
                   </div>
-                )}
-                {depositLinkMsg && (
-                  <p className={`mt-3 text-xs ${depositLinkMsg === "Copied!" || depositLinkMsg.includes("sent") || depositLinkMsg.includes("re-sent") || depositLinkMsg.startsWith("Link") ? "text-green-600" : "text-red-500"}`}>
-                    {depositLinkMsg}
-                  </p>
-                )}
-              </div>
-            )}
+                </div>
+              )}
 
-            {userRole !== "manager" && booking.stripeDepositIntentId && (
-              <div className="bg-gray-50 rounded-xl border border-gray-100 p-4 text-xs text-gray-500 space-y-1">
-                <p>Deposit intent: <code className="font-mono">{booking.stripeDepositIntentId}</code></p>
-                {booking.stripeBalanceIntentId && (
-                  <p>Balance intent: <code className="font-mono">{booking.stripeBalanceIntentId}</code></p>
-                )}
-              </div>
-            )}
+              {/* Visibility */}
+              {(userRole === "owner" || userRole === "admin") && (
+                <div className="bg-white border border-gray-200 rounded-[14px] p-4">
+                  <button disabled={hiding} onClick={async () => { setHiding(true); await patchBooking({ hidden: !booking.hidden }); setHiding(false); }}
+                    className="text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                    {hiding ? "Saving…" : booking.hidden ? "Unhide booking" : "Hide booking"}
+                  </button>
+                  {booking.hidden && <p className="text-xs text-amber-600 mt-2">Hidden from main dashboard view.</p>}
+                </div>
+              )}
 
-            {/* Hide Booking */}
-            {(userRole === "owner" || userRole === "admin") && (
-              <div className="card p-5">
-                <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Visibility</p>
-                <button
-                  disabled={hiding}
-                  onClick={async () => {
-                    const isHidden = booking.hidden;
-                    setHiding(true);
-                    await patchBooking({ hidden: !isHidden });
-                    setHiding(false);
-                  }}
-                  className="text-sm px-4 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-colors">
-                  {hiding ? "Saving…" : booking.hidden ? "Unhide Booking" : "Hide Booking"}
-                </button>
-                {booking.hidden && (
-                  <p className="text-xs text-amber-600 mt-2">This booking is hidden from your main dashboard view.</p>
-                )}
-              </div>
-            )}
+            </div>{/* end right col */}
           </div>
         )}
 
@@ -1877,6 +1913,29 @@ if (loading) return (
             <div className="card">
               <h3 className="font-display text-[#3486cf] text-base mb-5">Property Details</h3>
               <div className="space-y-4">
+                {/* Auto-fill row */}
+                <div className="flex items-center gap-3 p-3 rounded-[10px]" style={{ background: "#EEF4FA", border: "1px solid #DAE6F4" }}>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-[13px]" style={{ color: "#1E5A8A" }}>Auto-fill from MLS or Redfin</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: "#5478a0" }}>Paste a listing URL or MLS # to pull beds, baths, sqft, price, and description.</p>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <input
+                      type="text"
+                      value={autofillSource}
+                      onChange={(e) => setAutofillSource(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAutofill()}
+                      placeholder="URL or MLS #"
+                      className="input-field text-xs" style={{ width: 160 }} />
+                    <button onClick={handleAutofill} disabled={autofilling || !autofillSource.trim()}
+                      className="btn-primary text-xs px-3 py-1.5 disabled:opacity-50 flex-shrink-0">
+                      {autofilling ? "…" : "Auto-fill"}
+                    </button>
+                  </div>
+                </div>
+                {autofillMsg && (
+                  <p className={`text-xs -mt-2 ${autofillMsg.includes("coming soon") || autofillMsg.includes("manually") ? "text-amber-600" : "text-green-600"}`}>{autofillMsg}</p>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="label-field">Property Address</label>
@@ -2402,8 +2461,6 @@ if (loading) return (
             </div>
           </div>
         )}
-      </div>
-
         {/* ── REVISIONS TAB ────────────────────────────────────────────────── */}
         {tab === "revisions" && (
           <div className="max-w-3xl">
@@ -2524,6 +2581,8 @@ if (loading) return (
           </div>
         )}
 
+      </div>{/* end main px-7 content area */}
+
       {/* Deliver modal */}
       {showDeliver && (
         <div className="modal-backdrop">
@@ -2590,15 +2649,11 @@ if (loading) return (
               )}
             </div>
             <div className="px-6 pb-2">
-              <div className="rounded-lg bg-blue-50 border border-blue-100 px-3.5 py-3 flex items-start gap-2.5">
-                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-blue-400 mt-0.5 flex-shrink-0">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-xs text-blue-700 leading-relaxed">
-                  <span className="font-medium">Tip:</span> Also send the agent portal so your client can revisit all their media, captions, and QR codes anytime — not just when the gallery email arrives.{" "}
-                  <button type="button" onClick={() => { setShowDeliver(false); sendAgentAccess(true); }} className="underline font-medium hover:text-blue-900 transition-colors">
-                    Send agent portal →
-                  </button>
+              <div className="flex gap-2.5 px-3.5 py-3 rounded-[10px]" style={{ background: "#EFF6FF", border: "1px solid #BFDBFE" }}>
+                <span className="font-bold flex-shrink-0" style={{ color: "#1D4ED8" }}>ⓘ</span>
+                <p className="text-xs leading-relaxed" style={{ color: "#1D4ED8", margin: 0 }}>
+                  Delivering unlocks downloads and emails the client.
+                  {balanceDue && booking.remainingBalance > 0 && ` Outstanding balance of ${formatCurrency(booking.remainingBalance, currency, locale)} will be requested at the same time.`}
                 </p>
               </div>
             </div>
@@ -2615,6 +2670,7 @@ if (loading) return (
             </div>
           </div>
         </div>
+      </div>
       )}
 
       {showReschedModal && (() => {
