@@ -1155,8 +1155,8 @@ if (loading) return (
                   );
                 })()}
               </div>
-            )}
             </div>
+            )}
 
             </div>{/* end main column */}
 
