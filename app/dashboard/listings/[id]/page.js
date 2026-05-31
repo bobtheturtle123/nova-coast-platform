@@ -2670,7 +2670,6 @@ if (loading) return (
             </div>
           </div>
         </div>
-      </div>
       )}
 
       {showReschedModal && (() => {
