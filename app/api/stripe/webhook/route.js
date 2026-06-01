@@ -9,15 +9,25 @@ import { getTenantByStripeCustomerId, triggerReferralReward } from "@/lib/referr
 
 export const dynamic = "force-dynamic";
 
+// GET — liveness probe. Stripe (and you) can hit this to confirm the endpoint is reachable.
+export async function GET() {
+  return Response.json({ ok: true, endpoint: "stripe-webhook", ts: new Date().toISOString() });
+}
+
 export async function POST(req) {
   const sig     = req.headers.get("stripe-signature");
   const rawBody = await req.text();
+
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.error("[stripe/webhook] STRIPE_WEBHOOK_SECRET is not set");
+    return new Response("Webhook secret not configured", { status: 500 });
+  }
 
   let event;
   try {
     event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
-    console.error("Webhook signature error:", err.message);
+    console.error("[stripe/webhook] Signature verification failed:", err.message);
     return new Response(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
