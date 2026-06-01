@@ -168,6 +168,37 @@ export async function POST(req) {
               : null;
             const adminEmail = tenant.email || adminRecord?.email || null;
 
+            // Build .ics attachment FIRST so it's available when pushing client email below
+            function to24h(t) {
+              if (!t) return null;
+              const ampmMatch = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+              if (ampmMatch) {
+                let h = parseInt(ampmMatch[1], 10);
+                const m = ampmMatch[2];
+                const period = ampmMatch[3].toUpperCase();
+                if (period === "PM" && h !== 12) h += 12;
+                if (period === "AM" && h === 12) h = 0;
+                return `${String(h).padStart(2, "0")}:${m}`;
+              }
+              return t;
+            }
+            let icsAttachment = [];
+            const calDate = shootDate || preferredDate;
+            const calTimeRaw = shootTime || preferredTime;
+            const calTime = to24h(calTimeRaw);
+            if (calDate && calTime && !["flexible","morning","afternoon"].includes(calTimeRaw)) {
+              const icsContent = generateCalendarICS({
+                summary:         `Photo Shoot — ${fullAddress}`,
+                description:     `Client: ${clientName}\nProperty: ${fullAddress}${notes ? `\nNotes: ${notes}` : ""}`,
+                location:        fullAddress,
+                startISO:        `${calDate}T${calTime}:00`,
+                durationMinutes: 120,
+              });
+              if (icsContent) {
+                icsAttachment = [{ filename: "shoot-appointment.ics", content: Buffer.from(icsContent).toString("base64") }];
+              }
+            }
+
             const sends = [];
 
             const bookingHtml = (heading, intro, extra = "") => `
@@ -215,38 +246,6 @@ export async function POST(req) {
                 }).then(() => console.log("[email] admin notification sent to", adminEmail))
                   .catch((e) => console.error("[email] admin notification FAILED:", e?.message || e))
               );
-            }
-
-            // Build .ics attachment for calendar invites
-            // Normalize time to 24h "HH:MM" — handles both "09:00" and "9:00 AM" formats
-            function to24h(t) {
-              if (!t) return null;
-              const ampmMatch = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-              if (ampmMatch) {
-                let h = parseInt(ampmMatch[1], 10);
-                const m = ampmMatch[2];
-                const period = ampmMatch[3].toUpperCase();
-                if (period === "PM" && h !== 12) h += 12;
-                if (period === "AM" && h === 12) h = 0;
-                return `${String(h).padStart(2, "0")}:${m}`;
-              }
-              return t; // already HH:MM
-            }
-            let icsAttachment = [];
-            const calDate = shootDate || preferredDate;
-            const calTimeRaw = shootTime || preferredTime;
-            const calTime = to24h(calTimeRaw);
-            if (calDate && calTime && !["flexible","morning","afternoon"].includes(calTimeRaw)) {
-              const icsContent = generateCalendarICS({
-                summary:         `Photo Shoot — ${fullAddress}`,
-                description:     `Client: ${clientName}\nProperty: ${fullAddress}${notes ? `\nNotes: ${notes}` : ""}`,
-                location:        fullAddress,
-                startISO:        `${calDate}T${calTime}:00`,
-                durationMinutes: 120,
-              });
-              if (icsContent) {
-                icsAttachment = [{ filename: "shoot-appointment.ics", content: Buffer.from(icsContent).toString("base64") }];
-              }
             }
 
             // Photographer assignment emails

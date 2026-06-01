@@ -686,37 +686,31 @@ if (loading) return (
           : <div className="absolute inset-0" style={{ background: "linear-gradient(135deg,#2c3a4d,#1a2230)" }} />}
         <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,rgba(15,23,42,.12) 0%,rgba(15,23,42,.75) 100%)" }} />
 
-        {/* Balance strip */}
-        {balanceDue && booking.remainingBalance > 0 && (
-          <div className="absolute top-0 left-0 right-0 z-10 text-center text-white font-semibold" style={{ fontSize: 11.5, padding: "6px 12px", background: "rgba(217,119,6,0.95)", backdropFilter: "blur(4px)" }}>
-            Balance due {formatCurrency(booking.remainingBalance, currency, locale)} · collected automatically when you deliver
-          </div>
-        )}
-
-        <div className="absolute inset-0 flex flex-col justify-between p-6" style={{ paddingTop: (balanceDue && booking.remainingBalance > 0) ? 36 : 22 }}>
+        <div className="absolute inset-0 flex flex-col justify-between p-6" style={{ paddingTop: 22 }}>
           {/* Top row: badges + quick actions */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-2 flex-wrap">
               {booking.id && (
-                <span className="text-white font-semibold rounded-full" style={{ fontSize: 11, padding: "4px 11px", background: "rgba(255,255,255,0.16)", backdropFilter: "blur(8px)" }}>
+                <span className="text-white font-semibold rounded-full" style={{ fontSize: 11, padding: "4px 11px", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)" }}>
                   #{booking.id.slice(-6).toUpperCase()}
                 </span>
               )}
-              <span className="font-semibold rounded-full" style={{ fontSize: 11, padding: "4px 11px", background: "#C9A96E", color: "#1a1205" }}>
+              {/* Workflow stage — plain glass pill, no double-badge */}
+              <span className="font-semibold rounded-full text-white" style={{ fontSize: 11, padding: "4px 11px", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)" }}>
                 <WorkflowStatusBadge status={wfStatus} size="xs" className="inline" />
               </span>
               {balanceDue && booking.remainingBalance > 0 && (
-                <span className="font-semibold rounded-full text-white" style={{ fontSize: 11, padding: "4px 11px", background: "rgba(217,119,6,0.92)" }}>
-                  Balance due {formatCurrency(booking.remainingBalance, currency, locale)}
+                <span className="font-semibold rounded-full text-white" style={{ fontSize: 11, padding: "4px 11px", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.3)" }}>
+                  Balance {formatCurrency(booking.remainingBalance, currency, locale)}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button onClick={() => setShowDeliver(true)}
-                className="btn-primary text-xs font-semibold rounded-[9px] h-9 px-4" style={{ fontSize: 13 }}>
+                style={{ height: 36, padding: "0 16px", background: "#fff", color: "#0F172A", border: "none", borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
                 Deliver →
               </button>
-              <a href={`mailto:${booking.clientEmail}`} title="Message client"
+              <a href={`mailto:${booking.clientEmail}`} title="Message client" target="_blank" rel="noopener noreferrer"
                 className="w-9 h-9 rounded-[9px] flex items-center justify-center border border-white/20 text-white hover:bg-white/20 transition-colors" style={{ background: "rgba(255,255,255,0.14)", backdropFilter: "blur(8px)" }}>
                 <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
               </a>
@@ -1484,12 +1478,20 @@ if (loading) return (
                         className="flex-1 text-sm py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50" style={{ fontSize: 12 }}>
                         {sendingReminder ? "Sending…" : "Send reminder"}
                       </button>
-                      {tenantSlug && (
-                        <a href={`/${tenantSlug}/property/${id}/brochure`} target="_blank" rel="noopener noreferrer"
-                          className="flex-1 text-center text-sm py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors" style={{ fontSize: 12 }}>
-                          Invoice PDF
-                        </a>
-                      )}
+                      <button
+                        disabled={sendingInvoice || !booking.clientEmail}
+                        onClick={async () => {
+                          setSendingInvoice(true); setInvoiceMsg("");
+                          try {
+                            const token = await auth.currentUser?.getIdToken(true);
+                            const res = await fetch(`/api/dashboard/bookings/${id}/send-invoice`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+                            if (res.ok) setInvoiceMsg(`Invoice sent to ${booking.clientEmail}`);
+                            else { const d = await res.json(); setInvoiceMsg(d.error || "Failed."); }
+                          } catch { setInvoiceMsg("Failed."); } finally { setSendingInvoice(false); }
+                        }}
+                        className="flex-1 text-sm py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50" style={{ fontSize: 12 }}>
+                        {sendingInvoice ? "Sending…" : "Email Invoice"}
+                      </button>
                     </div>
                     <div className="pt-2 border-t border-gray-100 flex items-center gap-2 flex-wrap">
                       <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wide flex-1">Or record manually</span>
