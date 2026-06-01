@@ -4,6 +4,7 @@ export const metadata = {
   title: "Online Booking and Scheduling for Real Estate Photographers — Kyoria OS",
   description:
     "Take bookings around the clock with a guided checkout that collects the deposit automatically. Real-time availability, travel fee calculation, and instant confirmations — no back-and-forth required.",
+  alternates: { canonical: "https://kyoriaos.com/features/booking-scheduling" },
 };
 
 const FEATURES = [

@@ -4,6 +4,7 @@ export const metadata = {
   title: "Kyoria OS vs Other Real Estate Photography Software",
   description:
     "See how Kyoria OS compares to Aryeo, Spiro, HoneyBook, and other platforms for real estate photographers. Compare features, pricing, and which tool is right for your business.",
+  alternates: { canonical: "https://kyoriaos.com/compare" },
 };
 
 const COMPARISONS = [

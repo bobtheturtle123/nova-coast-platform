@@ -4,6 +4,7 @@ export const metadata = {
   title: "Features — KyoriaOS: Real Estate Photography Software",
   description:
     "Explore every feature in KyoriaOS — online booking, team scheduling, payment-gated gallery delivery, service area management, client CRM, and an agent marketing portal. Built for real estate photography businesses.",
+  alternates: { canonical: "https://kyoriaos.com/features" },
 };
 
 const FEATURES = [

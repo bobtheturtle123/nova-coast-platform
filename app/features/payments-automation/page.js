@@ -4,6 +4,7 @@ export const metadata = {
   title: "Payments and Automation for Real Estate Photographers — KyoriaOS",
   description:
     "Collect deposits at booking, lock galleries behind balance payments, and send automated reminders. KyoriaOS handles every payment touchpoint so you stop chasing clients.",
+  alternates: { canonical: "https://kyoriaos.com/features/payments-automation" },
 };
 
 const FEATURES = [

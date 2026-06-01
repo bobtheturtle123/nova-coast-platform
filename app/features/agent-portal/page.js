@@ -4,6 +4,7 @@ export const metadata = {
   title: "Agent Marketing Portal for Real Estate Photographers — KyoriaOS",
   description:
     "KyoriaOS automatically generates a branded property website, print-ready PDF brochure, and QR code for every real estate listing you photograph. Zero extra work — it happens at delivery.",
+  alternates: { canonical: "https://kyoriaos.com/features/agent-portal" },
 };
 
 const FEATURES = [

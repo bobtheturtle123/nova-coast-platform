@@ -4,6 +4,7 @@ export const metadata = {
   title: "Best Software for Real Estate Photographers in 2026 | Kyoria OS",
   description:
     "A practical breakdown of every tool category real estate photographers rely on, and how to stop managing them all separately.",
+  alternates: { canonical: "https://kyoriaos.com/blog/best-software-real-estate-photographers-2026" },
 };
 
 export default function BestSoftwarePage() {

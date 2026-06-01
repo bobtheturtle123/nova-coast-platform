@@ -4,6 +4,7 @@ export const metadata = {
   title: "Client and Agent Portal for Real Estate Photographers — Kyoria OS",
   description:
     "Give every client and agent their own portal to view job history, download galleries, and track orders. A professional experience that sets you apart from photographers who still email zip files.",
+  alternates: { canonical: "https://kyoriaos.com/features/client-portal" },
 };
 
 const FEATURES = [

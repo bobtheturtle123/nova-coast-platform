@@ -4,6 +4,7 @@ export const metadata = {
   title: "Blog — Real Estate Photography Business Tips | Kyoria OS",
   description:
     "Tips, guides, and insights for real estate photographers and media teams.",
+  alternates: { canonical: "https://kyoriaos.com/blog" },
 };
 
 const POSTS = [

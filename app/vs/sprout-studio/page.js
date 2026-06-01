@@ -4,6 +4,7 @@ export const metadata = {
   title: "KyoriaOS vs Sprout Studio — Real Estate Photography Software Comparison",
   description:
     "Comparing KyoriaOS vs Sprout Studio for real estate photographers. See why KyoriaOS wins on payment-gated gallery delivery, service area management, agent marketing portal, and team photographer dispatch.",
+  alternates: { canonical: "https://kyoriaos.com/vs/sprout-studio" },
 };
 
 const COMPARISON_ROWS = [

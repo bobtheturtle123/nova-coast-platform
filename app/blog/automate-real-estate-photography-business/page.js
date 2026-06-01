@@ -4,6 +4,7 @@ export const metadata = {
   title: "How to Automate Your Real Estate Photography Business | Kyoria OS",
   description:
     "From booking to final payment, here is how to remove every manual step from your workflow.",
+  alternates: { canonical: "https://kyoriaos.com/blog/automate-real-estate-photography-business" },
 };
 
 export default function AutomatePage() {

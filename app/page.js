@@ -6,6 +6,7 @@ export const metadata = {
   title: "Kyoria OS: The Complete System for Real Estate Media Businesses",
   description:
     "Booking, scheduling, gallery delivery, and client portals, all connected. Kyoria OS replaces the tools real estate photographers patch together.",
+  alternates: { canonical: "https://kyoriaos.com/" },
 };
 
 export default function MarketingPage() {

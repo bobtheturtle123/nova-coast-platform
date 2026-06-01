@@ -4,12 +4,14 @@ export default function robots() {
       {
         userAgent: "*",
         allow: "/",
+        // Only block pages where we can't serve noindex (truly private/internal).
+        // Auth and onboarding pages are handled with noindex meta tags instead —
+        // that way Googlebot can crawl them, read the noindex, and deindex them.
         disallow: [
           "/api/",
           "/dashboard/",
           "/superadmin/",
           "/admin/",
-          "/auth/",
           "/onboarding/",
         ],
       },

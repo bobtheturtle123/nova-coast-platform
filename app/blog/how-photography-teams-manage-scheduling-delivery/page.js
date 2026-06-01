@@ -4,6 +4,7 @@ export const metadata = {
   title: "How Top Photography Teams Manage Scheduling and Delivery | Kyoria OS",
   description:
     "The systems that growing real estate media teams use to stay organized without the group chat chaos.",
+  alternates: { canonical: "https://kyoriaos.com/blog/how-photography-teams-manage-scheduling-delivery" },
 };
 
 export default function TeamsSchedulingPage() {

@@ -4,6 +4,7 @@ export const metadata = {
   title: "Why Real Estate Photographers Are Leaving Multiple Tools Behind | Kyoria OS",
   description:
     "The hidden cost of running your business across six different platforms, and what the switch to one system actually looks like.",
+  alternates: { canonical: "https://kyoriaos.com/blog/why-photographers-leaving-multiple-tools" },
 };
 
 export default function LeavingMultipleToolsPage() {

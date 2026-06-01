@@ -4,6 +4,7 @@ export const metadata = {
   title: "Aryeo vs Kyoria OS — Real Estate Photography Software Comparison",
   description:
     "See how Aryeo (Beam) compares to Kyoria OS for real estate photography business management. Team dispatch, service areas, payment-gated delivery, and all-in-one pricing.",
+  alternates: { canonical: "https://kyoriaos.com/compare/aryeo-vs-kyoria-os" },
 };
 
 const ROWS = [

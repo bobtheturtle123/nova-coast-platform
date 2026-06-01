@@ -5,6 +5,7 @@ export const metadata = {
   metadataBase: new URL("https://kyoriaos.com"),
   title: "KyoriaOS: Business software for real estate photographers",
   description: "Booking, payments, and media delivery built for real estate photography businesses.",
+  alternates: { canonical: "https://kyoriaos.com" },
   manifest: "/manifest.json",
   icons: {
     icon: [{ url: "/kyoriaos-logo.png", type: "image/png" }],

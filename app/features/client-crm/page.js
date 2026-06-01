@@ -4,6 +4,7 @@ export const metadata = {
   title: "Real Estate Photographer CRM — KyoriaOS Client Management Software",
   description:
     "KyoriaOS is the best CRM for real estate photographers. Track lifetime revenue per client, group customers by brokerage, see your top agents, and manage your entire book of business in one place.",
+  alternates: { canonical: "https://kyoriaos.com/features/client-crm" },
 };
 
 const FEATURES = [

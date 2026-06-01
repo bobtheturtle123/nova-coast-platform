@@ -4,6 +4,7 @@ export const metadata = {
   title: "Service Area Management for Photography Businesses — KyoriaOS",
   description:
     "Draw custom map zones, assign photographers per coverage area, and let KyoriaOS automatically route new bookings to the right photographer. Built for real estate photography companies.",
+  alternates: { canonical: "https://kyoriaos.com/features/service-areas" },
 };
 
 const FEATURES = [

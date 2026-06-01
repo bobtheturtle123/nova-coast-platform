@@ -4,6 +4,7 @@ export const metadata = {
   title: "Team Scheduling and Photographer Management — Kyoria OS",
   description:
     "See every photographer's availability in real time, assign jobs in seconds, and dispatch your team without spreadsheets. Kyoria OS handles team scheduling so you can focus on growing your business.",
+  alternates: { canonical: "https://kyoriaos.com/features/team-management" },
 };
 
 const FEATURES = [

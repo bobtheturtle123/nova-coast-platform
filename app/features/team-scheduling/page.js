@@ -4,6 +4,7 @@ export const metadata = {
   title: "Photography Team Scheduling Software — KyoriaOS",
   description:
     "KyoriaOS is the best team scheduling and photographer dispatch software for real estate photography businesses. See availability, assign jobs with one click, and sync everyone to Google Calendar.",
+  alternates: { canonical: "https://kyoriaos.com/features/team-scheduling" },
 };
 
 const FEATURES = [

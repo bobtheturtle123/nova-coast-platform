@@ -4,6 +4,7 @@ export const metadata = {
   title: "How to Create a Professional Client Experience as a Real Estate Photographer | Kyoria OS",
   description:
     "From the booking page to gallery delivery, how every client touchpoint affects your repeat business.",
+  alternates: { canonical: "https://kyoriaos.com/blog/real-estate-photography-client-experience" },
 };
 
 export default function ClientExperiencePage() {

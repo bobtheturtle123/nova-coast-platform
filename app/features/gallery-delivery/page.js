@@ -4,6 +4,7 @@ export const metadata = {
   title: "Real Estate Photography Gallery Delivery — KyoriaOS",
   description:
     "Deliver real estate photos, video, floor plans, and 3D tours in one branded link. KyoriaOS payment-gated gallery delivery collects the balance automatically before downloads unlock.",
+  alternates: { canonical: "https://kyoriaos.com/features/gallery-delivery" },
 };
 
 const FEATURES = [
