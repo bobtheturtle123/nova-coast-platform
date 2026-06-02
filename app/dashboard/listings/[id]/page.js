@@ -1475,7 +1475,7 @@ if (loading) return (
                             else { const d = await res.json(); setReminderMsg(d.error || "Failed."); }
                           } catch { setReminderMsg("Failed."); } finally { setSendingReminder(false); }
                         }}
-                        className="flex-1 text-sm py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50" style={{ fontSize: 12 }}>
+                        className="flex-1 text-sm py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap" style={{ fontSize: 12 }}>
                         {sendingReminder ? "Sending…" : "Send reminder"}
                       </button>
                       <button
@@ -1489,7 +1489,7 @@ if (loading) return (
                             else { const d = await res.json(); setInvoiceMsg(d.error || "Failed."); }
                           } catch { setInvoiceMsg("Failed."); } finally { setSendingInvoice(false); }
                         }}
-                        className="flex-1 text-sm py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50" style={{ fontSize: 12 }}>
+                        className="flex-1 text-sm py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50 whitespace-nowrap" style={{ fontSize: 12 }}>
                         {sendingInvoice ? "Sending…" : "Email Invoice"}
                       </button>
                     </div>
@@ -1509,7 +1509,7 @@ if (loading) return (
                       )}
                     </div>
                     {(depositLinkMsg || invoiceMsg || reminderMsg) && (
-                      <p className="text-xs text-green-600 mt-1">{depositLinkMsg || invoiceMsg || reminderMsg}</p>
+                      <p className="text-xs text-green-600 mt-1 break-words">{depositLinkMsg || invoiceMsg || reminderMsg}</p>
                     )}
                     {depositUrl && (
                       <div className="p-2 bg-gray-50 rounded-lg break-all">

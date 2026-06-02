@@ -197,7 +197,11 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
           bookingConfig: tenantDoc.bookingConfig || null,
           showWeather:   tenantDoc.availability?.showWeather ?? true,
         });
-        setTeam(teamData.members || []);
+        // Admins and managers are dashboard-only roles — they never shoot, so
+        // they must not be assignable as the photographer on a booking.
+        // Photographers and assistants can both be assigned to shoots.
+        const NON_SHOOTING_ROLES = ["admin", "manager"];
+        setTeam((teamData.members || []).filter((m) => !NON_SHOOTING_ROLES.includes(m.role)));
         setTimeBlocks(blocks.blocks || []);
         setBookings((list.listings || []).filter((b) => b.id !== bookingId));
         setAgents(agentsData.agents || []);

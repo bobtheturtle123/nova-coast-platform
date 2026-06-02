@@ -1525,6 +1525,7 @@ export default function TeamPage() {
   const [editing,       setEditing]       = useState(null);
   const [anchor,        setAnchor]        = useState(new Date());
   const [filterMember,  setFilterMember]  = useState("all");
+  const [availPhotographersOnly, setAvailPhotographersOnly] = useState(true);
   const [calModal,      setCalModal]      = useState(null);
   const [calView,       setCalView]       = useState(() => {
     if (typeof window !== "undefined") return localStorage.getItem("kyoria_schedule_view") || "week";
@@ -2460,11 +2461,26 @@ export default function TeamPage() {
           </div>
 
           {/* ── Availability recap ─────────────────────────────────────────── */}
-          {visibleMembers.length > 0 && (
+          {visibleMembers.length > 0 && (() => {
+            // Admins/managers never shoot, so the availability recap can hide them.
+            // Owner, photographers, and assistants are shooting roles.
+            const NON_SHOOTING = ["admin", "manager"];
+            const recapMembers = availPhotographersOnly
+              ? visibleMembers.filter((m) => m.id === "__owner__" || !NON_SHOOTING.includes(m.role))
+              : visibleMembers;
+            return (
             <div className="border-t border-gray-100 px-4 py-4 bg-gray-50/60">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">This Week&apos;s Availability</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">This Week&apos;s Availability</p>
+                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                  <input type="checkbox" checked={availPhotographersOnly}
+                    onChange={(e) => setAvailPhotographersOnly(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded border-gray-300 text-[#3486cf] focus:ring-[#3486cf]/30" />
+                  <span className="text-xs text-gray-500">Photographers only</span>
+                </label>
+              </div>
               <div className="space-y-2">
-                {visibleMembers.map((member) => {
+                {recapMembers.map((member) => {
                   const memberEvents = member.id === "__owner__"
                     ? calendarEvents.filter((e) => !e.photographerId || e.photographerId === "__owner__")
                     : calendarEvents.filter((e) => e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email));
@@ -2504,7 +2520,8 @@ export default function TeamPage() {
                 })}
               </div>
             </div>
-          )}
+            );
+          })()}
         </>)}
 
         {/* ── MONTH VIEW ─────────────────────────────────────────────────── */}

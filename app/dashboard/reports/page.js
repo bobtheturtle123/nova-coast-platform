@@ -84,11 +84,11 @@ function exportCSV(bookings, period) {
   const rows = [
     ["Booking ID","Client","Address","Status","Total Price","Deposit Paid","Balance Paid","Revenue Collected","Total Cost","Net Profit","Margin %","Created At","Shoot Date"],
     ...bookings.map((b) => {
-      const effPrice  = Math.max(0, (b.totalPrice || 0) - (b.promoDiscount || 0));
+      // Profit/margin are computed on collected revenue only — never money still owed.
       const revenue   = (b.depositPaid ? (b.depositAmount || 0) : 0) + (b.balancePaid ? (b.remainingBalance || 0) : 0);
       const totalCost = b.costs?.totalCost || 0;
-      const profit    = effPrice - totalCost;
-      const margin    = effPrice > 0 ? Math.round((profit / effPrice) * 100) : "";
+      const profit    = revenue - totalCost;
+      const margin    = revenue > 0 ? Math.round((profit / revenue) * 100) : "";
       return [
         b.id || "",
         b.clientName || "",
@@ -163,24 +163,32 @@ export default function ReportsPage() {
   );
 
   // ── Revenue stats ─────────────────────────────────────────────────────────
-  // effectivePrice accounts for promo discounts so free/discounted shoots don't inflate revenue
-  function effectivePrice(b) {
-    return Math.max(0, (b.totalPrice || 0) - (b.promoDiscount || 0));
+  // collected() = money actually paid by the client. We never count unpaid amounts
+  // so reports never inflate revenue with money that may never come.
+  function collected(b) {
+    let sum = 0;
+    if (b.depositPaid) sum += b.depositAmount    || 0;
+    if (b.balancePaid) sum += b.remainingBalance || 0;
+    if (b.paidInFull && !b.depositPaid && !b.balancePaid) sum += Math.max(0, (b.totalPrice || 0) - (b.promoDiscount || 0));
+    return sum;
   }
-  const totalRevenue  = filtered.filter((b) => b.depositPaid).reduce((s, b) => s + (b.depositAmount  || 0), 0)
-                      + filtered.filter((b) => b.balancePaid).reduce((s, b) => s + (b.remainingBalance || 0), 0);
+  const totalRevenue  = filtered.reduce((s, b) => s + collected(b), 0);
   const totalBookings = filtered.length;
-  const paidDeposit   = filtered.filter((b) => b.depositPaid).length;
-  const avgOrder      = totalBookings > 0 ? Math.round(filtered.reduce((s, b) => s + effectivePrice(b), 0) / totalBookings) : 0;
+  const paidDeposit   = filtered.filter((b) => b.depositPaid || b.balancePaid || b.paidInFull).length;
+  // Avg order value = average collected revenue across bookings that have paid anything.
+  const avgOrder      = paidDeposit > 0 ? Math.round(totalRevenue / paidDeposit) : 0;
   // workflowStatus is set to "delivered" when a gallery is sent to the client
   const delivered     = filtered.filter((b) => b.workflowStatus === "delivered").length;
 
   // ── Profit stats ──────────────────────────────────────────────────────────
-  const totalCostAll  = filtered.reduce((s, b) => s + (b.costs?.totalCost || 0), 0);
-  const totalPriceAll = filtered.reduce((s, b) => s + effectivePrice(b), 0);
+  // Only count costs against bookings that have actually collected revenue, so
+  // P&L reflects real cash — not money still owed.
+  const paidFiltered  = filtered.filter((b) => collected(b) > 0);
+  const totalCostAll  = paidFiltered.reduce((s, b) => s + (b.costs?.totalCost || 0), 0);
+  const totalPriceAll = totalRevenue;
   const netProfit     = totalPriceAll - totalCostAll;
   const marginPct     = totalPriceAll > 0 ? Math.round((netProfit / totalPriceAll) * 100) : 0;
-  const withCosts     = filtered.filter((b) => b.costs?.totalCost > 0).length;
+  const withCosts     = paidFiltered.filter((b) => b.costs?.totalCost > 0).length;
 
   // ── Revenue + cost per month ──────────────────────────────────────────────
   const revenueByMonth = useMemo(() => {
@@ -218,7 +226,9 @@ export default function ReportsPage() {
       const d   = new Date(b.createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,"0")}`;
       if (!map[key]) map[key] = { label: `${MONTHS[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`, profit: 0 };
-      map[key].profit += effectivePrice(b) - (b.costs?.totalCost || 0);
+      // Only collected revenue counts; only subtract cost once revenue is in.
+      const rev = collected(b);
+      map[key].profit += rev - (rev > 0 ? (b.costs?.totalCost || 0) : 0);
     });
     return Object.entries(map).sort(([a],[b]) => a.localeCompare(b)).map(([,v]) => v);
   }, [filtered]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -234,7 +244,7 @@ export default function ReportsPage() {
       const rawKey = b.packageId || (b.serviceIds?.[0]) || "custom";
       const label  = nameMap[rawKey] || (rawKey === "custom" ? "Custom / A la carte" : rawKey);
       if (!map[rawKey]) map[rawKey] = { label, revenue: 0, count: 0 };
-      map[rawKey].revenue += effectivePrice(b);
+      map[rawKey].revenue += collected(b);
       map[rawKey].count++;
     });
     return Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 8);
@@ -254,7 +264,7 @@ export default function ReportsPage() {
       if (!b.clientEmail) return;
       const key = b.clientEmail.toLowerCase();
       if (!map[key]) map[key] = { name: b.clientName, email: key, revenue: 0, orders: 0 };
-      map[key].revenue += b.totalPrice || 0;
+      map[key].revenue += collected(b);
       map[key].orders++;
     });
     return Object.values(map).sort((a,b) => b.revenue - a.revenue).slice(0,5);

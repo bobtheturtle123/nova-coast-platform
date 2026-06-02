@@ -23,14 +23,35 @@ export async function GET(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const snap = await adminDb
-    .collection("tenants").doc(ctx.tenantId)
-    .collection("agents")
-    .orderBy("totalOrders", "desc")
-    .limit(2000)
-    .get();
+  const [snap, bookingsSnap] = await Promise.all([
+    adminDb.collection("tenants").doc(ctx.tenantId)
+      .collection("agents").orderBy("totalOrders", "desc").limit(2000).get(),
+    adminDb.collection("tenants").doc(ctx.tenantId)
+      .collection("bookings").limit(5000).get(),
+  ]);
 
-  const agents = snap.docs.map((d) => ({ id: d.id, ...serialize(d.data()) }));
+  // Compute COLLECTED revenue per client email from real bookings.
+  // We never count money that hasn't been paid, so totalSpent reflects cash only.
+  const collectedByEmail = {};
+  bookingsSnap.docs.forEach((d) => {
+    const b = d.data();
+    const email = (b.clientEmail || "").toLowerCase().trim();
+    if (!email) return;
+    let sum = 0;
+    if (b.depositPaid) sum += b.depositAmount    || 0;
+    if (b.balancePaid) sum += b.remainingBalance || 0;
+    if (b.paidInFull && !b.depositPaid && !b.balancePaid) {
+      sum += Math.max(0, (b.totalPrice || 0) - (b.promoDiscount || 0));
+    }
+    collectedByEmail[email] = (collectedByEmail[email] || 0) + sum;
+  });
+
+  const agents = snap.docs.map((d) => {
+    const data = serialize(d.data());
+    const email = (data.email || "").toLowerCase().trim();
+    // Override denormalized totalSpent with collected-only revenue.
+    return { id: d.id, ...data, totalSpent: collectedByEmail[email] || 0 };
+  });
   return Response.json({ agents });
 }
 
