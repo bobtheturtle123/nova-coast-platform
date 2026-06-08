@@ -287,10 +287,18 @@ export async function POST(req) {
         break;
       }
 
-      // Referral reward — fires on first successful subscription payment only
+      // Referral reward — fires on subscription payments.
+      // We listen to BOTH the first invoice (subscription_create) AND renewals
+      // (subscription_cycle). The reward has a 48h minimum-age guard to deter
+      // trial-and-cancel abuse; since customers usually pay at signup, the first
+      // invoice is always <48h old and the reward is DEFERRED. Without listening
+      // to subscription_cycle, that deferred reward would never retry and the
+      // $20 credit would never apply. triggerReferralReward is idempotent
+      // (dedupes on paymentIntentId and only processes "pending" referrals), so
+      // listening to renewals can't double-reward.
       case "invoice.payment_succeeded": {
         const invoice = event.data.object;
-        if (invoice.billing_reason !== "subscription_create") break;
+        if (!["subscription_create", "subscription_cycle"].includes(invoice.billing_reason)) break;
         if (!invoice.customer) break;
         try {
           const refereeTenant = await getTenantByStripeCustomerId(invoice.customer);
