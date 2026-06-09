@@ -2,6 +2,7 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { Resend } from "resend";
 import { v4 as uuidv4 } from "uuid";
 import { getAppUrl } from "@/lib/appUrl";
+import { normalizeRole } from "@/lib/roles";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -17,13 +18,13 @@ export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { email, role, permissions } = await req.json();
+  const { email, role, permissions, customRoleTitle } = await req.json();
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!email || !emailRegex.test(email.trim())) {
     return Response.json({ error: "Valid email required." }, { status: 400 });
   }
-  const validRoles = ["photographer", "editor", "manager", "admin", "assistant"];
-  const inviteRole = validRoles.includes(role) ? role : "photographer";
+  const inviteRole = normalizeRole(role);
+  const roleTitle  = (customRoleTitle || "").slice(0, 40);
 
   const VALID_PERM_KEYS = ["canViewListings","canCreateBookings","canViewRevenue","canViewReports","canManageTeam","canManageProducts","canEditSettings"];
   const savedPerms = permissions && typeof permissions === "object"
@@ -44,6 +45,7 @@ export async function POST(req) {
     email:       email.trim().toLowerCase(),
     tenantId:    ctx.tenantId,
     role:        inviteRole,
+    customRoleTitle: roleTitle,
     permissions: savedPerms,
     createdAt:   new Date(),
     expiresAt,

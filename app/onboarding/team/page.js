@@ -6,8 +6,9 @@ import { auth } from "@/lib/firebase";
 import { useOnboarding, StepCard } from "../ctx";
 import { avatarColor, initials } from "@/lib/avatar";
 import { getEffectivePlan, getSeatLimit } from "@/lib/plans";
+import { ROLE_IDS } from "@/lib/roles";
 
-const ROLES = ["photographer", "editor", "coordinator", "admin"];
+const ROLES = ROLE_IDS;
 
 function emptyRow() {
   return { id: Date.now() + Math.random(), name: "", email: "", role: "photographer" };
@@ -155,7 +156,7 @@ export default function TeamStep() {
       headline="Who's shooting with you?"
       lede={isSolo
         ? "The Solo plan is designed for individual photographers. Upgrade to Studio or higher to add team members."
-        : "Invite photographers, editors, or coordinators. They'll get their own login and only see what they need."}
+        : "Invite photographers, managers, admins, or a custom role. They'll get their own login and only see what they need."}
       footer={
         <>
           <button className="btn-ghost" onClick={() => router.push("/onboarding/stripe")}>← Back</button>
@@ -180,7 +181,7 @@ export default function TeamStep() {
           <div style={{ fontSize: 36, marginBottom: 12 }}>👥</div>
           <p style={{ margin: "0 0 8px", fontSize: 15, fontWeight: 700, color: "#0F172A" }}>Team invites require Studio plan or above</p>
           <p style={{ margin: "0 0 20px", fontSize: 13, color: "#6B7280", lineHeight: 1.6 }}>
-            The Solo plan is designed for individual photographers. Upgrade to Studio to invite photographers, assistants, and managers.
+            The Solo plan is designed for individual photographers. Upgrade to Studio to invite photographers, managers, and admins.
           </p>
           <button
             onClick={handleUpgrade}

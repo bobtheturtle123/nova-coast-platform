@@ -1,6 +1,7 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { v4 as uuidv4 } from "uuid";
 import { getEffectivePlan, getSeatLimit } from "@/lib/plans";
+import { normalizeRole } from "@/lib/roles";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -67,7 +68,7 @@ export async function POST(req) {
   const body  = await req.json();
   const id    = uuidv4().replace(/-/g, "").slice(0, 16);
   const calendarToken = uuidv4().replace(/-/g, "");
-  const role  = ["photographer","manager","assistant","admin"].includes(body.role) ? body.role : "photographer";
+  const role  = normalizeRole(body.role);
   const member = {
     id,
     name:          (body.name || "").slice(0, 80),
@@ -75,6 +76,7 @@ export async function POST(req) {
     phone:         body.phone || "",
     homeZip:       (body.homeZip || "").slice(0, 10),
     role,
+    customRoleTitle: (body.customRoleTitle || "").slice(0, 40),
     skills:        Array.isArray(body.skills) ? body.skills.map(String).slice(0, 50) : [],
     color:         body.color || "#3486cf",
     active:        body.active !== false,

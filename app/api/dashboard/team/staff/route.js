@@ -9,6 +9,7 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { Resend } from "resend";
 import { v4 as uuidv4 } from "uuid";
 import { getAppUrl } from "@/lib/appUrl";
+import { normalizeRole } from "@/lib/roles";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -61,11 +62,11 @@ export async function POST(req) {
     return Response.json({ error: "Your subscription has ended. Reactivate to invite team members." }, { status: 403 });
   }
 
-  const { email, role, permissions } = await req.json();
+  const { email, role, permissions, customRoleTitle } = await req.json();
   if (!email?.trim()) return Response.json({ error: "Email is required" }, { status: 400 });
 
-  const validRoles = ["admin", "manager", "photographer", "assistant"];
-  const staffRole = validRoles.includes(role) ? role : "manager";
+  const staffRole = normalizeRole(role);
+  const roleTitle = (customRoleTitle || "").slice(0, 40);
   const VALID_PERM_KEYS = ["canViewListings","canCreateBookings","canViewRevenue","canViewReports","canManageTeam","canManageProducts","canEditSettings"];
   const savedPerms = permissions && typeof permissions === "object"
     ? Object.fromEntries(VALID_PERM_KEYS.map((k) => [k, !!permissions[k]]))
@@ -88,6 +89,7 @@ export async function POST(req) {
     .set({
       email:      normalizedEmail,
       role:       staffRole,
+      customRoleTitle: roleTitle,
       tenantId:   ctx.tenantId,
       inviteToken: token,
       accepted:   false,
@@ -115,6 +117,7 @@ export async function POST(req) {
         id:          token,
         email:       normalizedEmail,
         role:        staffRole,
+        customRoleTitle: roleTitle,
         name:        normalizedEmail.split("@")[0],
         status:      "invited",
         inviteToken: token,

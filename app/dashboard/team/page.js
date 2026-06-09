@@ -12,13 +12,14 @@ import { avatarColor, initials } from "@/lib/avatar";
 import { ZONE_COLORS } from "@/lib/zoneColors";
 import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 import { getEffectivePlan, getSeatLimit } from "@/lib/plans";
+import {
+  ROLES as ROLE_DEFS, ROLE_IDS, DASHBOARD_ROLES, NON_SHOOTING,
+  normalizeRole, defaultPermissions, roleLabel, shootsSchedule,
+} from "@/lib/roles";
 
-const ROLE_OPTIONS = [
-  { id: "photographer", label: "Photographer", icon: "📷", desc: "Shows in booking schedule. Gets shoot notifications & their own calendar." },
-  { id: "assistant",    label: "Assistant",    icon: "🤝", desc: "On-site help. Can be assigned to shoots but won't appear in public booking." },
-  { id: "manager",      label: "Manager",      icon: "📋", desc: "Can log into your dashboard. Manages bookings, galleries, and team." },
-  { id: "admin",        label: "Admin",        icon: "🔑", desc: "Full dashboard access. Same as you, except cannot change billing." },
-];
+const ROLE_OPTIONS = ROLE_IDS.map((id) => ({
+  id, label: ROLE_DEFS[id].label, icon: ROLE_DEFS[id].icon, desc: ROLE_DEFS[id].desc,
+}));
 
 const PERMISSION_DEFS = [
   { key: "canViewListings",   label: "Access Listings",        desc: "View and manage property listings" },
@@ -30,21 +31,13 @@ const PERMISSION_DEFS = [
   { key: "canEditSettings",   label: "Edit Settings",          desc: "Change branding, availability, and booking settings" },
 ];
 
-const DEFAULT_PERMISSIONS = {
-  admin:        { canViewListings: true,  canCreateBookings: true,  canViewRevenue: true,  canViewReports: true,  canManageTeam: true,  canManageProducts: true,  canEditSettings: true  },
-  manager:      { canViewListings: true,  canCreateBookings: true,  canViewRevenue: false, canViewReports: false, canManageTeam: false, canManageProducts: true,  canEditSettings: false },
-  photographer: { canViewListings: false, canCreateBookings: false, canViewRevenue: false, canViewReports: false, canManageTeam: false, canManageProducts: false, canEditSettings: false },
-  assistant:    { canViewListings: false, canCreateBookings: false, canViewRevenue: false, canViewReports: false, canManageTeam: false, canManageProducts: false, canEditSettings: false },
-};
-
-// Roles that get dashboard (staff) access vs. photographer portal access
-const DASHBOARD_ROLES = ["manager", "admin"];
+const DEFAULT_PERMISSIONS = Object.fromEntries(ROLE_IDS.map((id) => [id, { ...ROLE_DEFS[id].permissions }]));
 
 const ROLE_COLORS = {
   photographer: { bg: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-100" },
   manager:      { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-100" },
-  assistant:    { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-100" },
   admin:        { bg: "bg-red-50",    text: "text-red-700",    border: "border-red-100" },
+  custom:       { bg: "bg-gray-50",   text: "text-gray-700",   border: "border-gray-200" },
 };
 
 const WEEK_DAYS = [
@@ -483,7 +476,7 @@ const MEMBER_TABS = [
 ];
 
 function MemberForm({ member, products, onSave, onDelete, onClose }) {
-  const initialRole = member?.role || "photographer";
+  const initialRole = normalizeRole(member?.role);
   const [tab, setTab] = useState("info");
   const [form, setForm] = useState({
     name:          member?.name          || "",
@@ -491,6 +484,7 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
     phone:         member?.phone         || "",
     homeZip:       member?.homeZip       || "",
     role:          initialRole,
+    customRoleTitle: member?.customRoleTitle || "",
     skills:        member?.skills        || [],
     color:         member?.color         || COLORS[0],
     active:        member?.active        !== false,
@@ -500,8 +494,8 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
     workingHours:  member?.workingHours  || DEFAULT_WORKING_HOURS,
     permissions:   member?.permissions   || { ...DEFAULT_PERMISSIONS[initialRole] },
     // Whether this member appears in the photographer picker on bookings.
-    // Defaults from role: photographers/assistants shoot, admins/managers don't.
-    showInScheduling: member?.showInScheduling ?? !["admin", "manager"].includes(initialRole),
+    // Only photographers shoot by default; managers/admins/custom default off.
+    showInScheduling: member?.showInScheduling ?? (initialRole === "photographer"),
     photoUrl:      member?.photoUrl      || "",
   });
   const [saving,   setSaving]   = useState(false);
@@ -586,7 +580,7 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
                   {ROLE_OPTIONS.map((r) => (
                     <button key={r.id} type="button" onClick={() => setForm((f) => ({
                       ...f, role: r.id, permissions: { ...DEFAULT_PERMISSIONS[r.id] },
-                      showInScheduling: !["admin", "manager"].includes(r.id),
+                      showInScheduling: r.id === "photographer",
                     }))}
                       className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
                         form.role === r.id ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300"
@@ -599,6 +593,20 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
                     </button>
                   ))}
                 </div>
+                {form.role === "custom" && (
+                  <div className="mt-3">
+                    <label className="label-field">Custom role title</label>
+                    <input
+                      type="text"
+                      value={form.customRoleTitle}
+                      onChange={(e) => setForm((f) => ({ ...f, customRoleTitle: e.target.value.slice(0, 40) }))}
+                      placeholder="e.g. Coordinator, Editor, Office Manager"
+                      className="input-field w-full" />
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Shown on the team list and schedule. Set exactly which permissions apply below.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Profile photo */}
@@ -1693,7 +1701,7 @@ export default function TeamPage() {
     return "week";
   });  // "2wk" | "week" | "month" | "day"
   const [addMode,       setAddMode]       = useState(null); // null | "choice" | "invite"
-  const [inviteForm,    setInviteForm]    = useState({ email: "", role: "photographer", permissions: { ...DEFAULT_PERMISSIONS.photographer } });
+  const [inviteForm,    setInviteForm]    = useState({ email: "", role: "photographer", customRoleTitle: "", permissions: { ...DEFAULT_PERMISSIONS.photographer } });
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteMsg,     setInviteMsg]     = useState("");
   const [inviteUrl,     setInviteUrl]     = useState("");
@@ -1857,7 +1865,7 @@ export default function TeamPage() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ email: inviteForm.email.trim(), role: inviteForm.role, permissions: inviteForm.permissions }),
+        body: JSON.stringify({ email: inviteForm.email.trim(), role: inviteForm.role, customRoleTitle: inviteForm.customRoleTitle, permissions: inviteForm.permissions }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -2100,7 +2108,7 @@ export default function TeamPage() {
             <>
               <p className="font-semibold text-[#0F172A] mb-1">No team members yet</p>
               <p className="text-sm text-gray-500 mb-5 max-w-sm mx-auto">
-                Add photographers, managers, editors, and assistants. Only photographers appear in booking schedule.
+                Add photographers, managers, admins, or a custom role. Only photographers appear in the booking schedule.
               </p>
               <button onClick={() => setAddMode("choice")} className="btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-2">
                 <span className="text-lg leading-none">+</span> Add Your First Team Member
@@ -2152,9 +2160,9 @@ export default function TeamPage() {
             <button onClick={() => setEditing(m)} className="text-left">
               <p className="text-sm font-medium text-[#0F172A]">{m.name}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                {(() => { const rc = ROLE_COLORS[m.role || "photographer"] || ROLE_COLORS.photographer; return (
-                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border capitalize ${rc.bg} ${rc.text} ${rc.border}`}>
-                    {m.role || "photographer"}
+                {(() => { const rc = ROLE_COLORS[normalizeRole(m.role)] || ROLE_COLORS.photographer; return (
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${rc.bg} ${rc.text} ${rc.border}`}>
+                    {roleLabel(m)}
                   </span>
                 ); })()}
                 {m.skills?.length > 0 && <span className="text-[10px] text-gray-400">{m.skills.length} skills</span>}
@@ -2255,7 +2263,7 @@ export default function TeamPage() {
                   </button>
                 );
               })()}
-              {members.map((m) => {
+              {members.filter((m) => !availPhotographersOnly || shootsSchedule(m)).map((m) => {
                 const isActive = filterMember === m.id;
                 const color    = m.color || "#0b2a55";
                 return (
@@ -2625,9 +2633,8 @@ export default function TeamPage() {
           {visibleMembers.length > 0 && (() => {
             // Admins/managers never shoot, so the availability recap can hide them.
             // Owner, photographers, and assistants are shooting roles.
-            const NON_SHOOTING = ["admin", "manager"];
             const recapMembers = availPhotographersOnly
-              ? visibleMembers.filter((m) => m.id === "__owner__" || !NON_SHOOTING.includes(m.role))
+              ? visibleMembers.filter((m) => m.id === "__owner__" || shootsSchedule(m))
               : visibleMembers;
             return (
             <div className="border-t border-gray-100 px-4 py-4 bg-gray-50/60">
@@ -3080,6 +3087,14 @@ export default function TeamPage() {
                     </button>
                   ))}
                 </div>
+                {inviteForm.role === "custom" && (
+                  <input
+                    type="text"
+                    value={inviteForm.customRoleTitle}
+                    onChange={(e) => setInviteForm((f) => ({ ...f, customRoleTitle: e.target.value.slice(0, 40) }))}
+                    placeholder="Custom role title (e.g. Coordinator, Editor)"
+                    className="input-field w-full mt-2" />
+                )}
                 {DASHBOARD_ROLES.includes(inviteForm.role) ? (
                   <p className="text-xs text-purple-600 mt-1.5">→ Gets dashboard login access</p>
                 ) : (

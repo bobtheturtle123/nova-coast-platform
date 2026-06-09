@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { v4 as uuidv4 } from "uuid";
+import { normalizeRole } from "@/lib/roles";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -27,7 +28,8 @@ export async function PATCH(req, { params }) {
     email:         (body.email || "").toLowerCase(),
     phone:         body.phone || "",
     homeZip:       (body.homeZip || "").slice(0, 10),
-    role:          ["photographer","manager","assistant","admin"].includes(body.role) ? body.role : "photographer",
+    role:          normalizeRole(body.role),
+    customRoleTitle: (body.customRoleTitle || "").slice(0, 40),
     skills:        Array.isArray(body.skills) ? body.skills.map(String).slice(0, 50) : [],
     color:         body.color || "#3486cf",
     active:        body.active !== false,
@@ -49,7 +51,7 @@ export async function PATCH(req, { params }) {
     // Whether this member shows in the photographer picker on bookings.
     showInScheduling: body.showInScheduling !== undefined
       ? !!body.showInScheduling
-      : !["admin", "manager"].includes(body.role),
+      : normalizeRole(body.role) === "photographer",
     photoUrl:      typeof body.photoUrl === "string" ? body.photoUrl.slice(0, 500) : "",
   };
 
@@ -113,6 +115,8 @@ export async function PATCH(req, { params }) {
       email:        updatedData.email,
       phone:        updatedData.phone,
       role:         updatedData.role,
+      customRoleTitle: updatedData.customRoleTitle || "",
+      showInScheduling: updatedData.showInScheduling,
       color:        updatedData.color,
       active:       updatedData.active,
       skills:       updatedData.skills        || [],
