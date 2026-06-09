@@ -138,7 +138,8 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   const [travelFee,         setTravelFee]         = useState(null);
   const [serviceArea,       setServiceArea]       = useState(null);
   const [showSchedulePopup,  setShowSchedulePopup]  = useState(false);
-  const [apptPopupIdx,       setApptPopupIdx]       = useState(null);
+  const [apptPopupIdx,       setApptPopupIdx]       = useState(null); // "new" | index | null
+  const [apptDraft,          setApptDraft]          = useState(null); // local draft — only committed on Confirm
   const [calYear,            setCalYear]            = useState(() => new Date().getFullYear());
   const [calMonth,           setCalMonth]           = useState(() => new Date().getMonth());
   const [aCalYear,           setACalYear]           = useState(() => new Date().getFullYear());
@@ -153,20 +154,35 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
 
   const getToken = () => auth.currentUser?.getIdToken();
 
-  useEffect(() => {
-    if (apptPopupIdx !== null) {
-      const appt = form.additionalAppointments?.[apptPopupIdx];
-      if (appt?.date) {
-        const d = new Date(appt.date + "T12:00:00");
-        setACalYear(d.getFullYear());
-        setACalMonth(d.getMonth());
-      } else {
-        const today = new Date();
-        setACalYear(today.getFullYear());
-        setACalMonth(today.getMonth());
-      }
-    }
-  }, [apptPopupIdx]);
+  // Open the appointment popup. idx === "new" starts a fresh draft (NOT yet
+  // added to the booking); a number edits an existing appointment via a draft
+  // copy. Nothing is written to the booking until the user clicks Confirm.
+  function openApptPopup(idx) {
+    const seed = idx === "new" ? { date: "", time: "" } : { ...(form.additionalAppointments[idx] || { date: "", time: "" }) };
+    setApptDraft(seed);
+    setApptPopupIdx(idx);
+    const base = seed.date ? new Date(seed.date + "T12:00:00") : new Date();
+    setACalYear(base.getFullYear());
+    setACalMonth(base.getMonth());
+  }
+
+  function closeApptPopup() {
+    // Discard the draft — nothing is saved unless Confirm was pressed.
+    setApptPopupIdx(null);
+    setApptDraft(null);
+  }
+
+  function confirmApptDraft() {
+    if (!apptDraft?.date || !apptDraft?.time) return; // require date + time
+    setForm((f) => {
+      const arr = [...f.additionalAppointments];
+      if (apptPopupIdx === "new") arr.push(apptDraft);
+      else arr[apptPopupIdx] = apptDraft;
+      return { ...f, additionalAppointments: arr };
+    });
+    setApptPopupIdx(null);
+    setApptDraft(null);
+  }
 
   useEffect(() => {
     async function load() {
@@ -197,11 +213,15 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
           bookingConfig: tenantDoc.bookingConfig || null,
           showWeather:   tenantDoc.availability?.showWeather ?? true,
         });
-        // Admins and managers are dashboard-only roles — they never shoot, so
-        // they must not be assignable as the photographer on a booking.
-        // Photographers and assistants can both be assigned to shoots.
+        // A member appears in the photographer picker when showInScheduling is
+        // on. For members saved before that toggle existed, fall back to role:
+        // photographers/assistants shoot, admins/managers don't.
         const NON_SHOOTING_ROLES = ["admin", "manager"];
-        setTeam((teamData.members || []).filter((m) => !NON_SHOOTING_ROLES.includes(m.role)));
+        setTeam((teamData.members || []).filter((m) =>
+          m.showInScheduling !== undefined
+            ? m.showInScheduling
+            : !NON_SHOOTING_ROLES.includes(m.role)
+        ));
         setTimeBlocks(blocks.blocks || []);
         setBookings((list.listings || []).filter((b) => b.id !== bookingId));
         setAgents(agentsData.agents || []);
@@ -564,6 +584,8 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
             photographerName:        form.photographerName,
             photographerPhone:       form.photographerPhone,
             additionalPhotographers: form.additionalPhotographers,
+            // When checked, the API emails the client a booking-update summary.
+            sendNotification:        form.sendNotification,
           }),
         });
         data = await res.json();
@@ -1007,7 +1029,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                   ? (() => { const [hh, mm] = appt.time.split(":"); const h = Number(hh); return `${h % 12 || 12}:${mm} ${h >= 12 ? "PM" : "AM"}`; })()
                   : null;
                 return (
-                  <button key={i} type="button" onClick={() => setApptPopupIdx(i)}
+                  <button key={i} type="button" onClick={() => openApptPopup(i)}
                     className="w-full text-left flex items-center justify-between p-3 rounded-xl border border-gray-200 hover:border-[#3486cf]/50 hover:bg-gray-50 transition-colors mb-2">
                     <div>
                       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Appointment {i + 2}</p>
@@ -1025,11 +1047,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                 );
               })}
               <button type="button"
-                onClick={() => {
-                  const newIdx = form.additionalAppointments.length;
-                  setForm((f) => ({ ...f, additionalAppointments: [...f.additionalAppointments, { date: "", time: "" }] }));
-                  setApptPopupIdx(newIdx);
-                }}
+                onClick={() => openApptPopup("new")}
                 className="w-full text-sm text-[#3486cf] border border-dashed border-[#3486cf]/30 px-3 py-2.5 rounded-xl hover:bg-[#3486cf]/5 transition-colors mb-4 font-medium">
                 + Add Another Appointment
               </button>
@@ -1316,10 +1334,10 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
       </form>
 
       {/* ── Additional appointment popup (split-panel: calendar + time) ─── */}
-      {apptPopupIdx !== null && form.additionalAppointments[apptPopupIdx] !== undefined && (() => {
-        const appt = form.additionalAppointments[apptPopupIdx];
-        const setApptField = (field, value) =>
-          setForm((f) => { const arr = [...f.additionalAppointments]; arr[apptPopupIdx] = { ...arr[apptPopupIdx], [field]: value }; return { ...f, additionalAppointments: arr }; });
+      {apptPopupIdx !== null && apptDraft !== null && (() => {
+        const appt = apptDraft;
+        const setApptField = (field, value) => setApptDraft((d) => ({ ...d, [field]: value }));
+        const apptLabelNum = (typeof apptPopupIdx === "number" ? apptPopupIdx : form.additionalAppointments.length) + 2;
         const apptToday = new Date();
         const apptTodayStr = `${apptToday.getFullYear()}-${String(apptToday.getMonth()+1).padStart(2,"0")}-${String(apptToday.getDate()).padStart(2,"0")}`;
         const aFirstDay = new Date(aCalYear, aCalMonth, 1).getDay();
@@ -1334,8 +1352,8 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ height: "min(90vh, 580px)" }}>
               <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
-                <h3 className="font-semibold text-[#0F172A]">Appointment {apptPopupIdx + 2}</h3>
-                <button type="button" onClick={() => setApptPopupIdx(null)}
+                <h3 className="font-semibold text-[#0F172A]">Appointment {apptLabelNum}</h3>
+                <button type="button" onClick={closeApptPopup}
                   className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
               </div>
               <div className="flex flex-1 overflow-hidden min-h-0">
@@ -1446,7 +1464,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                   )}
                   {aRightStep === "confirm" && (
                     <div>
-                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">Appointment {apptPopupIdx+2}</p>
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">Appointment {apptLabelNum}</p>
                       <div className="bg-gray-50 rounded-xl divide-y divide-gray-100 mb-4 overflow-hidden">
                         <div className="flex items-center gap-3 px-4 py-3">
                           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="2" className="flex-shrink-0"><rect x="3" y="4" width="18" height="18" rx="2"/><path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18"/></svg>
@@ -1475,10 +1493,14 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                           </div>
                         )}
                       </div>
-                      <button type="button" onClick={()=>setApptPopupIdx(null)}
+                      <button type="button" onClick={confirmApptDraft}
                         className="w-full py-3 rounded-xl text-white text-sm font-semibold transition-colors"
                         style={{backgroundColor:"#3486cf"}}>
                         Confirm Appointment ✓
+                      </button>
+                      <button type="button" onClick={closeApptPopup}
+                        className="w-full py-2 mt-2 text-sm text-gray-500 hover:text-gray-700">
+                        Cancel
                       </button>
                     </div>
                   )}

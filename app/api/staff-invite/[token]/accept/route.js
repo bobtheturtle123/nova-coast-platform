@@ -67,5 +67,31 @@ export async function POST(req, { params }) {
     }).catch(() => {}),
   ]);
 
+  // Notify the tenant owner (fire-and-forget).
+  (async () => {
+    try {
+      const key = process.env.RESEND_API_KEY;
+      if (!key) return;
+      const tenantDoc = await adminDb.collection("tenants").doc(tenantId).get();
+      const tenant    = tenantDoc.data() || {};
+      const ownerEmail = tenant.email;
+      if (!ownerEmail) return;
+      const bizName  = tenant.branding?.businessName || tenant.businessName || "your team";
+      const appUrl   = (await import("@/lib/appUrl")).getAppUrl();
+      const who      = inviteData.name || email || inviteData.email || "A new teammate";
+      const { Resend } = await import("resend");
+      await new Resend(key).emails.send({
+        from:    `KyoriaOS <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`,
+        to:      ownerEmail,
+        subject: `${who} joined ${bizName}`,
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
+          <h2 style="color:#3486cf;margin:0 0 12px">New team member joined</h2>
+          <p style="color:#555;margin:0 0 16px"><strong>${who}</strong> accepted your invitation and joined as <strong>${role}</strong>.</p>
+          <a href="${appUrl}/dashboard/team" style="display:inline-block;background:#3486cf;color:#fff;padding:11px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">View Team</a>
+        </div>`,
+      });
+    } catch (e) { console.error("[staff-invite/accept] owner notification failed:", e?.message || e); }
+  })();
+
   return Response.json({ ok: true, tenantId, role, memberId });
 }

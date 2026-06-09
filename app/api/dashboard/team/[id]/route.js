@@ -46,6 +46,11 @@ export async function PATCH(req, { params }) {
       : {},
     bufferMinutes: body.bufferMinutes != null ? Number(body.bufferMinutes) || 0 : 0,
     workingHours:  body.workingHours && typeof body.workingHours === "object" ? body.workingHours : {},
+    // Whether this member shows in the photographer picker on bookings.
+    showInScheduling: body.showInScheduling !== undefined
+      ? !!body.showInScheduling
+      : !["admin", "manager"].includes(body.role),
+    photoUrl:      typeof body.photoUrl === "string" ? body.photoUrl.slice(0, 500) : "",
   };
 
   // Only overwrite permissions when the caller explicitly sends them

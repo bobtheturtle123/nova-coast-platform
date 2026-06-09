@@ -246,6 +246,10 @@ const [listingUrl,       setListingUrl]        = useState("");
   const [depositLinkMsg, setDepositLinkMsg] = useState("");
   const [depositUrl,     setDepositUrl]     = useState("");
 
+  // Manual payment recording
+  const [manualMode,   setManualMode]   = useState(null); // "deposit" | "full" | null
+  const [manualAmount, setManualAmount] = useState("");
+
   // Cancel / hide state
   const [cancelling,  setCancelling]  = useState(false);
   const [hiding,      setHiding]      = useState(false);
@@ -1493,19 +1497,52 @@ if (loading) return (
                         {sendingInvoice ? "Sending…" : "Email Invoice"}
                       </button>
                     </div>
-                    <div className="pt-2 border-t border-gray-100 flex items-center gap-2 flex-wrap">
-                      <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wide flex-1">Or record manually</span>
-                      {!booking.depositPaid && (
-                        <button onClick={() => patchBooking({ depositPaid: true })} disabled={saving}
-                          className="text-xs py-1.5 px-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
-                          Mark deposit paid
-                        </button>
-                      )}
-                      {!booking.paidInFull && !booking.balancePaid && (
-                        <button onClick={() => patchBooking({ depositPaid: true, balancePaid: true })} disabled={saving}
-                          className="text-xs py-1.5 px-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
-                          Mark paid in full
-                        </button>
+                    <div className="pt-2 border-t border-gray-100">
+                      {!manualMode ? (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wide flex-1">Or record manually</span>
+                          {!booking.depositPaid && (
+                            <button onClick={() => { setManualMode("deposit"); setManualAmount(String(booking.depositAmount ?? "")); }} disabled={saving}
+                              className="text-xs py-1.5 px-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                              Mark deposit paid
+                            </button>
+                          )}
+                          {!booking.paidInFull && !booking.balancePaid && (
+                            <button onClick={() => { setManualMode("full"); setManualAmount(String(booking.totalPrice ?? "")); }} disabled={saving}
+                              className="text-xs py-1.5 px-3 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                              Mark paid in full
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                            {manualMode === "deposit" ? "Deposit amount received" : "Total amount received"}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <div className="relative flex-1">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">{currency === "USD" ? "$" : ""}</span>
+                              <input type="number" min="0" step="0.01" value={manualAmount}
+                                onChange={(e) => setManualAmount(e.target.value)} autoFocus
+                                className="input-field text-sm w-full pl-6" placeholder="0.00" />
+                            </div>
+                            <button disabled={saving} onClick={async () => {
+                              const amt = Math.max(0, Number(manualAmount) || 0);
+                              if (manualMode === "deposit") {
+                                await patchBooking({ depositPaid: true, depositAmount: amt, remainingBalance: Math.max(0, (booking.totalPrice || 0) - amt), offlinePaymentAmount: amt, offlinePaymentMethod: "manual" });
+                              } else {
+                                // Mark paid in full. Record the amount received without
+                                // touching totalPrice (which would trigger a deposit recalc).
+                                await patchBooking({ depositPaid: true, balancePaid: true, paidInFull: true, remainingBalance: 0, offlinePaymentAmount: amt, offlinePaymentMethod: "manual" });
+                              }
+                              setManualMode(null); setManualAmount("");
+                            }} className="text-xs py-2 px-3 rounded-lg bg-[#3486cf] text-white font-semibold hover:bg-[#2a6dab] transition-colors disabled:opacity-50 whitespace-nowrap">
+                              {saving ? "Saving…" : "Save"}
+                            </button>
+                            <button onClick={() => { setManualMode(null); setManualAmount(""); }}
+                              className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                          </div>
+                        </div>
                       )}
                     </div>
                     {(depositLinkMsg || invoiceMsg || reminderMsg) && (

@@ -205,5 +205,48 @@ export async function PATCH(req, { params }) {
     }
   }
 
+  // Send a booking-update email to the client when the editor requested it.
+  if (body.sendNotification === true) {
+    const resendKey = process.env.RESEND_API_KEY;
+    const clientEmail = update.clientEmail || prev.clientEmail;
+    if (resendKey && clientEmail) {
+      try {
+        const tenant = await getTenantById(ctx.tenantId);
+        if (tenant) {
+          const bizName   = tenant.branding?.businessName || tenant.businessName || "KyoriaOS";
+          const primary   = tenant.branding?.primaryColor || "#3486cf";
+          const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
+          const from      = `${bizName} <${fromEmail}>`;
+          const address   = update.fullAddress || prev.fullAddress || prev.address || "your property";
+          const clientName = (update.clientName || prev.clientName || "").split(" ")[0] || "there";
+          const shootDate = update.shootDate ?? prev.shootDate;
+          const shootTime = update.shootTime ?? prev.shootTime;
+          const shootInfo = shootDate
+            ? `${new Date(shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}${shootTime ? ` at ${shootTime}` : ""}`
+            : null;
+          await new Resend(resendKey).emails.send({
+            from, to: [clientEmail],
+            subject: `Your booking was updated — ${address}`,
+            html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:40px 20px">
+              <h2 style="color:${primary};font-family:Georgia,serif;margin:0 0 12px">Booking Updated</h2>
+              <p style="color:#555;margin:0 0 20px">Hi ${clientName}, your booking details for <strong>${address}</strong> have been updated.</p>
+              <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                <tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px;width:36%">Property</td>
+                    <td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${address}</td></tr>
+                ${shootInfo ? `<tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px">Scheduled</td>
+                    <td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${shootInfo}</td></tr>` : ""}
+              </table>
+              <p style="color:#888;font-size:12px;margin:0">Questions? Just reply to this email.</p>
+              <p style="color:#ccc;font-size:11px;margin-top:8px">${bizName}</p>
+            </div>`,
+          }).then(() => console.log("[email] client booking-update sent to", clientEmail))
+            .catch((e) => console.error("[email] client booking-update FAILED:", e?.message));
+        }
+      } catch (e) {
+        console.error("[email] client booking-update error (non-fatal):", e?.message);
+      }
+    }
+  }
+
   return Response.json({ ok: true });
 }

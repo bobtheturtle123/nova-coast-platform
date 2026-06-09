@@ -463,9 +463,33 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
     bufferMinutes: member?.bufferMinutes ?? "",
     workingHours:  member?.workingHours  || DEFAULT_WORKING_HOURS,
     permissions:   member?.permissions   || { ...DEFAULT_PERMISSIONS[initialRole] },
+    // Whether this member appears in the photographer picker on bookings.
+    // Defaults from role: photographers/assistants shoot, admins/managers don't.
+    showInScheduling: member?.showInScheduling ?? !["admin", "manager"].includes(initialRole),
+    photoUrl:      member?.photoUrl      || "",
   });
   const [saving,   setSaving]   = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  async function handlePhotoFile(file) {
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const { auth: fbAuth } = await import("@/lib/firebase");
+      const token = await fbAuth.currentUser?.getIdToken();
+      const res = await fetch("/api/dashboard/upload-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, folder: "team-photos" }),
+      });
+      if (!res.ok) return;
+      const { uploadUrl, publicUrl } = await res.json();
+      await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+      setForm((f) => ({ ...f, photoUrl: publicUrl }));
+    } catch { /* ignore */ }
+    finally { setUploadingPhoto(false); }
+  }
 
   function toggleSkill(s) {
     setForm((f) => ({ ...f, skills: f.skills.includes(s) ? f.skills.filter((x) => x !== s) : [...f.skills, s] }));
@@ -526,6 +550,7 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
                   {ROLE_OPTIONS.map((r) => (
                     <button key={r.id} type="button" onClick={() => setForm((f) => ({
                       ...f, role: r.id, permissions: { ...DEFAULT_PERMISSIONS[r.id] },
+                      showInScheduling: !["admin", "manager"].includes(r.id),
                     }))}
                       className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${
                         form.role === r.id ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300"
@@ -537,6 +562,27 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
                       </div>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Profile photo */}
+              <div className="flex items-center gap-3">
+                {form.photoUrl
+                  ? <img src={form.photoUrl} alt="" className="w-14 h-14 rounded-full object-cover ring-2 ring-gray-100 flex-shrink-0" />
+                  : <div className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0" style={{ background: form.color || "#3486cf" }}>{(form.name?.[0] || "?").toUpperCase()}</div>}
+                <div className="flex-1">
+                  <label className="label-field">Profile Photo</label>
+                  <div className="flex items-center gap-2">
+                    <label className="btn-outline px-3 py-1.5 text-xs cursor-pointer">
+                      {uploadingPhoto ? "Uploading…" : form.photoUrl ? "Change" : "Upload photo"}
+                      <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                        onChange={(e) => handlePhotoFile(e.target.files?.[0])} disabled={uploadingPhoto} />
+                    </label>
+                    {form.photoUrl && (
+                      <button type="button" onClick={() => setForm((f) => ({ ...f, photoUrl: "" }))}
+                        className="text-xs text-gray-400 hover:text-red-500">Remove</button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -758,8 +804,22 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
           {/* ── ACCESS ── */}
           {tab === "access" && (
             <>
+              {/* Photographer scheduling toggle — the most important, decoupled
+                  from dashboard permissions so it's never confusing. */}
+              <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border-2 border-[#3486cf]/20 bg-[#3486cf]/5 mb-3">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-[#0F172A]">Show in photographer selection</p>
+                  <p className="text-[11px] text-gray-500">When on, this person can be assigned as the photographer on bookings and appears in the schedule.</p>
+                </div>
+                <button type="button"
+                  onClick={() => setForm((f) => ({ ...f, showInScheduling: !f.showInScheduling }))}
+                  className={`relative inline-flex w-9 h-5 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${form.showInScheduling ? "bg-[#3486cf]" : "bg-gray-200"}`}>
+                  <span className={`inline-block w-4 h-4 rounded-full bg-white shadow transform transition-transform ${form.showInScheduling ? "translate-x-4" : "translate-x-0"}`} />
+                </button>
+              </div>
+
               <p className="text-xs text-gray-500 mb-1">
-                Control what this team member can see and do in the dashboard. Defaults are set by role.
+                Dashboard permissions below control what this member can see and do when they log in. Defaults are set by role — photographers usually have none of these.
               </p>
               <div className="border border-gray-200 rounded-xl overflow-hidden">
                 <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
@@ -862,6 +922,9 @@ function OwnerCalSyncModal({ tenant, onClose, onConnected }) {
         "gcal-oauth",
         "width=500,height=620,left=200,top=100"
       );
+      if (!popup) {
+        throw new Error("Popup blocked. Allow popups for this site, then try again.");
+      }
       await new Promise((resolve, reject) => {
         let poll;
         const cleanup = () => { clearInterval(poll); window.removeEventListener("message", handler); };
@@ -871,11 +934,13 @@ function OwnerCalSyncModal({ tenant, onClose, onConnected }) {
         };
         window.addEventListener("message", handler);
         poll = setInterval(() => {
-          if (popup?.closed) { cleanup(); resolve(); }
+          if (popup.closed) { cleanup(); resolve(); }
         }, 600);
       });
+      // Refresh tenant first so the modal reflects the new connection, THEN flag
+      // connected — prevents the UI flicker that looked like a reset.
+      await onConnected?.();
       setGcalConnected(true);
-      onConnected?.();
     } catch (e) {
       setConnectError(e.message || "Connection failed");
     } finally {

@@ -65,6 +65,8 @@ export async function POST(req, { params }) {
     skills:          [],
     active:          true,
     color:           "#3486cf",
+    photoUrl:        "",
+    showInScheduling: !["admin", "manager"].includes(memberRole),
     joinedViaInvite: true,
     joinedAt:        new Date(),
     calendarToken,
@@ -94,6 +96,31 @@ export async function POST(req, { params }) {
 
   // Mark invite accepted
   await inviteRef.update({ accepted: true, acceptedAt: new Date(), memberId, uid });
+
+  // Notify the tenant owner that their invite was accepted (fire-and-forget).
+  (async () => {
+    try {
+      const key = process.env.RESEND_API_KEY;
+      if (!key) return;
+      const tenantDoc = await adminDb.collection("tenants").doc(tenantId).get();
+      const tenant    = tenantDoc.data() || {};
+      const ownerEmail = tenant.email;
+      if (!ownerEmail) return;
+      const bizName  = tenant.branding?.businessName || tenant.businessName || "your team";
+      const appUrl   = (await import("@/lib/appUrl")).getAppUrl();
+      const { Resend } = await import("resend");
+      await new Resend(key).emails.send({
+        from:    `KyoriaOS <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`,
+        to:      ownerEmail,
+        subject: `${name.trim()} joined ${bizName}`,
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">
+          <h2 style="color:#3486cf;margin:0 0 12px">New team member joined</h2>
+          <p style="color:#555;margin:0 0 16px"><strong>${name.trim()}</strong> (${email.trim().toLowerCase()}) accepted your invitation and joined as <strong>${memberRole}</strong>.</p>
+          <a href="${appUrl}/dashboard/team" style="display:inline-block;background:#3486cf;color:#fff;padding:11px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">View Team</a>
+        </div>`,
+      });
+    } catch (e) { console.error("[join/accept] owner notification failed:", e?.message || e); }
+  })();
 
   // Generate custom token so the client can sign in immediately
   const customToken = await adminAuth.createCustomToken(uid, { tenantId, memberId, role: memberRole });
