@@ -246,9 +246,18 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, galle
     pw.parking   && !pw.hidden_parking   && { label: "Parking",        value: pw.parking },
   ].filter(Boolean);
 
-  // Google Maps embed URL (free iframe, no API key)
-  const mapQuery = encodeURIComponent(pw.address || booking.fullAddress || booking.address || "");
-  const mapEmbedUrl = mapQuery ? `https://maps.google.com/maps?q=${mapQuery}&output=embed&z=16` : null;
+  // Google Maps embed URL (free iframe, no API key).
+  // Build a full query (street + city/state/zip) so the map resolves even when
+  // the street alone is ambiguous or wasn't in the address autocomplete. Prefer
+  // the booking's full address, which includes city/state/zip.
+  const mapQueryText = [
+    booking.fullAddress,
+    [pw.address, pw.city, pw.state, pw.zip].filter(Boolean).join(", "),
+    booking.address,
+    pw.address,
+  ].find((x) => x && x.trim()) || "";
+  const mapQuery = encodeURIComponent(mapQueryText);
+  const mapEmbedUrl = mapQuery ? `https://maps.google.com/maps?q=${mapQuery}&output=embed&z=15` : null;
 
   // Resolve template + color theme
   const theme    = resolveTheme(pw, branding);

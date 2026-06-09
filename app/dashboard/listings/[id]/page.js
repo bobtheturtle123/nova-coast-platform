@@ -294,6 +294,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   const [revFilter,        setRevFilter]        = useState("all");
   const [revExpanded,      setRevExpanded]      = useState(null);
   const [revNotes,         setRevNotes]         = useState({});
+  const [lightbox,         setLightbox]         = useState(null); // { items, index }
   const [revSaving,        setRevSaving]        = useState(null);
 
   useEffect(() => {
@@ -2679,19 +2680,25 @@ if (loading) return (
                               <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Request</p>
                               <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{r.message}</p>
                             </div>
-                            {r.mediaItems?.length > 0 && (
-                              <div>
-                                <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Flagged Media ({r.mediaItems.length})</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {r.mediaItems.map((m, i) => (
-                                    <a key={i} href={m.url || m} target="_blank" rel="noopener noreferrer"
-                                      className="text-xs px-2.5 py-1 border border-gray-200 rounded-lg text-[#3486cf] hover:bg-gray-50 transition-colors">
-                                      Media {i + 1}
-                                    </a>
-                                  ))}
+                            {r.mediaItems?.length > 0 && (() => {
+                              const items = r.mediaItems.map((m) => ({ url: m.url || m, name: m.name || "" }));
+                              return (
+                                <div>
+                                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Flagged Photos ({items.length})</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {items.map((m, i) => (
+                                      <button key={i} type="button" onClick={() => setLightbox({ items, index: i })}
+                                        className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 hover:border-[#3486cf] transition-colors group"
+                                        title={m.name || `Photo ${i + 1}`}>
+                                        {m.url ? <img src={m.url} alt={m.name} className="w-full h-full object-cover" />
+                                               : <span className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">Photo {i + 1}</span>}
+                                        <span className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                                      </button>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              );
+                            })()}
                             <div>
                               <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Notes (internal)</p>
                               <textarea rows={2}
@@ -2731,6 +2738,30 @@ if (loading) return (
         )}
 
       </div>{/* end main px-7 content area */}
+
+      {/* Flagged-media lightbox */}
+      {lightbox && (() => {
+        const { items, index } = lightbox;
+        const cur = items[index];
+        const go = (d) => setLightbox((lb) => ({ ...lb, index: (lb.index + d + items.length) % items.length }));
+        return (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.85)" }} onClick={() => setLightbox(null)}>
+            <button onClick={() => setLightbox(null)} className="absolute top-4 right-5 text-white/70 hover:text-white text-3xl leading-none">×</button>
+            {items.length > 1 && (
+              <>
+                <button onClick={(e) => { e.stopPropagation(); go(-1); }} className="absolute left-4 text-white/70 hover:text-white text-4xl px-3">‹</button>
+                <button onClick={(e) => { e.stopPropagation(); go(1); }} className="absolute right-4 text-white/70 hover:text-white text-4xl px-3">›</button>
+              </>
+            )}
+            <div className="max-w-[90vw] max-h-[88vh] flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+              {cur?.url
+                ? <img src={cur.url} alt={cur.name} className="max-w-[90vw] max-h-[80vh] object-contain rounded-lg" />
+                : <div className="text-white/60">Image unavailable</div>}
+              <p className="text-white/80 text-sm">{cur?.name || `Photo ${index + 1}`}{items.length > 1 ? ` · ${index + 1} of ${items.length}` : ""}</p>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Deliver modal */}
       {showDeliver && (
