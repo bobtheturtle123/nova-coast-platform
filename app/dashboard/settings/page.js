@@ -1964,20 +1964,30 @@ export default function SettingsPage() {
               <p className="text-[10px] text-gray-400 mt-0.5">Wind-down / editing time after each appointment.</p>
             </div>
           </div>
-          <div className="mt-4 flex items-center justify-between gap-4 border border-gray-100 rounded-xl px-4 py-3">
-            <div>
-              <p className="text-sm font-medium text-[#0F172A]">Duration-aware slot blocking</p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Hide slots where the full service duration can&apos;t fit — e.g. a 1-hour service blocks 9:30 AM if 10:00 AM is busy.
-              </p>
+          {/* Duration-aware blocking only applies to Time Grid mode. Live
+              Availability is always duration-aware by design, so the toggle
+              would be redundant there. */}
+          {availMode === "slots" && (
+            <div className="mt-4 flex items-center justify-between gap-4 border border-gray-100 rounded-xl px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-[#0F172A]">Duration-aware slot blocking</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Hide grid slots where the full service duration can&apos;t fit — e.g. a 1-hour service blocks 9:30 AM if 10:00 AM is busy.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDurationAwareSlots((v) => !v)}
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${durationAwareSlots ? "bg-[#3486cf]" : "bg-gray-200"}`}>
+                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${durationAwareSlots ? "translate-x-4" : "translate-x-0"}`} />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setDurationAwareSlots((v) => !v)}
-              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${durationAwareSlots ? "bg-[#3486cf]" : "bg-gray-200"}`}>
-              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${durationAwareSlots ? "translate-x-4" : "translate-x-0"}`} />
-            </button>
-          </div>
+          )}
+          {availMode === "real" && (
+            <p className="mt-4 text-xs text-gray-400 border border-gray-100 rounded-xl px-4 py-3">
+              Live Availability always respects shoot duration and buffer — no extra setting needed.
+            </p>
+          )}
         </div>
 
         {/* Named time slots — only shown when "named" mode is selected */}

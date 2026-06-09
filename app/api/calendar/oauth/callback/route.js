@@ -33,18 +33,13 @@ function isAllDayBusy(start, end) {
 // Sync a member's Google Calendar immediately after connecting
 async function syncAfterConnect(tenantId, memberId, accessToken) {
   try {
+    const { fetchBusyIntervals } = await import("@/lib/googleCalendar");
     const timeMin = new Date().toISOString();
     const timeMax = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
-    const fbRes = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
-      method:  "POST",
-      headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
-      body:    JSON.stringify({ timeMin, timeMax, items: [{ id: "primary" }] }),
-    });
-    if (!fbRes.ok) return;
-
-    const fbData = await fbRes.json();
-    const busy   = fbData.calendars?.primary?.busy || [];
+    const result = await fetchBusyIntervals(accessToken, "primary", timeMin, timeMax);
+    if (result.error) return;
+    const busy = result.items;
 
     const blocksRef = adminDb.collection("tenants").doc(tenantId).collection("timeBlocks");
     const existing  = await blocksRef.where("memberId", "==", memberId).where("source", "==", "google").get();
@@ -57,7 +52,7 @@ async function syncAfterConnect(tenantId, memberId, accessToken) {
       const start = new Date(interval.start);
       const end   = new Date(interval.end);
       if ((end - start) / 60000 < 15) continue;
-      const allDay    = isAllDayBusy(start, end);
+      const allDay    = interval.allDay ?? isAllDayBusy(start, end);
       const id        = uuidv4();
       const startDate = start.toISOString().slice(0, 10);
       const endDate   = allDay ? new Date(end - 1).toISOString().slice(0, 10) : end.toISOString().slice(0, 10);
@@ -70,8 +65,9 @@ async function syncAfterConnect(tenantId, memberId, accessToken) {
         allDay,
         startTime: allDay ? null : interval.start,
         endTime:   allDay ? null : interval.end,
-        reason:    "Busy",
-        note:      allDay ? "" : `${fmt(start)} – ${fmt(end)}`,
+        reason:    interval.title || "Busy",
+        eventTitle: interval.title || null,
+        note:      allDay ? "All day" : `${fmt(start)} – ${fmt(end)}`,
         source:    "google",
         createdAt: new Date(),
       });

@@ -1,6 +1,7 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
+import { fetchBusyIntervals } from "@/lib/googleCalendar";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -164,19 +165,13 @@ export async function POST(req) {
   const timeMin = new Date().toISOString();
   const timeMax = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
-  const fbRes = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ timeMin, timeMax, items: [{ id: calendarId }] }),
-  });
-
-  if (!fbRes.ok) {
-    const err = await fbRes.json().catch(() => ({}));
-    return Response.json({ error: err.error?.message || "Failed to fetch Google Calendar" }, { status: 502 });
+  // Fetch real events (with titles + times) via the Events API. Falls back to
+  // freeBusy for members who connected under the old calendar.freebusy scope
+  // (their token can't read events until they reconnect).
+  const intervals = await fetchBusyIntervals(accessToken, calendarId, timeMin, timeMax);
+  if (intervals.error) {
+    return Response.json({ error: intervals.error }, { status: 502 });
   }
-
-  const fbData        = await fbRes.json();
-  const busyIntervals = fbData.calendars?.[calendarId]?.busy || fbData.calendars?.primary?.busy || [];
 
   const existingSnap = await adminDb
     .collection("tenants").doc(ctx.tenantId)
@@ -189,16 +184,17 @@ export async function POST(req) {
   existingSnap.docs.forEach((d) => batch.delete(d.ref));
 
   const newBlocks = [];
-  for (const interval of busyIntervals) {
+  for (const interval of intervals.items) {
     const start       = new Date(interval.start);
     const end         = new Date(interval.end);
     const durationMin = (end - start) / 60000;
     if (durationMin < 15) continue;
 
-    const allDay    = isAllDayBusy(start, end);
+    const allDay    = interval.allDay ?? isAllDayBusy(start, end);
     const id        = uuidv4();
     const startDate = start.toISOString().slice(0, 10);
     const endDate   = allDay ? new Date(end - 1).toISOString().slice(0, 10) : end.toISOString().slice(0, 10);
+    const title     = interval.title || "Busy";
 
     const block = {
       id,
@@ -209,8 +205,9 @@ export async function POST(req) {
       allDay,
       startTime: allDay ? null : interval.start,
       endTime:   allDay ? null : interval.end,
-      reason:    "Busy",
-      note:      allDay ? "" : `${formatTime(start)} – ${formatTime(end)}`,
+      reason:    title,
+      eventTitle: interval.title || null,
+      note:      allDay ? "All day" : `${formatTime(start)} – ${formatTime(end)}`,
       source:    "google",
       createdAt: new Date(),
     };

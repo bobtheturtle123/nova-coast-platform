@@ -18,14 +18,26 @@ export function middleware(request) {
   // Strip port for local dev
   const hostname = host.split(":")[0];
 
+  // ── Domain canonicalization for SEO ──────────────────────────────────────
+  // Redirect non-canonical host variants (www., app., and any other
+  // kyoriaos.com subdomain) to the single canonical apex https://kyoriaos.com.
+  // Without this, Google sees app.kyoriaos.com and www.kyoriaos.com as
+  // duplicate pages with no declared canonical ("Duplicate without
+  // user-selected canonical" / "Page with redirect" in Search Console).
+  const isApex = hostname === "kyoriaos.com";
+  const isKyoriaSubdomain = hostname.endsWith(".kyoriaos.com");
+  if (isKyoriaSubdomain && !isApex) {
+    const { pathname, search } = request.nextUrl;
+    return NextResponse.redirect(`https://kyoriaos.com${pathname}${search}`, 308);
+  }
+
   // Always pass through localhost, Vercel preview/deployment domains,
   // and the configured platform domain.
   const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
   const isVercel    = hostname.endsWith(".vercel.app");
   const isPlatform  = PLATFORM_HOST && (hostname === PLATFORM_HOST || hostname.endsWith(`.${PLATFORM_HOST}`));
-  // Always pass through the canonical production domain and all its subdomains,
-  // regardless of what NEXT_PUBLIC_APP_DOMAIN is set to.
-  const isCanonical = hostname === "kyoriaos.com" || hostname.endsWith(".kyoriaos.com");
+  // Always pass through the canonical production apex.
+  const isCanonical = isApex;
 
   // If no custom domain env var is set, or we're on a known platform host — skip entirely.
   if (isLocalhost || isVercel || isCanonical || isPlatform || !PLATFORM_HOST) {

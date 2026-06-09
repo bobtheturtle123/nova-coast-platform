@@ -44,6 +44,7 @@ export default function TeamStep() {
   const [sending, setSending] = useState(false);
   const [sent,    setSent]    = useState(false);
   const [error,   setError]  = useState("");
+  const [fallbackLinks, setFallbackLinks] = useState([]); // [{email, url}] when email delivery failed
   const [upgrading, setUpgrading] = useState(false);
 
   async function handleUpgrade() {
@@ -82,22 +83,51 @@ export default function TeamStep() {
 
   async function handleSend() {
     if (!filledRows.length) { handleSkip(); return; }
-    setSending(true); setError("");
+    setSending(true); setError(""); setFallbackLinks([]);
     try {
       const token = await auth.currentUser.getIdToken();
+      const failed   = [];   // hard failures (API error)
+      const emailNot = [];   // invite created but email not delivered
       for (const row of filledRows) {
-        await fetch("/api/dashboard/team/invite", {
-          method:  "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body:    JSON.stringify({ email: row.email.trim(), role: row.role }),
-        });
+        try {
+          const res  = await fetch("/api/dashboard/team/invite", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body:    JSON.stringify({ email: row.email.trim(), role: row.role }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            failed.push({ email: row.email.trim(), reason: data.error || `Error ${res.status}` });
+          } else if (data.emailFailed && data.inviteUrl) {
+            // Invite record was created but the email didn't go out — give the
+            // owner the link so they can share it directly.
+            emailNot.push({ email: row.email.trim(), url: data.inviteUrl });
+          }
+        } catch {
+          failed.push({ email: row.email.trim(), reason: "Network error" });
+        }
       }
-      setSent(true);
+
+      // Persist only the invites that were actually created (not hard-failed).
+      const created = filledRows.filter(r => !failed.some(f => f.email === r.email.trim()));
       await saveOnboarding({
         completed: { ...(onboarding?.completed || {}), team: true },
-        teamInvites: filledRows.map(r => ({ name: r.name, email: r.email, role: r.role })),
+        teamInvites: created.map(r => ({ name: r.name, email: r.email, role: r.role })),
         currentStep: 4,
       });
+
+      if (failed.length > 0) {
+        setError(`Couldn't send ${failed.length} invite${failed.length > 1 ? "s" : ""}: ${failed.map(f => `${f.email} (${f.reason})`).join(", ")}. You can retry from Team & Schedule.`);
+        setSending(false);
+        return;
+      }
+      if (emailNot.length > 0) {
+        // Created but email didn't deliver — surface the links instead of pretending it sent.
+        setFallbackLinks(emailNot);
+        setSending(false);
+        return;
+      }
+      setSent(true);
       setTimeout(() => router.push("/onboarding/service-area"), 800);
     } catch { setError("Some invites failed. You can retry from Team & Schedule."); setSending(false); }
   }
@@ -164,6 +194,31 @@ export default function TeamStep() {
           {error && (
             <div style={{ marginBottom: 16, padding: "10px 14px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 9, fontSize: 13, color: "#DC2626" }}>
               {error}
+            </div>
+          )}
+
+          {fallbackLinks.length > 0 && (
+            <div style={{ marginBottom: 16, padding: "12px 14px", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 9 }}>
+              <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: "#92400E" }}>
+                Invites created, but the email didn&apos;t send. Share these links directly:
+              </p>
+              {fallbackLinks.map((f) => (
+                <div key={f.email} style={{ marginBottom: 8 }}>
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#0F172A" }}>{f.email}</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <input readOnly value={f.url} onClick={(e) => e.target.select()}
+                      style={{ flex: 1, fontSize: 11, padding: "5px 8px", border: "1px solid #E5E7EB", borderRadius: 6, color: "#3486cf", background: "#fff" }} />
+                    <button type="button" onClick={() => navigator.clipboard.writeText(f.url)}
+                      style={{ fontSize: 11, fontWeight: 600, color: "#3486cf", background: "none", border: "1px solid #DAE6F4", borderRadius: 6, padding: "5px 10px", cursor: "pointer" }}>
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={() => router.push("/onboarding/service-area")}
+                style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: "#92400E", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+                Continue →
+              </button>
             </div>
           )}
 

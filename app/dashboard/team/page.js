@@ -1112,6 +1112,26 @@ function CalendarSyncModal({ member, onClose, onRegenerate, onDisconnect }) {
   const [syncResult,     setSyncResult]     = useState(null);
   const [lastSynced,     setLastSynced]     = useState(member.googleCalendar?.lastSynced || null);
   const [disconnecting,  setDisconnecting]  = useState(false);
+  const [calendarId,     setCalendarId]     = useState(member.googleCalendar?.calendarId || "primary");
+  const [savingCalId,    setSavingCalId]    = useState(false);
+  const [calIdSaved,     setCalIdSaved]     = useState(false);
+
+  async function saveCalendarId() {
+    setSavingCalId(true); setCalIdSaved(false); setSyncError("");
+    try {
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const token = await firebaseAuth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/team/google-sync", {
+        method:  "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body:    JSON.stringify({ memberId: member.id, calendarId: calendarId.trim() || "primary" }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setSyncError(d.error || "Couldn't save calendar"); return; }
+      setCalIdSaved(true);
+      setTimeout(() => setCalIdSaved(false), 2000);
+    } catch (e) { setSyncError(e.message); }
+    finally { setSavingCalId(false); }
+  }
 
   async function syncNow() {
     setSyncing(true);
@@ -1229,6 +1249,36 @@ function CalendarSyncModal({ member, onClose, onRegenerate, onDisconnect }) {
                   {syncError}
                 </div>
               )}
+
+              {/* What gets synced — explanation */}
+              <div className="mt-3 pt-3 border-t border-green-200/60">
+                <p className="text-[11px] text-green-700 leading-relaxed">
+                  <strong>What syncs:</strong> events from {member.name}&apos;s Google Calendar for the next 90 days
+                  are imported as unavailable blocks (with their title &amp; time). Events marked &quot;Free&quot; or declined
+                  are ignored. Syncs run automatically; use <strong>Sync Now</strong> to refresh immediately.
+                </p>
+              </div>
+
+              {/* Specific calendar selection */}
+              <div className="mt-3 pt-3 border-t border-green-200/60">
+                <label className="text-[11px] font-semibold text-green-800 block mb-1">Calendar to sync</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    value={calendarId}
+                    onChange={(e) => setCalendarId(e.target.value)}
+                    placeholder="primary"
+                    className="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-green-300 bg-white text-gray-700" />
+                  <button onClick={saveCalendarId} disabled={savingCalId}
+                    className="text-xs bg-white border border-green-300 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-50 disabled:opacity-50 font-medium flex-shrink-0">
+                    {savingCalId ? "Saving…" : calIdSaved ? "Saved ✓" : "Save"}
+                  </button>
+                </div>
+                <p className="text-[10px] text-green-600 mt-1 leading-relaxed">
+                  Leave as <strong>primary</strong> for the main calendar. To sync a different one, open Google Calendar →
+                  the calendar&apos;s <strong>Settings → Integrate calendar → Calendar ID</strong> (e.g.
+                  <span className="font-mono"> abc123@group.calendar.google.com</span>) and paste it here, then Sync Now.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 flex gap-3">
@@ -3035,33 +3085,49 @@ export default function TeamPage() {
                 <p className="font-semibold text-[#0F172A] text-sm">
                   {blockDetail.member.name} — {DAYS_SHORT[blockDetail.date.getDay()]}, {MONTHS[blockDetail.date.getMonth()]} {blockDetail.date.getDate()}
                 </p>
-                <p className="text-xs mt-0.5 font-medium" style={{ color: blockDetail.member.color || "#0b2a55" }}>Blocked</p>
+                <p className="text-xs mt-0.5 text-gray-400">{blockDetail.blocks.length} event{blockDetail.blocks.length !== 1 ? "s" : ""} · unavailable</p>
               </div>
               <button onClick={() => setBlockDetail(null)} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
             </div>
             <div className="p-5 space-y-3">
               {blockDetail.blocks.map((bl) => {
                 const mc = blockDetail.member.color || "#0b2a55";
+                const isGoogle = bl.source === "google";
                 return (
                   <div key={bl.id} className="border rounded-lg p-3"
                     style={{ background: hexWithAlpha(mc, 0.06), borderColor: hexWithAlpha(mc, 0.2) }}>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold" style={{ color: mc }}>{bl.reason || "Blocked"}</p>
-                      <button onClick={() => { deleteBlock(bl.id); setBlockDetail(null); }}
-                        className="text-xs font-medium" style={{ color: hexWithAlpha(mc, 0.6) }}>Remove</button>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-semibold flex-1 min-w-0" style={{ color: mc }}>{bl.eventTitle || bl.reason || "Busy"}</p>
+                      {!isGoogle && (
+                        <button onClick={() => { deleteBlock(bl.id); setBlockDetail(null); }}
+                          className="text-xs font-medium flex-shrink-0" style={{ color: hexWithAlpha(mc, 0.6) }}>Remove</button>
+                      )}
                     </div>
-                    {(bl.startTime || bl.endTime) && (
-                      <p className="text-xs mt-1" style={{ color: hexWithAlpha(mc, 0.7) }}>
-                        {fmt12(bl.startTime) || "All day"}{bl.endTime ? ` – ${fmt12(bl.endTime)}` : " (no end time set)"}
-                      </p>
-                    )}
-                    {!bl.startTime && !bl.endTime && (
-                      <p className="text-xs mt-1" style={{ color: hexWithAlpha(mc, 0.55) }}>Full day</p>
-                    )}
-                    {bl.note && <p className="text-xs mt-1 italic" style={{ color: hexWithAlpha(mc, 0.55) }}>{bl.note}</p>}
-                    <p className="text-[10px] mt-1" style={{ color: hexWithAlpha(mc, 0.4) }}>
-                      {bl.startDate === bl.endDate ? "Single day" : `${bl.startDate} – ${bl.endDate}`}
+                    {/* Time row — Google-Calendar style */}
+                    <p className="text-xs mt-1 flex items-center gap-1.5" style={{ color: hexWithAlpha(mc, 0.7) }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+                        <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+                      </svg>
+                      {bl.allDay || (!bl.startTime && !bl.endTime)
+                        ? "All day"
+                        : `${fmt12(bl.startTime)}${bl.endTime ? ` – ${fmt12(bl.endTime)}` : ""}`}
                     </p>
+                    {/* Who */}
+                    <p className="text-xs mt-1 flex items-center gap-1.5" style={{ color: hexWithAlpha(mc, 0.6) }}>
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: mc }} />
+                      {blockDetail.member.name}
+                    </p>
+                    {/* Source */}
+                    <div className="mt-2 pt-2 flex items-center gap-1.5" style={{ borderTop: `1px solid ${hexWithAlpha(mc, 0.12)}` }}>
+                      {isGoogle ? (
+                        <>
+                          <svg width="11" height="11" viewBox="0 0 24 24" className="flex-shrink-0"><rect width="24" height="24" rx="3" fill="#4285F4"/><rect x="5" y="6" width="14" height="13" rx="1.5" fill="white"/><rect x="5" y="6" width="14" height="3" fill="#4285F4"/></svg>
+                          <span className="text-[10px]" style={{ color: hexWithAlpha(mc, 0.5) }}>Synced from Google Calendar</span>
+                        </>
+                      ) : (
+                        <span className="text-[10px]" style={{ color: hexWithAlpha(mc, 0.5) }}>Manual block · {bl.startDate === bl.endDate ? "single day" : `${bl.startDate} – ${bl.endDate}`}</span>
+                      )}
+                    </div>
                   </div>
                 );
               })}
