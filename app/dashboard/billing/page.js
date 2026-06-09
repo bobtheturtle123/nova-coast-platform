@@ -49,6 +49,7 @@ export default function BillingPage() {
   const [cancelNote,      setCancelNote]     = useState("");
   const [discountSaving,  setDiscountSaving] = useState(false);
   const [downgradeTarget, setDowngradeTarget] = useState(null); // { planId, seatBlock }
+  const [upgradeTarget,   setUpgradeTarget]   = useState(null); // { planId }
   const [agentProWorking, setAgentProWorking] = useState(false);
   const [isOwner,       setIsOwner]      = useState(true); // staff admins cannot manage billing
 
@@ -273,11 +274,18 @@ export default function BillingPage() {
   function handlePlanChange(targetPlanId) {
     const fromOrder = PLAN_ORDER[plan] ?? 0;
     const toOrder   = PLAN_ORDER[targetPlanId] ?? 0;
+    // Upgrades go straight through (or show an upsell) — never the "you'll lose
+    // access" downgrade warning. Show the upsell modal so they see what they gain.
+    if (toOrder > fromOrder) {
+      setUpgradeTarget({ planId: targetPlanId });
+      return;
+    }
     const targetSeats = BASE_SEATS[targetPlanId];
     if (toOrder < fromOrder && targetSeats !== null && seatsUsed > targetSeats) {
       setDowngradeTarget({ planId: targetPlanId, seatBlock: true });
       return;
     }
+    // Genuine downgrade.
     setDowngradeTarget({ planId: targetPlanId, seatBlock: false });
   }
 
@@ -807,6 +815,61 @@ export default function BillingPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade upsell modal */}
+      {upgradeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.45)" }}
+          onClick={() => setUpgradeTarget(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#3486cf]/10 flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-[#3486cf]">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-[#0F172A] text-[15px]">Upgrade to {PLAN_NAMES[upgradeTarget.planId]}</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Here&apos;s what you unlock</p>
+              </div>
+            </div>
+            <div className="bg-[#3486cf]/5 border border-[#3486cf]/20 rounded-xl p-4 mb-4">
+              <p className="text-xs font-semibold text-[#1E5A8A] uppercase tracking-wide mb-2.5">You&apos;ll gain:</p>
+              <ul className="space-y-1.5">
+                {(() => {
+                  const gains = [];
+                  const fromLimit = PLAN_LIMITS[plan] || 120;
+                  const toLimit   = PLAN_LIMITS[upgradeTarget.planId] || 120;
+                  if (toLimit > fromLimit) gains.push(`${fromLimit.toLocaleString()} → ${toLimit.toLocaleString()} listing credits per year`);
+                  const fromSeats = BASE_SEATS[plan];
+                  const toSeats   = BASE_SEATS[upgradeTarget.planId];
+                  if (fromSeats !== null && toSeats !== null && toSeats > fromSeats) gains.push(`Team seats: ${fromSeats} → ${toSeats}`);
+                  const FEE_PCT = { solo: 2.0, starter: 2.0, studio: 1.5, pro: 1.25, scale: 1.0 };
+                  if ((FEE_PCT[upgradeTarget.planId] || 2.0) < (FEE_PCT[plan] || 2.0)) gains.push(`Lower platform fee: ${FEE_PCT[plan]}% → ${FEE_PCT[upgradeTarget.planId]}% per transaction`);
+                  if (gains.length === 0) gains.push("Higher limits and more features");
+                  return gains.map((g, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-[#1E5A8A]">
+                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" className="flex-shrink-0 mt-px text-[#3486cf]"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                      {g}
+                    </li>
+                  ));
+                })()}
+              </ul>
+            </div>
+            <p className="text-xs text-gray-400 mb-5">Upgrade is prorated — you&apos;re only charged the difference for the rest of this billing period.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setUpgradeTarget(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                Not now
+              </button>
+              <button onClick={() => { const id = upgradeTarget.planId; setUpgradeTarget(null); changePlan(id); }} disabled={working}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-[#3486cf] text-white text-sm font-semibold hover:bg-[#2a6dab] transition-colors disabled:opacity-50">
+                {working ? "Loading…" : `Upgrade to ${PLAN_NAMES[upgradeTarget.planId]} →`}
+              </button>
+            </div>
           </div>
         </div>
       )}

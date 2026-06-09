@@ -1324,7 +1324,7 @@ if (loading) return (
             {/* Appointment Record */}
             <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
               <div className="px-[17px] py-3 border-b border-gray-100"><span className="text-[13px] font-bold text-[#0F172A]">Appointment Record</span></div>
-              <div style={{ paddingTop: 2 }}>
+              <div className="px-[17px]" style={{ paddingTop: 2, paddingBottom: 4 }}>
                 {[
                   { k: "Client",       v: booking.clientName },
                   { k: "Email",        v: booking.clientEmail, link: `mailto:${booking.clientEmail}` },
@@ -1334,11 +1334,11 @@ if (loading) return (
                   { k: "Photographer", v: booking.photographerName },
                   { k: "Source",       v: booking.source, muted: true },
                 ].filter((r) => r.v).map((row) => (
-                  <div key={row.k} className="flex justify-between py-2.5 border-b last:border-b-0" style={{ borderColor: "#F4F0E3", fontSize: 13 }}>
-                    <span style={{ color: "#6B7280" }}>{row.k}</span>
+                  <div key={row.k} className="flex justify-between items-start gap-4 py-2.5 border-b last:border-b-0" style={{ borderColor: "#F4F0E3", fontSize: 13 }}>
+                    <span className="flex-shrink-0" style={{ color: "#6B7280" }}>{row.k}</span>
                     {row.link
-                      ? <a href={row.link} style={{ color: "#3486cf", fontWeight: 600 }}>{row.v}</a>
-                      : <span style={{ fontWeight: row.muted ? 400 : 600, color: row.muted ? "#9CA3AF" : "#0F172A", textAlign: "right", maxWidth: "60%" }}>{row.v}</span>}
+                      ? <a href={row.link} className="text-right break-words min-w-0" style={{ color: "#3486cf", fontWeight: 600 }}>{row.v}</a>
+                      : <span className="text-right break-words min-w-0" style={{ fontWeight: row.muted ? 400 : 600, color: row.muted ? "#9CA3AF" : "#0F172A" }}>{row.v}</span>}
                   </div>
                 ))}
                 {booking.notes && (

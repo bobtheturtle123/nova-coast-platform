@@ -1112,6 +1112,16 @@ function OwnerCalSyncModal({ tenant, onClose, onConnected }) {
                   <p className="text-xs text-gray-500">Block your busy times automatically in your booking schedule.</p>
                 </div>
               </div>
+              {/* How it works */}
+              <div className="rounded-lg bg-[#3486cf]/5 border border-[#3486cf]/15 p-3 text-[11px] text-[#1E5A8A] leading-relaxed">
+                <p className="font-semibold mb-1">How it works</p>
+                <ol className="list-decimal ml-4 space-y-0.5">
+                  <li>Connect your Google account (we only read your busy/free times — never event details).</li>
+                  <li>Your busy times for the next 90 days appear as &quot;Busy&quot; blocks on your schedule.</li>
+                  <li>Those blocks stop you being double-booked when assigning shoots.</li>
+                  <li>It re-syncs automatically; hit <strong>Sync Now</strong> anytime to refresh immediately.</li>
+                </ol>
+              </div>
               <button onClick={connectGoogle} disabled={connecting}
                 className="w-full flex items-center justify-center gap-2 border border-[#3486cf]/30 text-[#3486cf] text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-[#3486cf]/5 disabled:opacity-50 transition-colors">
                 {connecting ? "Opening…" : "Connect Google Calendar"}

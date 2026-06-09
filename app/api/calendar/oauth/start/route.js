@@ -76,9 +76,11 @@ export async function GET(req) {
     authUrl.searchParams.set("client_id",     clientId);
     authUrl.searchParams.set("redirect_uri",  redirectUri);
     authUrl.searchParams.set("response_type", "code");
-    // calendar.readonly lets us read event titles + times (richer than freebusy,
-    // which only returns opaque busy intervals). Read-only — we never write.
-    authUrl.searchParams.set("scope",         "https://www.googleapis.com/auth/calendar.readonly");
+    // calendar.freebusy is a non-sensitive scope, so Google does NOT show the
+    // "unverified app" warning. It returns only busy time intervals (no event
+    // titles), which is all we need — blocks are labelled "Busy" under the
+    // member's name.
+    authUrl.searchParams.set("scope",         "https://www.googleapis.com/auth/calendar.freebusy");
     authUrl.searchParams.set("access_type",   "offline");
     authUrl.searchParams.set("prompt",        "consent");
     authUrl.searchParams.set("state",         state);

@@ -1,7 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
 import { sendGalleryDelivery, sendGalleryDeliveryStatusEmail } from "@/lib/email";
-import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendMediaDeliveredSms } from "@/lib/sms";
 import { getAppUrl } from "@/lib/appUrl";
 import { safeDate } from "@/lib/dateUtils";
@@ -139,13 +138,10 @@ export async function POST(req, { params }) {
     .get();
   pendingSnap.docs.forEach((d) => d.ref.update({ status: "cancelled" }).catch(() => {}));
 
-  // Auto-send agent portal link on delivery (fire-and-forget)
-  sendAgentPortalEmail({
-    tenantId: ctx.tenantId,
-    booking,
-    tenant,
-    reason: "delivery",
-  }).catch(() => {});
+  // NOTE: we intentionally do NOT auto-send the agent-portal email here.
+  // The gallery delivery email above is the single notification the client
+  // gets. The owner can still send the portal link manually from the listing
+  // if they want — sending both was redundant ("2 notifications").
 
   // SMS notifications — Studio and Pro plans only
   const SMS_PLANS = ["studio", "pro", "scale"];
