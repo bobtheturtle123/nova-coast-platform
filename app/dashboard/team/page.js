@@ -100,6 +100,23 @@ function fmt12(time) {
   return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`;
 }
 
+// Date (YYYY-MM-DD) a block falls on, in the VIEWER's local timezone. Synced
+// blocks store startDate as a UTC date but startTime as a full ISO datetime;
+// bucketing by the UTC date shifts evening/edge events to the wrong day. We
+// recompute from the ISO so the day matches what the user sees in Google (and
+// matches the time we display, which is also local).
+function blockDateStr(bl, which) {
+  const iso = which === "end" ? bl.endTime : bl.startTime;
+  if (bl.source === "google" && iso && typeof iso === "string" && iso.includes("T")) {
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+  }
+  const fallback = which === "end" ? (bl.endDate || bl.startDate || "") : (bl.startDate || "");
+  return fallback.slice(0, 10);
+}
+
 // Label for a block in the grid. Synced calendar blocks get the member's first
 // name prefixed (e.g. "James · Busy") so it's clear whose calendar it's from.
 function blockLabel(bl, member) {
@@ -2327,8 +2344,8 @@ export default function TeamPage() {
                         {twoWeekDates.map((d, i) => {
                           const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
                           const hasBlock = allTeamBlocks.some((b) => {
-                            const s = (b.startDate || "").slice(0, 10);
-                            const e = (b.endDate || b.startDate || "").slice(0, 10);
+                            const s = blockDateStr(b, "start");
+                            const e = blockDateStr(b, "end");
                             return ds >= s && ds <= e;
                           });
                           return (
@@ -2360,8 +2377,8 @@ export default function TeamPage() {
                           const dayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
                           const dayEvents  = memberEvents.filter((e) => isSameDay(e.shootDateObj, d));
                           const dayBlocks  = timeBlocks.filter((b) => {
-                            const startStr = (b.startDate || "").slice(0, 10);
-                            const endStr   = (b.endDate   || b.startDate || "").slice(0, 10);
+                            const startStr = blockDateStr(b, "start");
+                            const endStr   = blockDateStr(b, "end");
                             return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
                           });
                           const isBlocked  = dayBlocks.some((b) => b.allDay !== false);
@@ -2460,8 +2477,8 @@ export default function TeamPage() {
                       {weekDates.map((d) => {
                         const dayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
                         const dayBlocks = allTeamBlocks.filter((b) => {
-                          const s = (b.startDate || "").slice(0, 10);
-                          const e = (b.endDate || b.startDate || "").slice(0, 10);
+                          const s = blockDateStr(b, "start");
+                          const e = blockDateStr(b, "end");
                           return dayStr >= s && dayStr <= e;
                         });
                         const isToday = isSameDay(d, today);
@@ -2523,8 +2540,8 @@ export default function TeamPage() {
                         // Compare as YYYY-MM-DD strings to avoid timezone shifts
                         const dayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
                         const dayBlocks = timeBlocks.filter((b) => {
-                          const startStr = (b.startDate || "").slice(0, 10);
-                          const endStr   = (b.endDate || b.startDate || "").slice(0, 10);
+                          const startStr = blockDateStr(b, "start");
+                            const endStr   = blockDateStr(b, "end");
                           return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
                         });
                         const hasAllDayBlock = dayBlocks.some((b) => b.allDay !== false);
@@ -2637,8 +2654,8 @@ export default function TeamPage() {
                   weekDates.forEach((d) => {
                     const dayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
                     const hasBlock = timeBlocks.some((b) => {
-                      const startStr = (b.startDate || "").slice(0, 10);
-                      const endStr   = (b.endDate   || b.startDate || "").slice(0, 10);
+                      const startStr = blockDateStr(b, "start");
+                      const endStr   = blockDateStr(b, "end");
                       return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
                     });
                     if (hasBlock) bookedDays.add(DAYS_SHORT[d.getDay()]);
@@ -2688,8 +2705,8 @@ export default function TeamPage() {
                     ? dayEvents.filter((e) => !e.photographerId || e.photographerId === "__owner__")
                     : dayEvents.filter((e) => e.photographerId === filterMember);
                 const dayBlocks = timeBlocks.filter((b) => {
-                  const startStr = (b.startDate || "").slice(0, 10);
-                  const endStr   = (b.endDate || b.startDate || "").slice(0, 10);
+                  const startStr = blockDateStr(b, "start");
+                            const endStr   = blockDateStr(b, "end");
                   const memberMatch = (filterMember === "all" || filterMember === "__owner__") ? true : (!b.memberId || b.memberId === filterMember);
                   return dayStr >= startStr && dayStr <= endStr && memberMatch;
                 });
@@ -2703,13 +2720,21 @@ export default function TeamPage() {
                     <p className={`text-xs font-bold mb-1 w-6 h-6 flex items-center justify-center rounded-full relative z-10 ${isToday ? "bg-[#3486cf] text-white" : "text-[#0F172A]"}`}>
                       {d.getDate()}
                     </p>
-                    {dayBlocks.slice(0, 2).map((bl) => (
-                      <div key={bl.id} className="text-xs bg-red-100 border-l-2 border-red-400 px-1 py-0.5 rounded-xl mb-0.5 relative z-10 flex items-center justify-between gap-0.5 group">
-                        <span className="text-red-600 font-medium truncate">{bl.reason || "Blocked"}</span>
-                        <button onClick={(e) => { e.stopPropagation(); deleteBlock(bl.id); }}
-                          className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 flex-shrink-0 leading-none transition-opacity">×</button>
-                      </div>
-                    ))}
+                    {dayBlocks.slice(0, 2).map((bl) => {
+                      const blkMember = members.find((m) => m.id === bl.memberId)
+                        || (bl.memberId === "__owner__" || !bl.memberId ? { id: "__owner__", name: ownerLabel, color: "#3486cf" } : { name: "", color: "#dc2626" });
+                      const mc = bl.source === "google" ? (blkMember.color || "#dc2626") : "#dc2626";
+                      const timeLabel = bl.allDay || (!bl.startTime && !bl.endTime) ? null : fmt12(bl.startTime);
+                      return (
+                        <button key={bl.id} type="button"
+                          onClick={(e) => { e.stopPropagation(); setBlockDetail({ member: blkMember, blocks: [bl], date: d }); }}
+                          className="text-xs px-1 py-0.5 rounded-xl mb-0.5 relative z-10 flex items-center gap-1 w-full text-left truncate group hover:opacity-80 transition-opacity"
+                          style={{ background: hexWithAlpha(mc, 0.14), borderLeft: `2px solid ${mc}` }}>
+                          {timeLabel && <span className="font-semibold flex-shrink-0" style={{ color: mc }}>{timeLabel}</span>}
+                          <span className="font-medium truncate" style={{ color: mc }}>{blockLabel(bl, blkMember)}</span>
+                        </button>
+                      );
+                    })}
                     {visibleDayEvents.slice(0, 3).map((ev) => {
                       const member = members.find((m) => m.id === ev.photographerId);
                       const color  = member?.color || "#0b2a55";
@@ -2747,8 +2772,8 @@ export default function TeamPage() {
               const dayStr = `${anchor.getFullYear()}-${String(anchor.getMonth()+1).padStart(2,"0")}-${String(anchor.getDate()).padStart(2,"0")}`;
               const allTeamDayBlocks = timeBlocks.filter((b) => {
                 if (b.memberId) return false;
-                const s = (b.startDate || "").slice(0, 10);
-                const e = (b.endDate || b.startDate || "").slice(0, 10);
+                const s = blockDateStr(b, "start");
+                const e = blockDateStr(b, "end");
                 return dayStr >= s && dayStr <= e;
               });
               if (allTeamDayBlocks.length === 0) return null;
@@ -2783,8 +2808,8 @@ export default function TeamPage() {
                     (e) => (e.photographerId === member.id || (e.photographerEmail && e.photographerEmail === member.email)) && isSameDay(e.shootDateObj, anchor)
                   );
                   const dayBlocks = timeBlocks.filter((b) => {
-                    const startStr = (b.startDate || "").slice(0, 10);
-                    const endStr   = (b.endDate || b.startDate || "").slice(0, 10);
+                    const startStr = blockDateStr(b, "start");
+                            const endStr   = blockDateStr(b, "end");
                     return dayStr >= startStr && dayStr <= endStr && (!b.memberId || b.memberId === member.id);
                   });
                   const isBlocked = dayBlocks.length > 0;
@@ -2893,7 +2918,7 @@ export default function TeamPage() {
                         const cnt = calendarEvents.filter((e) => isSameDay(e.shootDateObj, d)).length;
                         const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
                         const blk = timeBlocks.some((b) => {
-                          const s = (b.startDate || "").slice(0, 10), e = (b.endDate || b.startDate || "").slice(0, 10);
+                          const s = blockDateStr(b, "start"), e = blockDateStr(b, "end");
                           return ds >= s && ds <= e;
                         });
                         return (

@@ -4,14 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-export default function AgentNav({ slug, hasAccount = false }) {
+export default function AgentNav({ slug }) {
   const pathname = usePathname();
   const router   = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // Before the agent signs up, don't show account tabs (Dashboard/Settings) —
-  // they're confusing for token-only visitors.
-  if (!hasAccount) return null;
+  // Hide the Dashboard/Settings nav on the auth screens (login / sign-up /
+  // verify) — it's confusing before the agent is signed in. It shows on the
+  // actual portal pages once they're in.
+  const onAuthScreen = /\/agent\/(login|register|signup|sign-up|verify|reset)/.test(pathname || "");
+  if (onAuthScreen) return null;
 
   async function handleLogout() {
     setLoggingOut(true);

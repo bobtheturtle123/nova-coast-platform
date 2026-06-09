@@ -1,6 +1,4 @@
 import { getTenantBySlug } from "@/lib/tenants";
-import { adminDb } from "@/lib/firebase-admin";
-import { cookies } from "next/headers";
 import AgentNav from "@/components/AgentNav";
 
 export default async function AgentPortalLayout({ children, params }) {
@@ -8,23 +6,6 @@ export default async function AgentPortalLayout({ children, params }) {
   const primary = tenant?.branding?.primaryColor || "#3486cf";
   const name    = tenant?.branding?.businessName || tenant?.businessName || "";
   const logo    = tenant?.branding?.logoUrl || null;
-
-  // Only show the Dashboard/Settings nav once the agent has actually signed up
-  // (created an account). Token-only / not-yet-registered visitors don't see
-  // account tabs — it's confusing before sign-up.
-  let hasAccount = false;
-  try {
-    const token = cookies().get(`agt_${params.slug}`)?.value;
-    if (token && tenant) {
-      const snap = await adminDb
-        .collection("tenants").doc(tenant.id)
-        .collection("agents")
-        .where("accessToken", "==", token)
-        .limit(1)
-        .get();
-      if (!snap.empty) hasAccount = !!snap.docs[0].data().hasAccount;
-    }
-  } catch { /* default to hidden */ }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -47,7 +28,7 @@ export default async function AgentPortalLayout({ children, params }) {
             <a href="/legal/cookies" className="hover:text-gray-500 transition-colors">Cookies</a>
           </div>
         </div>
-        <AgentNav slug={params.slug} hasAccount={hasAccount} />
+        <AgentNav slug={params.slug} />
       </header>
       {children}
     </div>
