@@ -93,12 +93,12 @@ export async function POST(req) {
         from:    `KyoriaOS <${fromEmail}>`,
         to:      [ownerEmail],
         subject: `Customer import complete — ${imported} contacts added`,
-        html:    `<p>Your Aryeo import is complete.</p>
+        html:    `<p>Your customer import is complete.</p>
                   <ul>
                     <li><strong>${imported}</strong> contact${imported !== 1 ? "s" : ""} imported</li>
                     <li><strong>${skipped}</strong> duplicate${skipped !== 1 ? "s" : ""} skipped</li>
                   </ul>
-                  <p>You can view your customers at <a href="https://app.kyoriaos.com/dashboard/agents">app.kyoriaos.com/dashboard/agents</a>.</p>`,
+                  <p>You can view your customers at <a href="https://kyoriaos.com/dashboard/agents">kyoriaos.com/dashboard/agents</a>.</p>`,
       });
     } catch { /* email failure is non-fatal */ }
   }

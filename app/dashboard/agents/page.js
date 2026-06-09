@@ -250,13 +250,16 @@ function parseAryeoCSV(text) {
     const cols = line.split(sep).map((c) => c.trim().replace(/^"|"$/g, ""));
     const obj  = {};
     headers.forEach((h, i) => { obj[h] = cols[i] || ""; });
+    // Map common column names across Aryeo, HD Photo Hub, and generic exports.
+    const fullName = obj["name"] || obj["fullname"] || obj["clientname"] || obj["contactname"] || "";
+    const [fnFromFull, ...lnRest] = fullName.split(" ");
     return {
-      firstName: obj["firstname"]       || obj["first"]    || "",
-      lastName:  obj["lastname"]        || obj["last"]     || "",
-      email:     obj["email"]           || "",
-      phone:     obj["phone"]           || "",
-      company:   obj["officebrokerage"] || obj["officebrokerage/teamname"] || obj["officebrokerage"] || obj["office"] || obj["company"] || "",
-      notes:     obj["licensenumber"] ? `License: ${obj["licensenumber"]}` : "",
+      firstName: obj["firstname"] || obj["first"] || obj["clientfirstname"] || obj["contactfirstname"] || fnFromFull || "",
+      lastName:  obj["lastname"]  || obj["last"]  || obj["clientlastname"]  || obj["contactlastname"]  || lnRest.join(" ") || "",
+      email:     obj["email"] || obj["emailaddress"] || obj["clientemail"] || obj["contactemail"] || "",
+      phone:     obj["phone"] || obj["phonenumber"] || obj["mobile"] || obj["mobilephone"] || obj["cell"] || obj["clientphone"] || "",
+      company:   obj["officebrokerage"] || obj["officebrokerageteamname"] || obj["brokerage"] || obj["office"] || obj["company"] || obj["agency"] || "",
+      notes:     obj["licensenumber"] ? `License: ${obj["licensenumber"]}` : (obj["notes"] || ""),
     };
   }).filter((r) => r.email.trim());
 }
@@ -312,7 +315,7 @@ function ImportModal({ onClose, onImported }) {
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <div>
             <h2 className="text-[15px] font-semibold text-[#0F172A]">Import Customer Data</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Upload a CSV file — download the template below to get started</p>
+            <p className="text-xs text-gray-400 mt-0.5">Upload a CSV exported from Aryeo, HD Photo Hub, or any tool — or use the template below.</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
