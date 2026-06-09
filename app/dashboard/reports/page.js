@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { auth } from "@/lib/firebase";
 import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 
@@ -355,6 +356,9 @@ export default function ReportsPage() {
           <p className="page-subtitle">Financial and booking performance overview</p>
         </div>
         <div className="flex items-center gap-2 print:hidden">
+          <Link href="/dashboard/reports/earnings" className="btn-outline text-sm px-4 py-2">
+            Earnings &amp; Payroll
+          </Link>
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
