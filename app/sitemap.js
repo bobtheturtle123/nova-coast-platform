@@ -8,7 +8,12 @@ export default async function sitemap() {
     { url: `${BASE}/legal/privacy`, lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
     { url: `${BASE}/legal/terms`,   lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
     { url: `${BASE}/legal/cookies`, lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
-    { url: `${BASE}/guides/zapier`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE}/guides`,                 lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
+    { url: `${BASE}/guides/getting-started`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE}/guides/products`,        lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE}/guides/listings`,        lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE}/guides/team-schedule`,   lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE}/guides/zapier`,          lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
   ];
 
   // Tenant booking pages — canonical URL is /{slug}/book, NOT /{slug} which redirects
