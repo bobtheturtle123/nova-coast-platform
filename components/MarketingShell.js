@@ -19,6 +19,9 @@ export default function MarketingShell({ children }) {
             <a href="/#pricing" className="hover:text-navy transition-colors">
               Pricing
             </a>
+            <Link href="/guides" className="hover:text-navy transition-colors">
+              Guides
+            </Link>
             <Link href="/blog" className="hover:text-navy transition-colors">
               Blog
             </Link>
@@ -66,11 +69,20 @@ export default function MarketingShell({ children }) {
                 </ul>
               </div>
               <div>
+                <p className="text-white/60 font-semibold uppercase tracking-widest mb-3 text-[10px]">Guides</p>
+                <ul className="space-y-2">
+                  <li><Link href="/guides/getting-started" className="text-white/35 hover:text-white/65 transition-colors">How it works</Link></li>
+                  <li><Link href="/guides/products" className="text-white/35 hover:text-white/65 transition-colors">Setting up services</Link></li>
+                  <li><Link href="/guides/team-schedule" className="text-white/35 hover:text-white/65 transition-colors">Team &amp; scheduling</Link></li>
+                  <li><Link href="/guides/zapier" className="text-white/35 hover:text-white/65 transition-colors">Connect other apps</Link></li>
+                  <li><Link href="/guides" className="text-white/35 hover:text-white/65 transition-colors">All guides &rarr;</Link></li>
+                </ul>
+              </div>
+              <div>
                 <p className="text-white/60 font-semibold uppercase tracking-widest mb-3 text-[10px]">Blog</p>
                 <ul className="space-y-2">
                   <li><Link href="/blog/best-software-real-estate-photographers-2026" className="text-white/35 hover:text-white/65 transition-colors">Best software 2026</Link></li>
                   <li><Link href="/blog/automate-real-estate-photography-business" className="text-white/35 hover:text-white/65 transition-colors">Automate your business</Link></li>
-                  <li><Link href="/blog/how-photography-teams-manage-scheduling-delivery" className="text-white/35 hover:text-white/65 transition-colors">Team scheduling guide</Link></li>
                   <li><Link href="/blog" className="text-white/35 hover:text-white/65 transition-colors">All posts &rarr;</Link></li>
                 </ul>
               </div>

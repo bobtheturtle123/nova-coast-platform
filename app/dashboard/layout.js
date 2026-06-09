@@ -122,6 +122,16 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    href: "/guides",
+    label: "Help & Guides",
+    external: true,
+    icon: (
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
 ];
 
 export default function DashboardLayout({ children }) {
@@ -276,6 +286,19 @@ export default function DashboardLayout({ children }) {
           if (item.ownerOnly && !isOwner) return null;
           if (item.permKey && !isOwner && !permissions?.[item.permKey]) return null;
           const active = isActive(item);
+          // Public guide pages open in a new tab so the user keeps their place.
+          if (item.external) {
+            return (
+              <a key={item.href} href={item.href} target="_blank" rel="noopener noreferrer"
+                onClick={() => setSidebarOpen(false)} className="ky-nav-item">
+                <span className="flex-shrink-0">{item.icon}</span>
+                <span className="leading-none flex-1">{item.label}</span>
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="flex-shrink-0 opacity-40">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            );
+          }
           return (
             <Link
               key={item.href}

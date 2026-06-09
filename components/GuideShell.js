@@ -6,6 +6,11 @@ export const ALL_GUIDES = [
   { slug: "products",        icon: "🧾", title: "Setting up your services",  blurb: "Build packages, services, and add-ons clients can book." },
   { slug: "listings",        icon: "🏠", title: "Listings explained",        blurb: "What a listing is and the journey from shoot to delivery." },
   { slug: "team-schedule",   icon: "📆", title: "Team & scheduling",         blurb: "Add photographers, sync calendars, and avoid double-booking." },
+  { slug: "payments",        icon: "💳", title: "Getting paid with Stripe",  blurb: "Connect Stripe, take deposits, collect balances, and track revenue." },
+  { slug: "property-websites", icon: "🌐", title: "Property websites",       blurb: "Publish a single-property site with your photos and the agent's info." },
+  { slug: "promo-codes",     icon: "🏷️", title: "Promo codes & discounts",  blurb: "Create discount codes for campaigns and repeat clients." },
+  { slug: "importing-clients", icon: "📇", title: "Importing your clients",  blurb: "Bring your existing clients over from Aryeo, HD Photo Hub, or a CSV." },
+  { slug: "ai-assistant",    icon: "🤖", title: "The AI assistant",          blurb: "How the built-in AI helps write captions, descriptions, and answers." },
   { slug: "zapier",          icon: "🔗", title: "Connect other apps (Zapier)", blurb: "Send bookings to Google Sheets, Slack, your CRM, and more." },
 ];
 
