@@ -25,6 +25,84 @@ const planPriceFor = (plan) => {
 };
 const planNameFor = (plan) => PLANS[plan]?.name || (plan ? String(plan) : "—");
 
+// ── Growth projection assumptions ───────────────────────────────────────────
+// Default subscriber plan mix used to estimate blended MRR + storage.
+const PLAN_MIX = { solo: 0.40, studio: 0.35, pro: 0.20, scale: 0.05 };
+
+// Per-listing media footprint (GB) that ultimately stays in R2. "original" is
+// the full-res file held for the 1-year window; "web" is the optimized image /
+// 1080p version kept long-term.
+const PER_LISTING_GB = {
+  light: { original: 0.8, web: 0.17 }, // typical real estate shoot, modest video
+  heavy: { original: 8.0, web: 0.26 }, // 4K / drone, video-heavy listings
+};
+
+// Listing-cap utilization per scenario.
+const UTIL = { typical: 0.5, heavy: 1.0 };
+
+// Storage % of revenue → health verdict.
+function marginVerdict(ratio) {
+  if (ratio < 0.15) return { key: "healthy",    label: "This is healthy." };
+  if (ratio < 0.30) return { key: "monitor",    label: "This needs monitoring." };
+  return { key: "addon", label: "This may require storage add-ons." };
+}
+
+// Estimated steady-state GB held by one subscriber on `plan` under `scenario`.
+// Originals roll off after ~1 year (so ≈ one year's worth held); web versions
+// accumulate, modeled here at ~2 years of retention for a mature account.
+function perSubscriberGB(plan, scenario) {
+  const cap = PLANS[plan]?.activeListings || 0;
+  const listings = cap * UTIL[scenario];
+  const profile = scenario === "heavy" ? PER_LISTING_GB.heavy : PER_LISTING_GB.light;
+  return listings * (profile.original + profile.web * 2);
+}
+
+function buildProjections(perGbRate) {
+  const counts = [10, 25, 50, 100, 250, 500, 1000];
+  const blendedMrr = Object.entries(PLAN_MIX)
+    .reduce((s, [plan, w]) => s + w * (PLANS[plan]?.monthlyPrice || 0), 0);
+
+  const scenario = (name) => {
+    const gbPerSub = Object.entries(PLAN_MIX)
+      .reduce((s, [plan, w]) => s + w * perSubscriberGB(plan, name), 0);
+    const costPerSub = gbPerSub * perGbRate;
+    const ratio = blendedMrr > 0 ? costPerSub / blendedMrr : 0;
+    const verdict = marginVerdict(ratio);
+    return {
+      name,
+      gbPerSub: +gbPerSub.toFixed(1),
+      costPerSub: +costPerSub.toFixed(2),
+      ratioPct: +(ratio * 100).toFixed(1),
+      grossMarginPct: +((1 - ratio) * 100).toFixed(1),
+      verdict: verdict.key, verdictLabel: verdict.label,
+      rows: counts.map((n) => ({
+        subscribers: n,
+        mrr: +(n * blendedMrr).toFixed(0),
+        storageCost: +(n * costPerSub).toFixed(2),
+        costPerSub: +costPerSub.toFixed(2),
+        ratioPct: +(ratio * 100).toFixed(1),
+        grossMarginPct: +((1 - ratio) * 100).toFixed(1),
+      })),
+    };
+  };
+
+  return {
+    assumptions: {
+      planMix: PLAN_MIX,
+      planPrices: Object.fromEntries(Object.keys(PLAN_MIX).map((p) => [p, PLANS[p]?.monthlyPrice ?? null])),
+      planCaps:   Object.fromEntries(Object.keys(PLAN_MIX).map((p) => [p, PLANS[p]?.activeListings ?? null])),
+      perGbMonthUsd: perGbRate,
+      blendedMrrPerSub: +blendedMrr.toFixed(2),
+      typical: { utilization: UTIL.typical, perListingGB: PER_LISTING_GB.light,
+        note: "≈50% of listing limits, mostly light listings." },
+      heavy:   { utilization: UTIL.heavy, perListingGB: PER_LISTING_GB.heavy,
+        note: "Near listing limits, video-heavy listings." },
+    },
+    typical: scenario("typical"),
+    heavy:   scenario("heavy"),
+  };
+}
+
 // Recommended action for a single account.
 function recommendAction({ pct, costRatio, oversizedBytes, usedBytes }) {
   const T = ACTION_THRESHOLDS;
@@ -242,6 +320,7 @@ export async function GET(req) {
       oversizedVideos: oversizedVideos.length,
       byType: Object.fromEntries(Object.entries(platformByType).map(([k, v]) => [k, { bytes: v, pretty: fmtBytes(v) }])),
     },
+    projections: buildProjections(R2_STORAGE_USD_PER_GB_MONTH),
     tenants,
     oversizedVideos,
     topFiles: largestFiles.slice(0, 20).map((f) => ({ ...f, size: fmtBytes(f.sizeBytes) })),
