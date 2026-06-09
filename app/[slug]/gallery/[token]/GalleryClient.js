@@ -280,6 +280,38 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const balance   = booking?.remainingBalance ?? 0;
   const address   = booking?.fullAddress || booking?.address || "Property";
   const coverImg  = images[0]?.url || null;
+  const [downloadingAll, setDownloadingAll] = useState(false);
+
+  // Download everything: the photo/floor-plan/doc ZIP (served by Vercel, small +
+  // organized) PLUS each video downloaded DIRECTLY from R2 via a pre-signed URL,
+  // so the heavy video bytes never pass through (and cost) our server.
+  async function downloadEverything() {
+    setDownloadingAll(true);
+    try {
+      // 1) Kick off the photo/docs ZIP.
+      const a = document.createElement("a");
+      a.href = `/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`;
+      a.download = "";
+      document.body.appendChild(a); a.click(); a.remove();
+
+      // 2) Download videos directly from R2 (free egress), staggered so the
+      //    browser doesn't block multiple downloads at once.
+      if (videos.length > 0) {
+        const res = await fetch(`/api/gallery/download-urls?token=${token}&type=videos`);
+        if (res.ok) {
+          const { files } = await res.json();
+          for (let i = 0; i < (files || []).length; i++) {
+            const f = files[i];
+            await new Promise((r) => setTimeout(r, 800 * (i === 0 ? 1 : 1)));
+            const link = document.createElement("a");
+            link.href = f.url; link.download = f.name;
+            document.body.appendChild(link); link.click(); link.remove();
+          }
+        }
+      }
+    } catch { /* user can retry */ }
+    finally { setDownloadingAll(false); }
+  }
 
   async function startBalancePayment() {
     setLoadingPay(true);
@@ -545,13 +577,13 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
               </div>
             </div>
             {canDownload ? (
-              <a
-                href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`}
-                download
-                className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
+              <button
+                onClick={downloadEverything}
+                disabled={downloadingAll}
+                className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60"
                 style={{ background: primary }}>
-                ↓ Download Everything
-              </a>
+                {downloadingAll ? "Starting downloads…" : "↓ Download Everything"}
+              </button>
             ) : requireAgentPortal ? (
               <a href={`/${slug}/agent/register?returnTo=/${slug}/gallery/${token}`}
                 className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"

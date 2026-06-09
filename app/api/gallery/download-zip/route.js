@@ -115,18 +115,21 @@ export async function GET(req) {
           }
         }
 
-        // ── Videos (streamed — can be very large) ───────────────────────────
-        for (const vid of videos) {
-          try {
-            const res = await fetch(`${r2Url}/${vid.key}`);
-            if (!res.ok || !res.body) continue;
-            const folder = extras ? "Videos/" : "";
-            archive.append(toNodeStream(res.body), {
-              name: `${folder}${vid.fileName || vid.key.split("/").pop()}`,
-            });
-          } catch (e) {
-            console.warn("[download-zip] video failed:", vid.key, e?.message);
-          }
+        // ── Videos are intentionally NOT bundled here ───────────────────────
+        // Videos are the heavy bytes (up to 5 GB each). Streaming them through
+        // this Vercel function incurs egress cost; instead the client downloads
+        // them DIRECTLY from R2 via pre-signed URLs (/api/gallery/download-urls),
+        // where egress is free. We just leave a pointer so the ZIP is complete.
+        if (videos.length > 0) {
+          archive.append(
+            Buffer.from(
+              `This package includes ${videos.length} video${videos.length !== 1 ? "s" : ""}.\n` +
+              `Videos download separately (directly, at full quality) from the gallery page — ` +
+              `click "Download videos" there.\n`,
+              "utf8"
+            ),
+            { name: "Videos/READ ME — videos download separately.txt" }
+          );
         }
 
         // ── Floor Plans ──────────────────────────────────────────────────────
