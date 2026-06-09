@@ -9,6 +9,7 @@ import { onAuthStateChanged } from "firebase/auth";
 const NAV = [
   { href: "/superadmin",               label: "Overview",     icon: "⬛" },
   { href: "/superadmin/tenants",       label: "Accounts",     icon: "🏢" },
+  { href: "/admin/storage",            label: "Storage",      icon: "🗄️" },
   { href: "/superadmin/promo-codes",   label: "Promo Codes",  icon: "🎁" },
 ];
 

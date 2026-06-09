@@ -1,134 +1,251 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { isSuperAdmin } from "@/lib/superadmin";
-import { STORAGE_LIMIT_BYTES, WARN_80, fmtBytes } from "@/lib/storage";
-import { eligibleOriginals, eligibleVideoOriginals } from "@/lib/retention";
+import {
+  STORAGE_LIMIT_BYTES, WARN_80, WARN_90, GB, fmtBytes,
+  monthlyStorageCostUsd, warnLevel, ACTION_THRESHOLDS, R2_STORAGE_USD_PER_GB_MONTH,
+} from "@/lib/storage";
+import {
+  eligibleOriginals, eligibleVideoOriginals, isVideo, isPhoto, isWebSized,
+  isPastRetention, deliveredAtMs,
+} from "@/lib/retention";
+import { MAX_INLINE_TRANSCODE_BYTES } from "@/lib/videoTranscode";
+import { PLANS } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-// Admin storage + cleanup report. Superadmin-only.
-//
-// Returns: total R2 storage, by account, by type, largest 20 accounts,
-// largest 20 files, accounts over 80%, full-res photos eligible for cleanup +
-// estimated savings, the latest dry-run result, prepared-ZIP storage usage,
-// expired prepared ZIPs eligible for cleanup, and failed prepared-ZIP jobs.
+// Superadmin storage + cost + cleanup report. This route is the single data
+// source for the /admin/storage page. It is protected by isSuperAdmin (role
+// claim + UID allowlist) — no tenant admin/manager/photographer/client can read
+// it. All money is derived from R2_STORAGE_USD_PER_GB_MONTH in lib/storage.js.
+
+const planPriceFor = (plan) => {
+  const p = PLANS[plan];
+  return p && typeof p.monthlyPrice === "number" ? p.monthlyPrice : null;
+};
+const planNameFor = (plan) => PLANS[plan]?.name || (plan ? String(plan) : "—");
+
+// Recommended action for a single account.
+function recommendAction({ pct, costRatio, oversizedBytes, usedBytes }) {
+  const T = ACTION_THRESHOLDS;
+  const oversizedDriving =
+    oversizedBytes >= 100 * GB || (usedBytes > 0 && oversizedBytes / usedBytes >= 0.25);
+
+  if (pct >= T.requireAddonPct || (costRatio != null && costRatio >= T.requireAddonCostRatio)) {
+    return "require_addon";
+  }
+  if (pct >= T.contactPct || oversizedDriving) return "contact";
+  if (pct >= T.watchPct || (costRatio != null && costRatio >= T.watchCostRatio)) return "watch";
+  return "normal";
+}
 
 export async function GET(req) {
   if (!await isSuperAdmin(req)) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const now = Date.now();
+
+  // Prepared-ZIP usage, grouped per tenant, plus platform-level stats.
+  const zipByTenant = {};
+  let preparedZipBytes = 0, preparedReady = 0, preparedExpiredEligible = 0;
+  const failedJobs = [];
+  try {
+    const zipSnap = await adminDb.collection("preparedZips").get();
+    for (const z of zipSnap.docs) {
+      const d = z.data();
+      if (d.status === "ready") {
+        preparedReady++;
+        preparedZipBytes += Number(d.sizeBytes) || 0;
+        if (d.tenantId) zipByTenant[d.tenantId] = (zipByTenant[d.tenantId] || 0) + (Number(d.sizeBytes) || 0);
+      }
+      if (d.status === "failed") failedJobs.push({ jobId: z.id, galleryId: d.galleryId, error: d.error, createdAt: d.createdAt });
+      const exp = d.expiresAt && new Date(d.expiresAt).getTime() < now;
+      if (exp && d.status !== "expired") preparedExpiredEligible++;
+    }
+  } catch { /* collection may not exist yet */ }
+
   const tenantsSnap = await adminDb.collection("tenants").get();
 
-  const accounts = [];      // per-account storage rows
-  const largestFiles = [];  // candidate largest files (bounded)
-  let totalBytes = 0;
-  const byType = { photoBytes: 0, videoBytes: 0, documentBytes: 0, floorPlanBytes: 0 };
-  let eligibleFiles = 0, eligibleBytes = 0, galleriesPastRetention = 0;
-  let eligiblePhotos = 0, eligiblePhotoBytes = 0, eligibleVideos = 0, eligibleVideoBytes = 0;
+  const tenants = [];
+  const oversizedVideos = [];
+  const largestFiles = [];
+
+  // Platform accumulators.
+  const platformByType = {
+    photoOriginal: 0, webImage: 0, videoOriginal: 0, webVideo: 0,
+    floorPlan: 0, document: 0, preparedZip: preparedZipBytes, other: 0,
+  };
+  let platformBytes = 0, platformEligibleBytes = 0, platformEligiblePhotos = 0, platformEligibleVideos = 0;
+  let platformEligiblePhotoBytes = 0, platformEligibleVideoBytes = 0;
 
   for (const tDoc of tenantsSnap.docs) {
     const t = tDoc.data();
-    const s = t.storage || {};
-    const used = Math.max(0, s.totalBytes || 0);
-    totalBytes += used;
-    byType.photoBytes     += Math.max(0, s.photoBytes || 0);
-    byType.videoBytes     += Math.max(0, s.videoBytes || 0);
-    byType.documentBytes  += Math.max(0, s.documentBytes || 0);
-    byType.floorPlanBytes += Math.max(0, s.floorPlanBytes || 0);
+    const tenantId = tDoc.id;
+    const plan = t.subscriptionPlan || null;
+    const planPrice = planPriceFor(plan);
 
-    accounts.push({
-      tenantId: tDoc.id,
-      name: t.businessName || t.name || tDoc.id,
-      plan: t.subscriptionPlan || "—",
-      usedBytes: used,
-      pct: used / STORAGE_LIMIT_BYTES,
-      over80: used >= WARN_80,
-    });
+    // Per-tenant type breakdown derived from actual files (more granular than
+    // the running counters, which don't separate originals from web versions).
+    const byType = {
+      photoOriginal: 0, webImage: 0, videoOriginal: 0, webVideo: 0,
+      floorPlan: 0, document: 0, preparedZip: zipByTenant[tenantId] || 0, other: 0,
+    };
+    let eligiblePhotoBytes = 0, eligibleVideoBytes = 0, eligiblePhotos = 0, eligibleVideos = 0;
+    let oversizedBytes = 0; // skipped_large / preserved video originals
 
-    // Scan this tenant's galleries for cleanup eligibility + largest files.
-    const galSnap = await adminDb
-      .collection("tenants").doc(tDoc.id).collection("galleries").get();
+    const galSnap = await adminDb.collection("tenants").doc(tenantId).collection("galleries").get();
     for (const g of galSnap.docs) {
       const gallery = g.data();
-      const { items, bytes } = eligibleOriginals(gallery, now);
+      const galleryName = gallery.title || gallery.bookingAddress || gallery.address || g.id;
+
+      // Cleanup eligibility (past 1-year retention).
+      const { items: pItems, bytes: pBytes } = eligibleOriginals(gallery, now);
       const { items: vItems, bytes: vBytes } = eligibleVideoOriginals(gallery, now);
-      if (items.length || vItems.length) {
-        galleriesPastRetention++;
-        eligiblePhotos += items.length;  eligiblePhotoBytes += bytes;
-        eligibleVideos += vItems.length; eligibleVideoBytes += vBytes;
-        eligibleFiles += items.length + vItems.length;
-        eligibleBytes += bytes + vBytes;
-      }
+      eligiblePhotos += pItems.length; eligiblePhotoBytes += pBytes;
+      eligibleVideos += vItems.length; eligibleVideoBytes += vBytes;
+
+      const past = isPastRetention(gallery, now);
+
       for (const m of (gallery.media || [])) {
         const size = Number(m.size) || 0;
+        if (isVideo(m)) {
+          if (m.originalRemoved) {
+            byType.webVideo += Number(m.webVideoBytes) || 0;
+          } else {
+            byType.videoOriginal += size;
+            if (m.webVideoBytes) byType.webVideo += Number(m.webVideoBytes) || 0;
+          }
+          // Oversized / preserved video detection.
+          const tooBig = size > MAX_INLINE_TRANSCODE_BYTES;
+          const noWeb  = !m.webVideoKey || m.webVideoStatus !== "ready";
+          if ((m.webVideoStatus === "skipped_large" || (tooBig && noWeb)) && !m.originalRemoved) {
+            oversizedBytes += size;
+            const blocking = past && noWeb; // past retention but can't remove (no web version)
+            oversizedVideos.push({
+              tenantId, tenantName: t.businessName || t.name || tenantId,
+              galleryId: g.id, galleryName,
+              fileName: m.fileName || m.key?.split("/").pop() || "video",
+              sizeBytes: size, size: fmtBytes(size),
+              deliveredAt: deliveredAtMs(gallery),
+              reason: m.webVideoError ? `Transcode failed: ${m.webVideoError}` : "Too large to transcode in serverless",
+              hasWebVersion: !!(m.webVideoKey && m.webVideoStatus === "ready"),
+              blockingCleanup: blocking,
+              recommendedAction: blocking ? "external_processing" : "leave_preserved",
+            });
+          }
+        } else if (isPhoto(m)) {
+          if (m.originalRemoved || isWebSized(m)) byType.webImage += size;
+          else byType.photoOriginal += size;
+        } else {
+          byType.document += size;
+        }
         if (size > 0) largestFiles.push({
-          tenantId: tDoc.id, galleryId: g.id, fileName: m.fileName || m.key,
-          fileType: m.fileType || "", sizeBytes: size,
+          tenantId, tenantName: t.businessName || t.name || tenantId, galleryId: g.id,
+          fileName: m.fileName || m.key, fileType: m.fileType || "", sizeBytes: size,
         });
       }
+
+      for (const fp of (gallery.floorPlans || []))    byType.floorPlan += Number(fp.size) || 0;
+      for (const f  of (gallery.attachedFiles || [])) byType.document  += Number(f.size)  || 0;
     }
+
+    // Authoritative total = running counter, reconciled against the file scan.
+    const counterTotal = Math.max(0, t.storage?.totalBytes || 0);
+    const scannedTotal = byType.photoOriginal + byType.webImage + byType.videoOriginal +
+      byType.webVideo + byType.floorPlan + byType.document + byType.preparedZip;
+    const usedBytes = Math.max(counterTotal, scannedTotal);
+    byType.other = Math.max(0, usedBytes - scannedTotal); // reconcile untracked bytes
+
+    const eligibleBytes = eligiblePhotoBytes + eligibleVideoBytes;
+    const afterCleanupBytes = Math.max(0, usedBytes - eligibleBytes);
+
+    const costNow   = monthlyStorageCostUsd(usedBytes);
+    const costAfter = monthlyStorageCostUsd(afterCleanupBytes);
+    const costRatio = planPrice ? costNow / planPrice : null;
+    const pct = usedBytes / STORAGE_LIMIT_BYTES;
+    const action = recommendAction({ pct, costRatio, oversizedBytes, usedBytes });
+
+    // Roll up platform type totals.
+    for (const k of Object.keys(byType)) if (k !== "preparedZip") platformByType[k] += byType[k];
+    platformBytes += usedBytes;
+    platformEligibleBytes += eligibleBytes;
+    platformEligiblePhotos += eligiblePhotos; platformEligibleVideos += eligibleVideos;
+    platformEligiblePhotoBytes += eligiblePhotoBytes; platformEligibleVideoBytes += eligibleVideoBytes;
+
+    tenants.push({
+      tenantId,
+      name: t.businessName || t.name || tenantId,
+      plan, planName: planNameFor(plan), planPrice,
+      usedBytes, used: fmtBytes(usedBytes),
+      pct: +(pct * 100).toFixed(2),
+      warnLevel: warnLevel(usedBytes),
+      costNow: +costNow.toFixed(2),
+      costRatioPct: costRatio != null ? +(costRatio * 100).toFixed(1) : null,
+      eligibleBytes, eligibleSaved: fmtBytes(eligibleBytes),
+      eligiblePhotos, eligiblePhotoBytes, eligiblePhotoSaved: fmtBytes(eligiblePhotoBytes),
+      eligibleVideos, eligibleVideoBytes, eligibleVideoSaved: fmtBytes(eligibleVideoBytes),
+      costAfter: +costAfter.toFixed(2),
+      oversizedBytes, oversized: fmtBytes(oversizedBytes),
+      action,
+      byType: Object.fromEntries(Object.entries(byType).map(([k, v]) => [k, { bytes: v, pretty: fmtBytes(v) }])),
+    });
   }
 
-  // Largest 20 accounts + 20 files.
-  const topAccounts = [...accounts].sort((a, b) => b.usedBytes - a.usedBytes).slice(0, 20)
-    .map((a) => ({ ...a, used: fmtBytes(a.usedBytes), pct: +(a.pct * 100).toFixed(2) }));
-  const topFiles = largestFiles.sort((a, b) => b.sizeBytes - a.sizeBytes).slice(0, 20)
-    .map((f) => ({ ...f, size: fmtBytes(f.sizeBytes) }));
-  const over80 = accounts.filter((a) => a.over80)
-    .map((a) => ({ tenantId: a.tenantId, name: a.name, used: fmtBytes(a.usedBytes), pct: +(a.pct * 100).toFixed(2) }));
+  tenants.sort((a, b) => b.usedBytes - a.usedBytes);
+  largestFiles.sort((a, b) => b.sizeBytes - a.sizeBytes);
+  oversizedVideos.sort((a, b) => b.sizeBytes - a.sizeBytes);
 
-  // Prepared-ZIP storage usage + cleanup candidates + failed jobs.
-  const zipSnap = await adminDb.collection("preparedZips").get();
-  let preparedZipBytes = 0, preparedReady = 0, preparedExpiredEligible = 0;
-  const failedJobs = [];
-  for (const z of zipSnap.docs) {
-    const d = z.data();
-    if (d.status === "ready") { preparedReady++; preparedZipBytes += Number(d.sizeBytes) || 0; }
-    if (d.status === "failed") failedJobs.push({ jobId: z.id, galleryId: d.galleryId, error: d.error, createdAt: d.createdAt });
-    const exp = d.expiresAt && new Date(d.expiresAt).getTime() < now;
-    if (exp && d.status !== "expired") preparedExpiredEligible++;
-  }
-
-  // Latest retention dry-run / execute result.
-  let lastRetentionRun = null;
+  // Retention runs: latest overall, latest dry-run, latest execute.
+  let lastRun = null, lastDryRun = null, lastExecute = null;
   try {
-    const runSnap = await adminDb.collection("retentionRuns").orderBy("at", "desc").limit(1).get();
-    if (!runSnap.empty) {
-      const r = runSnap.docs[0].data();
-      lastRetentionRun = {
-        mode: r.mode, at: r.at, eligibleFiles: r.eligibleFiles, eligibleBytes: r.eligibleBytes,
-        eligible: fmtBytes(r.eligibleBytes || 0), removedFiles: r.removedFiles,
-        removed: fmtBytes(r.removedBytes || 0), errors: r.errors,
-      };
-    }
-  } catch { /* index may be missing */ }
+    const runSnap = await adminDb.collection("retentionRuns").orderBy("at", "desc").limit(25).get();
+    const runs = runSnap.docs.map((d) => d.data());
+    const norm = (r) => r && ({
+      mode: r.mode, at: r.at,
+      eligibleFiles: r.eligibleFiles || 0, eligible: fmtBytes(r.eligibleBytes || 0),
+      removedFiles: r.removedFiles || 0, removed: fmtBytes(r.removedBytes || 0),
+      videosSkippedLarge: r.videosSkippedLarge || 0, errors: r.errors || 0,
+    });
+    lastRun     = norm(runs[0]);
+    lastDryRun  = norm(runs.find((r) => r.mode === "DRY_RUN"));
+    lastExecute = norm(runs.find((r) => r.mode === "EXECUTE"));
+  } catch { /* single-field index auto-created; ignore if missing */ }
+
+  // Platform totals.
+  const platformCostNow   = monthlyStorageCostUsd(platformBytes);
+  const platformCostAfter = monthlyStorageCostUsd(Math.max(0, platformBytes - platformEligibleBytes));
+  const over80 = tenants.filter((t) => t.usedBytes >= WARN_80).length;
+  const over90 = tenants.filter((t) => t.usedBytes >= WARN_90).length;
+  const near100 = tenants.filter((t) => t.warnLevel === "100").length;
+  const needAddon = tenants.filter((t) => t.action === "require_addon").length;
 
   return Response.json({
     generatedAt: new Date().toISOString(),
-    limitPerAccount: fmtBytes(STORAGE_LIMIT_BYTES),
-    totals: {
-      bytes: totalBytes,
-      pretty: fmtBytes(totalBytes),
-      byType: {
-        photo:     fmtBytes(byType.photoBytes),
-        video:     fmtBytes(byType.videoBytes),
-        document:  fmtBytes(byType.documentBytes),
-        floorPlan: fmtBytes(byType.floorPlanBytes),
-      },
-      accounts: accounts.length,
+    pricing: {
+      perGbMonthUsd: R2_STORAGE_USD_PER_GB_MONTH,
+      capBytes: STORAGE_LIMIT_BYTES,
+      capPretty: fmtBytes(STORAGE_LIMIT_BYTES),
+      egressNote:
+        "Customer downloads are served directly from R2 using pre-signed URLs and do not stream " +
+        "through Vercel. R2 currently has free internet egress, so storage is the primary " +
+        "infrastructure cost to monitor.",
     },
-    topAccounts,
-    topFiles,
-    over80,
-    cleanup: {
-      galleriesPastRetention,
-      eligibleFiles,
-      eligibleBytes,
-      estimatedSaved: fmtBytes(eligibleBytes),
-      photos: { count: eligiblePhotos, estimatedSaved: fmtBytes(eligiblePhotoBytes) },
-      videos: { count: eligibleVideos, estimatedSaved: fmtBytes(eligibleVideoBytes) },
-      lastRetentionRun,
+    platform: {
+      totalTenants: tenants.length,
+      totalBytes: platformBytes, totalPretty: fmtBytes(platformBytes),
+      costNow: +platformCostNow.toFixed(2),
+      costAfter: +platformCostAfter.toFixed(2),
+      eligibleBytes: platformEligibleBytes, eligibleSaved: fmtBytes(platformEligibleBytes),
+      eligiblePhotos: platformEligiblePhotos, eligibleVideos: platformEligibleVideos,
+      eligiblePhotoSaved: fmtBytes(platformEligiblePhotoBytes),
+      eligibleVideoSaved: fmtBytes(platformEligibleVideoBytes),
+      over80, over90, near100, needAddon,
+      oversizedVideos: oversizedVideos.length,
+      byType: Object.fromEntries(Object.entries(platformByType).map(([k, v]) => [k, { bytes: v, pretty: fmtBytes(v) }])),
     },
+    tenants,
+    oversizedVideos,
+    topFiles: largestFiles.slice(0, 20).map((f) => ({ ...f, size: fmtBytes(f.sizeBytes) })),
+    retention: { lastRun, lastDryRun, lastExecute },
     preparedZips: {
       ready: preparedReady,
       storageUsed: fmtBytes(preparedZipBytes),

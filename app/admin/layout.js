@@ -26,9 +26,9 @@ export default function AdminLayout({ children }) {
         router.push("/admin/login");
         return;
       }
-      // Check admin custom claim
+      // Allow platform admins AND superadmins (superadmin is a superset).
       const token = await u.getIdTokenResult();
-      if (!token.claims.admin) {
+      if (!token.claims.admin && token.claims.role !== "superadmin") {
         router.push("/");
         return;
       }
