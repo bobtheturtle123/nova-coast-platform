@@ -3113,19 +3113,51 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* Zapier */}
+      {/* Zapier — connect to other apps */}
       <div id="settings-zapier" className="card mt-6 scroll-mt-24">
-        <h2 className="font-semibold text-[#0F172A] text-base mb-1">Zapier</h2>
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <h2 className="font-semibold text-[#0F172A] text-base">Connect to your other apps</h2>
+          <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-[#3486cf]/10 text-[#3486cf] flex-shrink-0">via Zapier</span>
+        </div>
         <p className="text-sm text-gray-500 mb-4">
-          Send booking events to 6,000+ apps. In Zapier, create a Zap with a <strong>“Webhooks by Zapier → Catch Hook”</strong> trigger,
-          copy its URL, and paste it below. We&apos;ll POST when a booking is <strong>created, paid, or delivered</strong>.
+          Automatically send your bookings to the tools you already use — <strong>no coding</strong>. For example:
         </p>
+        <div className="grid sm:grid-cols-3 gap-2 mb-5">
+          {[
+            { icon: "📊", t: "Google Sheets", d: "Log every new booking to a spreadsheet" },
+            { icon: "💬", t: "Slack / Email", d: "Get a message when you get paid" },
+            { icon: "📇", t: "Your CRM", d: "Add new clients automatically" },
+          ].map((x) => (
+            <div key={x.t} className="border border-gray-100 rounded-xl p-3">
+              <div className="text-lg mb-1">{x.icon}</div>
+              <p className="text-xs font-semibold text-[#0F172A]">{x.t}</p>
+              <p className="text-[11px] text-gray-400 leading-snug mt-0.5">{x.d}</p>
+            </div>
+          ))}
+        </div>
 
+        {/* Plain-language steps */}
+        <div className="bg-[#3486cf]/5 border border-[#3486cf]/15 rounded-xl p-4 mb-4">
+          <p className="text-xs font-bold text-[#1E5A8A] uppercase tracking-wide mb-2">How to set it up (5 minutes)</p>
+          <ol className="space-y-1.5 text-[13px] text-[#1E5A8A] list-decimal ml-4">
+            <li>Create a free account at <a href="https://zapier.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">zapier.com</a>.</li>
+            <li>Start a new “Zap”, search for <strong>Webhooks by Zapier</strong>, and pick the <strong>“Catch Hook”</strong> trigger.</li>
+            <li>Zapier shows you a web address (starts with <span className="font-mono">hooks.zapier.com</span>). Copy it.</li>
+            <li>Paste it in the box below and click <strong>Save</strong>.</li>
+            <li>Back in Zapier, choose what happens next — e.g. add a row to Google Sheets.</li>
+          </ol>
+          <a href="/guides/zapier" target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#3486cf] mt-3 hover:underline">
+            Read the full step-by-step guide →
+          </a>
+        </div>
+
+        <label className="label-field">Paste your Zapier link here</label>
         <div className="space-y-2 mb-3">
-          {zapierWebhooks.length === 0 && <p className="text-xs text-gray-400">No webhooks yet.</p>}
           {zapierWebhooks.map((url, i) => (
             <div key={i} className="flex items-center gap-2">
               <input readOnly value={url} className="input-field flex-1 text-xs font-mono bg-gray-50" />
+              <span className="text-[10px] font-semibold text-green-600 flex items-center gap-1 flex-shrink-0">● Connected</span>
               <button onClick={() => setZapierWebhooks((w) => w.filter((_, idx) => idx !== i))}
                 className="text-xs text-red-400 hover:text-red-600 flex-shrink-0">Remove</button>
             </div>
@@ -3138,8 +3170,9 @@ export default function SettingsPage() {
             onClick={() => { const u = newZapUrl.trim(); if (u) { setZapierWebhooks((w) => [...w, u]); setNewZapUrl(""); } }}
             className="btn-outline px-4 py-2 text-sm flex-shrink-0">Add</button>
         </div>
+        <p className="text-[11px] text-gray-400 mt-1.5">We&apos;ll notify your connected app whenever a booking is created, paid, or delivered.</p>
         <button onClick={saveIntegrations} disabled={savingIntegrations} className="btn-primary mt-4 px-6 py-2.5">
-          {savingIntegrations ? "Saving…" : "Save Webhooks"}
+          {savingIntegrations ? "Saving…" : "Save"}
         </button>
       </div>
 
