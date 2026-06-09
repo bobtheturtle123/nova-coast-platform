@@ -281,36 +281,73 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const address   = booking?.fullAddress || booking?.address || "Property";
   const coverImg  = images[0]?.url || null;
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const [dlStatus, setDlStatus] = useState(null); // null | "preparing" | "ready" | "failed"
 
-  // Download everything: the photo/floor-plan/doc ZIP (served by Vercel, small +
-  // organized) PLUS each video downloaded DIRECTLY from R2 via a pre-signed URL,
-  // so the heavy video bytes never pass through (and cost) our server.
+  // Large / video-heavy galleries use the prepared-download buffer: the photo +
+  // floor-plan + doc bundle is built server-side, stored in R2, and served via a
+  // signed URL — so the download never streams back through (or times out on)
+  // our server. Small galleries stream immediately. Videos always download
+  // DIRECTLY from R2 (free egress), regardless of path.
+  const isHeavy = videos.length > 0 || images.length > 250;
+
+  function triggerDownload(url, name) {
+    const a = document.createElement("a");
+    a.href = url; if (name) a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  async function downloadVideosDirect() {
+    if (videos.length === 0) return;
+    const res = await fetch(`/api/gallery/download-urls?token=${token}&type=videos`);
+    if (!res.ok) return;
+    const { files } = await res.json();
+    for (let i = 0; i < (files || []).length; i++) {
+      await new Promise((r) => setTimeout(r, 800));
+      triggerDownload(files[i].url, files[i].name);
+    }
+  }
+
   async function downloadEverything() {
     setDownloadingAll(true);
     try {
-      // 1) Kick off the photo/docs ZIP.
-      const a = document.createElement("a");
-      a.href = `/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`;
-      a.download = "";
-      document.body.appendChild(a); a.click(); a.remove();
-
-      // 2) Download videos directly from R2 (free egress), staggered so the
-      //    browser doesn't block multiple downloads at once.
-      if (videos.length > 0) {
-        const res = await fetch(`/api/gallery/download-urls?token=${token}&type=videos`);
-        if (res.ok) {
-          const { files } = await res.json();
-          for (let i = 0; i < (files || []).length; i++) {
-            const f = files[i];
-            await new Promise((r) => setTimeout(r, 800 * (i === 0 ? 1 : 1)));
-            const link = document.createElement("a");
-            link.href = f.url; link.download = f.name;
-            document.body.appendChild(link); link.click(); link.remove();
-          }
-        }
+      if (!isHeavy) {
+        // Small gallery — stream the photo/docs ZIP straight away.
+        triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
+        await downloadVideosDirect();
+        return;
       }
-    } catch { /* user can retry */ }
-    finally { setDownloadingAll(false); }
+
+      // Heavy gallery — prepare in the background, then serve from R2.
+      setDlStatus("preparing");
+      const start = await fetch(`/api/gallery/prepare-download`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, format: "web" }),
+      });
+      let job = await start.json().catch(() => ({}));
+
+      // Poll until ready/failed (the POST usually finishes inline, but poll for
+      // resilience if it returned early as "preparing"/"pending").
+      let tries = 0;
+      while (job.status && ["preparing", "pending"].includes(job.status) && tries < 60) {
+        await new Promise((r) => setTimeout(r, 5000));
+        const poll = await fetch(`/api/gallery/prepare-download?jobId=${job.jobId}`);
+        job = await poll.json().catch(() => job);
+        tries++;
+      }
+
+      if (job.status === "ready" && job.downloadUrl) {
+        setDlStatus("ready");
+        triggerDownload(job.downloadUrl, "");
+        await downloadVideosDirect();
+      } else {
+        setDlStatus("failed");
+      }
+    } catch {
+      setDlStatus("failed");
+    } finally {
+      setDownloadingAll(false);
+    }
   }
 
   async function startBalancePayment() {
@@ -577,13 +614,30 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
               </div>
             </div>
             {canDownload ? (
-              <button
-                onClick={downloadEverything}
-                disabled={downloadingAll}
-                className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60"
-                style={{ background: primary }}>
-                {downloadingAll ? "Starting downloads…" : "↓ Download Everything"}
-              </button>
+              <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                <button
+                  onClick={downloadEverything}
+                  disabled={downloadingAll}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60"
+                  style={{ background: primary }}>
+                  {downloadingAll
+                    ? (dlStatus === "preparing" ? "Preparing your download…" : "Starting downloads…")
+                    : "↓ Download Everything"}
+                </button>
+                {dlStatus === "preparing" && (
+                  <span className="text-xs text-gray-500 max-w-[16rem] text-right">
+                    Preparing your download. Large video-heavy galleries may take a few minutes.
+                  </span>
+                )}
+                {dlStatus === "ready" && (
+                  <span className="text-xs text-green-600">Your download is ready.</span>
+                )}
+                {dlStatus === "failed" && (
+                  <span className="text-xs text-red-500 max-w-[16rem] text-right">
+                    We couldn&apos;t prepare this download. Please try again or download videos individually.
+                  </span>
+                )}
+              </div>
             ) : requireAgentPortal ? (
               <a href={`/${slug}/agent/register?returnTo=/${slug}/gallery/${token}`}
                 className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"

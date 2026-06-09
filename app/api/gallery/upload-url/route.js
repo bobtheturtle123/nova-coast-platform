@@ -54,6 +54,20 @@ export async function POST(req) {
       }
     }
 
+    // Enforce the flat 10 TB account storage limit (same for every plan).
+    // Warnings at 80/90% are logged inside checkStorageLimit. At 100% we block
+    // NEW large uploads — existing galleries are never broken or deleted.
+    try {
+      const { checkStorageLimit } = await import("@/lib/storage");
+      const limitCheck = await checkStorageLimit(decoded.tenantId, fileSize || 0);
+      if (limitCheck.blocked) {
+        return Response.json({
+          error: "Your account has reached its 10 TB storage limit. Existing galleries are unaffected. Contact support to raise the limit before uploading more.",
+          code:  "storage_limit",
+        }, { status: 413 });
+      }
+    } catch (e) { console.error("[upload-url] storage check failed (allowing):", e?.message); }
+
     // Validate file type — allow image, video, and PDF (for floor plans)
     const ALLOWED_TYPES = [
       "image/jpeg", "image/jpg", "image/png", "image/webp", "image/tiff", "image/heic",

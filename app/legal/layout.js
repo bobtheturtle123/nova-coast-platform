@@ -11,6 +11,7 @@ export default function LegalLayout({ children }) {
           <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap justify-end">
             <Link href="/legal/privacy" className="hover:text-gray-600 transition-colors">Privacy</Link>
             <Link href="/legal/terms" className="hover:text-gray-600 transition-colors">Terms</Link>
+            <Link href="/legal/media-policy" className="hover:text-gray-600 transition-colors">Media Policy</Link>
             <Link href="/legal/sms-consent" className="hover:text-gray-600 transition-colors">SMS Consent</Link>
             <Link href="/legal/cookies" className="hover:text-gray-600 transition-colors">Cookies</Link>
           </div>

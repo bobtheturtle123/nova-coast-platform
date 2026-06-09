@@ -486,7 +486,7 @@ export default function GalleryDetailPage() {
         const saveRes = await fetch(`/api/dashboard/galleries/${id}/media`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ publicUrl, key, fileName: file.name, fileType: file.type }),
+          body: JSON.stringify({ publicUrl, key, fileName: file.name, fileType: file.type, size: file.size }),
         });
         if (!saveRes.ok) {
           const saveData = await saveRes.json().catch(() => ({}));

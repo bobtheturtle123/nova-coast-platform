@@ -17,6 +17,15 @@
     },
     "app/api/cron/calendar-sync/route.js": {
       "maxDuration": 300
+    },
+    "app/api/cron/media-retention/route.js": {
+      "maxDuration": 300
+    },
+    "app/api/admin/storage-report/route.js": {
+      "maxDuration": 300
+    },
+    "app/api/gallery/prepare-download/route.js": {
+      "maxDuration": 300
     }
   },
   "crons": [
@@ -31,6 +40,14 @@
     {
       "path": "/api/cron/calendar-sync",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/media-retention",
+      "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-prepared-zips",
+      "schedule": "0 4 * * *"
     }
   ]
 }

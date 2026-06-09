@@ -15,14 +15,23 @@ export async function POST(req, { params }) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { publicUrl, fileName, fileType, key } = await req.json();
+  const { publicUrl, fileName, fileType, key, size } = await req.json();
+  const bytes = Number(size) || 0;
 
   await adminDb
     .collection("tenants").doc(ctx.tenantId)
     .collection("galleries").doc(params.id)
     .update({
-      media: FieldValue.arrayUnion({ url: publicUrl, key: key || "", fileName, fileType, uploadedAt: new Date().toISOString() }),
+      media: FieldValue.arrayUnion({ url: publicUrl, key: key || "", fileName, fileType, size: bytes, uploadedAt: new Date().toISOString() }),
     });
+
+  // Track account storage usage by file type.
+  if (bytes > 0) {
+    try {
+      const { addStorage, categoryForType } = await import("@/lib/storage");
+      await addStorage(ctx.tenantId, bytes, categoryForType(fileType));
+    } catch (e) { console.error("[media] storage track failed:", e?.message); }
+  }
 
   return Response.json({ ok: true });
 }
@@ -46,9 +55,18 @@ export async function DELETE(req, { params }) {
 
   const gallery = snap.data();
   const keySet  = new Set(keys);
+  const removed = (gallery.media || []).filter((m) => keySet.has(m.key));
   const updated = (gallery.media || []).filter((m) => !keySet.has(m.key));
 
   await galleryRef.update({ media: updated });
+
+  // Decrement account storage for the removed files.
+  try {
+    const { removeStorage, categoryForType } = await import("@/lib/storage");
+    for (const m of removed) {
+      if (m.size > 0) await removeStorage(ctx.tenantId, Number(m.size) || 0, categoryForType(m.fileType));
+    }
+  } catch (e) { console.error("[media] storage untrack failed:", e?.message); }
 
   // Best-effort R2 deletion (no auth needed for admin delete, uses service account)
   try {

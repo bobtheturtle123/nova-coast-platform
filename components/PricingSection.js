@@ -159,8 +159,12 @@ export default function PricingSection() {
           </Link>
         </div>
 
-        <p className="text-center text-gray-400 text-xs mt-8">
-          No contracts. Cancel anytime.
+        <p className="text-center text-gray-400 text-xs mt-8 max-w-2xl mx-auto">
+          No contracts. Cancel anytime. Each account includes up to 10&nbsp;TB of storage.
+          Full-resolution photo files are retained for 1&nbsp;year after delivery. Gallery
+          previews, web-sized images, floor plans, videos, property pages, order history, and
+          client records remain available after that period. Large video-heavy downloads may
+          take a few minutes to prepare.
         </p>
 
       </div>
