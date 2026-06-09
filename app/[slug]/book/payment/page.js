@@ -307,6 +307,13 @@ export default function TenantPaymentPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create booking");
       setBookingId(data.bookingId);
+      // Free / sub-minimum bookings have no payment to collect — skip Stripe and
+      // go straight to confirmation.
+      if (data.free || !data.clientSecret) {
+        setBookingResult(data.bookingId, effectivePayFull);
+        router.push(`/${params.slug}/book/confirmation?bookingId=${data.bookingId}`);
+        return;
+      }
       setClientSecret(data.clientSecret);
     } catch (err) {
       setInitError(err.message);
@@ -582,7 +589,9 @@ export default function TenantPaymentPage() {
                           <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                           Creating booking…
                         </span>
-                      : `Proceed to Payment — $${chargeAmount.toLocaleString()} →`}
+                      : chargeAmount < 0.5
+                        ? "Confirm Booking →"
+                        : `Proceed to Payment — $${chargeAmount.toLocaleString()} →`}
                   </button>
                 </>
               )}

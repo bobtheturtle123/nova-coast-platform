@@ -102,39 +102,50 @@ export async function POST(req, { params }) {
       : effDeposit + tip;
     const paymentType   = isFullPayment ? "full" : "deposit";
 
-    if (chargeAmount <= 0) {
-      return Response.json({ error: "Invalid pricing data" }, { status: 400 });
-    }
+    // Stripe's minimum charge is $0.50. When the amount due now is below that —
+    // e.g. a promo makes the booking free, or the total is a few cents — we
+    // can't create a payment intent. Treat it as a no-charge booking so the
+    // agent can still complete it instead of hitting "Invalid pricing data".
+    const STRIPE_MIN = 0.5;
+    const isFreeBooking = chargeAmount < STRIPE_MIN;
 
     const bookingId    = uuidv4();
     const chargeCents  = Math.round(chargeAmount * 100);
     const fullAddress  = `${address}, ${city}, ${state} ${zip}`;
 
-    // Create payment intent — routed to tenant's Connect account (if onboarded)
+    // Create payment intent — routed to tenant's Connect account (if onboarded).
+    // Skipped entirely for free / sub-minimum bookings.
     const tenantPlanId = getEffectivePlan(tenant);
 
-    let paymentIntent;
-    if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
-      paymentIntent = await createConnectedPaymentIntent({
-        amountCents:        chargeCents,
-        connectedAccountId: tenant.stripeConnectAccountId,
-        metadata: { bookingId, type: paymentType, tenantId: tenant.id, clientName, clientEmail },
-        description: `${tenant.businessName} ${paymentType === "full" ? "full payment" : "deposit"} — ${address}, ${city}`,
-        receiptEmail: clientEmail,
-        planId:  tenantPlanId,
-      });
-    } else {
-      const { stripe } = await import("@/lib/stripe");
-      paymentIntent = await stripe.paymentIntents.create({
-        amount:   chargeCents,
-        currency: "usd",
-        metadata: { bookingId, type: paymentType, tenantId: tenant.id, clientName, clientEmail },
-        description: `${tenant.businessName} ${paymentType === "full" ? "full payment" : "deposit"} — ${address}, ${city}`,
-        receipt_email: clientEmail,
-      });
+    let paymentIntent = null;
+    if (!isFreeBooking) {
+      if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
+        paymentIntent = await createConnectedPaymentIntent({
+          amountCents:        chargeCents,
+          connectedAccountId: tenant.stripeConnectAccountId,
+          metadata: { bookingId, type: paymentType, tenantId: tenant.id, clientName, clientEmail },
+          description: `${tenant.businessName} ${paymentType === "full" ? "full payment" : "deposit"} — ${address}, ${city}`,
+          receiptEmail: clientEmail,
+          planId:  tenantPlanId,
+        });
+      } else {
+        const { stripe } = await import("@/lib/stripe");
+        paymentIntent = await stripe.paymentIntents.create({
+          amount:   chargeCents,
+          currency: "usd",
+          metadata: { bookingId, type: paymentType, tenantId: tenant.id, clientName, clientEmail },
+          description: `${tenant.businessName} ${paymentType === "full" ? "full payment" : "deposit"} — ${address}, ${city}`,
+          receipt_email: clientEmail,
+        });
+      }
     }
 
-    const remainingBalance = isFullPayment ? 0 : Math.max(0, effectiveTotal - effDeposit);
+    // For a free booking, the amount due now is considered paid (nothing owed).
+    // If the full total is also ~free, the whole booking is paid in full.
+    const fullyFree = isFreeBooking && (isFullPayment || effectiveTotal < STRIPE_MIN);
+    const remainingBalance = isFullPayment
+      ? 0
+      : (isFreeBooking ? Math.max(0, effectiveTotal - effDeposit) : Math.max(0, effectiveTotal - effDeposit));
 
     // Resolve suggested photographer pay from product pay rates
     const sqftTier = getSqftTier(squareFootage || 0, catalog.pricingConfig);
@@ -170,7 +181,8 @@ export async function POST(req, { params }) {
       .set({
         id:            bookingId,
         tenantId:      tenant.id,
-        status:        "pending_payment",
+        // Free bookings skip payment entirely → go straight to "requested".
+        status:        isFreeBooking ? "requested" : "pending_payment",
         createdAt:     new Date(),
 
         clientName, clientEmail, clientPhone,
@@ -197,11 +209,13 @@ export async function POST(req, { params }) {
         totalPrice:       effectiveTotal,
         depositAmount:    isFullPayment ? effectiveTotal : effDeposit,
         remainingBalance,
-        depositPaid:      false,
-        balancePaid:      isFullPayment ? false : false, // set true by webhook
-        paidInFull:       false, // set true by webhook
+        // Free bookings have nothing to collect now → mark the due portion paid.
+        depositPaid:      isFreeBooking,
+        balancePaid:      isFreeBooking ? fullyFree : false, // else set true by webhook
+        paidInFull:       isFreeBooking ? fullyFree : false, // else set true by webhook
+        isFreeBooking,
 
-        stripePaymentIntentId: paymentIntent.id,
+        stripePaymentIntentId: paymentIntent?.id || null,
 
         preferredDate:         preferredDate || null,
         preferredTime:         preferredTime || "morning",
@@ -258,7 +272,11 @@ export async function POST(req, { params }) {
       });
     }
 
-    return Response.json({ bookingId, clientSecret: paymentIntent.client_secret });
+    return Response.json({
+      bookingId,
+      clientSecret: paymentIntent?.client_secret || null,
+      free: isFreeBooking,
+    });
   } catch (err) {
     console.error("Create booking error:", err);
     return Response.json({ error: "Failed to create booking. Please try again." }, { status: 500 });
