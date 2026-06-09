@@ -621,6 +621,13 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 {floorPlans.length > 0 && <><span className="text-gray-300">·</span><span>{floorPlans.length} floor plan{floorPlans.length !== 1 ? "s" : ""}</span></>}
                 {attachedFiles.length > 0 && <><span className="text-gray-300">·</span><span>{attachedFiles.length} document{attachedFiles.length !== 1 ? "s" : ""}</span></>}
               </div>
+              {canDownload && (
+                <p className="text-xs text-gray-400 mt-2 max-w-md leading-relaxed">
+                  Download all available media from this gallery, including photos, floor plans,
+                  documents, videos, and important listing links. Large videos may download
+                  separately to keep delivery fast and reliable.
+                </p>
+              )}
             </div>
             {canDownload ? (
               <div className="flex-shrink-0 flex flex-col items-end gap-1">

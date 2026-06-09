@@ -29,12 +29,15 @@ async function resolveGallery(token) {
   const tokenDoc = await adminDb.collection("galleryTokens").doc(token).get();
   if (!tokenDoc.exists) return null;
   const { tenantId, galleryId } = tokenDoc.data();
-  const galleryDoc = await adminDb
-    .collection("tenants").doc(tenantId).collection("galleries").doc(galleryId).get();
+  const [galleryDoc, tenantDoc] = await Promise.all([
+    adminDb.collection("tenants").doc(tenantId).collection("galleries").doc(galleryId).get(),
+    adminDb.collection("tenants").doc(tenantId).get(),
+  ]);
   if (!galleryDoc.exists) return null;
   const gallery = galleryDoc.data();
   if (gallery.accessToken !== token || !gallery.unlocked) return null;
-  return { tenantId, galleryId, gallery };
+  const slug = tenantDoc.data()?.slug || null;
+  return { tenantId, galleryId, gallery, slug };
 }
 
 function s3client() {
@@ -74,7 +77,8 @@ export async function POST(req) {
 
   const resolved = await resolveGallery(token);
   if (!resolved) return Response.json({ error: "Gallery not found" }, { status: 404 });
-  const { tenantId, galleryId, gallery } = resolved;
+  const { tenantId, galleryId, gallery, slug } = resolved;
+  const bookingId = gallery.bookingId || null;
 
   const hash = fileSetHash(gallery, format);
   const jobs = adminDb.collection("preparedZips");
@@ -108,7 +112,7 @@ export async function POST(req) {
   });
 
   try {
-    const buf = await buildGalleryZipBuffer(gallery, { format });
+    const buf = await buildGalleryZipBuffer(gallery, { format, slug, token, bookingId });
     const key = `${ZIP_PREFIX}/${tenantId}/${galleryId}/${jobRef.id}.zip`;
 
     const { PutObjectCommand } = await import("@aws-sdk/client-s3");

@@ -3,6 +3,10 @@ import sharp from "sharp";
 import { Readable } from "stream";
 import { adminDb } from "@/lib/firebase-admin";
 import { rateLimit } from "@/lib/rateLimit";
+import { buildLinkFiles, partitionVideos } from "@/lib/galleryZip";
+
+// Top-level folder so the client gets one tidy package.
+const ROOT = "Listing Media Package";
 
 // Convert a Web ReadableStream (fetch response body) to a Node.js Readable
 // so archiver can pipe it directly without buffering the whole file.
@@ -42,6 +46,7 @@ export async function GET(req) {
   if (gallery.accessToken !== token) return new Response("Gallery not found", { status: 404 });
   if (!gallery.unlocked) return new Response("Gallery is locked", { status: 403 });
 
+  const slug  = tenantDoc.data()?.slug || null;
   const r2Url = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
   if (!r2Url) return new Response("Storage not configured", { status: 500 });
 
@@ -98,38 +103,21 @@ export async function GET(req) {
                   .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
                   .jpeg({ quality: WEB_QUALITY, progressive: true })
                   .toBuffer();
-                archive.append(buffer,  { name: `Photos/Print/${folder}/${img.fileName || "photo.jpg"}` });
-                archive.append(webBuf,  { name: `Photos/Web-MLS/${folder}/${baseName}-MLS.jpg` });
+                archive.append(buffer,  { name: `${ROOT}/Photos/Print/${folder}/${img.fileName || "photo.jpg"}` });
+                archive.append(webBuf,  { name: `${ROOT}/Photos/Web-MLS/${folder}/${baseName}-MLS.jpg` });
               } else if (format === "web") {
                 const webBuf = await sharp(buffer)
                   .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
                   .jpeg({ quality: WEB_QUALITY, progressive: true })
                   .toBuffer();
-                archive.append(webBuf, { name: `${folder}/${baseName}-MLS.jpg` });
+                archive.append(webBuf, { name: `${ROOT}/Photos/${folder}/${baseName}-MLS.jpg` });
               } else {
-                archive.append(buffer, { name: `${folder}/${img.fileName || "photo.jpg"}` });
+                archive.append(buffer, { name: `${ROOT}/Photos/${folder}/${img.fileName || "photo.jpg"}` });
               }
             } catch (e) {
               console.warn("[download-zip] photo failed:", img.key, e?.message);
             }
           }
-        }
-
-        // ── Videos are intentionally NOT bundled here ───────────────────────
-        // Videos are the heavy bytes (up to 5 GB each). Streaming them through
-        // this Vercel function incurs egress cost; instead the client downloads
-        // them DIRECTLY from R2 via pre-signed URLs (/api/gallery/download-urls),
-        // where egress is free. We just leave a pointer so the ZIP is complete.
-        if (videos.length > 0) {
-          archive.append(
-            Buffer.from(
-              `This package includes ${videos.length} video${videos.length !== 1 ? "s" : ""}.\n` +
-              `Videos download separately (directly, at full quality) from the gallery page — ` +
-              `click "Download videos" there.\n`,
-              "utf8"
-            ),
-            { name: "Videos/READ ME — videos download separately.txt" }
-          );
         }
 
         // ── Floor Plans ──────────────────────────────────────────────────────
@@ -138,7 +126,7 @@ export async function GET(req) {
             const res = await fetch(`${r2Url}/${fp.key}`);
             if (!res.ok || !res.body) continue;
             archive.append(toNodeStream(res.body), {
-              name: `Floor Plans/${fp.fileName || fp.key.split("/").pop()}`,
+              name: `${ROOT}/Floor Plans/${fp.fileName || fp.key.split("/").pop()}`,
             });
           } catch (e) {
             console.warn("[download-zip] floor plan failed:", fp.key, e?.message);
@@ -151,23 +139,34 @@ export async function GET(req) {
             const res = await fetch(`${r2Url}/${file.key}`);
             if (!res.ok || !res.body) continue;
             archive.append(toNodeStream(res.body), {
-              name: `Documents/${file.fileName || file.key.split("/").pop()}`,
+              name: `${ROOT}/Documents/${file.fileName || file.key.split("/").pop()}`,
             });
           } catch (e) {
             console.warn("[download-zip] file failed:", file.key, e?.message);
           }
         }
 
-        // ── Tour Links text file ─────────────────────────────────────────────
-        const lines = [];
-        if (gallery.matterportUrl && !gallery.matterportHidden)
-          lines.push(`3D Tour: ${gallery.matterportUrl}`);
-        if (gallery.videoUrl && !gallery.videoUrlHidden)
-          lines.push(`Video Tour: ${gallery.videoUrl}`);
-        for (const l of (gallery.virtualLinks || []).filter((l) => !l.hidden))
-          lines.push(`${l.label || "Virtual Tour"}: ${l.url}`);
-        if (lines.length) {
-          archive.append(Buffer.from(lines.join("\n"), "utf8"), { name: "Tour Links.txt" });
+        // ── Videos: bundle the small ones; large ones download separately ────
+        // Heavy video bytes (up to 5 GB each) are NOT forced into the ZIP — that
+        // causes timeouts/egress. Small clips ride along; the rest are listed in
+        // Links/Video-Download-Links.txt and download DIRECTLY from R2.
+        const { inZip: smallVideos, separate: separateVideos } = partitionVideos(videos);
+        for (const v of smallVideos) {
+          try {
+            const res = await fetch(`${r2Url}/${v.key}`);
+            if (!res.ok || !res.body) { separateVideos.push(v); continue; }
+            archive.append(toNodeStream(res.body), {
+              name: `${ROOT}/Videos/${v.fileName || v.key.split("/").pop()}`,
+            });
+          } catch (e) {
+            console.warn("[download-zip] video failed:", v.key, e?.message);
+            separateVideos.push(v);
+          }
+        }
+
+        // ── Links/ (Matterport, 3D tour, property website, gallery, videos) ──
+        for (const lf of buildLinkFiles(gallery, { slug, token, bookingId: gallery.bookingId, separateVideos })) {
+          archive.append(Buffer.from(lf.content, "utf8"), { name: lf.name });
         }
 
       } catch (outerErr) {

@@ -2,6 +2,7 @@ import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { adminDb } from "@/lib/firebase-admin";
 import { rateLimit } from "@/lib/rateLimit";
+import { partitionVideos } from "@/lib/galleryZip";
 
 export const dynamic = "force-dynamic";
 
@@ -45,10 +46,14 @@ export async function GET(req) {
   const bucket = process.env.R2_BUCKET_NAME;
   if (!bucket) return Response.json({ error: "Storage not configured" }, { status: 500 });
 
-  const media = (gallery.media || []).filter((m) => m.key && !m.hidden);
-  const pick = type === "all"
-    ? media
-    : media.filter((m) => m.fileType?.startsWith("video/"));
+  const media  = (gallery.media || []).filter((m) => m.key && !m.hidden);
+  const videos = media.filter((m) => m.fileType?.startsWith("video/"));
+
+  // For "videos": return only the videos delivered SEPARATELY (the large ones).
+  // Small videos are bundled inside the ZIP, so the client must not also fetch
+  // them directly — that would download them twice. "all" still returns
+  // everything (used by other callers).
+  const pick = type === "all" ? media : partitionVideos(videos).separate;
 
   const files = await Promise.all(
     pick.map(async (m, i) => {
