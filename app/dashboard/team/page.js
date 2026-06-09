@@ -83,11 +83,30 @@ const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS     = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const COLORS     = ["#0b2a55","#1e6091","#2e7d32","#6a1b9a","#d84315","#00695c","#827717","#ad1457"];
 
-function fmt12(time24) {
-  if (!time24) return "";
-  const [h, m] = time24.split(":");
+function fmt12(time) {
+  if (!time) return "";
+  // Synced calendar blocks (Google/Apple/Outlook) store a full ISO datetime in
+  // startTime/endTime, while manual blocks store plain "HH:MM". Handle both so
+  // synced event start/finish times always display (and stay accurate).
+  if (typeof time === "string" && (time.includes("T") || time.length > 5)) {
+    const d = new Date(time);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    }
+  }
+  const [h, m] = String(time).split(":");
   const hr = Number(h);
+  if (isNaN(hr)) return "";
   return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`;
+}
+
+// Label for a block in the grid. Synced calendar blocks get the member's first
+// name prefixed (e.g. "James · Busy") so it's clear whose calendar it's from.
+function blockLabel(bl, member) {
+  const base = bl.reason || "Busy";
+  const first = member?.name ? member.name.split(" ")[0] : "";
+  if (bl.source === "google" && first) return `${first} · ${base}`;
+  return base;
 }
 
 function hexWithAlpha(hex, alpha) {
@@ -2521,7 +2540,7 @@ export default function TeamPage() {
                               <div key={bl.id} className="text-xs border-l-2 px-1.5 py-0.5 rounded-xl mb-1 group"
                                 style={{ background: hexWithAlpha(member.color || "#0b2a55", 0.1), borderLeftColor: member.color || "#0b2a55" }}>
                                 <div className="flex items-center justify-between">
-                                  <span className="font-medium truncate" style={{ color: member.color || "#0b2a55" }}>{bl.reason}</span>
+                                  <span className="font-medium truncate" style={{ color: member.color || "#0b2a55" }}>{blockLabel(bl, member)}</span>
                                   <button onClick={() => deleteBlock(bl.id)}
                                     className="opacity-0 group-hover:opacity-100 ml-1 flex-shrink-0 text-[10px]"
                                     style={{ color: member.color || "#0b2a55" }}>×</button>
@@ -2785,9 +2804,9 @@ export default function TeamPage() {
                         <div key={bl.id} className="px-4 py-2 border-b flex items-center justify-between"
                           style={{ background: hexWithAlpha(member.color || "#0b2a55", 0.06), borderColor: hexWithAlpha(member.color || "#0b2a55", 0.15) }}>
                           <div>
-                            <p className="text-xs font-semibold" style={{ color: member.color || "#0b2a55" }}>{bl.reason || "Blocked"}</p>
+                            <p className="text-xs font-semibold" style={{ color: member.color || "#0b2a55" }}>{blockLabel(bl, member)}</p>
                             {(bl.startTime || bl.endTime) && (
-                              <p className="text-xs" style={{ color: hexWithAlpha(member.color || "#0b2a55", 0.65) }}>{fmt12(bl.startTime)} – {fmt12(bl.endTime)}</p>
+                              <p className="text-xs" style={{ color: hexWithAlpha(member.color || "#0b2a55", 0.65) }}>{fmt12(bl.startTime)}{bl.endTime ? ` – ${fmt12(bl.endTime)}` : ""}</p>
                             )}
                             {bl.note && <p className="text-xs mt-0.5" style={{ color: hexWithAlpha(member.color || "#0b2a55", 0.6) }}>{bl.note}</p>}
                           </div>
