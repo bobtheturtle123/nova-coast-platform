@@ -296,14 +296,23 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
     document.body.appendChild(a); a.click(); a.remove();
   }
 
+  // Download EVERY video directly from R2 (free egress). Browsers throttle/block
+  // repeated programmatic <a> clicks, so we use a hidden iframe per file — each
+  // R2 URL is sent with an attachment disposition, so the iframe downloads
+  // instead of navigating. A stagger keeps the browser from dropping any.
   async function downloadVideosDirect() {
     if (videos.length === 0) return;
     const res = await fetch(`/api/gallery/download-urls?token=${token}&type=videos`);
     if (!res.ok) return;
     const { files } = await res.json();
     for (let i = 0; i < (files || []).length; i++) {
-      await new Promise((r) => setTimeout(r, 800));
-      triggerDownload(files[i].url, files[i].name);
+      if (i > 0) await new Promise((r) => setTimeout(r, 1500));
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = files[i].url;
+      document.body.appendChild(iframe);
+      // Leave it long enough for the download to start, then clean up.
+      setTimeout(() => iframe.remove(), 60000);
     }
   }
 
