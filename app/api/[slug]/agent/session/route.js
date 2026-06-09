@@ -53,16 +53,22 @@ export async function POST(req, { params }) {
           accessToken: newToken,
           totalOrders: 0,
           totalSpent: 0,
+          hasAccount: true, // signed in via Firebase = has an account
           createdAt: new Date(),
         });
         agentDoc = await agentRef.get();
       } else {
         agentDoc = snap.docs[0];
+        const updates = {};
         // Backfill missing accessToken on legacy agent docs
         if (!agentDoc.data().accessToken) {
           const { randomUUID } = await import("crypto");
-          const newToken = randomUUID().replace(/-/g, "");
-          await agentDoc.ref.update({ accessToken: newToken });
+          updates.accessToken = randomUUID().replace(/-/g, "");
+        }
+        // Mark that this agent has a real account (signed in via Firebase).
+        if (!agentDoc.data().hasAccount) updates.hasAccount = true;
+        if (Object.keys(updates).length) {
+          await agentDoc.ref.update(updates);
           agentDoc = await agentDoc.ref.get();
         }
       }

@@ -4,10 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-export default function AgentNav({ slug }) {
+export default function AgentNav({ slug, hasAccount = false }) {
   const pathname = usePathname();
   const router   = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+
+  // Before the agent signs up, don't show account tabs (Dashboard/Settings) —
+  // they're confusing for token-only visitors.
+  if (!hasAccount) return null;
 
   async function handleLogout() {
     setLoggingOut(true);

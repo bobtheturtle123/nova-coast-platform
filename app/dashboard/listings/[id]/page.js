@@ -423,6 +423,49 @@ const [listingUrl,       setListingUrl]        = useState("");
     }
   }
 
+  function downloadAgreement() {
+    if (!booking?.contractSigned) return;
+    const esc = (s) => String(s || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    const fmt = (d) => d ? new Date(d).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" }) : "—";
+    const biz = booking.contractCounterSignedBy || "Business";
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Service Agreement — ${esc(booking.fullAddress || booking.address || "")}</title>
+      <style>
+        @media print { @page { margin: 24mm; } .noprint { display:none; } }
+        body { font-family: Georgia, 'Times New Roman', serif; color:#1a1a1a; max-width:740px; margin:32px auto; padding:0 24px; line-height:1.6; }
+        h1 { font-size:22px; margin:0 0 4px; }
+        .muted { color:#666; font-size:13px; }
+        .agreement { white-space:pre-wrap; font-size:14px; margin:24px 0; padding:20px; background:#fafafa; border:1px solid #e5e5e5; border-radius:6px; }
+        .sig { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:32px; border-top:1px solid #ddd; padding-top:24px; }
+        .sig h3 { font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:#888; margin:0 0 8px; }
+        .sig .name { font-size:18px; font-family:'Brush Script MT', cursive; }
+        .meta { font-size:12px; color:#666; margin-top:6px; }
+        .btn { background:#0F172A; color:#fff; border:none; padding:10px 20px; border-radius:6px; font-family:sans-serif; font-size:14px; cursor:pointer; }
+      </style></head><body>
+      <button class="noprint btn" onclick="window.print()">Save as PDF</button>
+      <div style="margin-top:24px">
+        <h1>Service Agreement</h1>
+        <p class="muted">${esc(booking.fullAddress || booking.address || "")}</p>
+        <p class="muted">Booking #${esc((booking.id || "").slice(-6).toUpperCase())}</p>
+      </div>
+      <div class="agreement">${esc(booking.contractText || "No agreement text was stored for this booking.")}</div>
+      <div class="sig">
+        <div>
+          <h3>Client Signature</h3>
+          <div class="name">${esc(booking.contractSignerName || booking.clientName || "")}</div>
+          <div class="meta">Signed: ${fmt(booking.contractSignedAt)}</div>
+          ${booking.contractSignerIp ? `<div class="meta">IP: ${esc(booking.contractSignerIp)}</div>` : ""}
+        </div>
+        <div>
+          <h3>Business</h3>
+          <div class="name">${esc(biz)}</div>
+          <div class="meta">Counter-signed: ${fmt(booking.contractCounterSignedAt)}</div>
+        </div>
+      </div>
+      </body></html>`;
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); }
+  }
+
   async function openGalleryEditor() {
     if (gallery) {
       router.push(`/dashboard/galleries/${gallery.id}`);
@@ -1556,6 +1599,29 @@ if (loading) return (
                     {booking.stripeDepositIntentId && (
                       <p className="text-[10px] text-gray-300 mt-1 font-mono truncate">{booking.stripeDepositIntentId}</p>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {/* Signed Agreement (legal copy) */}
+              {booking.contractSigned && (
+                <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
+                  <div className="px-[17px] py-3 border-b border-gray-100"><span className="text-[13px] font-bold text-[#0F172A]">Signed Agreement</span></div>
+                  <div className="px-[17px] py-3.5">
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-green-600 flex-shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <div>
+                        <p className="text-[13px] font-semibold text-[#0F172A]">Signed by {booking.contractSignerName || booking.clientName}</p>
+                        {booking.contractSignedAt && (
+                          <p className="text-[11px] text-gray-400">{new Date(booking.contractSignedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</p>
+                        )}
+                      </div>
+                    </div>
+                    <button onClick={downloadAgreement}
+                      className="w-full text-sm py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5">
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-8-3l-4-4m4 4l4-4m-4 4V4" /></svg>
+                      Download signed copy
+                    </button>
                   </div>
                 </div>
               )}
