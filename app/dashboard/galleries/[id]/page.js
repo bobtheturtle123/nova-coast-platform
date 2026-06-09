@@ -1736,7 +1736,7 @@ export default function GalleryDetailPage() {
               </button>
               <input ref={videoUploadRef} type="file" accept="video/*,video/mp4,video/quicktime,video/webm" className="hidden"
                 onChange={(e) => { if (e.target.files?.[0]) uploadFiles(Array.from(e.target.files)); e.target.value = ""; }} />
-              <span className="text-xs text-gray-400">MP4, MOV, or WebM · max 200 MB</span>
+              <span className="text-xs text-gray-400">MP4, MOV, or WebM · up to 5 GB</span>
             </div>
             {videos.length > 0 && (
               <div className="mt-3 space-y-2">

@@ -445,7 +445,7 @@ export default function MarketingPage() {
             >
               Get Started
             </Link>
-            <p className="text-white/25 text-xs mt-5">From $79/month. No contract. Cancel anytime.</p>
+            <p className="text-white/25 text-xs mt-5">From $49/month. No contract. Cancel anytime.</p>
           </div>
         </section>
 

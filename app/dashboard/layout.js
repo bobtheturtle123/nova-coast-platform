@@ -320,12 +320,12 @@ export default function DashboardLayout({ children }) {
 
       {/* Upgrade CTA — hidden on top-tier plan */}
       {(() => {
-        const NEXT = { starter: "Studio", solo: "Studio", studio: "Pro Team", pro: "Scale" };
+        const NEXT = { starter: "Studio", solo: "Studio", studio: "Pro", pro: "Scale" };
         const DESC = {
-          starter: "More listings, custom branding, and team seats.",
-          solo:    "More listings, custom branding, and team seats.",
-          studio:  "Multi-photographer ops with up to 12 seats.",
-          pro:     "Unlimited seats and 1,200 listing credits.",
+          starter: "More listings and team members.",
+          solo:    "300 listings/year and up to 3 team members.",
+          studio:  "600 listings/year and up to 5 team members.",
+          pro:     "1,000 listings/year and up to 10 team members.",
         };
         const next = NEXT[tenantPlan];
         if (!next) return null;

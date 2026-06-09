@@ -6,10 +6,10 @@ const PLANS = [
   {
     id: "solo",
     name: "Solo",
-    price: 79,
-    tagline: "For solo photographers running a professional operation.",
-    listings: "Up to 120 listings per year",
-    seats: "1 seat",
+    price: 49,
+    tagline: "Best for solo real estate media photographers.",
+    listings: "125 listings per year",
+    seats: "1 team member",
     featured: false,
     includesLabel: "Everything you need to run your business:",
     features: [
@@ -24,10 +24,10 @@ const PLANS = [
   {
     id: "studio",
     name: "Studio",
-    price: 159,
-    tagline: "The complete system for a growing media business.",
-    listings: "Up to 300 listings per year",
-    seats: "5 team seats included",
+    price: 99,
+    tagline: "Best for small teams and growing media businesses.",
+    listings: "300 listings per year",
+    seats: "3 team members",
     featured: true,
     includesLabel: "Everything in Solo, plus:",
     features: [
@@ -43,10 +43,10 @@ const PLANS = [
   {
     id: "pro",
     name: "Pro",
-    price: 279,
-    tagline: "For fast-growing teams that need full operational control.",
-    listings: "Up to 600 listings per year",
-    seats: "12 team seats included",
+    price: 179,
+    tagline: "Best for growing teams with higher listing volume.",
+    listings: "600 listings per year",
+    seats: "5 team members",
     featured: false,
     includesLabel: "Everything in Studio, plus:",
     features: [
@@ -67,7 +67,7 @@ export default function PricingSection() {
         <div className="text-center mb-14">
           <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">Pricing</p>
           <h2 className="font-serif text-4xl text-navy mb-3 font-normal">
-            Plans start at $79/month
+            Plans start at $49/month
           </h2>
           <p className="text-gray-500 max-w-xl mx-auto leading-relaxed">
             Every plan includes everything you need to run a professional media business. Pick the tier that matches your volume.
@@ -142,13 +142,13 @@ export default function PricingSection() {
         <div className="border border-gray-100 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/60">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h3 className="font-semibold text-navy text-sm">Scale: $449/month</h3>
+              <h3 className="font-semibold text-navy text-sm">Scale: $349/month</h3>
               <span className="text-[10px] text-gray-400 border border-gray-200 rounded-full px-2 py-0.5 bg-white">
-                For larger teams
+                For high-volume teams
               </span>
             </div>
             <p className="text-xs text-gray-500">
-              Up to 1,200 listings/year · Unlimited seats · Multi-location readiness · Priority support
+              1,000 listings/year · 10 team members · Multi-location readiness · Priority support
             </p>
           </div>
           <Link

@@ -5,15 +5,15 @@ import { useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 
 const PLANS = [
-  { id: "solo",   name: "Solo",     price: 79,  desc: "120 listing credits / year · 1 seat",              tagline: "Built for solo owner-operators" },
-  { id: "studio", name: "Studio",   price: 159, desc: "300 listing credits / year · 5 seats",             tagline: "Growing teams & higher volume" },
-  { id: "pro",    name: "Pro Team", price: 279, desc: "600 listing credits / year · 12 seats",            tagline: "Multi-photographer operations" },
-  { id: "scale",  name: "Scale",    price: 449, desc: "1,200 listing credits / year · Unlimited seats",   tagline: "Large teams, no limits" },
+  { id: "solo",   name: "Solo",   price: 49,  desc: "125 listings / year · 1 team member",   tagline: "Solo real estate media photographers" },
+  { id: "studio", name: "Studio", price: 99,  desc: "300 listings / year · 3 team members",  tagline: "Small teams & growing media businesses" },
+  { id: "pro",    name: "Pro",    price: 179, desc: "600 listings / year · 5 team members",  tagline: "Growing teams with higher volume" },
+  { id: "scale",  name: "Scale",  price: 349, desc: "1,000 listings / year · 10 team members", tagline: "High-volume media teams" },
 ];
 
-const PLAN_NAMES  = { solo: "Solo", studio: "Studio", pro: "Pro Team", scale: "Scale", starter: "Solo" };
-const PLAN_PRICES = { solo: 79, studio: 159, pro: 279, scale: 449, starter: 79 };
-const PLAN_LIMITS = { solo: 120, studio: 300, pro: 600, scale: 1200, starter: 120 };
+const PLAN_NAMES  = { solo: "Solo", studio: "Studio", pro: "Pro", scale: "Scale", starter: "Solo" };
+const PLAN_PRICES = { solo: 49, studio: 99, pro: 179, scale: 349, starter: 49 };
+const PLAN_LIMITS = { solo: 125, studio: 300, pro: 600, scale: 1000, starter: 125 };
 
 // Per-plan expansion caps — null means unlimited (Scale)
 const ADDON_CAPS = {
@@ -22,7 +22,7 @@ const ADDON_CAPS = {
   pro:    { extraSeats: 8,    topupListings: 200 },
   scale:  { extraSeats: null, topupListings: null },
 };
-const NEXT_PLAN_NAME = { solo: "Studio", studio: "Pro Team", pro: "Scale", scale: null };
+const NEXT_PLAN_NAME = { solo: "Studio", studio: "Pro", pro: "Scale", scale: null };
 const PLAN_ORDER     = { solo: 0, starter: 0, studio: 1, pro: 2, scale: 3 };
 
 const TOPUP_PACKS = [
@@ -242,7 +242,7 @@ export default function BillingPage() {
   const seatAtCap      = seatCap !== null && addonSeats >= seatCap;
 
   // Seat usage
-  const BASE_SEATS     = { solo: 1, studio: 5, pro: 12, scale: null, starter: 1 };
+  const BASE_SEATS     = { solo: 1, studio: 3, pro: 5, scale: 10, starter: 1 };
   const baseSeatLimit  = Object.prototype.hasOwnProperty.call(BASE_SEATS, plan) ? BASE_SEATS[plan] : 1;
   const totalSeats     = baseSeatLimit === null ? null : baseSeatLimit + addonSeats;
   const seatsUsed      = teamMemberCount + 1; // +1 for owner

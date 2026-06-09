@@ -7,8 +7,10 @@ import { trackPlatformUsage } from "@/lib/usageTracking";
 // Hard cap on files per gallery — prevents unlimited storage accumulation.
 // 1000 covers portrait photographers with large shoot volumes; normal shoots are 50-200 photos.
 const MAX_FILES_PER_GALLERY = 1000;
-// Per-file size cap: 200 MB. Enforced via presigned URL ContentLengthRange condition.
-const MAX_FILE_SIZE_BYTES = 200 * 1024 * 1024;
+// Per-file size caps, by media type. Matches/beats Aryeo (5 GB video, 100 MB image).
+const MAX_VIDEO_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB
+const MAX_IMAGE_BYTES = 100 * 1024 * 1024;      // 100 MB
+const MAX_OTHER_BYTES = 100 * 1024 * 1024;      // 100 MB (PDFs / floor plans)
 // Max upload URL requests per tenant per hour
 const UPLOAD_URL_HOURLY_LIMIT = 120;
 
@@ -40,9 +42,16 @@ export async function POST(req) {
       return Response.json({ error: "fileName and galleryId required" }, { status: 400 });
     }
 
-    // Enforce per-file size limit
-    if (fileSize && fileSize > MAX_FILE_SIZE_BYTES) {
-      return Response.json({ error: `File too large. Maximum size is 200 MB per file.` }, { status: 400 });
+    // Enforce per-file size limit (type-aware)
+    if (fileSize) {
+      const ft = (fileType || "").toLowerCase();
+      const isVideo = ft.startsWith("video/");
+      const isImage = ft.startsWith("image/");
+      const cap   = isVideo ? MAX_VIDEO_BYTES : isImage ? MAX_IMAGE_BYTES : MAX_OTHER_BYTES;
+      const label = isVideo ? "5 GB" : isImage ? "100 MB" : "100 MB";
+      if (fileSize > cap) {
+        return Response.json({ error: `File too large. Maximum size is ${label} per ${isVideo ? "video" : "file"}.` }, { status: 400 });
+      }
     }
 
     // Validate file type — allow image, video, and PDF (for floor plans)
