@@ -21,6 +21,9 @@
     "app/api/cron/media-retention/route.js": {
       "maxDuration": 300
     },
+    "app/api/cron/transcode-web-videos/route.js": {
+      "maxDuration": 300
+    },
     "app/api/admin/storage-report/route.js": {
       "maxDuration": 300
     },
@@ -48,6 +51,10 @@
     {
       "path": "/api/cron/cleanup-prepared-zips",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/transcode-web-videos",
+      "schedule": "*/30 * * * *"
     }
   ]
 }

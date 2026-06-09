@@ -58,9 +58,12 @@ export async function GET(req) {
   const files = await Promise.all(
     pick.map(async (m, i) => {
       const fileName = m.fileName || m.key.split("/").pop() || `file-${i + 1}`;
+      // After 1-year retention, the full-res original is gone — serve the 1080p
+      // web version so the download still works.
+      const dlKey = m.originalRemoved && m.webVideoKey ? m.webVideoKey : m.key;
       const cmd = new GetObjectCommand({
         Bucket: bucket,
-        Key:    m.key,
+        Key:    dlKey,
         // Force a download (not inline playback) with a clean filename.
         ResponseContentDisposition: `attachment; filename="${fileName.replace(/"/g, "")}"`,
       });

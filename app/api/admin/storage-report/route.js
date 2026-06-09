@@ -1,7 +1,7 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { isSuperAdmin } from "@/lib/superadmin";
 import { STORAGE_LIMIT_BYTES, WARN_80, fmtBytes } from "@/lib/storage";
-import { eligibleOriginals } from "@/lib/retention";
+import { eligibleOriginals, eligibleVideoOriginals } from "@/lib/retention";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -24,6 +24,7 @@ export async function GET(req) {
   let totalBytes = 0;
   const byType = { photoBytes: 0, videoBytes: 0, documentBytes: 0, floorPlanBytes: 0 };
   let eligibleFiles = 0, eligibleBytes = 0, galleriesPastRetention = 0;
+  let eligiblePhotos = 0, eligiblePhotoBytes = 0, eligibleVideos = 0, eligibleVideoBytes = 0;
 
   for (const tDoc of tenantsSnap.docs) {
     const t = tDoc.data();
@@ -50,10 +51,13 @@ export async function GET(req) {
     for (const g of galSnap.docs) {
       const gallery = g.data();
       const { items, bytes } = eligibleOriginals(gallery, now);
-      if (items.length) {
+      const { items: vItems, bytes: vBytes } = eligibleVideoOriginals(gallery, now);
+      if (items.length || vItems.length) {
         galleriesPastRetention++;
-        eligibleFiles += items.length;
-        eligibleBytes += bytes;
+        eligiblePhotos += items.length;  eligiblePhotoBytes += bytes;
+        eligibleVideos += vItems.length; eligibleVideoBytes += vBytes;
+        eligibleFiles += items.length + vItems.length;
+        eligibleBytes += bytes + vBytes;
       }
       for (const m of (gallery.media || [])) {
         const size = Number(m.size) || 0;
@@ -121,6 +125,8 @@ export async function GET(req) {
       eligibleFiles,
       eligibleBytes,
       estimatedSaved: fmtBytes(eligibleBytes),
+      photos: { count: eligiblePhotos, estimatedSaved: fmtBytes(eligiblePhotoBytes) },
+      videos: { count: eligibleVideos, estimatedSaved: fmtBytes(eligibleVideoBytes) },
       lastRetentionRun,
     },
     preparedZips: {

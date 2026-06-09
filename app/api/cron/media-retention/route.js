@@ -1,6 +1,7 @@
 import { adminDb } from "@/lib/firebase-admin";
-import { eligibleOriginals, isWebSized, deliveredAtMs } from "@/lib/retention";
-import { removeStorage } from "@/lib/storage";
+import { eligibleOriginals, eligibleVideoOriginals, isWebSized, deliveredAtMs } from "@/lib/retention";
+import { removeStorage, addStorage } from "@/lib/storage";
+import { transcodeTo1080p, webVideoKey, MAX_INLINE_TRANSCODE_BYTES } from "@/lib/videoTranscode";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -41,9 +42,13 @@ export async function GET(req) {
     galleriesScanned: 0,
     galleriesPastRetention: 0,
     eligibleFiles: 0,
+    eligiblePhotos: 0,
+    eligibleVideos: 0,
     eligibleBytes: 0,
     removedFiles: 0,
     removedBytes: 0,
+    webVideosGenerated: 0,
+    videosSkippedLarge: 0,
     errors: 0,
     galleries: [],   // per-gallery detail (capped)
   };
@@ -74,20 +79,25 @@ export async function GET(req) {
     for (const galDoc of galSnap.docs) {
       report.galleriesScanned++;
       const gallery = galDoc.data();
-      const { items, bytes } = eligibleOriginals(gallery, now);
-      if (items.length === 0) continue;
+      const { items, bytes } = eligibleOriginals(gallery, now);          // photos
+      const { items: vItems, bytes: vBytes } = eligibleVideoOriginals(gallery, now); // videos
+      if (items.length === 0 && vItems.length === 0) continue;
 
       report.galleriesPastRetention++;
-      report.eligibleFiles += items.length;
-      report.eligibleBytes += bytes;
+      report.eligibleFiles  += items.length + vItems.length;
+      report.eligibleBytes  += bytes + vBytes;
+      report.eligiblePhotos += items.length;
+      report.eligibleVideos += vItems.length;
 
       const detail = {
         tenantId,
         galleryId: galDoc.id,
         title: gallery.title || gallery.address || galDoc.id,
         deliveredAt: deliveredAtMs(gallery),
-        eligibleFiles: items.length,
-        eligibleBytes: bytes,
+        eligibleFiles: items.length + vItems.length,
+        eligiblePhotos: items.length,
+        eligibleVideos: vItems.length,
+        eligibleBytes: bytes + vBytes,
         removed: 0,
       };
 
@@ -149,6 +159,73 @@ export async function GET(req) {
             console.error(`[media-retention] tenant=${tenantId} gallery=${galDoc.id} key=${m.key}: ${e.message}`);
           }
         }
+
+        // ── Videos: remove the full-res original, keep a 1080p web version ──
+        // We never remove a video original unless a 1080p web version exists, so
+        // old galleries always keep a playable file. If the web version is
+        // missing we generate it first. Oversized originals are left in place.
+        const r2Url = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+        for (const v of vItems) {
+          const idx = media.findIndex((x) => x.key === v.key);
+          if (idx < 0) continue;
+          try {
+            let webKey   = media[idx].webVideoKey;
+            let webUrl   = media[idx].webVideoUrl;
+            let webBytes = Number(media[idx].webVideoBytes) || 0;
+
+            // Ensure a 1080p web version exists before touching the original.
+            if (!webKey || media[idx].webVideoStatus !== "ready") {
+              if ((Number(v.size) || 0) > MAX_INLINE_TRANSCODE_BYTES) {
+                // Too large to transcode inline — leave the original intact.
+                media[idx] = { ...media[idx], webVideoStatus: "skipped_large" };
+                changed = true;
+                report.videosSkippedLarge++;
+                continue;
+              }
+              const res = await fetch(`${r2Url}/${v.key}`);
+              if (!res.ok) throw new Error(`fetch ${res.status}`);
+              const inputBuf = Buffer.from(await res.arrayBuffer());
+              const out = await transcodeTo1080p(inputBuf);
+              webKey   = webVideoKey(v.key);
+              webUrl   = `${r2Url}/${webKey}`;
+              webBytes = out.bytes;
+              await s3.send(new PutObjectCommand({
+                Bucket: process.env.R2_BUCKET_NAME, Key: webKey, Body: out.buffer, ContentType: "video/mp4",
+              }));
+              await addStorage(tenantId, webBytes, "video");
+              report.webVideosGenerated++;
+            }
+
+            // Delete the full-res original from R2.
+            await s3.send(new DeleteObjectCommand({
+              Bucket: process.env.R2_BUCKET_NAME, Key: v.key,
+            }));
+
+            // Point the record at the web version and mark the original removed.
+            media[idx] = {
+              ...media[idx],
+              webVideoKey: webKey,
+              webVideoUrl: webUrl,
+              webVideoBytes: webBytes,
+              webVideoStatus: "ready",
+              url: webUrl,                 // playback + download fall back to 1080p
+              originalRemoved: true,
+              originalRemovedAt: new Date().toISOString(),
+              originalBytes: Number(v.size) || 0,
+            };
+            changed = true;
+
+            const freed = (Number(v.size) || 0);
+            if (freed > 0) await removeStorage(tenantId, freed, "video");
+            detail.removed++;
+            report.removedFiles++;
+            report.removedBytes += freed;
+          } catch (e) {
+            report.errors++;
+            console.error(`[media-retention] video tenant=${tenantId} gallery=${galDoc.id} key=${v.key}: ${e.message}`);
+          }
+        }
+
         if (changed) {
           await galDoc.ref.update({ media, lastRetentionRunAt: new Date().toISOString() });
         }

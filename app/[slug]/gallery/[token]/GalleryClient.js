@@ -784,7 +784,10 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 <div className={`grid gap-3 ${videos.length > 1 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
                   {videos.map((v, i) => (
                     <div key={i} className="rounded-xl overflow-hidden bg-gray-900 aspect-video relative group">
-                      <video src={v.url} className="w-full h-full" controls />
+                      {/* Prefer the lighter 1080p web version for playback; it
+                          also keeps old galleries playable after the full-res
+                          original is removed for storage management. */}
+                      <video src={v.webVideoUrl || v.url} className="w-full h-full" controls />
                       {unlocked && v.key && (
                         <a
                           href={`/api/gallery/video-download?token=${gallery.accessToken}&key=${encodeURIComponent(v.key)}&name=${encodeURIComponent(v.fileName || "video.mp4")}`}

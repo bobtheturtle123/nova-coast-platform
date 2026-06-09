@@ -16,7 +16,7 @@ const nextConfig = {
   },
   experimental: {
     // Required to use Firebase Admin in API routes (Next.js 14)
-    serverComponentsExternalPackages: ["firebase-admin", "sharp"],
+    serverComponentsExternalPackages: ["firebase-admin", "sharp", "fluent-ffmpeg", "ffmpeg-static"],
   },
 };
 

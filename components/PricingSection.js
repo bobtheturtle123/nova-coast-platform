@@ -161,10 +161,10 @@ export default function PricingSection() {
 
         <p className="text-center text-gray-400 text-xs mt-8 max-w-2xl mx-auto">
           No contracts. Cancel anytime. Each account includes up to 10&nbsp;TB of storage.
-          Full-resolution photo files are retained for 1&nbsp;year after delivery. Gallery
-          previews, web-sized images, floor plans, videos, property pages, order history, and
-          client records remain available after that period. Large video-heavy downloads may
-          take a few minutes to prepare.
+          Full-resolution photo and video files are available for download for 1&nbsp;year after
+          delivery. After that, large original files may be removed for storage management.
+          Optimized gallery images and 1080p web-viewable videos may remain available so galleries
+          can continue to display normally. Large video-heavy downloads may take a few minutes to prepare.
         </p>
 
       </div>

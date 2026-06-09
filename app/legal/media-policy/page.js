@@ -15,24 +15,29 @@ export default function MediaPolicyPage() {
         <p>Each account includes up to <strong>10&nbsp;TB of storage</strong>. This limit is the same for every plan. If an account approaches the limit, we&apos;ll reach out before it affects your ability to upload new media. Reaching the limit never deletes anything and never breaks existing galleries.</p>
       </Section>
 
-      <Section title="Full-resolution photo retention">
-        <p>Full-resolution (original) photo files are retained for <strong>1&nbsp;year after a gallery is delivered</strong>. After that period, the original photo downloads become unavailable, but your galleries continue to look and work exactly as before.</p>
+      <Section title="Full-resolution photo &amp; video retention">
+        <p><strong>Full-resolution photo and video files are available for download for 1&nbsp;year after delivery.</strong> After that, large original files may be removed for storage management. Optimized gallery images and 1080p web-viewable videos may remain available so galleries can continue to display normally.</p>
         <p>The following remain available with no time limit:</p>
         <ul>
           <li>Gallery previews and thumbnails</li>
           <li>Web-sized / MLS-ready images</li>
-          <li>Floor plans</li>
-          <li>Videos</li>
+          <li>1080p web-viewable videos (when generated)</li>
+          <li>Floor plans and documents</li>
+          <li>Matterport links, 3D tour links, and property website links</li>
           <li>Property websites and pages</li>
-          <li>Gallery metadata, order history, invoices, and payment records</li>
+          <li>Order history, invoices, and payment records</li>
           <li>Client and agent portal records, and download history</li>
         </ul>
-        <p>Only the full-resolution original photo files are affected by the 1-year retention window. Nothing is archived, hidden, or deactivated.</p>
+        <p>Only the large full-resolution original photo and video files are affected by the 1-year window. Whole listings are never automatically deleted, and nothing is archived, hidden, or deactivated.</p>
+      </Section>
+
+      <Section title="1080p web video">
+        <p>When possible we keep two versions of each video: the full-resolution delivery file (for download, for 1&nbsp;year) and a 1080p web-viewable version used for gallery playback. The 1080p version is kept long-term so older galleries still play normally, and is encoded at a high bitrate so real estate footage stays sharp and professional.</p>
       </Section>
 
       <Section title="Downloading your media">
-        <p>You can download everything in a gallery at any time. Within the 1-year window, &ldquo;Download all&rdquo; includes full-resolution photos, documents, floor plans, and videos. After the window, it includes web-sized photos, documents, floor plans, and any available videos.</p>
-        <p>Large, video-heavy galleries are prepared in the background and delivered as soon as they&apos;re ready: <em>&ldquo;Preparing your download. Large video-heavy galleries may take a few minutes.&rdquo;</em> Videos always download at full quality.</p>
+        <p>You can download everything in a gallery at any time. Within the 1-year window, &ldquo;Download all&rdquo; includes full-resolution photos and videos, documents, and floor plans. After the window, it includes optimized gallery images, 1080p web videos, documents, and floor plans.</p>
+        <p>Large, video-heavy galleries are prepared in the background and delivered as soon as they&apos;re ready: <em>&ldquo;Preparing your download. Large video-heavy galleries may take a few minutes.&rdquo;</em></p>
       </Section>
     </article>
   );

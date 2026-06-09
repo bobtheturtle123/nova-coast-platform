@@ -45,10 +45,14 @@ export async function GET(req) {
   if (!gallery.unlocked) return new Response("Gallery is locked. Please pay the balance first.", { status: 403 });
 
   // Verify the requested key belongs to this gallery's media
-  const allKeys = (gallery.media || []).map((m) => m.key).filter(Boolean);
-  if (!allKeys.includes(key)) {
+  const item = (gallery.media || []).find((m) => m.key === key);
+  if (!item) {
     return new Response("File not found in this gallery", { status: 404 });
   }
+
+  // If the full-res original was removed for storage management (1-year
+  // retention), serve the 1080p web version instead so the download still works.
+  const serveKey = item.originalRemoved && item.webVideoKey ? item.webVideoKey : key;
 
   if (!process.env.R2_BUCKET_NAME) {
     return new Response("Storage not configured", { status: 500 });
@@ -57,7 +61,7 @@ export async function GET(req) {
   try {
     const command = new GetObjectCommand({
       Bucket:                     process.env.R2_BUCKET_NAME,
-      Key:                        key,
+      Key:                        serveKey,
       ResponseContentDisposition: `attachment; filename="${encodeURIComponent(name)}"`,
     });
 

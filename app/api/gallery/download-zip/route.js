@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { Readable } from "stream";
 import { adminDb } from "@/lib/firebase-admin";
 import { rateLimit } from "@/lib/rateLimit";
-import { buildLinkFiles, partitionVideos } from "@/lib/galleryZip";
+import { buildLinkFiles, partitionVideos, effectiveVideo } from "@/lib/galleryZip";
 
 // Top-level folder so the client gets one tidy package.
 const ROOT = "Listing Media Package";
@@ -153,10 +153,11 @@ export async function GET(req) {
         const { inZip: smallVideos, separate: separateVideos } = partitionVideos(videos);
         for (const v of smallVideos) {
           try {
-            const res = await fetch(`${r2Url}/${v.key}`);
+            const { key: vKey } = effectiveVideo(v);
+            const res = await fetch(`${r2Url}/${vKey}`);
             if (!res.ok || !res.body) { separateVideos.push(v); continue; }
             archive.append(toNodeStream(res.body), {
-              name: `${ROOT}/Videos/${v.fileName || v.key.split("/").pop()}`,
+              name: `${ROOT}/Videos/${v.fileName || vKey.split("/").pop()}`,
             });
           } catch (e) {
             console.warn("[download-zip] video failed:", v.key, e?.message);
