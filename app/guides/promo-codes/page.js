@@ -3,7 +3,7 @@ import GuideShell, { Steps, GuideH2 } from "@/components/GuideShell";
 export const metadata = {
   title: "Promo Codes & Discounts for Real Estate Photographers | KyoriaOS",
   description:
-    "Create discount codes in KyoriaOS: flat or percentage off, usage limits, expiry dates, minimum order, and first-time-client offers — applied automatically at checkout.",
+    "Create discount codes in KyoriaOS: flat or percentage off, usage limits, expiry dates, minimum order, and first-time-client offers - applied automatically at checkout.",
   alternates: { canonical: "https://kyoriaos.com/guides/promo-codes" },
 };
 
@@ -19,7 +19,7 @@ export default function PromoCodesGuide() {
     <GuideShell
       eyebrow="Promo Codes"
       title="Promo codes & discounts"
-      intro="Run promotions, reward loyal agents, or close a deal with a discount code — applied automatically to the price the client actually pays."
+      intro="Run promotions, reward loyal agents, or close a deal with a discount code - applied automatically to the price the client actually pays."
       currentSlug="promo-codes"
     >
       <GuideH2>Create a code</GuideH2>
@@ -28,19 +28,19 @@ export default function PromoCodesGuide() {
       <GuideH2>How it applies</GuideH2>
       <div className="bg-white border border-gray-200 rounded-2xl p-6">
         <ul className="space-y-2.5 text-[14px] text-gray-700">
-          <li>✅ The discount is taken off the <strong>total the client is charged</strong> — and the deposit/balance adjust accordingly.</li>
+          <li>✅ The discount is taken off the <strong>total the client is charged</strong> - and the deposit/balance adjust accordingly.</li>
           <li>🔒 Codes are <strong>re-checked on the server</strong> at checkout, so they can&apos;t be tampered with.</li>
           <li>📈 Each use is <strong>counted</strong>, so usage limits are enforced.</li>
-          <li>🆓 If a code makes a booking essentially free, it still completes cleanly — see the <a href="/guides/payments" className="text-[#3486cf] underline">payments guide</a>.</li>
+          <li>🆓 If a code makes a booking essentially free, it still completes cleanly - see the <a href="/guides/payments" className="text-[#3486cf] underline">payments guide</a>.</li>
         </ul>
       </div>
 
       <GuideH2>Ideas that work</GuideH2>
       <div className="bg-white border border-gray-200 rounded-2xl p-6">
         <ul className="space-y-2.5 text-[14px] text-gray-700">
-          <li>🎉 <strong>WELCOME10</strong> — first-time-only 10% off to win new agents.</li>
-          <li>🔁 <strong>LOYAL25</strong> — $25 off for repeat clients after their 5th booking.</li>
-          <li>📅 <strong>SLOWSEASON</strong> — a limited-time % off to fill quiet weeks.</li>
+          <li>🎉 <strong>WELCOME10</strong> - first-time-only 10% off to win new agents.</li>
+          <li>🔁 <strong>LOYAL25</strong> - $25 off for repeat clients after their 5th booking.</li>
+          <li>📅 <strong>SLOWSEASON</strong> - a limited-time % off to fill quiet weeks.</li>
         </ul>
       </div>
     </GuideShell>

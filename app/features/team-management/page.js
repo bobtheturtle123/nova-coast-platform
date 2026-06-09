@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Team Scheduling and Photographer Management — Kyoria OS",
+  title: "Team Scheduling and Photographer Management - Kyoria OS",
   description:
     "See every photographer's availability in real time, assign jobs in seconds, and dispatch your team without spreadsheets. Kyoria OS handles team scheduling so you can focus on growing your business.",
   alternates: { canonical: "https://kyoriaos.com/features/team-management" },
@@ -14,7 +14,7 @@ const FEATURES = [
   "Automated assignment notifications via email and SMS",
   "Photographer-specific booking pages for direct client scheduling",
   "Time blocks and unavailability management per team member",
-  "Role-based permissions — photographers see only their own jobs",
+  "Role-based permissions - photographers see only their own jobs",
   "Dispatch history and job tracking per team member",
 ];
 
@@ -95,7 +95,7 @@ export default function TeamManagementPage() {
           {/* Team schedule mockup */}
           <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Team Availability — Today</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Team Availability - Today</p>
               <span className="text-[9px] text-navy bg-navy/5 border border-navy/10 px-2 py-0.5 rounded-full font-semibold">
                 May 29
               </span>

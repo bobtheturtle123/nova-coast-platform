@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Cookie Policy — KyoriaOS",
+  title: "Cookie Policy - KyoriaOS",
   description: "How KyoriaOS uses cookies and similar technologies.",
 };
 
@@ -13,7 +13,7 @@ export default function CookiePolicyPage() {
 
       <Section title="1. What Are Cookies?">
         <p>Cookies are small text files placed on your device by a website. They allow the site to remember your actions and preferences over time, or to keep you signed in between visits.</p>
-        <p>KyoriaOS also uses browser Local Storage in some cases — a similar technology that stores data directly in your browser without expiration.</p>
+        <p>KyoriaOS also uses browser Local Storage in some cases - a similar technology that stores data directly in your browser without expiration.</p>
       </Section>
 
       <Section title="2. Cookies We Use">
@@ -36,7 +36,7 @@ export default function CookiePolicyPage() {
             <tr>
               <td><code>agt_[slug]</code></td>
               <td>Essential</td>
-              <td>Agent portal session cookie — keeps agents logged in to the client portal</td>
+              <td>Agent portal session cookie - keeps agents logged in to the client portal</td>
               <td>30 days</td>
             </tr>
             <tr>
@@ -55,7 +55,7 @@ export default function CookiePolicyPage() {
       </Section>
 
       <Section title="4. Essential vs. Optional Cookies">
-        <p>All cookies used by KyoriaOS are <strong>essential</strong> — they are required for the platform to function. Without them, you cannot stay logged in or access your account.</p>
+        <p>All cookies used by KyoriaOS are <strong>essential</strong> - they are required for the platform to function. Without them, you cannot stay logged in or access your account.</p>
         <p>We do not use optional analytics, personalization, or advertising cookies. Therefore, a cookie consent banner is not displayed, as no non-essential cookies are set.</p>
       </Section>
 

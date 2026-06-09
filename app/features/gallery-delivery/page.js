@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Real Estate Photography Gallery Delivery — KyoriaOS",
+  title: "Real Estate Photography Gallery Delivery - KyoriaOS",
   description:
     "Deliver real estate photos, video, floor plans, and 3D tours in one branded link. KyoriaOS payment-gated gallery delivery collects the balance automatically before downloads unlock.",
   alternates: { canonical: "https://kyoriaos.com/features/gallery-delivery" },
@@ -11,11 +11,11 @@ const FEATURES = [
   "Payment-gated downloads: gallery unlocks automatically when balance clears",
   "Photos, video, floor plans, and 3D tours all delivered in a single link",
   "MLS-ready and print-ready download packages included automatically",
-  "Scheduled delivery — drop the gallery at the exact time you choose",
+  "Scheduled delivery - drop the gallery at the exact time you choose",
   "Built-in revision request workflow tracked inside the platform",
   "Activity tracking: see who viewed the gallery, what they downloaded, and when",
   "Branded gallery URL with your business name",
-  "Clients can re-access the gallery link anytime — no re-sending needed",
+  "Clients can re-access the gallery link anytime - no re-sending needed",
 ];
 
 const CheckIcon = () => (
@@ -50,7 +50,7 @@ export default function GalleryDeliveryPage() {
             Branded Gallery Delivery with Automatic Payment Collection
           </h1>
           <p className="text-white/55 text-lg max-w-2xl leading-relaxed mb-8">
-            Upload your work, hit send. The gallery stays locked until the balance is paid — no invoice, no follow-up, no Dropbox link. Just one professional link that handles everything.
+            Upload your work, hit send. The gallery stays locked until the balance is paid - no invoice, no follow-up, no Dropbox link. Just one professional link that handles everything.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link
@@ -79,7 +79,7 @@ export default function GalleryDeliveryPage() {
               Every file type, in one beautiful link.
             </h2>
             <p className="text-gray-500 leading-relaxed mb-7">
-              Stop sending multiple Dropbox folders. KyoriaOS puts your photos, video, floor plan, and 3D tour behind a single branded delivery link — and the balance is collected before any file can be downloaded.
+              Stop sending multiple Dropbox folders. KyoriaOS puts your photos, video, floor plan, and 3D tour behind a single branded delivery link - and the balance is collected before any file can be downloaded.
             </p>
             <ul className="space-y-3">
               {FEATURES.map((item) => (
@@ -120,7 +120,7 @@ export default function GalleryDeliveryPage() {
                 </svg>
               ),
               title: "All media in one place",
-              desc: "Photos, video, floor plans, Matterport 3D tours — clients and agents see everything in a single, organized delivery.",
+              desc: "Photos, video, floor plans, Matterport 3D tours - clients and agents see everything in a single, organized delivery.",
             },
             {
               icon: (

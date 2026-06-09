@@ -81,7 +81,7 @@ function drawJustListed(ctx, W, H, img, opts) {
     ctx.fillRect(0, 0, W, H);
   }
 
-  // Bottom gradient scrim — starts transparent at 45% height, black at bottom
+  // Bottom gradient scrim - starts transparent at 45% height, black at bottom
   const scrim = ctx.createLinearGradient(0, H * 0.38, 0, H);
   scrim.addColorStop(0, "rgba(0,0,0,0)");
   scrim.addColorStop(0.5, "rgba(0,0,0,0.62)");
@@ -148,7 +148,7 @@ function drawJustListed(ctx, W, H, img, opts) {
     y += 32 * S;
   }
 
-  // Business name — bottom right
+  // Business name - bottom right
   ctx.fillStyle = "rgba(255,255,255,0.38)";
   ctx.font = `400 ${11 * S}px sans-serif`;
   const bnW = ctx.measureText(bizName).width;
@@ -171,7 +171,7 @@ function drawOpenHouse(ctx, W, H, img, opts) {
     ctx.fillRect(0, 0, W, H);
   }
 
-  // Vignette — full canvas dark overlay, stronger at edges/bottom
+  // Vignette - full canvas dark overlay, stronger at edges/bottom
   const scrim = ctx.createLinearGradient(0, H * 0.25, 0, H);
   scrim.addColorStop(0, "rgba(0,0,0,0.15)");
   scrim.addColorStop(0.6, "rgba(0,0,0,0.72)");
@@ -230,7 +230,7 @@ function drawOpenHouse(ctx, W, H, img, opts) {
     ctx.fillText(stats.join("  ·  "), pad, y);
   }
 
-  // Business name — top right
+  // Business name - top right
   ctx.fillStyle = "rgba(255,255,255,0.45)";
   ctx.font = `400 ${12 * S}px sans-serif`;
   const bnW = ctx.measureText(bizName).width;
@@ -238,7 +238,7 @@ function drawOpenHouse(ctx, W, H, img, opts) {
 }
 
 // ── Template: Story Slide ────────────────────────────────────────────────────
-// Portrait — image top 64%, clean dark editorial panel bottom 36%
+// Portrait - image top 64%, clean dark editorial panel bottom 36%
 function drawStorySlide(ctx, W, H, img, opts) {
   const { headline, sub, price, beds, baths, sqft, primary, accent, bizName, showPrice } = opts;
   const S = W / 1080;
@@ -339,7 +339,7 @@ function drawStorySlide(ctx, W, H, img, opts) {
 }
 
 // ── Template: Promo Card ─────────────────────────────────────────────────────
-// 1200×628 landscape — left dark panel, right image
+// 1200×628 landscape - left dark panel, right image
 function drawPromoCard(ctx, W, H, img, opts) {
   const { headline, sub, price, beds, baths, sqft, primary, accent, bizName, showPrice } = opts;
   const S = W / 1200;

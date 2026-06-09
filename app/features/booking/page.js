@@ -1,14 +1,14 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Online Booking Software for Real Estate Photographers — KyoriaOS",
+  title: "Online Booking Software for Real Estate Photographers - KyoriaOS",
   description:
     "KyoriaOS is the best online booking software for real estate photographers. Collect deposits at checkout, auto-calculate travel fees, send automatic reminders, and embed your booking page on any website.",
 };
 
 const FEATURES = [
   "Guided multi-step booking flow with package selection and upsells",
-  "Deposit collected at checkout via Stripe — no chasing required",
+  "Deposit collected at checkout via Stripe - no chasing required",
   "Automatic travel fee calculation based on property address",
   "Real-time availability calendar blocks double-bookings",
   "Automated email and SMS reminders to client and photographer",
@@ -49,7 +49,7 @@ export default function BookingPage() {
             Online Booking Software Built for Real Estate Photographers
           </h1>
           <p className="text-white/55 text-lg max-w-2xl leading-relaxed mb-8">
-            Replace the back-and-forth texts with a professional booking flow that collects the deposit, confirms the appointment, and notifies everyone — all without you lifting a finger.
+            Replace the back-and-forth texts with a professional booking flow that collects the deposit, confirms the appointment, and notifies everyone - all without you lifting a finger.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link
@@ -78,7 +78,7 @@ export default function BookingPage() {
               Everything a photographer needs at checkout.
             </h2>
             <p className="text-gray-500 leading-relaxed mb-7">
-              Your clients get a smooth, professional booking experience. You get a confirmed appointment and a deposit in your account — automatically.
+              Your clients get a smooth, professional booking experience. You get a confirmed appointment and a deposit in your account - automatically.
             </p>
             <ul className="space-y-3">
               {FEATURES.map((item) => (
@@ -113,7 +113,7 @@ export default function BookingPage() {
               {
                 step: "1",
                 title: "Client visits your booking page",
-                desc: "Share your booking link — or embed it on your website. Clients pick their package, select a date from your live availability, and enter property details.",
+                desc: "Share your booking link - or embed it on your website. Clients pick their package, select a date from your live availability, and enter property details.",
               },
               {
                 step: "2",
@@ -143,7 +143,7 @@ export default function BookingPage() {
         <div className="max-w-2xl mx-auto">
           <p className="text-gold text-xs tracking-[0.2em] uppercase mb-4">Get started today</p>
           <h2 className="font-serif text-3xl text-white font-normal mb-4">
-            Your first booking, collected and confirmed — today.
+            Your first booking, collected and confirmed - today.
           </h2>
           <p className="text-white/50 mb-8 leading-relaxed">
             Set up your booking page, connect Stripe, and go live in under an hour. No developer needed.

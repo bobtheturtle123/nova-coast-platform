@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Features — KyoriaOS: Real Estate Photography Software",
+  title: "Features - KyoriaOS: Real Estate Photography Software",
   description:
-    "Explore every feature in KyoriaOS — online booking, team scheduling, payment-gated gallery delivery, service area management, client CRM, and an agent marketing portal. Built for real estate photography businesses.",
+    "Explore every feature in KyoriaOS - online booking, team scheduling, payment-gated gallery delivery, service area management, client CRM, and an agent marketing portal. Built for real estate photography businesses.",
   alternates: { canonical: "https://kyoriaos.com/features" },
 };
 
@@ -11,7 +11,7 @@ const FEATURES = [
   {
     href: "/features/booking",
     title: "Booking & Payments",
-    desc: "A guided online booking flow that collects deposits at checkout and auto-calculates travel fees — no back-and-forth required.",
+    desc: "A guided online booking flow that collects deposits at checkout and auto-calculates travel fees - no back-and-forth required.",
     icon: (
       <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -31,7 +31,7 @@ const FEATURES = [
   {
     href: "/features/gallery-delivery",
     title: "Gallery Delivery",
-    desc: "Deliver photos, video, floor plans, and 3D tours in one branded link — locked until the balance is paid.",
+    desc: "Deliver photos, video, floor plans, and 3D tours in one branded link - locked until the balance is paid.",
     icon: (
       <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -61,7 +61,7 @@ const FEATURES = [
   {
     href: "/features/agent-portal",
     title: "Agent Portal",
-    desc: "Every delivery automatically generates a branded property website, print brochure, and QR code for the listing agent — zero extra work.",
+    desc: "Every delivery automatically generates a branded property website, print brochure, and QR code for the listing agent - zero extra work.",
     icon: (
       <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -84,13 +84,13 @@ export default function FeaturesPage() {
             Every tool your photography business needs,<br className="hidden md:block" /> built into one platform.
           </h1>
           <p className="text-white/55 text-lg max-w-2xl mx-auto leading-relaxed mb-8">
-            KyoriaOS covers every step of your workflow — from the first online booking to the final payment collected — so you can stop managing software and start running your business.
+            KyoriaOS covers every step of your workflow - from the first online booking to the final payment collected - so you can stop managing software and start running your business.
           </p>
           <Link
             href="/auth/register"
             className="inline-block bg-gold text-navy font-semibold px-8 py-4 rounded-xl hover:bg-gold/90 transition-colors text-sm"
           >
-            Start for free — no credit card needed
+            Start for free - no credit card needed
           </Link>
         </div>
       </section>
@@ -130,7 +130,7 @@ export default function FeaturesPage() {
             Ready to see it in action?
           </h2>
           <p className="text-gray-500 mb-7 leading-relaxed">
-            Set up your booking page, connect Stripe, and take your first real booking — all within the same afternoon.
+            Set up your booking page, connect Stripe, and take your first real booking - all within the same afternoon.
           </p>
           <Link
             href="/auth/register"

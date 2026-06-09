@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Photography Team Scheduling Software — KyoriaOS",
+  title: "Photography Team Scheduling Software - KyoriaOS",
   description:
     "KyoriaOS is the best team scheduling and photographer dispatch software for real estate photography businesses. See availability, assign jobs with one click, and sync everyone to Google Calendar.",
   alternates: { canonical: "https://kyoriaos.com/features/team-scheduling" },
@@ -47,7 +47,7 @@ export default function TeamSchedulingPage() {
           </div>
           <p className="text-gold text-xs tracking-[0.2em] uppercase mb-4">Team Scheduling</p>
           <h1 className="font-serif text-4xl md:text-5xl font-normal leading-tight mb-5 max-w-3xl">
-            Team Scheduling &amp; Photographer Dispatch — Built for Growing Photo Teams
+            Team Scheduling &amp; Photographer Dispatch - Built for Growing Photo Teams
           </h1>
           <p className="text-white/55 text-lg max-w-2xl leading-relaxed mb-8">
             Stop coordinating your photographers over group texts. See availability, assign jobs, and dispatch your whole crew from a single dashboard view.
@@ -76,7 +76,7 @@ export default function TeamSchedulingPage() {
           <div>
             <p className="text-gold text-xs tracking-[0.2em] uppercase mb-4">What&apos;s included</p>
             <h2 className="font-serif text-3xl text-navy font-normal mb-5">
-              Your whole team in one place — no group chat needed.
+              Your whole team in one place - no group chat needed.
             </h2>
             <p className="text-gray-500 leading-relaxed mb-7">
               KyoriaOS gives you a complete view of your team&apos;s availability, lets you assign photographers to jobs with one click, and keeps everyone notified automatically.
@@ -109,7 +109,7 @@ export default function TeamSchedulingPage() {
               Zone routing makes dispatch even faster.
             </h2>
             <p className="text-gray-500 text-sm leading-relaxed">
-              When your service area zones are set up, KyoriaOS automatically surfaces the photographers who cover a given property address first — so you always assign the right person, not just the nearest available one.
+              When your service area zones are set up, KyoriaOS automatically surfaces the photographers who cover a given property address first - so you always assign the right person, not just the nearest available one.
             </p>
           </div>
           <Link
@@ -168,7 +168,7 @@ export default function TeamSchedulingPage() {
             Your team, running like a real operation.
           </h2>
           <p className="text-white/50 mb-8 leading-relaxed">
-            Invite your photographers, set up their zones, and dispatch your first job — all in the same session.
+            Invite your photographers, set up their zones, and dispatch your first job - all in the same session.
           </p>
           <Link
             href="/auth/register"

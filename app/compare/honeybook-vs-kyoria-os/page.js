@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "HoneyBook vs Kyoria OS — Real Estate Photography Software Comparison",
+  title: "HoneyBook vs Kyoria OS - Real Estate Photography Software Comparison",
   description:
     "HoneyBook is built for general creative freelancers. Kyoria OS is built specifically for real estate photography businesses. See the difference in booking, team management, and delivery tools.",
 };
@@ -10,7 +10,7 @@ const ROWS = [
   {
     feature: "Built for real estate photography",
     kyoria: { value: "Yes", positive: true },
-    competitor: { value: "No — general freelancers", positive: false },
+    competitor: { value: "No - general freelancers", positive: false },
   },
   {
     feature: "Online booking with deposit collection",

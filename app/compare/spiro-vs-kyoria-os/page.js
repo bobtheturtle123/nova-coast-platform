@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Spiro vs Kyoria OS — Real Estate Photography Software Comparison",
+  title: "Spiro vs Kyoria OS - Real Estate Photography Software Comparison",
   description:
-    "See how Spiro compares to Kyoria OS for real estate photography business management. Booking, team scheduling, payment-gated delivery, and service area routing — all in one platform.",
+    "See how Spiro compares to Kyoria OS for real estate photography business management. Booking, team scheduling, payment-gated delivery, and service area routing - all in one platform.",
   alternates: { canonical: "https://kyoriaos.com/compare/spiro-vs-kyoria-os" },
 };
 

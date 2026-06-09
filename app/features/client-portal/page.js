@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Client and Agent Portal for Real Estate Photographers — Kyoria OS",
+  title: "Client and Agent Portal for Real Estate Photographers - Kyoria OS",
   description:
     "Give every client and agent their own portal to view job history, download galleries, and track orders. A professional experience that sets you apart from photographers who still email zip files.",
   alternates: { canonical: "https://kyoriaos.com/features/client-portal" },
@@ -13,7 +13,7 @@ const FEATURES = [
   "Gallery download links gated behind payment confirmation",
   "Booking history, invoices, and status updates in one place",
   "Branded experience that matches your business",
-  "No app downloads required — works in any browser",
+  "No app downloads required - works in any browser",
   "Automatic gallery delivery notification on job completion",
   "Agents can share gallery access directly with their teams",
 ];

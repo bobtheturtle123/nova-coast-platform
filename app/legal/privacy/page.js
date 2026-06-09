@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Privacy Policy — KyoriaOS",
+  title: "Privacy Policy - KyoriaOS",
   description: "How KyoriaOS collects, uses, and protects your information.",
 };
 
@@ -20,7 +20,7 @@ export default function PrivacyPolicyPage() {
         <ul>
           <li>Name, email address, and password used to create your account</li>
           <li>Business name, logo, and branding preferences</li>
-          <li>Billing and subscription information (processed by Stripe — we do not store card numbers)</li>
+          <li>Billing and subscription information (processed by Stripe - we do not store card numbers)</li>
           <li>Uploaded photos, videos, and media files associated with bookings</li>
           <li>Communication preferences and notification settings</li>
         </ul>
@@ -41,12 +41,12 @@ export default function PrivacyPolicyPage() {
 
       <Section title="3. How We Use Your Information">
         <ul>
-          <li><strong>Providing the service</strong> — delivering the booking management, gallery delivery, and agent portal features you signed up for</li>
-          <li><strong>Communications</strong> — sending booking confirmations, portal invites, and notification emails that you have configured</li>
-          <li><strong>Billing</strong> — processing subscription payments through our payment processor (Stripe)</li>
-          <li><strong>Support</strong> — responding to support requests and diagnosing technical issues</li>
-          <li><strong>Security</strong> — detecting and preventing fraud, abuse, and unauthorized access</li>
-          <li><strong>Improvements</strong> — understanding how the platform is used to improve features (using aggregate, non-personal data)</li>
+          <li><strong>Providing the service</strong> - delivering the booking management, gallery delivery, and agent portal features you signed up for</li>
+          <li><strong>Communications</strong> - sending booking confirmations, portal invites, and notification emails that you have configured</li>
+          <li><strong>Billing</strong> - processing subscription payments through our payment processor (Stripe)</li>
+          <li><strong>Support</strong> - responding to support requests and diagnosing technical issues</li>
+          <li><strong>Security</strong> - detecting and preventing fraud, abuse, and unauthorized access</li>
+          <li><strong>Improvements</strong> - understanding how the platform is used to improve features (using aggregate, non-personal data)</li>
         </ul>
         <p>We do not sell your personal information. We do not use your data for advertising purposes.</p>
       </Section>
@@ -54,11 +54,11 @@ export default function PrivacyPolicyPage() {
       <Section title="4. Data Sharing">
         <p>We share information only as necessary to operate our service:</p>
         <ul>
-          <li><strong>Firebase / Google</strong> — authentication and database hosting (Google Firebase)</li>
-          <li><strong>Stripe</strong> — payment processing for subscriptions</li>
-          <li><strong>Resend</strong> — transactional email delivery</li>
-          <li><strong>Vercel</strong> — application hosting and infrastructure</li>
-          <li><strong>Google Maps</strong> — address autocomplete and travel time calculations</li>
+          <li><strong>Firebase / Google</strong> - authentication and database hosting (Google Firebase)</li>
+          <li><strong>Stripe</strong> - payment processing for subscriptions</li>
+          <li><strong>Resend</strong> - transactional email delivery</li>
+          <li><strong>Vercel</strong> - application hosting and infrastructure</li>
+          <li><strong>Google Maps</strong> - address autocomplete and travel time calculations</li>
         </ul>
         <p>Each of these sub-processors operates under their own privacy policies and data processing agreements. We do not share your data with advertisers or data brokers.</p>
         <p>Within the platform: photographers can see booking and client data for their own tenants. Agents/clients can only see data related to their own bookings.</p>

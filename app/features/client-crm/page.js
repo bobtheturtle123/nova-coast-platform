@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Real Estate Photographer CRM — KyoriaOS Client Management Software",
+  title: "Real Estate Photographer CRM - KyoriaOS Client Management Software",
   description:
     "KyoriaOS is the best CRM for real estate photographers. Track lifetime revenue per client, group customers by brokerage, see your top agents, and manage your entire book of business in one place.",
   alternates: { canonical: "https://kyoriaos.com/features/client-crm" },
@@ -9,7 +9,7 @@ export const metadata = {
 
 const FEATURES = [
   "Group customers by brokerage, team, or agent network",
-  "Track lifetime revenue per client — know your most valuable accounts",
+  "Track lifetime revenue per client - know your most valuable accounts",
   "Top customer spotlight shows your highest-revenue agents at a glance",
   "Full booking history per client with order count and revenue totals",
   "Invite clients to the Agent Portal with one click",
@@ -50,7 +50,7 @@ export default function ClientCrmPage() {
             Client &amp; Agent CRM for Real Estate Photography Businesses
           </h1>
           <p className="text-white/55 text-lg max-w-2xl leading-relaxed mb-8">
-            Know your best clients, track your revenue per agent, and manage your entire book of business — without a spreadsheet in sight.
+            Know your best clients, track your revenue per agent, and manage your entire book of business - without a spreadsheet in sight.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link
@@ -79,7 +79,7 @@ export default function ClientCrmPage() {
               Your entire client base, organized and searchable.
             </h2>
             <p className="text-gray-500 leading-relaxed mb-7">
-              KyoriaOS builds your CRM automatically as you take bookings. Every client, every order, every dollar — tracked without any manual data entry from you.
+              KyoriaOS builds your CRM automatically as you take bookings. Every client, every order, every dollar - tracked without any manual data entry from you.
             </p>
             <ul className="space-y-3">
               {FEATURES.map((item) => (
@@ -155,7 +155,7 @@ export default function ClientCrmPage() {
         <div className="max-w-2xl mx-auto">
           <p className="text-gold text-xs tracking-[0.2em] uppercase mb-4">Get started today</p>
           <h2 className="font-serif text-3xl text-white font-normal mb-4">
-            Your client data is already there — it just needs a home.
+            Your client data is already there - it just needs a home.
           </h2>
           <p className="text-white/50 mb-8 leading-relaxed">
             Every booking you take in KyoriaOS automatically builds your CRM. No import, no setup, no spreadsheets.

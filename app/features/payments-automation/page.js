@@ -1,20 +1,20 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Payments and Automation for Real Estate Photographers — KyoriaOS",
+  title: "Payments and Automation for Real Estate Photographers - KyoriaOS",
   description:
     "Collect deposits at booking, lock galleries behind balance payments, and send automated reminders. KyoriaOS handles every payment touchpoint so you stop chasing clients.",
   alternates: { canonical: "https://kyoriaos.com/features/payments-automation" },
 };
 
 const FEATURES = [
-  "Deposit collected at the time of booking — before you schedule the shoot",
+  "Deposit collected at the time of booking - before you schedule the shoot",
   "Gallery locked until balance payment clears through Stripe",
   "Automated shoot reminders sent to clients and photographers by SMS and email",
   "Revenue tracking per listing so you know exactly what each job made",
   "Promo codes and seasonal discount tools built into the booking flow",
   "Payment history and outstanding balances visible from the dashboard",
-  "Stripe Connect integration — payments go directly to your account",
+  "Stripe Connect integration - payments go directly to your account",
   "Service agreement capture built into the checkout flow",
 ];
 

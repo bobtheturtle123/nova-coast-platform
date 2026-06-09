@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ALL_GUIDES } from "@/components/GuideShell";
 
 export const metadata = {
-  title: "Guides — Learn KyoriaOS | Real Estate Photography Software",
+  title: "Guides - Learn KyoriaOS | Real Estate Photography Software",
   description:
     "Step-by-step guides for running your real estate photography business on KyoriaOS: bookings, listings, services, team scheduling, and app integrations.",
   alternates: { canonical: "https://kyoriaos.com/guides" },
@@ -18,7 +18,7 @@ export default function GuidesIndexPage() {
           <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#3486cf]">Help &amp; Guides</span>
           <h1 className="font-display text-4xl text-[#0F172A] mt-2 leading-tight">Learn KyoriaOS</h1>
           <p className="text-gray-500 mt-3 text-lg leading-relaxed">
-            Everything you need to run your real estate photography business — explained simply.
+            Everything you need to run your real estate photography business - explained simply.
           </p>
         </div>
 

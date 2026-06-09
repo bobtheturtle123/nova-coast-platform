@@ -3,14 +3,14 @@ import GuideShell, { Steps, GuideH2 } from "@/components/GuideShell";
 export const metadata = {
   title: "Setting Up Your Services, Packages & Add-ons | KyoriaOS",
   description:
-    "Learn how to build the services, packages, and add-ons clients book on KyoriaOS — including tiered pricing by square footage and how it all appears on your booking page.",
+    "Learn how to build the services, packages, and add-ons clients book on KyoriaOS - including tiered pricing by square footage and how it all appears on your booking page.",
   alternates: { canonical: "https://kyoriaos.com/guides/products" },
 };
 
 const TYPES = [
-  { icon: "📦", t: "Packages", d: "Bundles you sell as one price — e.g. “Listing Premium: 30 photos + drone + floor plan.” The main thing most agents pick." },
-  { icon: "🧩", t: "Services", d: "Individual offerings — photography, video, twilight, 3D tour. Sold alone or grouped inside packages." },
-  { icon: "➕", t: "Add-ons", d: "Optional extras a client tacks on at checkout — extra photos, rush delivery, virtual staging." },
+  { icon: "📦", t: "Packages", d: "Bundles you sell as one price - e.g. “Listing Premium: 30 photos + drone + floor plan.” The main thing most agents pick." },
+  { icon: "🧩", t: "Services", d: "Individual offerings - photography, video, twilight, 3D tour. Sold alone or grouped inside packages." },
+  { icon: "➕", t: "Add-ons", d: "Optional extras a client tacks on at checkout - extra photos, rush delivery, virtual staging." },
 ];
 
 const STEPS = [
@@ -48,7 +48,7 @@ export default function ProductsGuide() {
         <ul className="space-y-2.5 text-[14px] text-gray-700">
           <li>🎯 <strong>Lead with packages.</strong> Most agents want one clear choice, not a long à la carte list.</li>
           <li>💬 <strong>Write benefit-focused descriptions.</strong> “Same-day delivery” beats “25 images.”</li>
-          <li>📐 <strong>Use tiered pricing</strong> if bigger homes take more time — it keeps quotes fair automatically.</li>
+          <li>📐 <strong>Use tiered pricing</strong> if bigger homes take more time - it keeps quotes fair automatically.</li>
           <li>➕ <strong>Keep add-ons short.</strong> 3–5 high-value extras convert better than twenty.</li>
         </ul>
       </div>

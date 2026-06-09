@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Terms of Service — KyoriaOS",
+  title: "Terms of Service - KyoriaOS",
   description: "Terms governing use of the KyoriaOS platform.",
 };
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Service Area Management for Photography Businesses — KyoriaOS",
+  title: "Service Area Management for Photography Businesses - KyoriaOS",
   description:
     "Draw custom map zones, assign photographers per coverage area, and let KyoriaOS automatically route new bookings to the right photographer. Built for real estate photography companies.",
   alternates: { canonical: "https://kyoriaos.com/features/service-areas" },
@@ -14,7 +14,7 @@ const FEATURES = [
   "Color-coded zones for easy visual identification at a glance",
   "Add notes to each zone (special instructions, pricing exceptions)",
   "Auto-routing on booking surfaces zone-matched photographers first",
-  "Guided zone setup during onboarding — live in minutes",
+  "Guided zone setup during onboarding - live in minutes",
   "Zones update in real time as you add or remove photographers",
 ];
 
@@ -50,7 +50,7 @@ export default function ServiceAreasPage() {
             Map-Based Service Area Management for Photography Businesses
           </h1>
           <p className="text-white/55 text-lg max-w-2xl leading-relaxed mb-8">
-            Draw your coverage zones on a map, assign photographers to each one, and let KyoriaOS route incoming bookings to the right person — automatically, every time.
+            Draw your coverage zones on a map, assign photographers to each one, and let KyoriaOS route incoming bookings to the right person - automatically, every time.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link
@@ -79,7 +79,7 @@ export default function ServiceAreasPage() {
               Define where you shoot, and who shoots there.
             </h2>
             <p className="text-gray-500 leading-relaxed mb-7">
-              Instead of manually checking which photographer covers which neighborhood every time a booking comes in, KyoriaOS does it for you — based on the zones you define on the map.
+              Instead of manually checking which photographer covers which neighborhood every time a booking comes in, KyoriaOS does it for you - based on the zones you define on the map.
             </p>
             <ul className="space-y-3">
               {FEATURES.map((item) => (

@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "SMS Consent — KyoriaOS",
+  title: "SMS Consent - KyoriaOS",
   description: "How KyoriaOS handles SMS consent and opt-in for transactional notifications.",
 };
 

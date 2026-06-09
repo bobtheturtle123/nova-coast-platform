@@ -1,7 +1,7 @@
 import GuideShell, { Steps, GuideH2 } from "@/components/GuideShell";
 
 export const metadata = {
-  title: "Team & Scheduling — Photographers, Calendars & Availability | KyoriaOS",
+  title: "Team & Scheduling - Photographers, Calendars & Availability | KyoriaOS",
   description:
     "Set up your team in KyoriaOS: invite photographers, control who can be booked, sync Google Calendar to avoid double-booking, and read the schedule views.",
   alternates: { canonical: "https://kyoriaos.com/guides/team-schedule" },
@@ -17,7 +17,7 @@ const ROLES = [
 const STEPS = [
   { title: "Invite a team member", body: <>Go to <strong>Team &amp; Schedule → Add</strong>, enter their email and pick a role. They get an email invite to set a password and join.</> },
   { title: "Decide who can be booked", body: <>Each member has a <strong>“Show in photographer selection”</strong> toggle. Turn it on for anyone who shoots; admins and managers are off by default so they&apos;re never accidentally assigned.</> },
-  { title: "Connect calendars", body: <>Each person can connect their Google Calendar so their personal busy times show as blocks — KyoriaOS then won&apos;t let them be double-booked.</> },
+  { title: "Connect calendars", body: <>Each person can connect their Google Calendar so their personal busy times show as blocks - KyoriaOS then won&apos;t let them be double-booked.</> },
   { title: "Assign shoots", body: <>When booking, you&apos;ll see each photographer&apos;s availability for that date (free, booked, blocked, or travel conflict) and assign accordingly.</> },
 ];
 
@@ -47,7 +47,7 @@ export default function TeamScheduleGuide() {
       <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-4">
         <p className="text-[14px] text-gray-600 mb-3">When a photographer connects Google Calendar:</p>
         <ul className="space-y-2.5 text-[14px] text-gray-700">
-          <li>🗓️ Their busy times for the next 90 days import as <strong>“Busy” blocks</strong> on the schedule (we only read free/busy — never event details).</li>
+          <li>🗓️ Their busy times for the next 90 days import as <strong>“Busy” blocks</strong> on the schedule (we only read free/busy - never event details).</li>
           <li>⏱️ Each block shows the <strong>start and finish time</strong> and whose calendar it&apos;s from, so you can fit a shoot accurately.</li>
           <li>🚫 Those blocks stop that person from being assigned during conflicting times.</li>
           <li>🔄 It re-syncs automatically; a <strong>Sync Now</strong> button refreshes immediately.</li>
@@ -58,7 +58,7 @@ export default function TeamScheduleGuide() {
       <GuideH2>Reading the schedule</GuideH2>
       <div className="bg-white border border-gray-200 rounded-2xl p-6">
         <ul className="space-y-2.5 text-[14px] text-gray-700">
-          <li><strong>Week / 2-week / Month / Day</strong> views — switch based on how far ahead you&apos;re planning.</li>
+          <li><strong>Week / 2-week / Month / Day</strong> views - switch based on how far ahead you&apos;re planning.</li>
           <li>Filter to <strong>one photographer</strong> or see the whole team at once, each in their own color.</li>
           <li>Click any shoot or busy block to see full details in a popup.</li>
           <li>The <strong>“This week&apos;s availability”</strong> recap shows who&apos;s free at a glance.</li>

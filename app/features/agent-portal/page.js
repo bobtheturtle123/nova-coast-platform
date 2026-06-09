@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Agent Marketing Portal for Real Estate Photographers — KyoriaOS",
+  title: "Agent Marketing Portal for Real Estate Photographers - KyoriaOS",
   description:
-    "KyoriaOS automatically generates a branded property website, print-ready PDF brochure, and QR code for every real estate listing you photograph. Zero extra work — it happens at delivery.",
+    "KyoriaOS automatically generates a branded property website, print-ready PDF brochure, and QR code for every real estate listing you photograph. Zero extra work - it happens at delivery.",
   alternates: { canonical: "https://kyoriaos.com/features/agent-portal" },
 };
 
@@ -11,11 +11,11 @@ const FEATURES = [
   "Branded property website auto-generated with listing details and all media",
   "Print-ready PDF brochure for open houses, generated automatically",
   "QR code for yard signs and print materials, unique to each listing",
-  "Private link — agents access everything without creating an account",
+  "Private link - agents access everything without creating an account",
   "Photos, video, and 3D Matterport tour all in one agent-facing view",
   "MLS-ready download packages sized and labeled for easy upload",
-  "Fully mobile responsive — agents can share directly from their phone",
-  "Every delivery auto-generates the kit — no extra step on your end",
+  "Fully mobile responsive - agents can share directly from their phone",
+  "Every delivery auto-generates the kit - no extra step on your end",
 ];
 
 const CheckIcon = () => (
@@ -55,10 +55,10 @@ export default function AgentPortalPage() {
           </div>
           <p className="text-gold text-xs tracking-[0.2em] uppercase mb-4">Agent Portal</p>
           <h1 className="font-serif text-4xl md:text-5xl font-normal leading-tight mb-5 max-w-3xl">
-            Automatic Agent Marketing Kits — Every Delivery, Without Extra Work
+            Automatic Agent Marketing Kits - Every Delivery, Without Extra Work
           </h1>
           <p className="text-white/55 text-lg max-w-2xl leading-relaxed mb-8">
-            When you deliver a gallery, the agent automatically gets a branded property website, a print brochure, and a QR code for their sign. No extra steps on your end — ever.
+            When you deliver a gallery, the agent automatically gets a branded property website, a print brochure, and a QR code for their sign. No extra steps on your end - ever.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link
@@ -78,7 +78,7 @@ export default function AgentPortalPage() {
         </div>
       </section>
 
-      {/* FEATURES LIST — navy bg to match homepage agent portal section */}
+      {/* FEATURES LIST - navy bg to match homepage agent portal section */}
       <section className="py-20 px-6 bg-navy">
         <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
           <div>
@@ -87,7 +87,7 @@ export default function AgentPortalPage() {
               A professional listing kit that makes agents book you again.
             </h2>
             <p className="text-white/50 leading-relaxed mb-7">
-              Agents stay loyal to photographers who make their job easier. The agent portal gives every client a reason to keep coming back — without you doing a single extra thing.
+              Agents stay loyal to photographers who make their job easier. The agent portal gives every client a reason to keep coming back - without you doing a single extra thing.
             </p>
             <ul className="space-y-3">
               {FEATURES.map((item) => (
@@ -174,15 +174,15 @@ export default function AgentPortalPage() {
             {[
               {
                 title: "You become more than a photographer",
-                desc: "When an agent gets a branded website, brochure, and QR code with every shoot — automatically — you stop being a vendor and start being a partner. That shift means repeat business.",
+                desc: "When an agent gets a branded website, brochure, and QR code with every shoot - automatically - you stop being a vendor and start being a partner. That shift means repeat business.",
               },
               {
                 title: "Agents share your work for you",
-                desc: "The property website and QR code travel everywhere the agent's listing does — open houses, print flyers, Instagram, MLS listings. Your work gets seen by every future client they have.",
+                desc: "The property website and QR code travel everywhere the agent's listing does - open houses, print flyers, Instagram, MLS listings. Your work gets seen by every future client they have.",
               },
               {
                 title: "No account required for agents",
-                desc: "Agents access everything through a private link — no login, no password, no learning curve. They click the link, grab the files, share the site. Done.",
+                desc: "Agents access everything through a private link - no login, no password, no learning curve. They click the link, grab the files, share the site. Done.",
               },
               {
                 title: "Zero extra work on your end",
@@ -206,7 +206,7 @@ export default function AgentPortalPage() {
             Give every agent a reason to come back.
           </h2>
           <p className="text-white/50 mb-8 leading-relaxed">
-            The agent portal turns every delivery into a retention tool — automatically. Start today and it&apos;s live with your first order.
+            The agent portal turns every delivery into a retention tool - automatically. Start today and it&apos;s live with your first order.
           </p>
           <Link
             href="/auth/register"
