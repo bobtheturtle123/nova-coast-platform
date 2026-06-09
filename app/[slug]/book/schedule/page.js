@@ -58,6 +58,8 @@ export default function TenantSchedulePage() {
   const [sunsetTime,              setSunsetTime]              = useState(null);
   const [sunsetLoading,           setSunsetLoading]           = useState(false);
   const [requireScheduleApproval, setRequireScheduleApproval] = useState(false);
+  const [maxAdvanceDays,          setMaxAdvanceDays]          = useState(0);   // 0 = no limit
+  const [minNoticeHours,          setMinNoticeHours]          = useState(0);
   // Local twilight input — only committed to store on explicit confirm so the panel doesn't
   // auto-jump while the user is still typing
   const [twilightInputVal,        setTwilightInputVal]        = useState(twilightTime || "");
@@ -65,6 +67,21 @@ export default function TenantSchedulePage() {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // Booking window bounds from tenant settings.
+  // minDate: earliest bookable day (respects minimum-notice hours, rounded up to whole days).
+  // maxDate: latest bookable day (maxAdvanceDays after today). 0 = no max.
+  const minDate = useMemo(() => {
+    const d = new Date(today);
+    if (minNoticeHours > 0) d.setDate(d.getDate() + Math.ceil(minNoticeHours / 24));
+    return d;
+  }, [minNoticeHours]); // eslint-disable-line react-hooks/exhaustive-deps
+  const maxDate = useMemo(() => {
+    if (!maxAdvanceDays || maxAdvanceDays <= 0) return null;
+    const d = new Date(today);
+    d.setDate(d.getDate() + maxAdvanceDays);
+    return d;
+  }, [maxAdvanceDays]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [calYear,  setCalYear]  = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
@@ -78,6 +95,8 @@ export default function TenantSchedulePage() {
         if (av?.mode) setAvailMode(av.mode);
         if (av?.businessHours?.days?.length) setWorkingDays(av.businessHours.days);
         if (data.bookingConfig?.requireScheduleApproval) setRequireScheduleApproval(true);
+        if (av?.maxAdvanceDays != null) setMaxAdvanceDays(Number(av.maxAdvanceDays) || 0);
+        if (av?.minNoticeHours != null) setMinNoticeHours(Number(av.minNoticeHours) || 0);
       })
       .catch(() => {});
   }, [slug]);
@@ -161,6 +180,10 @@ export default function TenantSchedulePage() {
   }
 
   const isPrevDisabled = calYear === today.getFullYear() && calMonth <= today.getMonth();
+  // Disable forward nav once the viewed month is at/after the month containing maxDate.
+  const isNextDisabled = maxDate
+    ? (calYear > maxDate.getFullYear() || (calYear === maxDate.getFullYear() && calMonth >= maxDate.getMonth()))
+    : false;
   const formattedDate  = preferredDate
     ? new Date(preferredDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
     : null;
@@ -207,9 +230,9 @@ export default function TenantSchedulePage() {
                 </svg>
               </button>
               <p className="text-base font-semibold text-[#0F172A]">{MONTHS[calMonth]} {calYear}</p>
-              <button onClick={nextMonth}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors"
-                style={{ color: P }}>
+              <button onClick={nextMonth} disabled={isNextDisabled}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                style={isNextDisabled ? {} : { color: P }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
@@ -233,7 +256,9 @@ export default function TenantSchedulePage() {
                 const dayKey    = DAY_KEYS[cellDate.getDay()];
                 const isPast    = cellDate < today;
                 const isOffDay  = !workingDays.includes(dayKey);
-                const isDisabled = isPast || isOffDay;
+                const isBeforeMin = cellDate < minDate;
+                const isAfterMax  = maxDate && cellDate > maxDate;
+                const isDisabled = isPast || isOffDay || isBeforeMin || isAfterMax;
                 const isToday   = cellDate.getTime() === today.getTime();
                 const isSelected = selectedYear === calYear && selectedMonth === calMonth && selectedDay === day;
 

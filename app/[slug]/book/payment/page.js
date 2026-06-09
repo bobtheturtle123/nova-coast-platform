@@ -76,7 +76,11 @@ function formatPhone(raw) {
 function OrderSummary({ pricing, catalog, packageIds, serviceIds, addonIds, address, city, payFull, tip }) {
   if (!pricing || !catalog) return null;
   const depLabel = depositLabel(catalog?.bookingConfig?.deposit);
-  const totalCharge = (payFull ? pricing.subtotal : pricing.deposit) + (tip || 0);
+  const discount      = pricing.discount || 0;
+  const effectiveTotal = pricing.finalTotal ?? pricing.subtotal ?? 0;
+  const effDeposit    = Math.min(pricing.deposit ?? 0, effectiveTotal);
+  const effBalance    = Math.max(0, effectiveTotal - effDeposit);
+  const totalCharge   = (payFull ? effectiveTotal : effDeposit) + (tip || 0);
 
   const pkgItems = (packageIds || [])
     .map((id) => catalog.packages?.find((p) => p.id === id))
@@ -138,26 +142,32 @@ function OrderSummary({ pricing, catalog, packageIds, serviceIds, addonIds, addr
 
       {/* Totals */}
       <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
+        {discount > 0 && (
+          <div className="flex justify-between text-green-600">
+            <span>Promo discount</span>
+            <span>−${discount.toLocaleString()}</span>
+          </div>
+        )}
         <div className="flex justify-between font-semibold">
           <span>Total</span>
-          <span className="text-[#3486cf]">${pricing.subtotal?.toLocaleString()}</span>
+          <span className="text-[#3486cf]">${effectiveTotal.toLocaleString()}</span>
         </div>
-        {!payFull && pricing.deposit > 0 && (
+        {!payFull && effDeposit > 0 && (
           <>
             <div className="flex justify-between text-gold-dark font-medium">
               <span>{depLabel} today</span>
-              <span>${pricing.deposit?.toLocaleString()}</span>
+              <span>${effDeposit.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-gray-400">
               <span>Due at delivery</span>
-              <span>${pricing.balance?.toLocaleString()}</span>
+              <span>${effBalance.toLocaleString()}</span>
             </div>
           </>
         )}
         {payFull && (
           <div className="flex justify-between text-green-700 font-medium">
             <span>Paying in full</span>
-            <span>${pricing.subtotal?.toLocaleString()}</span>
+            <span>${effectiveTotal.toLocaleString()}</span>
           </div>
         )}
         {tip > 0 && (
@@ -185,10 +195,10 @@ export default function TenantPaymentPage() {
 
   const {
     pricing, packageIds, serviceIds, addonIds,
-    address, city, state, zip, squareFootage, propertyType, notes,
+    address, unit, city, state, zip, squareFootage, propertyType, notes,
     preferredDate, preferredTime, preferredTimeSpecific, twilightTime, travelFee,
     clientName, clientEmail, clientPhone, customFields,
-    photographerId,
+    photographerId, promoCode, promoId, discount,
     setClientInfo, setBookingResult,
   } = store;
 
@@ -213,8 +223,13 @@ export default function TenantPaymentPage() {
   const noDeposit     = depositConfig?.type === "none";
   // If no deposit configured, force pay-in-full
   const effectivePayFull = payFull || noDeposit;
-  const deposit      = pricing?.deposit ?? 0;
-  const chargeAmount = (effectivePayFull ? (pricing?.subtotal ?? 0) : deposit) + tip;
+  // Use the discounted total when a promo is applied (finalTotal); fall back to
+  // subtotal. Previously this charged subtotal, so promo codes were recorded but
+  // never reduced the amount actually charged.
+  const effectiveTotal = pricing?.finalTotal ?? pricing?.subtotal ?? 0;
+  // Deposit can't exceed the discounted total.
+  const deposit      = Math.min(pricing?.deposit ?? 0, effectiveTotal);
+  const chargeAmount = (effectivePayFull ? effectiveTotal : deposit) + tip;
 
   // Load catalog for order summary
   useEffect(() => {
@@ -276,7 +291,7 @@ export default function TenantPaymentPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           packageIds, packageId: packageIds?.[0] ?? null, serviceIds, addonIds,
-          address, city, state, zip, squareFootage, propertyType, notes,
+          address, unit, city, state, zip, squareFootage, propertyType, notes,
           preferredDate, preferredTime, preferredTimeSpecific, twilightTime,
           clientName, clientEmail, clientPhone,
           travelFee, pricing,
@@ -285,6 +300,7 @@ export default function TenantPaymentPage() {
           smsConsent,
           customFields: customFields || {},
           photographerId: photographerId || null,
+          promoCode: promoCode || null, promoId: promoId || null, discount: discount || 0,
           contractSignerName: contractSigned ? contractSignerName.trim() : null,
         }),
       });

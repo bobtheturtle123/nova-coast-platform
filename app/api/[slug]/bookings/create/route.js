@@ -48,6 +48,7 @@ export async function POST(req, { params }) {
       travelFee, tipAmount: rawTip, payFull, customFields,
       photographerId: preferredPhotographerId,
       contractSignerName,
+      unit, promoCode: rawPromoCode, promoId: rawPromoId,
     } = body;
 
     // Normalize: accept either packageIds array or legacy packageId string
@@ -65,11 +66,40 @@ export async function POST(req, { params }) {
     const pricing = calculateTenantPrice(packageIds, serviceIds, addonIds, travelFee || 0, catalog, squareFootage || 0);
     const tip = Math.max(0, Number(rawTip) || 0);
 
+    // ── Re-validate promo code server-side (never trust client discount) ──────
+    let promoDiscount = 0;
+    let appliedPromo  = null; // { id, code }
+    if (rawPromoCode || rawPromoId) {
+      try {
+        const normalized = String(rawPromoCode || "").trim().toUpperCase();
+        const snap = rawPromoId
+          ? await adminDb.collection("tenants").doc(tenant.id).collection("promoCodes").doc(rawPromoId).get().then((d) => d.exists ? [{ id: d.id, data: () => d.data() }] : [])
+          : (await adminDb.collection("tenants").doc(tenant.id).collection("promoCodes").where("code", "==", normalized).limit(1).get()).docs;
+        const doc = snap[0];
+        if (doc) {
+          const promo = doc.data();
+          const expired = promo.expiresAt && (() => { const e = new Date(promo.expiresAt?.toDate?.() || promo.expiresAt); return isNaN(e) || e < new Date(); })();
+          const limitHit = promo.usageLimit > 0 && (promo.usageCount || 0) >= promo.usageLimit;
+          const belowMin = promo.minOrder > 0 && pricing.subtotal < promo.minOrder;
+          if (promo.active && !expired && !limitHit && !belowMin) {
+            promoDiscount = promo.type === "flat"
+              ? Math.min(promo.value, pricing.subtotal)
+              : Math.round((pricing.subtotal * promo.value) / 100 * 100) / 100;
+            appliedPromo = { id: doc.id, code: promo.code };
+          }
+        }
+      } catch (e) { console.error("[booking/create] promo validation failed:", e?.message); }
+    }
+
+    // Apply discount to the total. Deposit can't exceed the discounted total.
+    const effectiveTotal = Math.max(0, pricing.subtotal - promoDiscount);
+    const effDeposit     = Math.min(pricing.deposit || 0, effectiveTotal);
+
     // Determine payment type and amount
-    const isFullPayment = payFull || pricing.deposit === 0;
+    const isFullPayment = payFull || effDeposit === 0;
     const chargeAmount  = isFullPayment
-      ? pricing.subtotal + tip
-      : pricing.deposit + tip;
+      ? effectiveTotal + tip
+      : effDeposit + tip;
     const paymentType   = isFullPayment ? "full" : "deposit";
 
     if (chargeAmount <= 0) {
@@ -104,7 +134,7 @@ export async function POST(req, { params }) {
       });
     }
 
-    const remainingBalance = isFullPayment ? 0 : pricing.balance;
+    const remainingBalance = isFullPayment ? 0 : Math.max(0, effectiveTotal - effDeposit);
 
     // Resolve suggested photographer pay from product pay rates
     const sqftTier = getSqftTier(squareFootage || 0, catalog.pricingConfig);
@@ -146,7 +176,7 @@ export async function POST(req, { params }) {
         clientName, clientEmail, clientPhone,
         smsConsent:    !!smsConsent,
         smsConsentAt:  smsConsent ? new Date() : null,
-        address, city, state, zip, fullAddress,
+        address, unit: unit || null, city, state, zip, fullAddress,
         squareFootage: squareFootage ? Number(squareFootage) : null,
         propertyType:  propertyType || "residential",
         notes:         notes || "",
@@ -160,8 +190,12 @@ export async function POST(req, { params }) {
         addonPrice:       pricing.addonTotal,
         travelFee:        travelFee || 0,
         tipAmount:        tip,
-        totalPrice:       pricing.subtotal,
-        depositAmount:    isFullPayment ? pricing.subtotal : pricing.deposit,
+        // Discounted figures — promo is applied to the price actually charged.
+        promoCode:        appliedPromo?.code || null,
+        promoId:          appliedPromo?.id   || null,
+        promoDiscount,
+        totalPrice:       effectiveTotal,
+        depositAmount:    isFullPayment ? effectiveTotal : effDeposit,
         remainingBalance,
         depositPaid:      false,
         balancePaid:      isFullPayment ? false : false, // set true by webhook
@@ -190,6 +224,13 @@ export async function POST(req, { params }) {
         contractCounterSignedAt:   contractSignerName ? new Date() : null,
         contractCounterSignedBy:   contractSignerName ? (tenant.businessName || "Business") : null,
       });
+
+    // Increment promo usage now that the booking exists (only if a valid promo applied).
+    if (appliedPromo?.id) {
+      adminDb.collection("tenants").doc(tenant.id).collection("promoCodes").doc(appliedPromo.id)
+        .update({ usageCount: (await import("firebase-admin/firestore")).FieldValue.increment(1) })
+        .catch((e) => console.error("[booking/create] promo usage increment failed:", e?.message));
+    }
 
     // Upsert agent record (keyed by email so repeat clients accumulate history)
     const agentId = Buffer.from(clientEmail.toLowerCase()).toString("base64").replace(/[^a-zA-Z0-9]/g, "").slice(0, 32);

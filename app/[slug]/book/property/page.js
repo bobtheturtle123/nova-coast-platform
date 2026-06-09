@@ -19,7 +19,7 @@ export default function TenantPropertyPage() {
   const params = useParams();
   const router = useRouter();
   const {
-    address, city, state, zip, squareFootage, propertyType, notes,
+    address, unit, city, state, zip, squareFootage, propertyType, notes,
     lat, lng,
     setProperty, customFields, setCustomFields, setServiceZone,
   } = useBookingStore();
@@ -138,9 +138,17 @@ export default function TenantPropertyPage() {
                   }}
                   placeholder="123 Sunset Blvd"
                 />
+                <p className="text-xs text-gray-400 mt-1">Don&apos;t see your address? Just type it in — you can fill the city, state &amp; ZIP below.</p>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                <div className="col-span-2 sm:col-span-1">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
+                    Apt / Unit <span className="text-gray-400 font-normal">(opt.)</span>
+                  </label>
+                  <input name="unit" value={unit} onChange={handleChange}
+                    placeholder="Apt 4B" className="input-field" />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
                     City <span className="text-red-400">*</span>
                   </label>

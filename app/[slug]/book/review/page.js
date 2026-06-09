@@ -11,9 +11,9 @@ export default function TenantReviewPage() {
   const router = useRouter();
   const store  = useBookingStore();
   const {
-    packageIds, serviceIds, addonIds, address, city, state, zip,
+    packageIds, serviceIds, addonIds, address, unit, city, state, zip,
     squareFootage, propertyType, notes, travelFee, setTravelFee, setPricing, pricing,
-    promoCode, discount, setPromo, clearPromo,
+    promoCode, discount, setPromo, clearPromo, customFields,
   } = store;
 
   const [catalog,       setCatalog]       = useState(null);
@@ -21,7 +21,12 @@ export default function TenantReviewPage() {
   const [promoInput,    setPromoInput]    = useState(promoCode || "");
   const [promoMsg,      setPromoMsg]      = useState(promoCode ? { text: discount > 0 ? `Code applied — $${discount} off` : "Code applied", ok: true } : null);
   const [promoLoading,  setPromoLoading]  = useState(false);
-  const fullAddress = [address, city, state, zip].filter(Boolean).join(", ");
+  const fullAddress = [address, unit, city, state, zip].filter(Boolean).join(", ");
+  // Custom questions the agent answered on the property step.
+  const customFieldDefs = catalog?.bookingConfig?.customFields || [];
+  const answeredCustom = customFieldDefs
+    .map((f) => ({ label: f.label, value: (customFields || {})[f.id] }))
+    .filter((x) => x.value && String(x.value).trim());
   const tier = getSqftTier(Number(squareFootage) || 0);
 
   async function applyPromo() {
@@ -134,6 +139,25 @@ export default function TenantReviewPage() {
                 </p>
               )}
             </div>
+
+            {/* Custom questions & answers */}
+            {answeredCustom.length > 0 && (
+              <div className="card">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="section-label">Additional Details</p>
+                  <button onClick={() => router.push(`/${params.slug}/book/property`)}
+                    className="text-xs text-[#3486cf] hover:underline">Edit</button>
+                </div>
+                <div className="space-y-2">
+                  {answeredCustom.map((q, i) => (
+                    <div key={i} className="flex justify-between gap-4 text-sm">
+                      <span className="text-gray-500 flex-shrink-0">{q.label}</span>
+                      <span className="font-medium text-[#0F172A] text-right break-words min-w-0">{q.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Services card */}
             <div className="card">

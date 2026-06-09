@@ -16,6 +16,7 @@ const INITIAL_STATE = {
 
   // Step 3 — Property
   address:       "",
+  unit:          "",
   city:          "",
   state:         "CA",
   zip:           "",
