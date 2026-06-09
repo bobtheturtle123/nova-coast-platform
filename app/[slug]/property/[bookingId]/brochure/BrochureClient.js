@@ -6,141 +6,130 @@ export default function BrochureClient({ pw, booking, images, branding, listingU
   const gridImgs = images.slice(heroImg === images[0]?.url ? 1 : 0, 5);
 
   const stats = [
-    pw.beds      && { label: "Beds",   value: pw.beds },
-    pw.baths     && { label: "Baths",  value: pw.baths },
-    pw.sqft      && { label: "Sq Ft",  value: Number(String(pw.sqft).replace(/,/g, "") || 0).toLocaleString() },
-    pw.parking   && { label: "Parking",value: pw.parking },
-    pw.lotAcres  && { label: "Lot",    value: `${pw.lotAcres} ac` },
+    pw.beds      && { label: "Bedrooms",  value: pw.beds },
+    pw.baths     && { label: "Bathrooms", value: pw.baths },
+    pw.sqft      && { label: "Sq Ft",     value: Number(String(pw.sqft).replace(/,/g, "") || 0).toLocaleString() },
+    pw.lotAcres  && { label: "Acres",     value: pw.lotAcres },
+    pw.parking   && { label: "Parking",   value: pw.parking },
   ].filter(Boolean).slice(0, 4);
 
-  const primary = branding.primary || "#0F172A";
-  const accent  = branding.accent  || "#C9A96E";
+  // Luxury palette — deep neutral + warm metallic. Falls back to brand colors.
+  const ink    = branding.primary || "#1A1A1A";
+  const gold    = branding.accent || "#B08D57";
+  const paper   = "#FBFAF7";
 
   const qrUrl = listingUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(listingUrl)}&size=160x160&color=${primary.replace("#","")}&bgcolor=FFFFFF&margin=4`
+    ? `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(listingUrl)}&size=140x140&color=1A1A1A&bgcolor=FBFAF7&margin=2`
     : null;
 
   return (
     <>
       {/* Controls (screen only) */}
       <div className="print:hidden fixed top-4 right-4 z-50 flex gap-2">
-        <button
-          onClick={() => window.print()}
-          style={{ background: primary, color: "white" }}
-          className="text-sm font-semibold px-5 py-3 rounded-xl shadow-lg hover:opacity-90 transition-opacity flex items-center gap-2"
-        >
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
+        <button onClick={() => window.print()}
+          style={{ background: ink, color: paper, letterSpacing: "0.08em" }}
+          className="text-xs font-semibold uppercase px-6 py-3 rounded-sm shadow-lg hover:opacity-90 transition-opacity">
           Save as PDF
         </button>
         <button onClick={() => window.close()}
-          className="bg-white text-gray-600 text-sm font-semibold px-4 py-3 rounded-xl shadow border border-gray-200 hover:bg-gray-50 transition-colors">
+          className="bg-white text-gray-600 text-xs font-medium uppercase tracking-wide px-4 py-3 rounded-sm shadow border border-gray-200 hover:bg-gray-50 transition-colors">
           Close
         </button>
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Jost:wght@300;400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background: #E9EAEC; color: #0F172A; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .brochure { background: #fff; max-width: 850px; margin: 0 auto; }
-        .display { font-family: 'Fraunces', Georgia, serif; }
+        body { font-family: 'Jost', sans-serif; background: #DEDDD8; color: #1A1A1A; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .brochure { background: ${paper}; max-width: 820px; margin: 0 auto; }
+        .serif { font-family: 'Cormorant Garamond', Georgia, serif; }
+        .tracking { letter-spacing: 0.28em; }
         @media print {
-          body { background: #fff; }
+          body { background: ${paper}; }
           .brochure { max-width: 100%; margin: 0; box-shadow: none !important; }
           @page { margin: 0; size: letter; }
         }
       `}</style>
 
-      <div className="brochure" style={{ boxShadow: "0 12px 70px rgba(0,0,0,0.22)" }}>
+      <div className="brochure" style={{ boxShadow: "0 10px 60px rgba(0,0,0,0.2)" }}>
 
         {/* ── HEADER ── */}
-        <div style={{ padding: "22px 44px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            {branding.logo ? (
-              <img src={branding.logo} alt={branding.bizName} style={{ height: 40, objectFit: "contain" }} />
-            ) : (
-              <span className="display" style={{ color: primary, fontWeight: 600, fontSize: 26, letterSpacing: "-0.01em" }}>
-                {branding.bizName}
-              </span>
-            )}
-          </div>
+        <div style={{ padding: "26px 48px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid #E7E3DB` }}>
+          {branding.logo ? (
+            <img src={branding.logo} alt={branding.bizName} style={{ height: 32, objectFit: "contain" }} />
+          ) : (
+            <span className="serif" style={{ color: ink, fontWeight: 500, fontSize: 19, letterSpacing: "0.04em" }}>{branding.bizName}</span>
+          )}
           {pw.status && (
-            <span style={{
-              background: primary, color: "#fff",
-              fontWeight: 700, fontSize: 11, padding: "8px 18px",
-              letterSpacing: "0.14em", textTransform: "uppercase", borderRadius: 999,
-            }}>
+            <span className="tracking" style={{ color: gold, fontSize: 9.5, fontWeight: 500, textTransform: "uppercase" }}>
               {pw.status}
             </span>
           )}
         </div>
 
         {/* ── HERO ── */}
-        <div style={{ position: "relative", height: 430, background: "#0F172A", overflow: "hidden", margin: "0 24px", borderRadius: 20 }}>
+        <div style={{ position: "relative", height: 420, background: "#111", overflow: "hidden" }}>
           {heroImg ? (
             <img src={heroImg} alt={address} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
-            <div style={{ width: "100%", height: "100%", background: `linear-gradient(135deg, ${primary}, #0a1628)` }} />
+            <div style={{ width: "100%", height: "100%", background: `linear-gradient(135deg, ${ink}, #000)` }} />
           )}
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.1) 50%)" }} />
-          <div style={{ position: "absolute", bottom: 34, left: 38, right: 38 }}>
-            {pw.price && (
-              <div className="display" style={{ color: accent, fontSize: 30, fontWeight: 600, marginBottom: 6, letterSpacing: "-0.01em" }}>
-                {pw.price}
-              </div>
-            )}
-            <div className="display" style={{ color: "#fff", fontWeight: 600, fontSize: 50, lineHeight: 1.04, letterSpacing: "-0.02em" }}>
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 45%)" }} />
+          {/* thin gold frame */}
+          <div style={{ position: "absolute", inset: 16, border: "1px solid rgba(255,255,255,0.35)", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", bottom: 36, left: 44, right: 44, textAlign: "center" }}>
+            <div className="tracking" style={{ color: "rgba(255,255,255,0.8)", fontSize: 10, fontWeight: 400, textTransform: "uppercase", marginBottom: 12 }}>
+              {[pw.city, pw.state].filter(Boolean).join(", ") || "Presented For Sale"}
+            </div>
+            <div className="serif" style={{ color: "#fff", fontWeight: 400, fontSize: 38, lineHeight: 1.15, letterSpacing: "0.01em" }}>
               {address}
             </div>
-            {(pw.city || pw.state) && (
-              <div style={{ color: "rgba(255,255,255,0.78)", fontSize: 16, letterSpacing: "0.04em", marginTop: 12, fontWeight: 500 }}>
-                {[pw.city, pw.state].filter(Boolean).join(", ")}
+            {pw.price && (
+              <div className="serif" style={{ color: gold, fontSize: 22, fontWeight: 500, marginTop: 12, letterSpacing: "0.04em" }}>
+                {pw.price}
               </div>
             )}
           </div>
         </div>
 
-        {/* ── STATS BAR ── */}
+        {/* ── STATS ── */}
         {stats.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", margin: "26px 44px 0", borderRadius: 16, overflow: "hidden", border: "1px solid #EAEBEE" }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: 0, padding: "26px 48px", borderBottom: "1px solid #E7E3DB" }}>
             {stats.map((s, i) => (
               <div key={i} style={{
-                flex: "1 1 0", minWidth: 90, textAlign: "center", padding: "20px 12px",
-                borderRight: i < stats.length - 1 ? "1px solid #EAEBEE" : "none",
-                background: "#fff",
+                flex: "1 1 0", textAlign: "center",
+                borderLeft: i > 0 ? "1px solid #E7E3DB" : "none", padding: "0 14px",
               }}>
-                <div className="display" style={{ fontWeight: 600, fontSize: 38, color: primary, lineHeight: 1, letterSpacing: "-0.02em" }}>{s.value}</div>
-                <div style={{ fontSize: 12, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.12em", marginTop: 8, fontWeight: 700 }}>{s.label}</div>
+                <div className="serif" style={{ fontWeight: 500, fontSize: 30, color: ink, lineHeight: 1 }}>{s.value}</div>
+                <div className="tracking" style={{ fontSize: 9, color: "#9A8F7E", textTransform: "uppercase", marginTop: 7, fontWeight: 400 }}>{s.label}</div>
               </div>
             ))}
           </div>
         )}
 
         {/* ── BODY ── */}
-        <div style={{ padding: "32px 44px 36px", display: "grid", gridTemplateColumns: "1fr 250px", gap: 38 }}>
+        <div style={{ padding: "34px 48px 30px", display: "grid", gridTemplateColumns: "1fr 230px", gap: 40 }}>
 
           {/* LEFT */}
           <div>
             {pw.description && (
-              <div style={{ marginBottom: 32 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: "0.16em", marginBottom: 14 }}>
-                  About This Home
+              <div style={{ marginBottom: 30 }}>
+                <div className="tracking serif" style={{ fontSize: 13, fontWeight: 500, color: gold, textTransform: "uppercase", marginBottom: 12, fontStyle: "italic", letterSpacing: "0.12em" }}>
+                  The Residence
                 </div>
-                <p style={{ fontSize: 17, lineHeight: 1.7, color: "#334155", fontWeight: 400 }}>{pw.description}</p>
+                <p style={{ fontSize: 14, lineHeight: 1.85, color: "#3A352E", fontWeight: 300 }}>{pw.description}</p>
               </div>
             )}
 
             {pw.features?.length > 0 && (
               <div style={{ marginBottom: 30 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: "0.16em", marginBottom: 14 }}>
-                  Features &amp; Highlights
+                <div className="tracking serif" style={{ fontSize: 13, fontWeight: 500, color: gold, textTransform: "uppercase", marginBottom: 14, fontStyle: "italic", letterSpacing: "0.12em" }}>
+                  Features
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "11px 22px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "9px 24px" }}>
                   {pw.features.slice(0, 12).map((f, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 15, color: "#334155", fontWeight: 500 }}>
-                      <span style={{ color: accent, fontWeight: 800, marginTop: 2, flexShrink: 0 }}>✦</span>
+                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 13, color: "#3A352E", fontWeight: 300 }}>
+                      <span style={{ color: gold, marginTop: 7, flexShrink: 0, width: 5, height: 5, background: gold, borderRadius: "50%" }} />
                       <span>{f}</span>
                     </div>
                   ))}
@@ -150,10 +139,10 @@ export default function BrochureClient({ pw, booking, images, branding, listingU
 
             {/* Photo grid */}
             {gridImgs.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
                 {gridImgs.map((img, i) => (
-                  <div key={i} style={{ aspectRatio: "4/3", overflow: "hidden", borderRadius: 12 }}>
-                    <img src={img.url} alt={`Photo ${i + 2}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <div key={i} style={{ aspectRatio: "4/3", overflow: "hidden" }}>
+                    <img src={img.url} alt={`View ${i + 2}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   </div>
                 ))}
               </div>
@@ -161,52 +150,42 @@ export default function BrochureClient({ pw, booking, images, branding, listingU
           </div>
 
           {/* RIGHT */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
 
-            {/* Agent card */}
-            <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid #EAEBEE" }}>
-              <div style={{ background: primary, padding: "22px 20px", textAlign: "center" }}>
-                {pw.agentPhoto ? (
-                  <img src={pw.agentPhoto} alt={pw.agentName}
-                    style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: `3px solid ${accent}`, margin: "0 auto 12px" }} />
-                ) : (
-                  <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 28, margin: "0 auto 12px" }}>
-                    {(pw.agentName || "A")[0].toUpperCase()}
-                  </div>
-                )}
-                <div className="display" style={{ color: "#fff", fontWeight: 600, fontSize: 21, lineHeight: 1.2 }}>
-                  {pw.agentName || "Contact Agent"}
+            {/* Agent */}
+            <div style={{ textAlign: "center", padding: "4px 0 20px", borderBottom: "1px solid #E7E3DB" }}>
+              {pw.agentPhoto ? (
+                <img src={pw.agentPhoto} alt={pw.agentName}
+                  style={{ width: 78, height: 78, borderRadius: "50%", objectFit: "cover", margin: "0 auto 14px", border: `1px solid ${gold}`, padding: 3 }} />
+              ) : (
+                <div style={{ width: 78, height: 78, borderRadius: "50%", background: ink, display: "flex", alignItems: "center", justifyContent: "center", color: paper, fontWeight: 400, fontSize: 26, margin: "0 auto 14px" }} className="serif">
+                  {(pw.agentName || "A")[0].toUpperCase()}
                 </div>
-                {pw.agentBrokerage && (
-                  <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12.5, marginTop: 5, fontWeight: 500 }}>
-                    {pw.agentBrokerage}
-                  </div>
-                )}
+              )}
+              <div className="serif" style={{ color: ink, fontWeight: 500, fontSize: 19, lineHeight: 1.2 }}>
+                {pw.agentName || "Contact Agent"}
               </div>
-              <div style={{ padding: "16px 18px", background: "#fff" }}>
-                {pw.agentLogoUrl && (
-                  <div style={{ marginBottom: 13, paddingBottom: 12, borderBottom: "1px solid #EEF0F2", textAlign: "center" }}>
-                    <img src={pw.agentLogoUrl} alt={pw.agentBrokerage || "Brokerage"} style={{ height: 28, maxWidth: "100%", objectFit: "contain" }} />
-                  </div>
-                )}
-                {[
-                  pw.agentPhone   && { label: pw.agentPhone },
-                  pw.agentEmail   && { label: pw.agentEmail },
-                  branding.website && { label: branding.website },
-                ].filter(Boolean).map(({ label }, i) => (
-                  <div key={i} style={{ fontSize: 13.5, color: "#475569", marginBottom: 8, wordBreak: "break-all", fontWeight: 500, textAlign: "center" }}>
-                    {label}
-                  </div>
+              {pw.agentBrokerage && (
+                <div className="tracking" style={{ color: "#9A8F7E", fontSize: 9, marginTop: 6, textTransform: "uppercase" }}>
+                  {pw.agentBrokerage}
+                </div>
+              )}
+              <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+                {[pw.agentPhone, pw.agentEmail, branding.website].filter(Boolean).map((label, i) => (
+                  <div key={i} style={{ fontSize: 12, color: "#5A5349", wordBreak: "break-all", fontWeight: 300 }}>{label}</div>
                 ))}
               </div>
+              {pw.agentLogoUrl && (
+                <img src={pw.agentLogoUrl} alt="" style={{ height: 22, maxWidth: "70%", objectFit: "contain", margin: "14px auto 0" }} />
+              )}
             </div>
 
             {/* QR */}
             {qrUrl && (
-              <div style={{ borderRadius: 16, padding: "18px", textAlign: "center", background: "#F8FAFC", border: "1px solid #EAEBEE" }}>
-                <img src={qrUrl} alt="View listing online" style={{ width: 120, height: 120, display: "block", margin: "0 auto 10px" }} />
-                <div style={{ fontSize: 12.5, color: "#64748B", lineHeight: 1.5, fontWeight: 600 }}>
-                  Scan for photos &amp; virtual tour
+              <div style={{ textAlign: "center" }}>
+                <img src={qrUrl} alt="View listing" style={{ width: 110, height: 110, display: "block", margin: "0 auto 10px" }} />
+                <div className="tracking" style={{ fontSize: 8.5, color: "#9A8F7E", textTransform: "uppercase", lineHeight: 1.7 }}>
+                  Scan To View<br />Photos &amp; Tour
                 </div>
               </div>
             )}
@@ -214,11 +193,11 @@ export default function BrochureClient({ pw, booking, images, branding, listingU
         </div>
 
         {/* ── FOOTER ── */}
-        <div style={{ borderTop: "1px solid #EAEBEE", padding: "16px 44px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontSize: 11, color: "#94A3B8", fontWeight: 400, maxWidth: 460 }}>
+        <div style={{ borderTop: "1px solid #E7E3DB", padding: "16px 48px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontSize: 9.5, color: "#B0A698", fontWeight: 300, maxWidth: 440 }}>
             All information deemed reliable but not guaranteed.
           </div>
-          <div className="display" style={{ fontSize: 16, fontWeight: 600, color: primary }}>
+          <div className="serif" style={{ fontSize: 14, fontWeight: 500, color: ink, letterSpacing: "0.04em" }}>
             {branding.bizName}
           </div>
         </div>
