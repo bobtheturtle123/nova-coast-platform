@@ -788,7 +788,7 @@ export default function BillingPage() {
                       if (fromSeats !== null && toSeats !== null && fromSeats > toSeats) {
                         losses.push(`Team seats: ${fromSeats} → ${toSeats} (extra members will lose access)`);
                       }
-                      const FEE_PCT = { solo: 2.0, starter: 2.0, studio: 1.5, pro: 1.25, scale: 1.0 };
+                      const FEE_PCT = { solo: 2.0, starter: 2.0, studio: 2.0, pro: 1.5, scale: 1.25 };
                       if ((FEE_PCT[plan] || 2.0) < (FEE_PCT[downgradeTarget.planId] || 2.0)) {
                         losses.push(`Platform fee: ${FEE_PCT[plan]}% → ${FEE_PCT[downgradeTarget.planId]}% per transaction`);
                       }

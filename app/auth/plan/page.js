@@ -11,7 +11,7 @@ const PLANS = [
     name:     "Solo",
     price:    49,
     tagline:  "Solo real estate media photographers",
-    features: ["1 team member", "125 listings / year", "2% transaction fee"],
+    features: ["1 team member", "125 listings / year"],
     featured: false,
   },
   {
@@ -19,7 +19,7 @@ const PLANS = [
     name:     "Studio",
     price:    99,
     tagline:  "Small teams & growing media businesses",
-    features: ["3 team members", "300 listings / year", "1.5% transaction fee"],
+    features: ["3 team members", "300 listings / year"],
     featured: true,
   },
   {
@@ -27,7 +27,7 @@ const PLANS = [
     name:     "Pro",
     price:    179,
     tagline:  "Growing teams with higher volume",
-    features: ["5 team members", "600 listings / year", "1.25% transaction fee"],
+    features: ["5 team members", "600 listings / year"],
     featured: false,
   },
   {
@@ -35,7 +35,7 @@ const PLANS = [
     name:     "Scale",
     price:    349,
     tagline:  "High-volume media teams",
-    features: ["10 team members", "1,000 listings / year", "1% transaction fee"],
+    features: ["10 team members", "1,000 listings / year"],
     featured: false,
   },
 ];

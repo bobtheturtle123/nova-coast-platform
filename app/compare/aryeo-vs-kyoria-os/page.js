@@ -158,23 +158,14 @@ export default function AryeoCompare() {
         </div>
       </section>
 
-      {/* DETAIL SECTIONS */}
+      {/* DETAIL SECTION */}
       <section className="py-16 px-6 bg-cream border-y border-gray-100">
-        <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-10">
-          <div>
-            <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">Where Aryeo leads</p>
-            <h2 className="font-serif text-2xl text-navy font-normal mb-4">Strong on property marketing</h2>
-            <p className="text-gray-600 leading-relaxed text-sm">
-              Aryeo has a mature product for property websites and MLS integrations. If your business model centers on providing listing agents with embeddable media for their MLS submissions, Aryeo has tooling built specifically for that workflow. These features are well-developed and agent-facing.
-            </p>
-          </div>
-          <div>
-            <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">Where Kyoria OS leads</p>
-            <h2 className="font-serif text-2xl text-navy font-normal mb-4">Built for operational management</h2>
-            <p className="text-gray-600 leading-relaxed text-sm">
-              Kyoria OS is focused on the internal operations of your business. Team dispatch, photographer assignment, service area configuration, and payment-gated delivery are core features rather than afterthoughts. If you are managing a team of photographers across multiple zones, Kyoria OS handles that directly. The payment automation means you never release a gallery before you are paid, which changes how cash flow works for growing businesses.
-            </p>
-          </div>
+        <div className="max-w-2xl mx-auto">
+          <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">Where Kyoria OS leads</p>
+          <h2 className="font-serif text-2xl text-navy font-normal mb-4">Built for operational management</h2>
+          <p className="text-gray-600 leading-relaxed text-sm">
+            Kyoria OS is focused on the internal operations of your business. Team dispatch, photographer assignment, service area configuration, and payment-gated delivery are core features rather than afterthoughts. If you are managing a team of photographers across multiple zones, Kyoria OS handles that directly. The payment automation means you never release a gallery before you are paid, which changes how cash flow works for growing businesses.
+          </p>
         </div>
       </section>
 
