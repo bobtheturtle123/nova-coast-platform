@@ -3,6 +3,11 @@ import { getTenantBySlug } from "@/lib/tenants";
 import { notFound } from "next/navigation";
 import PropertyWebsiteClient from "./PropertyWebsiteClient";
 
+// Always render fresh from Firestore so Template & Style (and any other) edits
+// show immediately — previously the cached route only updated when the publish
+// state changed, forcing an unpublish/republish to see template changes.
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }) {
   const tenant = await getTenantBySlug(params.slug);
   if (!tenant) return { robots: { index: false } };

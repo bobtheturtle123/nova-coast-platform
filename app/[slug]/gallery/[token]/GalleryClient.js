@@ -486,8 +486,9 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           </div>
         )}
 
-        {/* ── Brochure (always visible when unlocked and property website exists) ── */}
-        {unlocked && booking?.propertyWebsite?.published && (
+        {/* ── Brochure — marketing materials require the balance to be fully paid,
+              not just an unlocked/delivered gallery. ── */}
+        {unlocked && balance <= 0 && booking?.propertyWebsite?.published && (
           <div className="bg-white border border-gray-200 rounded-2xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: primary + "18" }}>
@@ -513,6 +514,19 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                   View Listing ↗
                 </a>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Marketing locked until paid */}
+        {unlocked && balance > 0 && booking?.propertyWebsite?.published && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-amber-500 flex-shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <div>
+              <p className="font-semibold text-amber-800 text-sm">Marketing materials unlock after payment</p>
+              <p className="text-xs text-amber-700">Pay the remaining balance above to download the brochure and listing materials.</p>
             </div>
           </div>
         )}

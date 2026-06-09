@@ -141,6 +141,11 @@ export default async function AgentBookingPage({ params, searchParams }) {
         imageCount:            images.length,
         videoCount:            videos.length,
         coverUrl:              images[0]?.url            || null,
+        // Thumbnails so the agent can flag specific photos in a revision request.
+        images:                images.filter((m) => !m.hidden).slice(0, 60).map((m, i) => ({
+          url:  m.url || null,
+          name: m.fileName || m.name || `Photo ${i + 1}`,
+        })),
       };
     }
   }

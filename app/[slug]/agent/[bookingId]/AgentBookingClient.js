@@ -25,6 +25,7 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
   const [revMsg,       setRevMsg]       = useState("");
   const [revSending,   setRevSending]   = useState(false);
   const [revText,      setRevText]      = useState("");
+  const [revImages,    setRevImages]    = useState([]); // selected image urls to flag
 
   const pw             = booking.propertyWebsite || {};
   const listingUrl     = `${getAppUrl()}/${slug}/property/${booking.id}`;
@@ -37,18 +38,23 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
     if (!revText.trim()) return;
     setRevSending(true);
     try {
+      const mediaItems = revImages.map((url) => {
+        const img = (gallery?.images || []).find((x) => x.url === url);
+        return { url, name: img?.name || "" };
+      });
       const res = await fetch(`/api/${slug}/agent/revision-request`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ token, bookingId: booking.id, message: revText }),
+        body:    JSON.stringify({ token, bookingId: booking.id, message: revText, mediaItems }),
       });
       const data = await res.json();
       if (data.ok) {
         setRevisions((prev) => [{
-          id: data.revisionId, status: "pending", message: revText,
+          id: data.revisionId, status: "pending", message: revText, mediaItems,
           requestedAt: new Date().toISOString(), adminNotes: "", resolvedAt: null,
         }, ...prev]);
         setRevText("");
+        setRevImages([]);
         setRevMsg("Revision request submitted. You'll be notified when it's addressed.");
       } else {
         setRevMsg(data.error || "Failed to submit.");
@@ -565,6 +571,35 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
               className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#3486cf]/30 resize-none mb-3"
               placeholder="Describe what needs to be changed or re-shot…"
             />
+
+            {/* Flag specific photos so the editor knows exactly which ones */}
+            {(gallery?.images || []).length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs font-medium text-gray-600 mb-2">
+                  Tag the photos this applies to <span className="text-gray-400 font-normal">(optional)</span>
+                  {revImages.length > 0 && <span className="text-[#3486cf] ml-1">· {revImages.length} selected</span>}
+                </p>
+                <div className="grid grid-cols-5 sm:grid-cols-8 gap-1.5 max-h-44 overflow-y-auto p-1 border border-gray-100 rounded-lg">
+                  {gallery.images.map((img, i) => {
+                    const sel = revImages.includes(img.url);
+                    return (
+                      <button key={i} type="button"
+                        onClick={() => setRevImages((p) => sel ? p.filter((u) => u !== img.url) : [...p, img.url])}
+                        className="relative aspect-square rounded-md overflow-hidden group"
+                        style={{ outline: sel ? `2px solid ${branding.primary}` : "1px solid #e5e7eb", outlineOffset: sel ? "-2px" : "-1px" }}
+                        title={img.name}>
+                        {img.url && <img src={img.url} alt={img.name} className="w-full h-full object-cover" loading="lazy" />}
+                        {sel && (
+                          <span className="absolute inset-0 flex items-center justify-center" style={{ background: branding.primary + "55" }}>
+                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {revMsg && (
               <p className={`text-sm mb-3 ${revMsg.includes("submitted") ? "text-emerald-600" : "text-red-500"}`}>
                 {revMsg}
