@@ -1,8 +1,8 @@
 import { adminDb } from "@/lib/firebase-admin";
-import { isSuperAdmin } from "@/lib/superadmin";
+import { isSuperAdminVerified } from "@/lib/superadmin";
 
 export async function GET(req) {
-  if (!await isSuperAdmin(req)) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!await isSuperAdminVerified(req)) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const tenantsSnap = await adminDb.collection("tenants").get();
   const tenants = tenantsSnap.docs.map((d) => d.data());

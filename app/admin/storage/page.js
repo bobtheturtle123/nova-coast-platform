@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import SuperadminMfaGate from "@/components/SuperadminMfaGate";
 
 const usd = (n) => `$${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const pct = (n) => `${Number(n || 0).toFixed(n >= 10 ? 0 : 1)}%`;
@@ -58,7 +59,8 @@ export default function AdminStoragePage() {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) { setAuthState("denied"); return; }
       const tok = await u.getIdTokenResult();
-      if (tok.claims.role === "superadmin") { setAuthState("ok"); load(); }
+      // Data loads after the 2FA gate calls onVerified (load), not here.
+      if (tok.claims.role === "superadmin") setAuthState("ok");
       else setAuthState("denied");
     });
     return unsub;
@@ -73,6 +75,7 @@ export default function AdminStoragePage() {
   );
 
   return (
+    <SuperadminMfaGate onVerified={load}>
     <div className="p-6 lg:p-10 max-w-7xl mx-auto">
       <header className="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
@@ -128,6 +131,7 @@ export default function AdminStoragePage() {
         </>
       )}
     </div>
+    </SuperadminMfaGate>
   );
 }
 

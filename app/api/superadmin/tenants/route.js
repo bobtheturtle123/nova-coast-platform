@@ -1,8 +1,8 @@
 import { adminDb } from "@/lib/firebase-admin";
-import { isSuperAdmin } from "@/lib/superadmin";
+import { isSuperAdminVerified } from "@/lib/superadmin";
 
 export async function GET(req) {
-  if (!await isSuperAdmin(req)) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!await isSuperAdminVerified(req)) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const snap = await adminDb.collection("tenants").orderBy("createdAt", "desc").limit(500).get();
 
@@ -26,7 +26,7 @@ export async function GET(req) {
 
 // PATCH /api/superadmin/tenants — set permanentPlan (or any safe field) on a tenant
 export async function PATCH(req) {
-  if (!await isSuperAdmin(req)) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!await isSuperAdminVerified(req)) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const { tenantId, permanentPlan, subscriptionStatus } = body;

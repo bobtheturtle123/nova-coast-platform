@@ -1,5 +1,5 @@
 import { adminDb } from "@/lib/firebase-admin";
-import { isSuperAdmin } from "@/lib/superadmin";
+import { isSuperAdminVerified } from "@/lib/superadmin";
 import {
   STORAGE_LIMIT_BYTES, WARN_80, WARN_90, GB, fmtBytes,
   monthlyStorageCostUsd, warnLevel, ACTION_THRESHOLDS, R2_STORAGE_USD_PER_GB_MONTH,
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 // Superadmin storage + cost + cleanup report. This route is the single data
-// source for the /admin/storage page. It is protected by isSuperAdmin (role
+// source for the /admin/storage page. It is protected by isSuperAdminVerified (role
 // claim + UID allowlist) — no tenant admin/manager/photographer/client can read
 // it. All money is derived from R2_STORAGE_USD_PER_GB_MONTH in lib/storage.js.
 
@@ -118,7 +118,7 @@ function recommendAction({ pct, costRatio, oversizedBytes, usedBytes }) {
 }
 
 export async function GET(req) {
-  if (!await isSuperAdmin(req)) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!await isSuperAdminVerified(req)) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const now = Date.now();
 

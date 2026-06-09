@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import SuperadminMfaGate from "@/components/SuperadminMfaGate";
 
 const NAV = [
   { href: "/superadmin",               label: "Overview",     icon: "⬛" },
@@ -63,7 +64,9 @@ export default function SuperadminLayout({ children }) {
           </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main className="flex-1 overflow-auto">
+        <SuperadminMfaGate>{children}</SuperadminMfaGate>
+      </main>
     </div>
   );
 }
