@@ -272,6 +272,19 @@ export async function POST(req, { params }) {
       });
     }
 
+    // Fire Zapier webhook (fire-and-forget).
+    (async () => {
+      try {
+        const { dispatchZapier, bookingWebhookData } = await import("@/lib/zapier");
+        await dispatchZapier(tenant, "booking.created", bookingWebhookData({
+          id: bookingId, clientName, clientEmail, clientPhone,
+          fullAddress, status: isFreeBooking ? "requested" : "pending_payment",
+          totalPrice: effectiveTotal, depositPaid: isFreeBooking, paidInFull: fullyFree,
+          remainingBalance, shootDate: null, preferredDate, preferredTime,
+        }));
+      } catch {}
+    })();
+
     return Response.json({
       bookingId,
       clientSecret: paymentIntent?.client_secret || null,

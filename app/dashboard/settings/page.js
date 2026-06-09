@@ -644,6 +644,32 @@ export default function SettingsPage() {
   // Booking limits state
   const [minNoticeHours,    setMinNoticeHours]    = useState(24);
   const [maxAdvanceDays,    setMaxAdvanceDays]     = useState(90);
+
+  // Integrations
+  const [googleReviewUrl,              setGoogleReviewUrl]              = useState("");
+  const [requestReviewsAfterDelivery,  setRequestReviewsAfterDelivery]  = useState(false);
+  const [zapierWebhooks,               setZapierWebhooks]               = useState([]); // string[]
+  const [newZapUrl,                    setNewZapUrl]                    = useState("");
+  const [savingIntegrations,           setSavingIntegrations]           = useState(false);
+
+  async function saveIntegrations() {
+    setSavingIntegrations(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/tenants/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ integrations: {
+          googleReviewUrl:             googleReviewUrl.trim(),
+          requestReviewsAfterDelivery: !!requestReviewsAfterDelivery,
+          zapierWebhooks:              zapierWebhooks.filter((u) => u.trim()),
+        } }),
+      });
+      if (res.ok) showMsg("Integrations saved.");
+      else showMsg("Failed to save.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    setSavingIntegrations(false);
+  }
   const [maxBookingsPerDay, setMaxBookingsPerDay]  = useState(0);  // 0 = unlimited
   const [maxWeeklyHours,    setMaxWeeklyHours]     = useState(0);  // 0 = unlimited
 
@@ -798,6 +824,12 @@ export default function SettingsPage() {
             if (c.reschedulePercent != null)       setRescheduleFeePercent(c.reschedulePercent);
             if (c.rescheduleWindowHrs != null)     setRescheduleFeeWindowHrs(c.rescheduleWindowHrs);
           }
+        }
+        if (data.tenant.integrations) {
+          const ig = data.tenant.integrations;
+          if (ig.googleReviewUrl) setGoogleReviewUrl(ig.googleReviewUrl);
+          if (ig.requestReviewsAfterDelivery !== undefined) setRequestReviewsAfterDelivery(ig.requestReviewsAfterDelivery);
+          if (Array.isArray(ig.zapierWebhooks)) setZapierWebhooks(ig.zapierWebhooks);
         }
         if (data.tenant.notificationPrefs) setNotifPrefs(data.tenant.notificationPrefs);
         if (data.tenant.gallerySettings?.viewerTracking !== undefined) {
@@ -3052,9 +3084,63 @@ export default function SettingsPage() {
         </button>
         {openSections.integrations && (
         <div className="pt-2 pb-4">
-      <div id="settings-integrations" className="card mt-6 scroll-mt-24">
-        <h2 className="font-semibold text-[#0F172A] text-base mb-1">Integrations</h2>
-        <p className="text-sm text-gray-500">More integrations coming soon.</p>
+      {/* Google Reviews */}
+      <div id="settings-reviews" className="card mt-6 scroll-mt-24">
+        <h2 className="font-semibold text-[#0F172A] text-base mb-1">Google Reviews</h2>
+        <p className="text-sm text-gray-500 mb-4">Ask clients to leave a Google review once their media is delivered.</p>
+
+        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl mb-4">
+          <div>
+            <p className="text-sm font-medium text-[#0F172A]">Request a review after delivery</p>
+            <p className="text-xs text-gray-400">Adds a “Leave us a review” button to the gallery delivery email.</p>
+          </div>
+          <button type="button"
+            onClick={() => setRequestReviewsAfterDelivery((v) => !v)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${requestReviewsAfterDelivery ? "bg-[#3486cf]" : "bg-gray-300"}`}>
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${requestReviewsAfterDelivery ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+        </div>
+
+        <label className="label-field">Your Google review link</label>
+        <input type="url" value={googleReviewUrl} onChange={(e) => setGoogleReviewUrl(e.target.value)}
+          className="input-field w-full" placeholder="https://g.page/r/…/review" />
+        <p className="text-xs text-gray-400 mt-1">
+          Find it in your Google Business Profile → Ask for reviews → copy the short link (g.page/r/…). Paste it here.
+        </p>
+
+        <button onClick={saveIntegrations} disabled={savingIntegrations} className="btn-primary mt-4 px-6 py-2.5">
+          {savingIntegrations ? "Saving…" : "Save"}
+        </button>
+      </div>
+
+      {/* Zapier */}
+      <div id="settings-zapier" className="card mt-6 scroll-mt-24">
+        <h2 className="font-semibold text-[#0F172A] text-base mb-1">Zapier</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Send booking events to 6,000+ apps. In Zapier, create a Zap with a <strong>“Webhooks by Zapier → Catch Hook”</strong> trigger,
+          copy its URL, and paste it below. We&apos;ll POST when a booking is <strong>created, paid, or delivered</strong>.
+        </p>
+
+        <div className="space-y-2 mb-3">
+          {zapierWebhooks.length === 0 && <p className="text-xs text-gray-400">No webhooks yet.</p>}
+          {zapierWebhooks.map((url, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input readOnly value={url} className="input-field flex-1 text-xs font-mono bg-gray-50" />
+              <button onClick={() => setZapierWebhooks((w) => w.filter((_, idx) => idx !== i))}
+                className="text-xs text-red-400 hover:text-red-600 flex-shrink-0">Remove</button>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <input type="url" value={newZapUrl} onChange={(e) => setNewZapUrl(e.target.value)}
+            className="input-field flex-1" placeholder="https://hooks.zapier.com/hooks/catch/…" />
+          <button type="button"
+            onClick={() => { const u = newZapUrl.trim(); if (u) { setZapierWebhooks((w) => [...w, u]); setNewZapUrl(""); } }}
+            className="btn-outline px-4 py-2 text-sm flex-shrink-0">Add</button>
+        </div>
+        <button onClick={saveIntegrations} disabled={savingIntegrations} className="btn-primary mt-4 px-6 py-2.5">
+          {savingIntegrations ? "Saving…" : "Save Webhooks"}
+        </button>
       </div>
 
       {/* Custom Domain */}

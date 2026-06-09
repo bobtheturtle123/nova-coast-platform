@@ -151,6 +151,14 @@ export async function POST(req, { params }) {
     sendMediaDeliveredSms({ booking, tenant, galleryUrl }).catch(() => {});
   }
 
+  // Zapier webhook (fire-and-forget)
+  (async () => {
+    try {
+      const { dispatchZapier, bookingWebhookData } = await import("@/lib/zapier");
+      await dispatchZapier(tenant, "booking.delivered", bookingWebhookData({ ...booking, status: "delivered" }));
+    } catch {}
+  })();
+
   return Response.json({ ok: true });
 }
 

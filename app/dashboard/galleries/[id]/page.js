@@ -9,6 +9,11 @@ import { getAppUrl } from "@/lib/appUrl";
 
 const APP_URL = getAppUrl();
 
+// CubiCasa floor-plan import is disabled until a CubiCasa partner/integration
+// agreement is in place — their API is partner-only and a personal API key is
+// rejected. Flip to true once real partner credentials + API docs are wired up.
+const CUBICASA_ENABLED = false;
+
 function sanitizeHtml(html) {
   if (typeof window === "undefined") return "";
   const doc = new DOMParser().parseFromString(html, "text/html");
@@ -1772,13 +1777,17 @@ export default function GalleryDetailPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button type="button" onClick={(e) => { e.preventDefault(); setCubiCasaOpen(true); if (cubiCasaConnected && !cubiCasaOrders) fetchCubiCasaOrders(); }}
-                  className="btn-outline text-xs px-3 py-1.5 flex items-center gap-1.5">
-                  <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  CubiCasa
-                </button>
+                {/* CubiCasa import hidden until a partner/integration agreement is
+                    in place (their floor-plan API is partner-only). */}
+                {CUBICASA_ENABLED && (
+                  <button type="button" onClick={(e) => { e.preventDefault(); setCubiCasaOpen(true); if (cubiCasaConnected && !cubiCasaOrders) fetchCubiCasaOrders(); }}
+                    className="btn-outline text-xs px-3 py-1.5 flex items-center gap-1.5">
+                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    CubiCasa
+                  </button>
+                )}
                 <button type="button" onClick={(e) => { e.preventDefault(); floorRef.current?.click(); }} disabled={uploadingFloor}
                   className="btn-outline text-xs px-3 py-1.5">
                   {uploadingFloor ? "Uploading…" : "+ Upload"}
@@ -2144,7 +2153,7 @@ export default function GalleryDetailPage() {
       )}
 
       {/* CubiCasa Floor Plan Importer */}
-      {cubiCasaOpen && (
+      {CUBICASA_ENABLED && cubiCasaOpen && (
         <div className="modal-backdrop">
           <div className="absolute inset-0" onClick={() => { setCubiCasaOpen(false); setCubiCasaOrders(null); setCubiCasaError(null); }} />
           <div className="modal-card relative w-full max-w-xl max-h-[90vh] overflow-y-auto">
