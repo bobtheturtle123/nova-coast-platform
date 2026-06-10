@@ -703,6 +703,62 @@ export default function SettingsPage() {
     finally { setDropboxBusy(false); }
   }
 
+  // CubiCasa integration
+  const [cubicasa,     setCubicasa]     = useState(null); // { connected, email, lastVerifiedAt }
+  const [cubicasaBusy, setCubicasaBusy] = useState(false);
+  const [ccEmail,      setCcEmail]      = useState("");
+  const [ccApiKey,     setCcApiKey]     = useState("");
+
+  const loadCubicasa = useCallback(async () => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/integrations/cubicasa/status", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setCubicasa(await res.json());
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadCubicasa(); }, [loadCubicasa]);
+
+  async function connectCubicasa() {
+    if (!ccEmail.trim() || !ccApiKey.trim()) { showMsg("Enter your CubiCasa email and API key.", "error"); return; }
+    setCubicasaBusy(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/integrations/cubicasa/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email: ccEmail.trim(), apiKey: ccApiKey.trim() }),
+      });
+      const d = await res.json();
+      if (res.ok) { showMsg("CubiCasa connected."); setCcApiKey(""); loadCubicasa(); }
+      else showMsg(d.error || "Could not connect CubiCasa.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    finally { setCubicasaBusy(false); }
+  }
+
+  async function testCubicasa() {
+    setCubicasaBusy(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/integrations/cubicasa/test", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      const d = await res.json();
+      if (res.ok) { showMsg("CubiCasa connection is working."); loadCubicasa(); }
+      else showMsg(d.error || "CubiCasa test failed.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    finally { setCubicasaBusy(false); }
+  }
+
+  async function disconnectCubicasa() {
+    setCubicasaBusy(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/integrations/cubicasa/disconnect", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { showMsg("CubiCasa disconnected."); setCubicasa({ connected: false }); }
+      else showMsg("Failed to disconnect.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    finally { setCubicasaBusy(false); }
+  }
+
   async function saveIntegrations() {
     setSavingIntegrations(true);
     try {
@@ -3171,6 +3227,61 @@ export default function SettingsPage() {
             style={{ background: "#0061FF" }}>
             {dropboxBusy ? "Connecting…" : "Connect Dropbox"}
           </button>
+        )}
+      </div>
+
+      {/* CubiCasa */}
+      <div id="settings-cubicasa" className="card mt-6 scroll-mt-24">
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">📐</span>
+            <h2 className="font-semibold text-[#0F172A] text-base">CubiCasa</h2>
+          </div>
+          {cubicasa?.connected && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex-shrink-0">Connected</span>
+          )}
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Connect your CubiCasa company account to import floor plans into your listing galleries.
+        </p>
+
+        {cubicasa?.connected ? (
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl gap-3 flex-wrap">
+            <div>
+              <p className="text-sm font-medium text-[#0F172A]">Connected as {cubicasa.email}</p>
+              <p className="text-xs text-gray-400">
+                {cubicasa.lastVerifiedAt ? `Last verified ${new Date(cubicasa.lastVerifiedAt).toLocaleDateString()}` : "Import is available from any gallery's Add Media menu."}
+              </p>
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
+              <button type="button" onClick={testCubicasa} disabled={cubicasaBusy}
+                className="text-sm font-semibold text-gray-700 border border-gray-200 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50">
+                {cubicasaBusy ? "…" : "Test connection"}
+              </button>
+              <button type="button" onClick={disconnectCubicasa} disabled={cubicasaBusy}
+                className="text-sm font-semibold text-red-600 border border-red-200 px-4 py-2 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50">
+                Disconnect
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <label className="label-field">CubiCasa account email</label>
+              <input type="email" value={ccEmail} onChange={(e) => setCcEmail(e.target.value)}
+                className="input-field w-full" placeholder="you@yourcompany.com" />
+            </div>
+            <div>
+              <label className="label-field">CubiCasa API key</label>
+              <input type="password" value={ccApiKey} onChange={(e) => setCcApiKey(e.target.value)}
+                className="input-field w-full" placeholder="Your CubiCasa API key" autoComplete="off" />
+              <p className="text-xs text-gray-400 mt-1">Stored encrypted. Generate this in your CubiCasa company account settings.</p>
+            </div>
+            <button type="button" onClick={connectCubicasa} disabled={cubicasaBusy}
+              className="btn-primary px-6 py-2.5">
+              {cubicasaBusy ? "Connecting…" : "Connect CubiCasa"}
+            </button>
+          </div>
         )}
       </div>
 

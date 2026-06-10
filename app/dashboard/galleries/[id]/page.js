@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useToast } from "@/components/Toast";
 import { getAppUrl } from "@/lib/appUrl";
 import DropboxImportModal from "@/components/DropboxImportModal";
+import CubiCasaImportModal from "@/components/CubiCasaImportModal";
 
 const APP_URL = getAppUrl();
 
@@ -322,6 +323,7 @@ export default function GalleryDetailPage() {
   const [dragIdx,      setDragIdx]      = useState(null);
   const [savingOrder,  setSavingOrder]  = useState(false);
   const [showDropbox,  setShowDropbox]  = useState(false);
+  const [showCubicasa, setShowCubicasa] = useState(false);
   const fileRef = useRef(null);
 
   // Email state
@@ -1380,6 +1382,13 @@ export default function GalleryDetailPage() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="#0061FF"><path d="M12 14.56l-5.6-3.36L0 14.56 6.4 18l5.6-3.44zM6.4 2L0 5.44l6.4 3.36 5.6-3.36L6.4 2zm5.6 3.36L17.6 2 24 5.44l-5.6 3.36L12 5.36zm0 5.44l5.6 3.36L24 10.44 17.6 7.08 12 10.8zM12 15.2l-5.6 3.44L0 15.2l6.4 3.36L12 22l5.6-3.44L24 15.2l-6.4 3.44L12 15.2z"/></svg>
             Import from Dropbox
           </button>
+          <button
+            onClick={() => setShowCubicasa(true)}
+            disabled={uploading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
+            <span className="text-[13px]">📐</span>
+            Import from CubiCasa
+          </button>
         </div>
 
         {showDropbox && (
@@ -1396,6 +1405,20 @@ export default function GalleryDetailPage() {
                 ],
               }));
               toast(`Imported ${items.length} file${items.length !== 1 ? "s" : ""} from Dropbox.`);
+            }}
+          />
+        )}
+
+        {showCubicasa && (
+          <CubiCasaImportModal
+            galleryId={id}
+            onClose={() => setShowCubicasa(false)}
+            onImported={(items) => {
+              setFloorPlans((prev) => [
+                ...prev,
+                ...items.map((it) => ({ url: it.url, key: it.key, fileName: it.fileName, fileType: it.fileType })),
+              ]);
+              toast(`Imported ${items.length} floor plan${items.length !== 1 ? "s" : ""} from CubiCasa.`);
             }}
           />
         )}
