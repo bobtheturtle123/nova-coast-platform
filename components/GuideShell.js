@@ -1,4 +1,5 @@
 import Link from "next/link";
+import GuideBackLink from "@/components/GuideBackLink";
 
 // Shared chrome for every /guides/* page so they look consistent and cross-link.
 export const ALL_GUIDES = [
@@ -19,7 +20,10 @@ export default function GuideShell({ eyebrow = "Guide", title, intro, currentSlu
   return (
     <main style={{ background: "#F7F8FA", minHeight: "100vh" }}>
       <div className="max-w-3xl mx-auto px-6 py-16">
-        <Link href="/guides" className="text-sm text-[#3486cf] hover:underline">← All guides</Link>
+        <div className="flex items-center gap-4">
+          <GuideBackLink />
+          <Link href="/guides" className="text-sm text-gray-400 hover:text-gray-600">All guides</Link>
+        </div>
 
         <div className="mt-6 mb-10">
           <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#3486cf]">{eyebrow}</span>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ALL_GUIDES } from "@/components/GuideShell";
+import GuideBackLink from "@/components/GuideBackLink";
 
 export const metadata = {
   title: "Guides - Learn KyoriaOS | Real Estate Photography Software",
@@ -12,7 +13,7 @@ export default function GuidesIndexPage() {
   return (
     <main style={{ background: "#F7F8FA", minHeight: "100vh" }}>
       <div className="max-w-3xl mx-auto px-6 py-16">
-        <Link href="/" className="text-sm text-[#3486cf] hover:underline">← Back to KyoriaOS</Link>
+        <GuideBackLink />
 
         <div className="mt-6 mb-10">
           <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#3486cf]">Help &amp; Guides</span>

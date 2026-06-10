@@ -6,6 +6,7 @@ import Link from "next/link";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import AiChatButton from "@/components/dashboard/AiChatButton";
+import NotificationBell from "@/components/NotificationBell";
 import { ToastProvider } from "@/components/Toast";
 import { DashboardPermissionsContext } from "@/lib/dashboardPermissions";
 import { TenantSettingsContext } from "@/lib/TenantSettingsContext";
@@ -125,7 +126,8 @@ const NAV = [
   {
     href: "/guides",
     label: "Help & Guides",
-    external: true,
+    // Same-tab navigation so the browser back button returns to the last page,
+    // and the in-guide back link returns to the dashboard.
     icon: (
       <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
         <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -406,20 +408,21 @@ export default function DashboardLayout({ children }) {
         )}
 
         <div className="flex flex-col min-h-screen md:ml-[240px]">
-          {/* Mobile top bar */}
+          {/* Top bar (hamburger + logo on mobile; notifications bell on all sizes) */}
           <div
-            className="md:hidden flex items-center gap-3 px-4 py-3"
+            className="flex items-center gap-3 px-4 py-3"
             style={{
               background: "#ffffff",
               borderBottom: "1px solid #E9ECF0",
             }}
           >
-            <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-gray-800 transition-colors">
+            <button onClick={() => setSidebarOpen(true)} className="md:hidden text-gray-500 hover:text-gray-800 transition-colors">
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="h-6 w-auto object-contain" />
+            <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="md:hidden h-6 w-auto object-contain" />
+            <div className="ml-auto"><NotificationBell /></div>
           </div>
 
           <TenantSettingsContext.Provider value={{ ...tenantSettings, refresh: refreshSettings }}>

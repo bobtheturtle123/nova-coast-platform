@@ -1,5 +1,10 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { stripe, PLAN_PRICE_IDS } from "@/lib/stripe";
+import { PLANS } from "@/lib/plans";
+import { notifyTenant } from "@/lib/notify";
+import { sendPlanChangeEmail } from "@/lib/email";
+
+const PLAN_ORDER = ["solo", "studio", "pro", "scale"];
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -44,17 +49,38 @@ export async function POST(req) {
       return Response.json({ error: "Could not find subscription item to update" }, { status: 400 });
     }
 
-    // Update the subscription — Stripe prorates mid-month automatically
+    const currentPlan = tenant.subscriptionPlan || null;
+    const isUpgrade = PLAN_ORDER.indexOf(plan) > PLAN_ORDER.indexOf(currentPlan);
+
+    // Update the subscription. For UPGRADES we invoice the prorated difference
+    // immediately (always_invoice) and require the payment to succeed now
+    // (error_if_incomplete) — otherwise the customer would get the higher plan
+    // without being charged until the next cycle (effectively free). Downgrades
+    // create a proration credit applied to the next invoice.
     await stripe.subscriptions.update(tenant.stripeSubscriptionId, {
       items: [{ id: mainItem.id, price: newPriceId }],
-      proration_behavior: "create_prorations",
+      proration_behavior: isUpgrade ? "always_invoice" : "create_prorations",
+      payment_behavior:   isUpgrade ? "error_if_incomplete" : "allow_incomplete",
       metadata: { plan, tenantId: ctx.tenantId },
     });
 
-    // Mirror to Firestore immediately (webhook will also update, but this gives instant UI feedback)
+    // Only reached if the (immediate) charge succeeded for upgrades.
     await adminDb.collection("tenants").doc(ctx.tenantId).update({
       subscriptionPlan: plan,
     });
+
+    // Notify the tenant (in-app + email). Best-effort.
+    const planName  = PLANS[plan]?.name || plan;
+    const priceText = PLANS[plan]?.monthlyPrice != null ? `$${PLANS[plan].monthlyPrice}/mo` : "";
+    notifyTenant(ctx.tenantId, {
+      type: "billing",
+      title: `Plan ${isUpgrade ? "upgraded" : "changed"} to ${planName}`,
+      body: isUpgrade ? `The prorated difference was charged to your card. You're now on ${planName}.` : `You're now on ${planName}.`,
+      link: "/dashboard/billing",
+    }).catch(() => {});
+    if (tenant.email) {
+      sendPlanChangeEmail({ email: tenant.email, businessName: tenant.businessName, planName, priceText, isUpgrade }).catch(() => {});
+    }
 
     return Response.json({ ok: true, plan });
   } catch (err) {
