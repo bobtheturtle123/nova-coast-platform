@@ -1,12 +1,28 @@
 import { adminDb } from "@/lib/firebase-admin";
 
 // CubiCasa calls this endpoint when an order's status changes.
-// Register this URL in your CubiCasa company settings:
-//   https://app.cubi.casa/api/integrate/v3  →  Company → Developer → Webhook URL
-//   URL: https://app.kyoriaos.com/api/webhooks/cubicasa
+// Register this URL (including the ?secret=... below) in your CubiCasa company
+// settings: Company → Developer → Webhook URL
+//   https://app.kyoriaos.com/api/webhooks/cubicasa?secret=YOUR_SECRET
+//
+// Set CUBICASA_WEBHOOK_SECRET in the environment and append it as ?secret= to
+// the registered URL. When set, requests missing/mismatching the secret are
+// rejected — preventing forged order events. (If unset, we accept and log, for
+// first-time setup.)
 
 export async function POST(req) {
   try {
+    const expected = process.env.CUBICASA_WEBHOOK_SECRET;
+    if (expected) {
+      const provided = new URL(req.url).searchParams.get("secret")
+        || req.headers.get("x-cubicasa-secret");
+      if (provided !== expected) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    } else {
+      console.warn("[cubicasa/webhook] CUBICASA_WEBHOOK_SECRET not set — accepting unverified webhook");
+    }
+
     const body = await req.json();
     console.log("[cubicasa/webhook] received:", JSON.stringify(body).slice(0, 1000));
 

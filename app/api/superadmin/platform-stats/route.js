@@ -1,13 +1,17 @@
 import { adminDb } from "@/lib/firebase-admin";
+import { isSuperAdminVerified } from "@/lib/superadmin";
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
 // GET /api/superadmin/platform-stats
 // Lightweight operational cost observability for internal monitoring.
 // Returns current-month counters for AI calls, SMS, email, uploads, storage.
+// Accepts EITHER a verified superadmin session (role + UID allowlist + 2FA) OR
+// the static ADMIN_SECRET bearer (for headless monitoring).
 export async function GET(req) {
   const auth = req.headers.get("Authorization");
-  if (!ADMIN_SECRET || auth !== `Bearer ${ADMIN_SECRET}`) {
+  const secretOk = ADMIN_SECRET && auth === `Bearer ${ADMIN_SECRET}`;
+  if (!secretOk && !(await isSuperAdminVerified(req))) {
     return new Response("Unauthorized", { status: 401 });
   }
 

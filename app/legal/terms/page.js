@@ -32,6 +32,7 @@ export default function TermsPage() {
           <li>Ensure that any client data you enter into the platform is obtained with appropriate consent</li>
           <li>Comply with all applicable privacy laws when handling client phone numbers, email addresses, and personal information</li>
         </ul>
+        <p>Your use of the platform is also governed by our <a href="/legal/acceptable-use">Acceptable Use Policy</a>. Where KyoriaOS processes personal data on your behalf, our <a href="/legal/dpa">Data Processing Addendum</a> applies and is incorporated into these Terms.</p>
       </Section>
 
       <Section title="4. SMS Notifications">
