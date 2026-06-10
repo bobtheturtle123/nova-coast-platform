@@ -3246,18 +3246,20 @@ export default function SettingsPage() {
         {openSections.integrations && (
         <div className="pt-2 pb-4">
       {/* Dropbox */}
-      <div id="settings-dropbox" className="card mt-6 scroll-mt-24">
-        <div className="flex items-start justify-between gap-3 mb-1">
+      <details id="settings-dropbox" className="card mt-6 scroll-mt-24 group">
+        <summary className="flex items-center justify-between gap-3 cursor-pointer list-none">
           <div className="flex items-center gap-2">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="#0061FF"><path d="M6 2L0 5.44l6.4 3.36L12 5.44 6 2zm12 0l-6 3.44 5.6 3.36L24 5.44 18 2zM0 12.16l6.4 3.36L12 12.16 6 8.8 0 12.16zm18-3.36l-6 3.36 5.6 3.36L24 12.16 18 8.8zM6.4 18.56L12 22l5.6-3.44L12 15.2l-5.6 3.36z"/></svg>
             <h2 className="font-semibold text-[#0F172A] text-base">Dropbox</h2>
+            {dropbox?.connected && (
+              <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex-shrink-0">Connected</span>
+            )}
           </div>
-          {dropbox?.connected && (
-            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex-shrink-0">Connected</span>
-          )}
-        </div>
-        <p className="text-sm text-gray-500 mb-4">
-          Connect Dropbox to import photos, videos, floor plans, and files into your listing galleries.
+          <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+        </summary>
+        <p className="text-sm text-gray-500 mb-4 mt-3">
+          Connect Dropbox to import photos, videos, floor plans, and files into your listing galleries.{" "}
+          <a href="/guides/dropbox-import" target="_blank" className="text-[#3486cf] hover:underline">Setup guide →</a>
         </p>
 
         {dropbox?.configured === false ? (
@@ -3282,21 +3284,23 @@ export default function SettingsPage() {
             {dropboxBusy ? "Connecting…" : "Connect Dropbox"}
           </button>
         )}
-      </div>
+      </details>
 
       {/* CubiCasa */}
-      <div id="settings-cubicasa" className="card mt-6 scroll-mt-24">
-        <div className="flex items-start justify-between gap-3 mb-1">
+      <details id="settings-cubicasa" className="card mt-6 scroll-mt-24 group">
+        <summary className="flex items-center justify-between gap-3 cursor-pointer list-none">
           <div className="flex items-center gap-2">
             <img src="https://www.google.com/s2/favicons?domain=cubi.casa&sz=64" alt="" className="w-5 h-5 rounded" />
             <h2 className="font-semibold text-[#0F172A] text-base">CubiCasa</h2>
+            {cubicasa?.connected && (
+              <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex-shrink-0">Connected</span>
+            )}
           </div>
-          {cubicasa?.connected && (
-            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex-shrink-0">Connected</span>
-          )}
-        </div>
-        <p className="text-sm text-gray-500 mb-4">
-          Connect your CubiCasa company account to import floor plans into your listing galleries.
+          <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+        </summary>
+        <p className="text-sm text-gray-500 mb-4 mt-3">
+          Connect your CubiCasa company account to import floor plans into your listing galleries.{" "}
+          <a href="/guides/cubicasa-import" target="_blank" className="text-[#3486cf] hover:underline">Setup guide →</a>
         </p>
 
         {cubicasa?.connected ? (
@@ -3337,21 +3341,22 @@ export default function SettingsPage() {
             </button>
           </div>
         )}
-      </div>
+      </details>
 
       {/* Vimeo (hidden until approved) */}
       {VIMEO_ENABLED && (
-      <div id="settings-vimeo" className="card mt-6 scroll-mt-24">
-        <div className="flex items-start justify-between gap-3 mb-1">
+      <details id="settings-vimeo" className="card mt-6 scroll-mt-24 group">
+        <summary className="flex items-center justify-between gap-3 cursor-pointer list-none">
           <div className="flex items-center gap-2">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="#1AB7EA"><path d="M23.977 6.416c-.105 2.338-1.739 5.543-4.894 9.609-3.268 4.247-6.026 6.37-8.29 6.37-1.409 0-2.578-1.294-3.553-3.881L5.322 11.4C4.603 8.816 3.834 7.522 3.01 7.522c-.179 0-.806.378-1.881 1.132L0 7.197c1.185-1.044 2.351-2.084 3.501-3.128C5.08 2.701 6.266 1.984 7.055 1.91c1.867-.18 3.016 1.1 3.447 3.838.465 2.953.789 4.789.971 5.507.539 2.45 1.131 3.674 1.776 3.674.502 0 1.256-.796 2.265-2.385 1.004-1.589 1.54-2.797 1.612-3.628.144-1.371-.395-2.061-1.614-2.061-.574 0-1.167.121-1.777.391 1.186-3.868 3.434-5.757 6.762-5.637 2.473.06 3.628 1.664 3.493 4.797l-.013.013z"/></svg>
             <h2 className="font-semibold text-[#0F172A] text-base">Vimeo</h2>
+            {vimeo?.connected && (
+              <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex-shrink-0">Connected</span>
+            )}
           </div>
-          {vimeo?.connected && (
-            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex-shrink-0">Connected</span>
-          )}
-        </div>
-        <p className="text-sm text-gray-500 mb-4">
+          <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+        </summary>
+        <p className="text-sm text-gray-500 mb-4 mt-3">
           Connect your Vimeo account to import videos into your listing galleries.
         </p>
 
@@ -3377,13 +3382,19 @@ export default function SettingsPage() {
             {vimeoBusy ? "Connecting…" : "Connect Vimeo"}
           </button>
         )}
-      </div>
+      </details>
       )}
 
       {/* Google Reviews */}
-      <div id="settings-reviews" className="card mt-6 scroll-mt-24">
-        <h2 className="font-semibold text-[#0F172A] text-base mb-1">Google Reviews</h2>
-        <p className="text-sm text-gray-500 mb-4">Ask clients to leave a Google review once their media is delivered.</p>
+      <details id="settings-reviews" className="card mt-6 scroll-mt-24 group">
+        <summary className="flex items-center justify-between gap-3 cursor-pointer list-none">
+          <div className="flex items-center gap-2">
+            <img src="https://www.google.com/s2/favicons?domain=google.com&sz=64" alt="" className="w-5 h-5 rounded" />
+            <h2 className="font-semibold text-[#0F172A] text-base">Google Reviews</h2>
+          </div>
+          <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+        </summary>
+        <p className="text-sm text-gray-500 mb-4 mt-3">Ask clients to leave a Google review once their media is delivered.</p>
 
         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl mb-4">
           <div>
@@ -3407,18 +3418,19 @@ export default function SettingsPage() {
         <button onClick={saveIntegrations} disabled={savingIntegrations} className="btn-primary mt-4 px-6 py-2.5">
           {savingIntegrations ? "Saving…" : "Save"}
         </button>
-      </div>
+      </details>
 
       {/* Zapier — connect to other apps */}
-      <div id="settings-zapier" className="card mt-6 scroll-mt-24">
-        <div className="flex items-start justify-between gap-3 mb-1">
+      <details id="settings-zapier" className="card mt-6 scroll-mt-24 group">
+        <summary className="flex items-center justify-between gap-3 cursor-pointer list-none">
           <div className="flex items-center gap-2">
             <img src="https://cdn.simpleicons.org/zapier/FF4F00" alt="Zapier" className="w-5 h-5" />
             <h2 className="font-semibold text-[#0F172A] text-base">Connect to your other apps</h2>
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-[#FF4F00]/10 text-[#FF4F00] flex-shrink-0">via Zapier</span>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-[#FF4F00]/10 text-[#FF4F00] flex-shrink-0">via Zapier</span>
-        </div>
-        <p className="text-sm text-gray-500 mb-4">
+          <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+        </summary>
+        <p className="text-sm text-gray-500 mb-4 mt-3">
           Automatically send your bookings to the tools you already use — <strong>no coding</strong>. For example:
         </p>
         <div className="grid sm:grid-cols-3 gap-2 mb-5">
@@ -3473,7 +3485,7 @@ export default function SettingsPage() {
         <button onClick={saveIntegrations} disabled={savingIntegrations} className="btn-primary mt-4 px-6 py-2.5">
           {savingIntegrations ? "Saving…" : "Save"}
         </button>
-      </div>
+      </details>
 
       {/* Custom Domain */}
       <CustomDomainSection />

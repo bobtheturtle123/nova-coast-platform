@@ -19,6 +19,9 @@ export default async function sitemap() {
     { url: `${BASE}/guides/importing-clients`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE}/guides/ai-assistant`,      lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE}/guides/zapier`,            lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE}/guides/dropbox-import`,    lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE}/guides/cubicasa-import`,   lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE}/guides/3d-tours`,          lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
   ];
 
   // Tenant booking pages — canonical URL is /{slug}/book, NOT /{slug} which redirects

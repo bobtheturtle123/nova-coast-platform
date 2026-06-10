@@ -13,6 +13,9 @@ export const ALL_GUIDES = [
   { slug: "importing-clients", icon: "📇", title: "Importing your clients",  blurb: "Bring your existing clients over from Aryeo, HD Photo Hub, or a CSV." },
   { slug: "ai-assistant",    icon: "🤖", title: "The AI assistant",          blurb: "How the built-in AI helps write captions, descriptions, and answers." },
   { slug: "zapier",          icon: "🔗", title: "Connect other apps (Zapier)", blurb: "Send bookings to Google Sheets, Slack, your CRM, and more." },
+  { slug: "dropbox-import",  icon: "📦", title: "Import from Dropbox",        blurb: "Connect Dropbox and pull photos, videos, and files into a gallery." },
+  { slug: "cubicasa-import", icon: "📐", title: "Import floor plans from CubiCasa", blurb: "Connect your CubiCasa account and import finished floor plans." },
+  { slug: "3d-tours",        icon: "🧭", title: "Add 3D tours (iGuide, Matterport)", blurb: "Embed an iGuide or Matterport tour into the client gallery." },
 ];
 
 export default function GuideShell({ eyebrow = "Guide", title, intro, currentSlug, children }) {
