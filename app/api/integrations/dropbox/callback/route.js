@@ -25,6 +25,7 @@ export async function GET(req) {
     return Response.redirect(`${settings}?dropbox=connected`, 302);
   } catch (e) {
     console.error("[dropbox/callback]", e?.message);
-    return Response.redirect(`${settings}?dropbox=error`, 302);
+    const reason = encodeURIComponent((e?.message || "").replace(/\s+/g, " ").slice(0, 300));
+    return Response.redirect(`${settings}?dropbox=error&reason=${reason}`, 302);
   }
 }

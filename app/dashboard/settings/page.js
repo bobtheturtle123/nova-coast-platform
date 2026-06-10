@@ -672,7 +672,10 @@ export default function SettingsPage() {
     const p = new URLSearchParams(window.location.search).get("dropbox");
     if (!p) return;
     if (p === "connected") { showMsg("Dropbox connected."); loadDropbox(); }
-    else if (p === "error") showMsg("Could not connect Dropbox. Please try again.", "error");
+    else if (p === "error") {
+      const reason = new URLSearchParams(window.location.search).get("reason");
+      showMsg(reason ? `Could not connect Dropbox: ${decodeURIComponent(reason)}` : "Could not connect Dropbox. Please try again.", "error");
+    }
     else if (p === "invalid_state") showMsg("Dropbox connection expired. Please try again.", "error");
     window.history.replaceState({}, "", window.location.pathname);
   }, [loadDropbox]);
