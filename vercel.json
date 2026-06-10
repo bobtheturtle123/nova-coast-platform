@@ -57,7 +57,7 @@
     },
     {
       "path": "/api/cron/transcode-web-videos",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 5 * * *"
     }
   ]
 }
