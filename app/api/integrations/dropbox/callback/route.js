@@ -1,4 +1,4 @@
-import { verifyState, exchangeCodeAndStore } from "@/lib/dropbox";
+import { verifyState, exchangeCodeAndStore, clientDebug } from "@/lib/dropbox";
 import { getAppUrl } from "@/lib/appUrl";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,9 @@ export async function GET(req) {
     return Response.redirect(`${settings}?dropbox=connected`, 302);
   } catch (e) {
     console.error("[dropbox/callback]", e?.message);
-    const reason = encodeURIComponent((e?.message || "").replace(/\s+/g, " ").slice(0, 300));
+    const dbg = clientDebug();
+    const msg = `${e?.message || ""} [keyLen:${dbg.idLen} secretLen:${dbg.secretLen} redirect:${dbg.redirectUri}]`;
+    const reason = encodeURIComponent(msg.replace(/\s+/g, " ").slice(0, 400));
     return Response.redirect(`${settings}?dropbox=error&reason=${reason}`, 302);
   }
 }
