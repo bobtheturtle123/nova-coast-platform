@@ -763,6 +763,47 @@ export default function SettingsPage() {
     finally { setCubicasaBusy(false); }
   }
 
+  // Google Calendar integration (owner's personal calendar)
+  const [gcal,     setGcal]     = useState(null); // { connected, configured, lastSynced }
+  const [gcalBusy, setGcalBusy] = useState(false);
+
+  const loadGcal = useCallback(async () => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/integrations/google-calendar/status", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setGcal(await res.json());
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadGcal(); }, [loadGcal]);
+
+  async function connectGcal() {
+    setGcalBusy(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const popup = window.open(`/api/calendar/oauth/start?token=${encodeURIComponent(token)}&owner=1`, "gcal", "width=520,height=680");
+      const handler = (e) => {
+        if (e.data?.type === "gcal-connected") { showMsg("Google Calendar connected."); loadGcal(); cleanup(); }
+        else if (e.data?.type === "gcal-error") { showMsg(e.data.error || "Could not connect Google Calendar.", "error"); cleanup(); }
+      };
+      const cleanup = () => { window.removeEventListener("message", handler); setGcalBusy(false); };
+      window.addEventListener("message", handler);
+      // Fallback: if the popup is closed without a message, stop the spinner.
+      const iv = setInterval(() => { if (popup?.closed) { clearInterval(iv); setGcalBusy(false); loadGcal(); } }, 1000);
+    } catch { showMsg("Something went wrong.", "error"); setGcalBusy(false); }
+  }
+
+  async function disconnectGcal() {
+    setGcalBusy(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/integrations/google-calendar/disconnect", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { showMsg("Google Calendar disconnected."); setGcal({ connected: false, configured: gcal?.configured }); }
+      else showMsg("Failed to disconnect.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    finally { setGcalBusy(false); }
+  }
+
   // Vimeo integration (OAuth)
   const [vimeo,     setVimeo]     = useState(null); // { connected, accountName, configured }
   const [vimeoBusy, setVimeoBusy] = useState(false);
@@ -3245,6 +3286,46 @@ export default function SettingsPage() {
         </button>
         {openSections.integrations && (
         <div className="pt-2 pb-4">
+      {/* Google Calendar */}
+      <details id="settings-google-calendar" className="card mt-6 scroll-mt-24 group">
+        <summary className="flex items-center justify-between gap-3 cursor-pointer list-none">
+          <div className="flex items-center gap-2">
+            <img src="https://www.google.com/s2/favicons?domain=calendar.google.com&sz=64" alt="" className="w-5 h-5 rounded" />
+            <h2 className="font-semibold text-[#0F172A] text-base">Google Calendar</h2>
+            {gcal?.connected && (
+              <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex-shrink-0">Connected</span>
+            )}
+          </div>
+          <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+        </summary>
+        <p className="text-sm text-gray-500 mb-4 mt-3">
+          Connect your Google Calendar so your existing busy times block out availability and shoots can sync to your calendar. We only read free/busy times — never event details.
+        </p>
+
+        {gcal?.configured === false ? (
+          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Google Calendar is not configured on the server yet. Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_OAUTH_REDIRECT_URI.
+          </p>
+        ) : gcal?.connected ? (
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl gap-3 flex-wrap">
+            <div>
+              <p className="text-sm font-medium text-[#0F172A]">Connected{gcal.email ? ` as ${gcal.email}` : ""}</p>
+              <p className="text-xs text-gray-400">{gcal.lastSynced ? `Last synced ${new Date(gcal.lastSynced).toLocaleString()}` : "Your busy times now block availability."}</p>
+            </div>
+            <button type="button" onClick={disconnectGcal} disabled={gcalBusy}
+              className="text-sm font-semibold text-red-600 border border-red-200 px-4 py-2 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50">
+              {gcalBusy ? "…" : "Disconnect"}
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={connectGcal} disabled={gcalBusy}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-white px-5 py-2.5 rounded-xl transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ background: "#4285F4" }}>
+            {gcalBusy ? "Connecting…" : "Connect Google Calendar"}
+          </button>
+        )}
+      </details>
+
       {/* Dropbox */}
       <details id="settings-dropbox" className="card mt-6 scroll-mt-24 group">
         <summary className="flex items-center justify-between gap-3 cursor-pointer list-none">

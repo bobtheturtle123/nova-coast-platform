@@ -5,7 +5,7 @@ import { getTenantById } from "@/lib/tenants";
 import { sendBookingCreatedNotifications } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendBookingConfirmedSms } from "@/lib/sms";
-import { getTenantByStripeCustomerId, triggerReferralReward } from "@/lib/referral";
+import { getTenantByStripeCustomerId, triggerReferralReward, applyPendingReferralCredits } from "@/lib/referral";
 
 export const dynamic = "force-dynamic";
 
@@ -305,9 +305,13 @@ export async function POST(req) {
         if (!["subscription_create", "subscription_cycle"].includes(invoice.billing_reason)) break;
         if (!invoice.customer) break;
         try {
-          const refereeTenant = await getTenantByStripeCustomerId(invoice.customer);
-          if (refereeTenant?.referredBy) {
-            await triggerReferralReward(refereeTenant.id, invoice.payment_intent || invoice.id);
+          const tenant = await getTenantByStripeCustomerId(invoice.customer);
+          if (tenant?.referredBy) {
+            await triggerReferralReward(tenant.id, invoice.payment_intent || invoice.id);
+          }
+          // Flush any pending referral credit now that this tenant has a customer.
+          if (tenant?.id && (tenant.pendingReferralCredits || 0) > 0) {
+            await applyPendingReferralCredits(tenant.id, invoice.customer);
           }
         } catch (err) {
           console.error("Referral reward error:", err.message);
