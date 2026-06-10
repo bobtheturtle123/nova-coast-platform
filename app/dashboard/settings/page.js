@@ -1,5 +1,9 @@
 "use client";
 
+// Vimeo is hidden until the Vimeo app is approved (the video_files scope +
+// downloads require Vimeo approval / a paid plan). Flip to true to re-enable.
+const VIMEO_ENABLED = false;
+
 import { useEffect, useState, useCallback } from "react";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/components/Toast";
@@ -3335,7 +3339,8 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* Vimeo */}
+      {/* Vimeo (hidden until approved) */}
+      {VIMEO_ENABLED && (
       <div id="settings-vimeo" className="card mt-6 scroll-mt-24">
         <div className="flex items-start justify-between gap-3 mb-1">
           <div className="flex items-center gap-2">
@@ -3373,6 +3378,7 @@ export default function SettingsPage() {
           </button>
         )}
       </div>
+      )}
 
       {/* Google Reviews */}
       <div id="settings-reviews" className="card mt-6 scroll-mt-24">
