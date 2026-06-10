@@ -759,6 +759,56 @@ export default function SettingsPage() {
     finally { setCubicasaBusy(false); }
   }
 
+  // Vimeo integration (OAuth)
+  const [vimeo,     setVimeo]     = useState(null); // { connected, accountName, configured }
+  const [vimeoBusy, setVimeoBusy] = useState(false);
+
+  const loadVimeo = useCallback(async () => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/integrations/vimeo/status", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setVimeo(await res.json());
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadVimeo(); }, [loadVimeo]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const p = new URLSearchParams(window.location.search).get("vimeo");
+    if (!p) return;
+    if (p === "connected") { showMsg("Vimeo connected."); loadVimeo(); }
+    else if (p === "error") {
+      const reason = new URLSearchParams(window.location.search).get("reason");
+      showMsg(reason ? `Could not connect Vimeo: ${decodeURIComponent(reason)}` : "Could not connect Vimeo. Please try again.", "error");
+    }
+    else if (p === "invalid_state") showMsg("Vimeo connection expired. Please try again.", "error");
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [loadVimeo]);
+
+  async function connectVimeo() {
+    setVimeoBusy(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/integrations/vimeo/connect", { headers: { Authorization: `Bearer ${token}` } });
+      const d = await res.json();
+      if (res.ok && d.url) window.location.href = d.url;
+      else showMsg(d.error || "Could not start Vimeo connection.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    finally { setVimeoBusy(false); }
+  }
+
+  async function disconnectVimeo() {
+    setVimeoBusy(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/integrations/vimeo/disconnect", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { showMsg("Vimeo disconnected."); setVimeo({ connected: false, configured: vimeo?.configured }); }
+      else showMsg("Failed to disconnect.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    finally { setVimeoBusy(false); }
+  }
+
   async function saveIntegrations() {
     setSavingIntegrations(true);
     try {
@@ -3234,7 +3284,7 @@ export default function SettingsPage() {
       <div id="settings-cubicasa" className="card mt-6 scroll-mt-24">
         <div className="flex items-start justify-between gap-3 mb-1">
           <div className="flex items-center gap-2">
-            <span className="text-lg">📐</span>
+            <img src="https://www.google.com/s2/favicons?domain=cubi.casa&sz=64" alt="" className="w-5 h-5 rounded" />
             <h2 className="font-semibold text-[#0F172A] text-base">CubiCasa</h2>
           </div>
           {cubicasa?.connected && (
@@ -3285,6 +3335,45 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {/* Vimeo */}
+      <div id="settings-vimeo" className="card mt-6 scroll-mt-24">
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <div className="flex items-center gap-2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#1AB7EA"><path d="M23.977 6.416c-.105 2.338-1.739 5.543-4.894 9.609-3.268 4.247-6.026 6.37-8.29 6.37-1.409 0-2.578-1.294-3.553-3.881L5.322 11.4C4.603 8.816 3.834 7.522 3.01 7.522c-.179 0-.806.378-1.881 1.132L0 7.197c1.185-1.044 2.351-2.084 3.501-3.128C5.08 2.701 6.266 1.984 7.055 1.91c1.867-.18 3.016 1.1 3.447 3.838.465 2.953.789 4.789.971 5.507.539 2.45 1.131 3.674 1.776 3.674.502 0 1.256-.796 2.265-2.385 1.004-1.589 1.54-2.797 1.612-3.628.144-1.371-.395-2.061-1.614-2.061-.574 0-1.167.121-1.777.391 1.186-3.868 3.434-5.757 6.762-5.637 2.473.06 3.628 1.664 3.493 4.797l-.013.013z"/></svg>
+            <h2 className="font-semibold text-[#0F172A] text-base">Vimeo</h2>
+          </div>
+          {vimeo?.connected && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex-shrink-0">Connected</span>
+          )}
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Connect your Vimeo account to import videos into your listing galleries.
+        </p>
+
+        {vimeo?.configured === false ? (
+          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Vimeo is not configured on the server yet. Add VIMEO_CLIENT_ID, VIMEO_CLIENT_SECRET, and VIMEO_REDIRECT_URI.
+          </p>
+        ) : vimeo?.connected ? (
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl gap-3 flex-wrap">
+            <div>
+              <p className="text-sm font-medium text-[#0F172A]">Connected{vimeo.accountName ? ` as ${vimeo.accountName}` : ""}</p>
+              <p className="text-xs text-gray-400">Import is available from any gallery's Add Media menu.</p>
+            </div>
+            <button type="button" onClick={disconnectVimeo} disabled={vimeoBusy}
+              className="text-sm font-semibold text-red-600 border border-red-200 px-4 py-2 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50">
+              {vimeoBusy ? "…" : "Disconnect"}
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={connectVimeo} disabled={vimeoBusy}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-white px-5 py-2.5 rounded-xl transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ background: "#1AB7EA" }}>
+            {vimeoBusy ? "Connecting…" : "Connect Vimeo"}
+          </button>
+        )}
+      </div>
+
       {/* Google Reviews */}
       <div id="settings-reviews" className="card mt-6 scroll-mt-24">
         <h2 className="font-semibold text-[#0F172A] text-base mb-1">Google Reviews</h2>
@@ -3317,8 +3406,11 @@ export default function SettingsPage() {
       {/* Zapier — connect to other apps */}
       <div id="settings-zapier" className="card mt-6 scroll-mt-24">
         <div className="flex items-start justify-between gap-3 mb-1">
-          <h2 className="font-semibold text-[#0F172A] text-base">Connect to your other apps</h2>
-          <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-[#3486cf]/10 text-[#3486cf] flex-shrink-0">via Zapier</span>
+          <div className="flex items-center gap-2">
+            <img src="https://cdn.simpleicons.org/zapier/FF4F00" alt="Zapier" className="w-5 h-5" />
+            <h2 className="font-semibold text-[#0F172A] text-base">Connect to your other apps</h2>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-[#FF4F00]/10 text-[#FF4F00] flex-shrink-0">via Zapier</span>
         </div>
         <p className="text-sm text-gray-500 mb-4">
           Automatically send your bookings to the tools you already use — <strong>no coding</strong>. For example:
