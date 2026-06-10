@@ -59,10 +59,16 @@ export async function POST(req) {
     // Create tenant + seed subcollections + set custom claims
     const tenantId = await createTenant({ uid, email, ownerName, businessName, slug, phone, referralCode, referredBy, trialDays });
 
-    // Record referral relationship (status: pending until first payment)
+    // Record referral relationship (status: pending until first payment).
+    // This MUST be awaited — on serverless the function can freeze right after
+    // the response, dropping a fire-and-forget write. If the pending referral
+    // record is never created, the referrer would never receive their credit.
     if (referredBy && referredBy !== tenantId) {
-      createReferralRecord({ referrerId: referredBy, refereeId: tenantId, refereeEmail: email })
-        .catch(console.error);
+      try {
+        await createReferralRecord({ referrerId: referredBy, refereeId: tenantId, refereeEmail: email });
+      } catch (err) {
+        console.error("Failed to create referral record:", err?.message);
+      }
     }
 
     // Send welcome email (non-blocking)

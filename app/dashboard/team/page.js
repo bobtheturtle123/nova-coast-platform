@@ -1996,6 +1996,9 @@ export default function TeamPage() {
     ? [soloOwnerMember]
     : filterMember === "all"
       ? (calView === "2wk" || calView === "week" ? [soloOwnerMember, ...activeMembers] : [soloOwnerMember, ...members])
+          // "Photographers only" hides non-shooting roles (managers/admins) from
+          // every calendar view; the owner always stays visible.
+          .filter((m) => m.id === "__owner__" || !availPhotographersOnly || shootsSchedule(m))
       : members.filter((m) => m.id === filterMember);
 
   const feature = { scheduleNewTabs: false };
@@ -2774,6 +2777,13 @@ export default function TeamPage() {
         {/* ── DAY VIEW ───────────────────────────────────────────────────── */}
         {calView === "day" && (
           <div className="p-4">
+            {/* Show photographers only vs. everyone */}
+            <label className="flex items-center gap-2 mb-4 cursor-pointer w-fit">
+              <input type="checkbox" checked={availPhotographersOnly}
+                onChange={(e) => setAvailPhotographersOnly(e.target.checked)}
+                className="accent-[#3486cf]" />
+              <span className="text-xs text-gray-500">Photographers only</span>
+            </label>
             {/* All-Team blocks for this day */}
             {(() => {
               const dayStr = `${anchor.getFullYear()}-${String(anchor.getMonth()+1).padStart(2,"0")}-${String(anchor.getDate()).padStart(2,"0")}`;
@@ -2847,7 +2857,11 @@ export default function TeamPage() {
                         </div>
                       ))}
                       {memberEvents.length === 0 && !isBlocked ? (
-                        <p className="px-4 py-3 text-sm text-gray-400">No shoots scheduled for this day.</p>
+                        // Non-shooting roles (managers/admins) don't get a
+                        // "No shoots scheduled" line — it's noise for them.
+                        shootsSchedule(member)
+                          ? <p className="px-4 py-3 text-sm text-gray-400">No shoots scheduled for this day.</p>
+                          : null
                       ) : (
                         <div className="divide-y divide-gray-50">
                           {memberEvents.map((ev) => {
