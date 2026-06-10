@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/components/Toast";
 import { useTenantSettings } from "@/lib/TenantSettingsContext";
@@ -651,6 +651,54 @@ export default function SettingsPage() {
   const [zapierWebhooks,               setZapierWebhooks]               = useState([]); // string[]
   const [newZapUrl,                    setNewZapUrl]                    = useState("");
   const [savingIntegrations,           setSavingIntegrations]           = useState(false);
+
+  // Dropbox integration
+  const [dropbox,        setDropbox]        = useState(null); // { connected, email, configured }
+  const [dropboxBusy,    setDropboxBusy]    = useState(false);
+
+  const loadDropbox = useCallback(async () => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/integrations/dropbox/status", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setDropbox(await res.json());
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadDropbox(); }, [loadDropbox]);
+
+  // Surface the OAuth redirect result (e.g. ?dropbox=connected).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const p = new URLSearchParams(window.location.search).get("dropbox");
+    if (!p) return;
+    if (p === "connected") { showMsg("Dropbox connected."); loadDropbox(); }
+    else if (p === "error") showMsg("Could not connect Dropbox. Please try again.", "error");
+    else if (p === "invalid_state") showMsg("Dropbox connection expired. Please try again.", "error");
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [loadDropbox]);
+
+  async function connectDropbox() {
+    setDropboxBusy(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/integrations/dropbox/connect", { headers: { Authorization: `Bearer ${token}` } });
+      const d = await res.json();
+      if (res.ok && d.url) window.location.href = d.url;
+      else showMsg(d.error || "Could not start Dropbox connection.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    finally { setDropboxBusy(false); }
+  }
+
+  async function disconnectDropbox() {
+    setDropboxBusy(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/integrations/dropbox/disconnect", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { showMsg("Dropbox disconnected."); setDropbox({ connected: false, configured: dropbox?.configured }); }
+      else showMsg("Failed to disconnect.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    finally { setDropboxBusy(false); }
+  }
 
   async function saveIntegrations() {
     setSavingIntegrations(true);
@@ -3084,6 +3132,45 @@ export default function SettingsPage() {
         </button>
         {openSections.integrations && (
         <div className="pt-2 pb-4">
+      {/* Dropbox */}
+      <div id="settings-dropbox" className="card mt-6 scroll-mt-24">
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <div className="flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#0061FF"><path d="M6 2L0 5.44l6.4 3.36L12 5.44 6 2zm12 0l-6 3.44 5.6 3.36L24 5.44 18 2zM0 12.16l6.4 3.36L12 12.16 6 8.8 0 12.16zm18-3.36l-6 3.36 5.6 3.36L24 12.16 18 8.8zM6.4 18.56L12 22l5.6-3.44L12 15.2l-5.6 3.36z"/></svg>
+            <h2 className="font-semibold text-[#0F172A] text-base">Dropbox</h2>
+          </div>
+          {dropbox?.connected && (
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 flex-shrink-0">Connected</span>
+          )}
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Connect Dropbox to import photos, videos, floor plans, and files into your listing galleries.
+        </p>
+
+        {dropbox?.configured === false ? (
+          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Dropbox is not configured on the server yet. Add DROPBOX_CLIENT_ID, DROPBOX_CLIENT_SECRET, and DROPBOX_REDIRECT_URI.
+          </p>
+        ) : dropbox?.connected ? (
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+            <div>
+              <p className="text-sm font-medium text-[#0F172A]">Connected{dropbox.email ? ` as ${dropbox.email}` : ""}</p>
+              <p className="text-xs text-gray-400">Import is available from any listing gallery's Add Media menu.</p>
+            </div>
+            <button type="button" onClick={disconnectDropbox} disabled={dropboxBusy}
+              className="text-sm font-semibold text-red-600 border border-red-200 px-4 py-2 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50">
+              {dropboxBusy ? "…" : "Disconnect"}
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={connectDropbox} disabled={dropboxBusy}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-white px-5 py-2.5 rounded-xl transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ background: "#0061FF" }}>
+            {dropboxBusy ? "Connecting…" : "Connect Dropbox"}
+          </button>
+        )}
+      </div>
+
       {/* Google Reviews */}
       <div id="settings-reviews" className="card mt-6 scroll-mt-24">
         <h2 className="font-semibold text-[#0F172A] text-base mb-1">Google Reviews</h2>

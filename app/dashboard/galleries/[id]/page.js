@@ -6,6 +6,7 @@ import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import { useToast } from "@/components/Toast";
 import { getAppUrl } from "@/lib/appUrl";
+import DropboxImportModal from "@/components/DropboxImportModal";
 
 const APP_URL = getAppUrl();
 
@@ -320,6 +321,7 @@ export default function GalleryDetailPage() {
   const [activeTab,    setActiveTab]    = useState("all");
   const [dragIdx,      setDragIdx]      = useState(null);
   const [savingOrder,  setSavingOrder]  = useState(false);
+  const [showDropbox,  setShowDropbox]  = useState(false);
   const fileRef = useRef(null);
 
   // Email state
@@ -935,38 +937,6 @@ export default function GalleryDetailPage() {
     }
   }
 
-  function openDropboxChooser() {
-    const appKey = process.env.NEXT_PUBLIC_DROPBOX_APP_KEY;
-    if (!appKey) { toast("Dropbox is not configured. Add NEXT_PUBLIC_DROPBOX_APP_KEY to .env.", "error"); return; }
-    const launch = () => {
-      window.Dropbox.choose({
-        success: async (files) => {
-          toast(`Importing ${files.length} file${files.length !== 1 ? "s" : ""} from Dropbox…`);
-          try {
-            const fileObjects = await Promise.all(files.map(async (f) => {
-              const res = await fetch(f.link);
-              const blob = await res.blob();
-              return new File([blob], f.name, { type: blob.type || "image/jpeg" });
-            }));
-            await uploadFiles(fileObjects);
-          } catch (e) { toast("Dropbox import failed: " + e.message, "error"); }
-        },
-        cancel: () => {},
-        linkType: "direct",
-        multiselect: true,
-        extensions: [".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".heic", ".mp4", ".mov", ".webm"],
-      });
-    };
-    if (typeof window !== "undefined" && !window.Dropbox) {
-      const s = document.createElement("script");
-      s.src = "https://www.dropbox.com/static/api/2/dropins.js";
-      s.id = "dropboxjs";
-      s.setAttribute("data-app-key", appKey);
-      s.onload = launch;
-      document.head.appendChild(s);
-    } else { launch(); }
-  }
-
   async function saveVideo() {
     setSavingVideo(true);
     try {
@@ -1381,18 +1351,34 @@ export default function GalleryDetailPage() {
           )}
         </div>
 
-        {/* Cloud import */}
-        {process.env.NEXT_PUBLIC_DROPBOX_APP_KEY && (
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs text-gray-400">Import from:</span>
-            <button
-              onClick={openDropboxChooser}
-              disabled={uploading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="#0061FF"><path d="M12 14.56l-5.6-3.36L0 14.56 6.4 18l5.6-3.44zM6.4 2L0 5.44l6.4 3.36 5.6-3.36L6.4 2zm5.6 3.36L17.6 2 24 5.44l-5.6 3.36L12 5.36zm0 5.44l5.6 3.36L24 10.44 17.6 7.08 12 10.8zM12 15.2l-5.6 3.44L0 15.2l6.4 3.36L12 22l5.6-3.44L24 15.2l-6.4 3.44L12 15.2z"/></svg>
-              Dropbox
-            </button>
-          </div>
+        {/* Cloud import — OAuth-based Dropbox import (connect in Settings → Integrations) */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs text-gray-400">Import from:</span>
+          <button
+            onClick={() => setShowDropbox(true)}
+            disabled={uploading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#0061FF"><path d="M12 14.56l-5.6-3.36L0 14.56 6.4 18l5.6-3.44zM6.4 2L0 5.44l6.4 3.36 5.6-3.36L6.4 2zm5.6 3.36L17.6 2 24 5.44l-5.6 3.36L12 5.36zm0 5.44l5.6 3.36L24 10.44 17.6 7.08 12 10.8zM12 15.2l-5.6 3.44L0 15.2l6.4 3.36L12 22l5.6-3.44L24 15.2l-6.4 3.44L12 15.2z"/></svg>
+            Import from Dropbox
+          </button>
+        </div>
+
+        {showDropbox && (
+          <DropboxImportModal
+            galleryId={id}
+            onClose={() => setShowDropbox(false)}
+            onImported={(items) => {
+              // Reflect imported files in the gallery immediately.
+              setGallery((g) => ({
+                ...g,
+                media: [
+                  ...(g.media || []),
+                  ...items.map((it) => ({ url: it.url, key: it.key, fileName: it.name, fileType: it.fileType, size: it.size })),
+                ],
+              }));
+              toast(`Imported ${items.length} file${items.length !== 1 ? "s" : ""} from Dropbox.`);
+            }}
+          />
         )}
 
         {/* Tabs — photos only; videos have their own section below */}

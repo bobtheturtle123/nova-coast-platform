@@ -29,6 +29,9 @@
     },
     "app/api/gallery/prepare-download/route.js": {
       "maxDuration": 300
+    },
+    "app/api/dashboard/galleries/[id]/media/import-dropbox/route.js": {
+      "maxDuration": 300
     }
   },
   "crons": [
