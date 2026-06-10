@@ -2,6 +2,7 @@ import { adminAuth } from "@/lib/firebase-admin";
 import { listFloorplans } from "@/lib/cubicasa";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 // GET — list completed CubiCasa floor plans if the account's API supports it.
 // Honest about non-support: returns { supported:false, message } rather than
