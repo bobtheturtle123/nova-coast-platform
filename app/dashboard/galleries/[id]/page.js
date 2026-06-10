@@ -1296,6 +1296,25 @@ export default function GalleryDetailPage() {
           );
         })()}
 
+        {/* ── Photos (collapsible, consistent with the sections below) ── */}
+        <details open className="group card shadow-card mb-4 mx-6">
+          <summary className="flex items-center justify-between cursor-pointer list-none mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-[#3486cf]/8 flex items-center justify-center flex-shrink-0">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" className="text-[#3486cf]">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 6h16v12H4V6z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#0F172A]">Photos &amp; Videos{images.length > 0 ? ` (${images.length})` : ""}</p>
+                <p className="text-xs text-gray-400">Upload from your computer or import from Dropbox, then organize.</p>
+              </div>
+            </div>
+            <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </summary>
+
         {/* Upload zone */}
         <div
           className={`border-2 border-dashed rounded-xl p-8 mb-6 text-center cursor-pointer transition-colors ${
@@ -1606,6 +1625,7 @@ export default function GalleryDetailPage() {
             </div>
           </div>
         )}
+        </details>
       </div>
 
       {/* ── Extras: 3D / Floor Plans / Files ─────────────────────────────── */}
