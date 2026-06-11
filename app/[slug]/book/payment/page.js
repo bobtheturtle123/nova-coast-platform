@@ -194,7 +194,7 @@ export default function TenantPaymentPage() {
   const store  = useBookingStore();
 
   const {
-    pricing, packageIds, serviceIds, addonIds,
+    pricing, packageIds, serviceIds, addonIds, retainerIds,
     address, unit, city, state, zip, squareFootage, propertyType, notes,
     preferredDate, preferredTime, preferredTimeSpecific, twilightTime, travelFee,
     clientName, clientEmail, clientPhone, customFields,
@@ -290,7 +290,7 @@ export default function TenantPaymentPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          packageIds, packageId: packageIds?.[0] ?? null, serviceIds, addonIds,
+          packageIds, packageId: packageIds?.[0] ?? null, serviceIds, addonIds, retainerIds,
           address, unit, city, state, zip, squareFootage, propertyType, notes,
           preferredDate, preferredTime, preferredTimeSpecific, twilightTime,
           clientName, clientEmail, clientPhone,

@@ -41,7 +41,7 @@ export async function POST(req, { params }) {
 
     const body = await req.json();
     const {
-      packageIds: rawPkgIds, packageId: rawPkgId, serviceIds, addonIds,
+      packageIds: rawPkgIds, packageId: rawPkgId, serviceIds, addonIds, retainerIds,
       address, city, state, zip, squareFootage, propertyType, notes,
       preferredDate, preferredTime, preferredTimeSpecific, twilightTime,
       clientName, clientEmail, clientPhone, smsConsent,
@@ -203,6 +203,7 @@ export async function POST(req, { params }) {
         packageIds: packageIds || [],
         serviceIds: serviceIds || [],
         addonIds:   addonIds  || [],
+        retainerIds: Array.isArray(retainerIds) ? retainerIds.slice(0, 20) : [],
 
         basePrice:        pricing.base,
         addonPrice:       pricing.addonTotal,

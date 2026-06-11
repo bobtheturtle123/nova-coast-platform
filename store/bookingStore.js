@@ -13,6 +13,7 @@ const INITIAL_STATE = {
 
   // Step 2
   addonIds: [],
+  retainerIds: [],
 
   // Step 3 — Property
   address:       "",
@@ -89,6 +90,14 @@ export const useBookingStore = create(
           addonIds: state.addonIds.includes(addonId)
             ? state.addonIds.filter((id) => id !== addonId)
             : [...state.addonIds, addonId],
+        })),
+
+      // Optional recurring retainers — recorded on the booking, billed separately.
+      toggleRetainer: (retainerId) =>
+        set((state) => ({
+          retainerIds: state.retainerIds.includes(retainerId)
+            ? state.retainerIds.filter((id) => id !== retainerId)
+            : [...state.retainerIds, retainerId],
         })),
 
       setSquareFootage: (squareFootage) => set({ squareFootage }),

@@ -58,8 +58,9 @@ const ADDON_IMAGES = {
 
 export default function TenantAddonsClient({ slug, addons = [], catalog }) {
   const router = useRouter();
-  const { packageIds, serviceIds, addonIds, squareFootage, toggleAddon, setPricing, travelFee } =
+  const { packageIds, serviceIds, addonIds, retainerIds, squareFootage, toggleAddon, toggleRetainer, setPricing, travelFee } =
     useBookingStore();
+  const activeRetainers = (catalog?.retainers || []).filter((r) => r.active !== false);
   const [lightboxAddon, setLightboxAddon] = useState(null);
 
   function getImages(addon) {
@@ -130,10 +131,46 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
                   </button>
                 );
               })}
-              {addons.length === 0 && (
+              {addons.length === 0 && activeRetainers.length === 0 && (
                 <p className="text-gray-400 text-sm">No add-ons available.</p>
               )}
             </div>
+
+            {/* Optional recurring retainers — only shown if the studio offers any */}
+            {activeRetainers.length > 0 && (
+              <div className="mt-8">
+                <p className="section-label mb-2">Ongoing plans (optional)</p>
+                <div className="space-y-3">
+                  {activeRetainers.map((r) => {
+                    const selected = (retainerIds || []).includes(r.id);
+                    const per = r.interval === "year" ? "yr" : r.interval === "quarter" ? "qtr" : "mo";
+                    return (
+                      <button key={r.id} onClick={() => toggleRetainer(r.id)}
+                        className={clsx(
+                          "w-full text-left border rounded-xl transition-all duration-200 overflow-hidden focus:outline-none",
+                          selected ? "border-teal-500 bg-teal-50 ring-1 ring-teal-200" : "border-gray-200 bg-white hover:border-teal-300"
+                        )}>
+                        <div className="flex items-center gap-4 p-4">
+                          <div className="flex-1 min-w-0">
+                            <p className={clsx("font-body font-semibold mb-0.5", selected ? "text-teal-700" : "text-[#0F172A]")}>{r.name}</p>
+                            {r.description && <p className="text-sm text-gray-500 line-clamp-2">{r.description}</p>}
+                          </div>
+                          <div className="flex items-center gap-4 flex-shrink-0">
+                            {Number(r.price) > 0 && (
+                              <span className={clsx("font-display text-xl", selected ? "text-teal-700" : "text-[#0F172A]")}>${Number(r.price).toLocaleString()}/{per}</span>
+                            )}
+                            <div className={clsx("w-12 h-6 rounded-full transition-colors duration-200 relative flex-shrink-0", selected ? "bg-teal-500" : "bg-gray-200")}>
+                              <div className={clsx("absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all duration-200", selected ? "left-7" : "left-1")} />
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-400 mt-2">Billed separately on a recurring basis — not added to this booking&apos;s total. We&apos;ll set it up with you.</p>
+              </div>
+            )}
 
             <div className="flex justify-between mt-10">
               <button onClick={() => router.push(`/${slug}/book`)} className="btn-outline">← Back</button>
