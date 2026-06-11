@@ -1989,6 +1989,8 @@ export default function TeamPage() {
   const atSeatLimit = isSolo || (seatLimit !== null && (members.length + 1) >= seatLimit);
   const ownerLabel = tenant?.ownerName || tenant?.businessName || "You";
   const soloOwnerMember = { id: "__owner__", name: ownerLabel, color: "#3486cf" };
+  // Whether the owner personally shoots / appears in scheduling (default: yes).
+  const ownerShoots = tenant?.ownerShoots !== false;
 
   // In availability views hide inactive photographers; the member list still shows all
   const activeMembers = members.filter((m) => m.active !== false);
@@ -1996,9 +1998,11 @@ export default function TeamPage() {
     ? [soloOwnerMember]
     : filterMember === "all"
       ? (calView === "2wk" || calView === "week" ? [soloOwnerMember, ...activeMembers] : [soloOwnerMember, ...members])
-          // "Photographers only" hides non-shooting roles (managers/admins) from
-          // every calendar view; the owner always stays visible.
-          .filter((m) => m.id === "__owner__" || !availPhotographersOnly || shootsSchedule(m))
+          // "Photographers only" hides non-shooting roles. The owner is hidden by
+          // this filter too when they've turned off "I shoot".
+          .filter((m) => m.id === "__owner__"
+            ? (ownerShoots || !availPhotographersOnly)
+            : (!availPhotographersOnly || shootsSchedule(m)))
       : members.filter((m) => m.id === filterMember);
 
   const feature = { scheduleNewTabs: false };
@@ -2133,6 +2137,19 @@ export default function TeamPage() {
             <p className="text-sm font-medium text-[#0F172A]">{ownerLabel}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-100">owner</span>
+              {/* Toggle whether the owner personally shoots / appears in the schedule */}
+              <button type="button" title="Toggle whether you appear in the booking schedule as a photographer"
+                onClick={async () => {
+                  const next = !ownerShoots;
+                  setTenant((t) => ({ ...(t || {}), ownerShoots: next }));
+                  try {
+                    const token = await auth.currentUser.getIdToken();
+                    await fetch("/api/tenants/update", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ ownerShoots: next }) });
+                  } catch {}
+                }}
+                className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${ownerShoots ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-gray-100 text-gray-500 border-gray-200"}`}>
+                {ownerShoots ? "I shoot" : "Not shooting"}
+              </button>
             </div>
           </div>
           <button
@@ -2637,7 +2654,7 @@ export default function TeamPage() {
             // Admins/managers never shoot, so the availability recap can hide them.
             // Owner, photographers, and assistants are shooting roles.
             const recapMembers = availPhotographersOnly
-              ? visibleMembers.filter((m) => m.id === "__owner__" || shootsSchedule(m))
+              ? visibleMembers.filter((m) => m.id === "__owner__" ? ownerShoots : shootsSchedule(m))
               : visibleMembers;
             return (
             <div className="border-t border-gray-100 px-4 py-4 bg-gray-50/60">
