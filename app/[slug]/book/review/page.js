@@ -14,7 +14,12 @@ export default function TenantReviewPage() {
     packageIds, serviceIds, addonIds, address, unit, city, state, zip,
     squareFootage, propertyType, notes, travelFee, setTravelFee, setPricing, pricing,
     promoCode, discount, setPromo, clearPromo, customFields,
+    preferredDate, preferredTime, preferredTimeSpecific,
   } = store;
+
+  const scheduleLabel = preferredDate
+    ? `${new Date(preferredDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}${preferredTimeSpecific ? ` at ${preferredTimeSpecific}` : preferredTime ? ` · ${preferredTime}` : ""}`
+    : null;
 
   const [catalog,       setCatalog]       = useState(null);
   const [loading,       setLoading]       = useState(true);
@@ -95,7 +100,7 @@ export default function TenantReviewPage() {
 
   return (
     <>
-      <StepProgress current={4} />
+      <StepProgress current={5} />
       <div className="step-container">
         <div className="mb-8">
           <p className="section-label mb-2">Step 4 of 6</p>
@@ -139,6 +144,18 @@ export default function TenantReviewPage() {
                 </p>
               )}
             </div>
+
+            {/* Schedule (chosen on the previous step) */}
+            {scheduleLabel && (
+              <div className="card">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="section-label">Schedule</p>
+                  <button onClick={() => router.push(`/${params.slug}/book/schedule`)}
+                    className="text-xs text-[#3486cf] hover:underline">Edit</button>
+                </div>
+                <p className="font-medium text-[#0F172A]">{scheduleLabel}</p>
+              </div>
+            )}
 
             {/* Custom questions & answers */}
             {answeredCustom.length > 0 && (
@@ -295,12 +312,12 @@ export default function TenantReviewPage() {
         </div>
 
         <div className="flex justify-between mt-8">
-          <button onClick={() => router.push(`/${params.slug}/book/property`)} className="btn-outline">← Back</button>
+          <button onClick={() => router.push(`/${params.slug}/book/schedule`)} className="btn-outline">← Back</button>
           <button
-            onClick={() => router.push(`/${params.slug}/book/schedule`)}
+            onClick={() => router.push(`/${params.slug}/book/payment`)}
             className="btn-primary px-12"
           >
-            Continue →
+            Continue to Payment →
           </button>
         </div>
       </div>

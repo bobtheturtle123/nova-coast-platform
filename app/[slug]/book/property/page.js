@@ -101,7 +101,7 @@ export default function TenantPropertyPage() {
       setChecking(false);
     }
 
-    router.push(`/${params.slug}/book/review`);
+    router.push(`/${params.slug}/book/schedule`);
   }
 
   return (

@@ -4,8 +4,8 @@ const STEPS = [
   { n: 1, label: "Services"  },
   { n: 2, label: "Add-ons"   },
   { n: 3, label: "Property"  },
-  { n: 4, label: "Review"    },
-  { n: 5, label: "Schedule"  },
+  { n: 4, label: "Schedule"  },
+  { n: 5, label: "Review"    },
   { n: 6, label: "Payment"   },
 ];
 

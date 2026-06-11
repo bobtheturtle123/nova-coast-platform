@@ -199,7 +199,7 @@ export default function TenantSchedulePage() {
 
   return (
     <div className="min-h-screen">
-      <StepProgress current={5} />
+      <StepProgress current={4} />
 
       <div className="max-w-5xl mx-auto px-4 pb-16">
         {/* Page header */}
@@ -553,10 +553,10 @@ export default function TenantSchedulePage() {
                   )}
 
                   <button
-                    onClick={() => router.push(`/${slug}/book/payment`)}
+                    onClick={() => router.push(`/${slug}/book/review`)}
                     disabled={!canContinue}
                     className="btn-book-primary">
-                    Continue to Payment →
+                    Continue to Review →
                   </button>
                 </div>
               )}
@@ -566,7 +566,7 @@ export default function TenantSchedulePage() {
 
         {/* Back button */}
         <div className="mt-8">
-          <button onClick={() => router.push(`/${slug}/book/review`)} className="btn-outline">← Back</button>
+          <button onClick={() => router.push(`/${slug}/book/property`)} className="btn-outline">← Back</button>
         </div>
       </div>
     </div>

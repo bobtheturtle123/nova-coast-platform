@@ -645,7 +645,7 @@ export default function TenantPaymentPage() {
         </div>
 
         <div className="mt-6">
-          <button onClick={() => router.push(`/${params.slug}/book/schedule`)} className="btn-outline">
+          <button onClick={() => router.push(`/${params.slug}/book/review`)} className="btn-outline">
             ← Back
           </button>
         </div>
