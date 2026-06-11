@@ -46,6 +46,7 @@ const CSS = `
 .lp .logo{display:flex;align-items:center;gap:10px;}
 .lp .logo .mark{width:34px;height:34px;border-radius:9px;background:var(--ink);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:17px;font-weight:800;}
 .lp .logo .nm{font-size:16.5px;font-weight:700;}
+.lp .logo-img{height:38px;width:auto;object-fit:contain;display:block;}
 .lp .nav nav{display:flex;gap:28px;font-size:14px;font-weight:500;color:var(--muted);}
 .lp .nav nav a:hover{color:var(--ink);}
 .lp .nav .cta{display:flex;align-items:center;gap:12px;}
@@ -260,8 +261,7 @@ export default function MarketingPage() {
         <header className="nav">
           <div className="wrap row">
             <Link className="logo" href="/">
-              <span className="mark">K</span>
-              <span className="nm">Kyoria OS</span>
+              <img src="/kyoriaos-logo.png" alt="Kyoria OS" className="logo-img" />
             </Link>
             <nav>
               <a href="#how-it-works">How it works</a>
@@ -493,8 +493,7 @@ export default function MarketingPage() {
             <div className="cols">
               <div>
                 <Link className="logo" href="/" style={{ marginBottom: 14, display: "inline-flex" }}>
-                  <span className="mark">K</span>
-                  <span className="nm">Kyoria OS</span>
+                  <img src="/kyoriaos-logo.png" alt="Kyoria OS" className="logo-img" />
                 </Link>
                 <p style={{ maxWidth: 260, fontSize: 13, lineHeight: 1.7, color: "var(--muted-2)" }}>The complete system for real estate photography businesses.</p>
               </div>
