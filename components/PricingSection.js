@@ -1,16 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { PLANS as PLAN_DEFS } from "@/lib/plans";
 
-const PLANS = [
-  {
-    id: "solo",
-    name: "Solo",
-    price: 49,
-    tagline: "Best for solo real estate media photographers.",
-    listings: "125 listings per year",
-    seats: "1 team member",
-    featured: false,
+// Marketing copy that isn't part of the canonical plan record. Prices, listing
+// caps, and seats are ALWAYS sourced from lib/plans.js so they can never drift.
+const PLAN_COPY = {
+  solo: {
     includesLabel: "Everything you need to run your business:",
     features: [
       "Booking page + deposit collection",
@@ -21,14 +17,7 @@ const PLANS = [
       "Calendar sync",
     ],
   },
-  {
-    id: "studio",
-    name: "Studio",
-    price: 99,
-    tagline: "Best for small teams and growing media businesses.",
-    listings: "300 listings per year",
-    seats: "3 team members",
-    featured: true,
+  studio: {
     includesLabel: "Everything in Solo, plus:",
     features: [
       "Team scheduling + calendar sync",
@@ -40,14 +29,7 @@ const PLANS = [
       "Scheduled gallery delivery",
     ],
   },
-  {
-    id: "pro",
-    name: "Pro",
-    price: 179,
-    tagline: "Best for growing teams with higher listing volume.",
-    listings: "600 listings per year",
-    seats: "5 team members",
-    featured: false,
+  pro: {
     includesLabel: "Everything in Studio, plus:",
     features: [
       "Contractor pay management",
@@ -57,7 +39,23 @@ const PLANS = [
       "Priority support",
     ],
   },
-];
+};
+
+const seatLabel = (n) => `${n} team member${n === 1 ? "" : "s"}`;
+
+const PLANS = ["solo", "studio", "pro"].map((id) => {
+  const p = PLAN_DEFS[id];
+  return {
+    id,
+    name: p.name,
+    price: p.monthlyPrice,
+    tagline: p.tagline,
+    listings: `${p.activeListings} listings per year`,
+    seats: seatLabel(p.teamSeats),
+    featured: p.featured,
+    ...PLAN_COPY[id],
+  };
+});
 
 export default function PricingSection() {
   return (
@@ -67,7 +65,7 @@ export default function PricingSection() {
         <div className="text-center mb-14">
           <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">Pricing</p>
           <h2 className="font-serif text-4xl text-navy mb-3 font-normal">
-            Plans start at $49/month
+            Plans start at ${PLAN_DEFS.solo.monthlyPrice}/month
           </h2>
           <p className="text-gray-500 max-w-xl mx-auto leading-relaxed">
             Every plan includes everything you need to run a professional media business. Pick the tier that matches your volume.
@@ -142,13 +140,13 @@ export default function PricingSection() {
         <div className="border border-gray-100 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/60">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h3 className="font-semibold text-navy text-sm">Scale: $349/month</h3>
+              <h3 className="font-semibold text-navy text-sm">Scale: ${PLAN_DEFS.scale.monthlyPrice}/month</h3>
               <span className="text-[10px] text-gray-400 border border-gray-200 rounded-full px-2 py-0.5 bg-white">
                 For high-volume teams
               </span>
             </div>
             <p className="text-xs text-gray-500">
-              1,000 listings/year · 10 team members · Multi-location readiness · Priority support
+              {PLAN_DEFS.scale.activeListings.toLocaleString()} listings/year · {PLAN_DEFS.scale.teamSeats} team members · Multi-location readiness · Priority support
             </p>
           </div>
           <Link

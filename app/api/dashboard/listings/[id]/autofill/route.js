@@ -43,7 +43,12 @@ export async function POST(req) {
       redirect: "follow",
     });
     if (!res.ok) {
-      return Response.json({ ok: true, fields: {}, message: `That site returned ${res.status}. It may block automatic import — enter details manually.` });
+      const host = (() => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return "That site"; } })();
+      const blocked = res.status === 403 || res.status === 409 || res.status === 429 || res.status === 503;
+      const msg = blocked
+        ? `${host} blocks automatic import (error ${res.status}). Auto-sync works best with Redfin — paste a Redfin URL, or enter details manually.`
+        : `${host} returned ${res.status}. Auto-sync works best with Redfin — paste a Redfin URL, or enter details manually.`;
+      return Response.json({ ok: true, fields: {}, message: msg });
     }
     html = await res.text();
   } catch {
