@@ -108,8 +108,9 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
         </div>
       </div>
 
-      {/* Hover overlay */}
-      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-end justify-end gap-1 p-1.5">
+      {/* Hover overlay — controls only; a light bottom gradient (not a full
+          black wash) keeps the photo visible on hover. */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-end justify-end gap-1 p-1.5">
         {/* Delete button (top-right) */}
         <button
           onClick={(e) => { e.stopPropagation(); onDelete?.(); }}

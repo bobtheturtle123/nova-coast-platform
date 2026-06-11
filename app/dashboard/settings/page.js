@@ -876,6 +876,17 @@ export default function SettingsPage() {
     setSavingIntegrations(false);
   }
   const [maxBookingsPerDay, setMaxBookingsPerDay]  = useState(0);  // 0 = unlimited
+  // Whether the owner personally shoots (appears in the photographer schedule).
+  const [ownerShoots, setOwnerShoots] = useState(true);
+  async function toggleOwnerShoots() {
+    const next = !ownerShoots;
+    setOwnerShoots(next);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      await fetch("/api/tenants/update", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ ownerShoots: next }) });
+      showMsg(next ? "You'll appear in the photographer schedule." : "You're hidden from the photographer schedule.");
+    } catch { showMsg("Couldn't save.", "error"); }
+  }
   const [maxWeeklyHours,    setMaxWeeklyHours]     = useState(0);  // 0 = unlimited
 
   // Cancel / reschedule fee state
@@ -1021,6 +1032,7 @@ export default function SettingsPage() {
             if (av.maxBookingsPerDay != null) setMaxBookingsPerDay(av.maxBookingsPerDay);
             if (av.maxWeeklyHours    != null) setMaxWeeklyHours(av.maxWeeklyHours);
           }
+          setOwnerShoots(data.tenant.ownerShoots !== false);
           if (bc.cancellation) {
             const c = bc.cancellation;
             if (c.feeEnabled    !== undefined) setCancelFeeEnabled(c.feeEnabled);
@@ -2144,6 +2156,18 @@ export default function SettingsPage() {
         <p className="text-sm text-gray-500 mb-6">
           Control how time slots are offered to clients on the booking schedule step.
         </p>
+
+        {/* Owner shoots? — moved here from the calendar for clarity */}
+        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl mb-6">
+          <div>
+            <p className="text-sm font-medium text-[#0F172A]">I personally shoot</p>
+            <p className="text-xs text-gray-400">When on, you appear as a photographer in the booking schedule and can be assigned shoots. Turn off if you only manage.</p>
+          </div>
+          <button type="button" onClick={toggleOwnerShoots}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${ownerShoots ? "bg-[#3486cf]" : "bg-gray-300"}`}>
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${ownerShoots ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+        </div>
 
         {/* Mode toggle */}
         <div className="mb-5">

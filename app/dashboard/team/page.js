@@ -2158,19 +2158,9 @@ export default function TeamPage() {
             <p className="text-sm font-medium text-[#0F172A]">{ownerLabel}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-100">owner</span>
-              {/* Toggle whether the owner personally shoots / appears in the schedule */}
-              <button type="button" title="Toggle whether you appear in the booking schedule as a photographer"
-                onClick={async () => {
-                  const next = !ownerShoots;
-                  setTenant((t) => ({ ...(t || {}), ownerShoots: next }));
-                  try {
-                    const token = await auth.currentUser.getIdToken();
-                    await fetch("/api/tenants/update", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ ownerShoots: next }) });
-                  } catch {}
-                }}
-                className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border ${ownerShoots ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-gray-100 text-gray-500 border-gray-200"}`}>
-                {ownerShoots ? "I shoot" : "Not shooting"}
-              </button>
+              {!ownerShoots && (
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full border bg-gray-100 text-gray-500 border-gray-200">not shooting</span>
+              )}
             </div>
           </div>
           <button
