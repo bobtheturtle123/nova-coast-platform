@@ -1755,6 +1755,27 @@ export default function TeamPage() {
     load();
   }, []);
 
+  // Refresh busy blocks the moment a Google sync runs (or another tab syncs),
+  // so newly-synced events appear — and events deleted in Google disappear —
+  // immediately, without a page reload.
+  useEffect(() => {
+    async function refreshBlocks() {
+      try {
+        const token = await getToken();
+        const res = await fetch("/api/dashboard/team/blocks", { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) { const d = await res.json(); setTimeBlocks(d.blocks || []); }
+      } catch { /* ignore */ }
+    }
+    const onUpdate = () => refreshBlocks();
+    const onStorage = (e) => { if (e.key === "kyoria_blocks_ts") refreshBlocks(); };
+    window.addEventListener("kyoria:blocks-updated", onUpdate);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("kyoria:blocks-updated", onUpdate);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
   async function saveMember(form) {
     const token = await getToken();
     try {
