@@ -1,6 +1,6 @@
 import Link from "next/link";
-import PricingSection from "@/components/PricingSection";
 import DiscountPopup from "@/components/DiscountPopup";
+import { PLANS } from "@/lib/plans";
 
 export const metadata = {
   title: "Kyoria OS: The Complete System for Real Estate Media Businesses",
@@ -9,330 +9,412 @@ export const metadata = {
   alternates: { canonical: "https://kyoriaos.com/" },
 };
 
+// Landing styles ported from the Claude Design "Landing Page Hi-Fi" handoff.
+const CSS = `
+:root{
+  --ink:#181B20; --ink-2:#23262D;
+  --gold:#C9A96E; --gold-dark:#A8843F; --gold-soft:#F7F0E2;
+  --bg:#FFFFFF; --bg-2:#F8F7F4; --bg-3:#F2F0EB;
+  --muted:#6B7075; --muted-2:#9CA0A6; --line:#E9E7E1;
+  --sage:#5F7A5A; --sage-soft:#ECF1EA;
+  --clay:#BC6B4A; --clay-soft:#F8EDE7;
+  --teal:#3E6B66; --teal-soft:#E7F0EE;
+  --r:20px;
+  --shadow:0 1px 2px rgba(24,27,32,0.04),0 8px 24px -8px rgba(24,27,32,0.08);
+  --shadow-lg:0 24px 60px -20px rgba(24,27,32,0.18);
+}
+.lp *{box-sizing:border-box;margin:0;}
+.lp{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15.5px;line-height:1.55;-webkit-font-smoothing:antialiased;letter-spacing:-0.011em;scroll-behavior:smooth;}
+.lp a{text-decoration:none;color:inherit;}
+.lp .wrap{max-width:1160px;margin:0 auto;padding:0 28px;}
+
+.lp h1,.lp h2,.lp h3{letter-spacing:-0.03em;}
+.lp .eyebrow{display:inline-block;font-size:12.5px;font-weight:600;color:var(--gold-dark);background:var(--gold-soft);padding:6px 14px;border-radius:99px;margin-bottom:18px;}
+
+.lp .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:50px;padding:0 26px;border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .15s;letter-spacing:-0.01em;}
+.lp .btn-ink{background:var(--ink);color:#fff;}
+.lp .btn-ink:hover{background:var(--ink-2);transform:translateY(-1px);}
+.lp .btn-ghost{border-color:var(--line);background:#fff;color:var(--ink);}
+.lp .btn-ghost:hover{border-color:var(--ink);}
+.lp .btn-gold{background:var(--gold);color:#2A2008;}
+.lp .btn-gold:hover{background:#BD9A5C;transform:translateY(-1px);}
+.lp .btn-sm{height:42px;padding:0 18px;font-size:14px;border-radius:12px;}
+
+/* NAV */
+.lp .nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--line);}
+.lp .nav .row{display:flex;align-items:center;justify-content:space-between;height:68px;}
+.lp .logo{display:flex;align-items:center;gap:10px;}
+.lp .logo .mark{width:34px;height:34px;border-radius:9px;background:var(--ink);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:17px;font-weight:800;}
+.lp .logo .nm{font-size:16.5px;font-weight:700;}
+.lp .nav nav{display:flex;gap:28px;font-size:14px;font-weight:500;color:var(--muted);}
+.lp .nav nav a:hover{color:var(--ink);}
+.lp .nav .cta{display:flex;align-items:center;gap:12px;}
+.lp .nav .signin{font-size:14px;font-weight:500;color:var(--muted);}
+.lp .nav .signin:hover{color:var(--ink);}
+
+/* HERO */
+.lp .hero{padding:84px 0 0;background:linear-gradient(180deg,var(--bg-2),var(--bg));overflow:hidden;}
+.lp .hero .inner{text-align:center;max-width:780px;margin:0 auto;}
+.lp .hero h1{font-size:56px;font-weight:800;line-height:1.06;}
+.lp .hero .lede{font-size:18.5px;color:var(--muted);max-width:600px;margin:22px auto 0;line-height:1.6;}
+.lp .hero .ctas{display:flex;gap:12px;justify-content:center;margin-top:34px;}
+.lp .hero .micro{margin-top:16px;font-size:13px;color:var(--muted-2);}
+
+.lp .chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:34px;}
+.lp .chip{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:500;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:99px;padding:8px 16px;box-shadow:0 1px 2px rgba(24,27,32,0.04);}
+.lp .chip i{font-style:normal;color:var(--sage);font-weight:700;}
+
+.lp .hero-shot{max-width:1020px;margin:56px auto -2px;background:#fff;border:1px solid var(--line);border-bottom:none;border-radius:24px 24px 0 0;box-shadow:var(--shadow-lg);overflow:hidden;}
+.lp .hero-shot .bar{display:flex;align-items:center;gap:6px;padding:13px 18px;border-bottom:1px solid var(--line);background:var(--bg-2);}
+.lp .hero-shot .bar i{width:10px;height:10px;border-radius:50%;font-style:normal;background:var(--line);}
+.lp .hero-shot .bar .url{flex:1;max-width:340px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:8px;font-size:11.5px;color:var(--muted-2);text-align:center;padding:4px 12px;}
+.lp .hero-shot .img{aspect-ratio:16/7.6;background:repeating-linear-gradient(45deg,rgba(24,27,32,0.025) 0 1px,transparent 1px 10px),linear-gradient(135deg,#F3F1EC,#EAE7DF);display:flex;align-items:center;justify-content:center;color:var(--muted-2);font-size:13px;letter-spacing:0.06em;text-transform:uppercase;}
+
+/* SECTIONS */
+.lp section.block{padding:96px 0;}
+.lp .sec-head{text-align:center;max-width:680px;margin:0 auto 56px;}
+.lp .sec-head h2{font-size:38px;font-weight:800;line-height:1.12;}
+.lp .sec-head p{color:var(--muted);font-size:16.5px;line-height:1.65;margin-top:14px;}
+
+/* BEFORE/AFTER */
+.lp .ba{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.lp .ba .col{border-radius:var(--r);padding:34px 32px;}
+.lp .ba .before{background:var(--bg-2);border:1px solid var(--line);}
+.lp .ba .after{background:var(--ink);color:#fff;}
+.lp .ba .tag{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:20px;padding:5px 13px;border-radius:99px;}
+.lp .ba .before .tag{background:var(--clay-soft);color:var(--clay);}
+.lp .ba .after .tag{background:rgba(201,169,110,0.18);color:var(--gold);}
+.lp .ba li{list-style:none;display:flex;gap:12px;padding:9px 0;font-size:14.5px;line-height:1.5;}
+.lp .ba .before li{color:var(--muted);}
+.lp .ba .before li i{font-style:normal;color:var(--clay);flex-shrink:0;font-weight:700;}
+.lp .ba .after li{color:rgba(255,255,255,0.82);}
+.lp .ba .after li i{font-style:normal;color:var(--gold);flex-shrink:0;font-weight:700;}
+
+/* HOW IT WORKS */
+.lp .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.lp .step{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:28px 24px;transition:all .18s;box-shadow:var(--shadow);}
+.lp .step:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);}
+.lp .step .num{width:34px;height:34px;border-radius:10px;background:var(--gold-soft);color:var(--gold-dark);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;}
+.lp .step h3{font-size:16px;font-weight:700;margin:16px 0 8px;}
+.lp .step p{font-size:13.5px;color:var(--muted);line-height:1.6;}
+
+/* BENEFITS */
+.lp .bens{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.lp .ben{border-radius:var(--r);padding:28px 24px;transition:all .18s;}
+.lp .ben.gold{background:var(--gold-soft);}
+.lp .ben.sage{background:var(--sage-soft);}
+.lp .ben.clay{background:var(--clay-soft);}
+.lp .ben.teal{background:var(--teal-soft);}
+.lp .ben:hover{transform:translateY(-4px);}
+.lp .ben .ic{width:42px;height:42px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:18px;box-shadow:0 1px 3px rgba(24,27,32,0.08);}
+.lp .ben.gold .ic{color:var(--gold-dark);}
+.lp .ben.sage .ic{color:var(--sage);}
+.lp .ben.clay .ic{color:var(--clay);}
+.lp .ben.teal .ic{color:var(--teal);}
+.lp .ben h3{font-size:15.5px;font-weight:700;margin-bottom:7px;}
+.lp .ben p{font-size:13.5px;color:#55595E;line-height:1.6;}
+
+/* SCREENSHOTS */
+.lp .shots{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;}
+.lp .shot{border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow);transition:all .18s;}
+.lp .shot:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);}
+.lp .shot .img{aspect-ratio:16/9;background:repeating-linear-gradient(45deg,rgba(24,27,32,0.03) 0 1px,transparent 1px 10px),linear-gradient(135deg,#F3F1EC,#E9E6DE);display:flex;align-items:center;justify-content:center;color:var(--muted-2);font-size:12px;letter-spacing:0.08em;text-transform:uppercase;}
+.lp .shot .cap{padding:20px 24px;}
+.lp .shot .cap h3{font-size:15.5px;font-weight:700;}
+.lp .shot .cap p{font-size:13.5px;color:var(--muted);margin-top:4px;line-height:1.6;}
+
+/* AGENT KIT */
+.lp .kit{background:var(--bg-2);border-radius:28px;padding:72px 64px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;}
+.lp .kit h2{font-size:34px;font-weight:800;line-height:1.14;}
+.lp .kit .lede{color:var(--muted);font-size:15.5px;line-height:1.7;margin:16px 0 24px;}
+.lp .kit .feats{display:flex;flex-direction:column;gap:12px;}
+.lp .kit .feat{display:flex;gap:12px;font-size:14.5px;color:var(--ink);}
+.lp .kit .feat i{font-style:normal;color:var(--sage);font-weight:700;flex-shrink:0;}
+.lp .kcard{background:#fff;border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-lg);border:1px solid var(--line);}
+.lp .kcard .ph{aspect-ratio:16/8;background:linear-gradient(135deg,#2B2E36,#41454F);display:flex;align-items:flex-end;padding:18px;}
+.lp .kcard .ph b{color:#fff;font-size:18px;font-weight:700;display:block;}
+.lp .kcard .ph s{text-decoration:none;font-size:12px;color:rgba(255,255,255,0.6);}
+.lp .kcard .body{padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.lp .kcard .cell{background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;}
+.lp .kcard .cell b{display:block;font-size:13px;}
+.lp .kcard .cell s{text-decoration:none;font-size:10.5px;color:var(--muted-2);}
+
+/* TESTIMONIALS */
+.lp .quotes{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.lp .quote{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:28px;display:flex;flex-direction:column;box-shadow:var(--shadow);}
+.lp .quote .stars{color:var(--gold);font-size:13px;letter-spacing:2px;margin-bottom:16px;}
+.lp .quote p{font-size:14.5px;color:#3C4046;line-height:1.7;flex:1;}
+.lp .quote .who{margin-top:20px;padding-top:18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:11px;}
+.lp .quote .who .av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12.5px;font-weight:700;}
+.lp .quote .who b{display:block;font-size:13.5px;}
+.lp .quote .who s{text-decoration:none;font-size:12px;color:var(--muted-2);}
+
+/* PRICING */
+.lp .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:920px;margin:0 auto;align-items:stretch;}
+.lp .plan{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:32px 28px;display:flex;flex-direction:column;position:relative;box-shadow:var(--shadow);}
+.lp .plan.featured{border:2px solid var(--ink);box-shadow:var(--shadow-lg);}
+.lp .plan .ribbon{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--gold);font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:5px 16px;border-radius:99px;}
+.lp .plan .pn{font-size:14.5px;font-weight:700;}
+.lp .plan .pp{font-size:42px;font-weight:800;letter-spacing:-0.04em;margin:12px 0 4px;}
+.lp .plan .pp span{font-size:14px;font-weight:500;color:var(--muted-2);letter-spacing:0;}
+.lp .plan .pd{font-size:13px;color:var(--muted);min-height:36px;}
+.lp .plan ul{list-style:none;padding:0;margin:20px 0 24px;flex:1;display:flex;flex-direction:column;gap:10px;}
+.lp .plan li{font-size:13.5px;display:flex;gap:9px;color:#46494E;}
+.lp .plan .ck{color:var(--sage);font-weight:700;}
+.lp .scale-bar{max-width:920px;margin:14px auto 0;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);padding:24px 30px;display:flex;align-items:center;gap:30px;}
+.lp .scale-bar .left{flex:1;}
+.lp .scale-bar .nm{font-size:16px;font-weight:700;}
+.lp .scale-bar .ds{font-size:13px;color:var(--muted);margin-top:3px;}
+.lp .scale-bar .spec{text-align:center;}
+.lp .scale-bar .spec b{display:block;font-size:20px;font-weight:800;letter-spacing:-0.02em;}
+.lp .scale-bar .spec s{text-decoration:none;font-size:11px;color:var(--muted-2);}
+.lp .scale-bar .vd{width:1px;height:36px;background:var(--line);}
+
+/* FINAL CTA */
+.lp .final{padding:40px 0 96px;}
+.lp .final .card{background:var(--ink);border-radius:28px;text-align:center;padding:88px 40px;color:#fff;position:relative;overflow:hidden;}
+.lp .final .card::before{content:'';position:absolute;inset:0;background:radial-gradient(600px 300px at 50% -10%,rgba(201,169,110,0.22),transparent 65%);}
+.lp .final h2{font-size:42px;font-weight:800;line-height:1.1;max-width:620px;margin:0 auto 16px;position:relative;}
+.lp .final p{color:rgba(255,255,255,0.6);max-width:460px;margin:0 auto 32px;font-size:16px;line-height:1.6;position:relative;}
+.lp .final .micro{font-size:13px;color:rgba(255,255,255,0.35);margin-top:16px;}
+.lp .final .btn{position:relative;}
+
+/* FOOTER */
+.lp .footer{border-top:1px solid var(--line);padding:56px 0 36px;font-size:13.5px;color:var(--muted);}
+.lp .footer .cols{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:40px;padding-bottom:40px;border-bottom:1px solid var(--line);}
+.lp .footer h4{color:var(--ink);font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:14px;}
+.lp .footer a{display:block;padding:4px 0;color:var(--muted);}
+.lp .footer a:hover{color:var(--ink);}
+.lp .footer .base{display:flex;justify-content:space-between;padding-top:22px;font-size:12.5px;color:var(--muted-2);}
+
+@media(max-width:980px){
+  .lp .hero h1{font-size:40px;}
+  .lp .ba,.lp .shots,.lp .kit{grid-template-columns:1fr;}
+  .lp .kit{padding:48px 32px;gap:40px;}
+  .lp .steps,.lp .bens{grid-template-columns:1fr 1fr;}
+  .lp .quotes,.lp .price-grid{grid-template-columns:1fr;}
+  .lp .scale-bar{flex-direction:column;align-items:flex-start;gap:18px;}
+  .lp .footer .cols{grid-template-columns:1fr 1fr;}
+}
+`;
+
+// Real prices/limits — sourced from lib/plans.js so the marketing page can never
+// drift from billing. (The design mockup used placeholder numbers.)
+const seat = (n) => `${n} seat${n === 1 ? "" : "s"}`;
+const PRICE_PLANS = [
+  {
+    id: "solo",
+    name: "Solo",
+    desc: "For solo owner-operators getting organized.",
+    featured: false,
+    btn: "btn-ghost",
+    features: [
+      `${PLANS.solo.activeListings} listing credits / year`,
+      seat(PLANS.solo.teamSeats),
+      "Booking, scheduling & delivery",
+      "Automatic payments",
+    ],
+  },
+  {
+    id: "studio",
+    name: "Studio",
+    desc: "For growing teams with higher volume.",
+    featured: true,
+    btn: "btn-ink",
+    features: [
+      `${PLANS.studio.activeListings} listing credits / year`,
+      seat(PLANS.studio.teamSeats),
+      "SMS notifications",
+      "Everything in Solo",
+    ],
+  },
+  {
+    id: "pro",
+    name: "Pro Team",
+    desc: "For multi-photographer operations.",
+    featured: false,
+    btn: "btn-ghost",
+    features: [
+      `${PLANS.pro.activeListings} listing credits / year`,
+      seat(PLANS.pro.teamSeats),
+      "Service-area routing",
+      "Everything in Studio",
+    ],
+  },
+];
+
 export default function MarketingPage() {
   return (
     <>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+      />
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <DiscountPopup />
-      <div className="min-h-screen bg-white font-body">
 
+      <div className="lp">
         {/* NAV */}
-        <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
-          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-            <img src="/kyoriaos-logo.png" alt="Kyoria OS" className="h-11 w-auto object-contain" />
-            <nav className="hidden md:flex items-center gap-8 text-sm text-gray-600">
-              <a href="#how-it-works" className="hover:text-navy transition-colors">How it works</a>
-              <a href="#pricing" className="hover:text-navy transition-colors">Pricing</a>
-              <Link href="/blog" className="hover:text-navy transition-colors">Blog</Link>
+        <header className="nav">
+          <div className="wrap row">
+            <Link className="logo" href="/">
+              <span className="mark">K</span>
+              <span className="nm">Kyoria OS</span>
+            </Link>
+            <nav>
+              <a href="#how-it-works">How it works</a>
+              <a href="#features">Features</a>
+              <a href="#pricing">Pricing</a>
+              <Link href="/blog">Blog</Link>
             </nav>
-            <div className="flex items-center gap-3">
-              <Link href="/auth/login" className="text-sm text-gray-600 hover:text-navy px-3 py-2 transition-colors">
-                Sign in
-              </Link>
-              <Link
-                href="/auth/register"
-                className="text-sm bg-navy text-white px-4 py-2 rounded-xl hover:bg-navy/90 transition-colors font-medium"
-              >
-                Get Started
-              </Link>
+            <div className="cta">
+              <Link className="signin" href="/auth/login">Sign in</Link>
+              <Link className="btn btn-ink btn-sm" href="/auth/register">Get Started</Link>
             </div>
           </div>
         </header>
 
         {/* HERO */}
-        <section className="bg-navy text-white pt-20 pb-0 px-6 overflow-hidden">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-12 items-end">
-              <div className="py-12">
-                <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-4 py-1.5 mb-6">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
-                  <span className="text-white/75 text-xs">Built for real estate media teams</span>
-                </div>
-                <h1 className="font-serif text-5xl md:text-[3.15rem] leading-[1.1] mb-5 font-normal text-white">
-                  Stop juggling bookings,<br />messages, and files<br />across different tools.
-                </h1>
-                <p className="text-white/60 text-lg max-w-lg leading-relaxed mb-3">
-                  Kyoria OS connects booking, scheduling, gallery delivery, and payments into one system, so you can stop patching tools together and start running a real business.
-                </p>
-                <p className="text-white/45 text-sm max-w-lg leading-relaxed mb-8">
-                  Replace your booking tools, delivery platforms, and client communication with one system.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Link
-                    href="/auth/register"
-                    className="bg-gold text-navy font-semibold px-8 py-4 rounded-xl hover:bg-gold/90 transition-colors text-center text-sm"
-                  >
-                    Get Started
-                  </Link>
-                  <a
-                    href="#pricing"
-                    className="border border-white/20 text-white/75 px-8 py-4 rounded-xl hover:bg-white/5 transition-colors text-center text-sm"
-                  >
-                    See Plans
-                  </a>
-                </div>
-                <p className="text-white/30 text-xs mt-4">Set up in under an hour.</p>
+        <section className="hero">
+          <div className="wrap">
+            <div className="inner">
+              <span className="eyebrow">The complete system for real estate photography businesses</span>
+              <h1>Stop juggling bookings, messages, and files across different tools.</h1>
+              <p className="lede">Kyoria OS connects booking, scheduling, gallery delivery, and payments into one system, so you can stop patching tools together and start running a real business.</p>
+              <div className="ctas">
+                <Link className="btn btn-ink" href="/auth/register">Get Started</Link>
+                <a className="btn btn-ghost" href="#pricing">See Plans</a>
               </div>
+              <p className="micro">Replace your booking tools, delivery platforms, and client communication with one system.</p>
+              <div className="chips">
+                <span className="chip"><i>✓</i>Collect deposits automatically</span>
+                <span className="chip"><i>✓</i>Schedule your team in seconds</span>
+                <span className="chip"><i>✓</i>Deliver galleries instantly</span>
+                <span className="chip"><i>✓</i>Get paid before downloads</span>
+                <span className="chip"><i>✓</i>Give agents a full portal</span>
+                <span className="chip"><i>✓</i>Sync your calendar</span>
+              </div>
+            </div>
 
-              <div className="relative pb-0 hidden md:block">
-                <div className="rounded-t-2xl overflow-hidden shadow-2xl border border-white/10">
-                  <div className="px-4 py-2.5 flex items-center gap-2 border-b border-white/10" style={{ background: "rgba(255,255,255,0.07)" }}>
-                    <div className="flex gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-white/15" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-white/15" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-white/15" />
-                    </div>
-                    <div className="flex-1 bg-white/10 rounded text-white/25 text-[10px] px-3 py-1 text-center">
-                      app.kyoriaos.com/dashboard
-                    </div>
-                  </div>
-                  <img
-                    src="/screenshots/schedule.png"
-                    alt="Kyoria OS team schedule and bookings dashboard"
-                    className="w-full block"
-                  />
-                </div>
+            <div className="hero-shot">
+              <div className="bar">
+                <i></i><i></i><i></i>
+                <span className="url">app.kyoriaos.com/dashboard</span>
               </div>
+              <div className="img">Dashboard screenshot</div>
             </div>
           </div>
         </section>
 
-        {/* TRUST BAR */}
-        <div className="bg-cream border-y border-gray-100 py-4 px-6">
-          <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-x-8 gap-y-2">
-            {[
-              "Collect deposits automatically",
-              "Schedule your team in seconds",
-              "Deliver galleries instantly",
-              "Get paid before downloads",
-              "Give agents a full portal",
-              "Sync your calendar",
-            ].map((f) => (
-              <span key={f} className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="text-gold">✓</span>{f}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* BEFORE / AFTER */}
-        <section className="py-24 px-6 bg-white">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-14">
-              <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">If this feels familiar, you&apos;re not alone</p>
-              <h2 className="font-serif text-4xl text-navy mb-4 font-normal">
-                You&apos;re running a media business<br />out of duct tape and iMessage.
-              </h2>
-              <p className="text-gray-500 max-w-xl mx-auto text-base leading-relaxed">
-                Every tool disconnected. Every follow-up manual. There&apos;s a better way.
-              </p>
+        {/* PROBLEM / BEFORE-AFTER */}
+        <section className="block" style={{ background: "var(--bg-2)" }}>
+          <div className="wrap">
+            <div className="sec-head">
+              <h2>You&apos;re running a media business<br />out of duct tape and iMessage.</h2>
+              <p>Every tool disconnected. Every follow-up manual. There&apos;s a better way.</p>
             </div>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-7">
-                <p className="text-xs font-semibold text-red-400 uppercase tracking-widest mb-5">Without Kyoria OS</p>
-                <ul className="space-y-3">
-                  {[
-                    "Chase deposits over iMessage",
-                    "Send Dropbox links manually after delivery",
-                    "Follow up on unpaid balances for weeks",
-                    "Coordinate photographers in group texts",
-                    "Clients lose the gallery link and text you",
-                    "No record of what each shoot actually made",
-                    "Build pricing tables in Google Docs",
-                    "No marketing materials for agents",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-sm text-gray-500">
-                      <span className="text-red-300 mt-0.5 flex-shrink-0 font-bold">✕</span>{item}
-                    </li>
-                  ))}
-                </ul>
+            <div className="ba">
+              <div className="col before">
+                <span className="tag">The old way</span>
+                <li><i>✕</i>Chase deposits over iMessage</li>
+                <li><i>✕</i>Send Dropbox links manually after delivery</li>
+                <li><i>✕</i>Follow up on unpaid balances for weeks</li>
+                <li><i>✕</i>Coordinate photographers in group texts</li>
+                <li><i>✕</i>Clients lose the gallery link and text you</li>
+                <li><i>✕</i>No record of what each shoot actually made</li>
+                <li><i>✕</i>Build pricing tables in Google Docs</li>
+                <li><i>✕</i>No marketing materials for agents</li>
               </div>
-              <div className="bg-navy text-white rounded-2xl p-7">
-                <p className="text-xs font-semibold text-gold uppercase tracking-widest mb-5">With Kyoria OS</p>
-                <ul className="space-y-3">
-                  {[
-                    "Deposit collected the moment they book",
-                    "Gallery delivered in one click, locked until paid",
-                    "Balance auto-collected before downloads unlock",
-                    "Assign photographers from the dashboard",
-                    "Gallery link re-sent on demand",
-                    "Full revenue breakdown per listing",
-                    "Guided booking flow upsells for you",
-                    "Agent portal with brochure, QR code, and downloads",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-sm text-white/70">
-                      <span className="text-gold mt-0.5 flex-shrink-0 font-bold">✓</span>{item}
-                    </li>
-                  ))}
-                </ul>
+              <div className="col after">
+                <span className="tag">With Kyoria OS</span>
+                <li><i>✓</i>Deposit collected the moment they book</li>
+                <li><i>✓</i>Gallery delivered in one click, locked until paid</li>
+                <li><i>✓</i>Balance auto-collected before downloads unlock</li>
+                <li><i>✓</i>Assign photographers from the dashboard</li>
+                <li><i>✓</i>Gallery link re-sent on demand</li>
+                <li><i>✓</i>Full revenue breakdown per listing</li>
+                <li><i>✓</i>Guided booking flow upsells for you</li>
+                <li><i>✓</i>Agent portal with brochure, QR code, and downloads</li>
               </div>
             </div>
           </div>
         </section>
 
         {/* HOW IT WORKS */}
-        <section id="how-it-works" className="py-24 px-6 bg-navy text-white">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-16">
-              <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">How it works</p>
-              <h2 className="font-serif text-4xl text-white mb-4 font-normal">
-                Four steps. Every job, handled.
-              </h2>
-              <p className="text-white/45 max-w-xl mx-auto text-base">
-                From first contact to final payment. The entire job cycle runs through one system.
-              </p>
+        <section className="block" id="how-it-works">
+          <div className="wrap">
+            <div className="sec-head">
+              <h2>Four steps. Every job, handled.</h2>
+              <p>From first contact to final payment. The entire job cycle runs through one system.</p>
             </div>
-            <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8">
-              {HOW_IT_WORKS.map((step, i) => (
-                <div key={step.title}>
-                  <div className="w-10 h-10 rounded-xl bg-gold/15 border border-gold/25 flex items-center justify-center mb-4">
-                    <span className="text-gold font-bold text-sm">{i + 1}</span>
-                  </div>
-                  <h3 className="font-semibold text-white text-sm mb-2">{step.title}</h3>
-                  <p className="text-white/45 text-xs leading-relaxed">{step.desc}</p>
-                </div>
-              ))}
+            <div className="steps">
+              <div className="step"><div className="num">1</div><h3>They book</h3><p>Clients pick a package on your branded booking page. Square footage sets the price. Deposit collected on the spot.</p></div>
+              <div className="step"><div className="num">2</div><h3>You shoot</h3><p>Assign photographers from the dashboard. Schedules and reminders go out automatically.</p></div>
+              <div className="step"><div className="num">3</div><h3>You deliver</h3><p>Upload once. Gallery, property website, and brochure are generated and sent in one click.</p></div>
+              <div className="step"><div className="num">4</div><h3>You get paid</h3><p>Balance auto-collected before downloads unlock. No chasing, no awkward emails.</p></div>
             </div>
           </div>
         </section>
 
-        {/* CORE BENEFITS */}
-        <section className="py-24 px-6 bg-white border-b border-gray-100">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-14">
-              <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">Why it works</p>
-              <h2 className="font-serif text-4xl text-navy mb-4 font-normal">
-                Built to grow your business,<br />not just manage it.
-              </h2>
+        {/* BENEFITS */}
+        <section className="block" id="features" style={{ paddingTop: 0 }}>
+          <div className="wrap">
+            <div className="sec-head">
+              <h2>Built to grow your business,<br />not just manage it.</h2>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {BENEFITS.map((b) => (
-                <div key={b.title} className="bg-gray-50 border border-gray-100 rounded-2xl p-6">
-                  <div className="w-9 h-9 bg-navy/5 border border-navy/10 rounded-xl flex items-center justify-center mb-4 text-navy">
-                    {b.icon}
-                  </div>
-                  <h3 className="font-semibold text-sm text-gray-900 mb-2">{b.title}</h3>
-                  <p className="text-xs text-gray-500 leading-relaxed">{b.desc}</p>
-                </div>
-              ))}
+            <div className="bens">
+              <div className="ben gold"><div className="ic">◆</div><h3>Branded everything</h3><p>Booking page, galleries, property sites, and emails carry your logo and colors. Clients see your brand, not ours.</p></div>
+              <div className="ben sage"><div className="ic">▣</div><h3>Payments on autopilot</h3><p>Deposits at booking, balances at delivery, reminders in between. Stripe-powered, hands-off.</p></div>
+              <div className="ben clay"><div className="ic">⬡</div><h3>Service-area routing</h3><p>Draw your zones on a map. Bookings inside a zone go to the photographers you&apos;ve assigned to it.</p></div>
+              <div className="ben teal"><div className="ic">◎</div><h3>Agent self-serve portal</h3><p>Agents log in to view galleries, download media, request revisions, and rebook. You stay out of the inbox.</p></div>
             </div>
           </div>
         </section>
 
-        {/* PRODUCT SCREENSHOTS */}
-        <section className="py-20 px-6 bg-white border-b border-gray-100">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
-              <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">Real product · real screenshots</p>
-              <h2 className="font-serif text-4xl text-navy mb-4 font-normal">
-                Every part of your business,<br />in one dashboard.
-              </h2>
-              <p className="text-gray-500 max-w-xl mx-auto text-base leading-relaxed">
-                Not renders. Not mockups. The actual platform, running live businesses today.
-              </p>
+        {/* SCREENSHOTS */}
+        <section className="block" style={{ background: "var(--bg-2)" }}>
+          <div className="wrap">
+            <div className="sec-head">
+              <h2>Every part of your business,<br />in one dashboard.</h2>
+              <p>Not renders. Not mockups. The actual platform, running live businesses today.</p>
             </div>
-            <div className="grid md:grid-cols-2 gap-5">
-              {SCREENSHOTS.map((s) => (
-                <div key={s.title} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                  <div className="overflow-hidden bg-gray-100 aspect-[16/9]">
-                    <img
-                      src={s.src}
-                      alt={`${s.title} in Kyoria OS`}
-                      className="w-full h-full object-cover object-top"
-                    />
-                  </div>
-                  <div className="p-5 border-t border-gray-100">
-                    <p className="text-sm font-semibold text-navy mb-1">{s.title}</p>
-                    <p className="text-xs text-gray-500 leading-relaxed">{s.desc}</p>
-                  </div>
-                </div>
-              ))}
+            <div className="shots">
+              <div className="shot"><div className="img">Dashboard screenshot</div><div className="cap"><h3>The morning command center</h3><p>Today&apos;s shoots, team on duty, and anything that needs you, in one glance.</p></div></div>
+              <div className="shot"><div className="img">Listing screenshot</div><div className="cap"><h3>Every listing, one record</h3><p>Workflow, media, payments, property site, and revisions, all attached to the job itself.</p></div></div>
+              <div className="shot"><div className="img">Gallery screenshot</div><div className="cap"><h3>Delivery agents love</h3><p>Fast, clean galleries with downloads that unlock on payment.</p></div></div>
+              <div className="shot"><div className="img">Booking page screenshot</div><div className="cap"><h3>A booking page that sells</h3><p>Packages, add-ons, and instant scheduling, priced by square footage automatically.</p></div></div>
             </div>
           </div>
         </section>
 
-        {/* AGENT PORTAL SPOTLIGHT */}
-        <section className="py-24 px-6 bg-navy text-white">
-          <div className="max-w-5xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-16 items-center">
+        {/* AGENT KIT */}
+        <section className="block">
+          <div className="wrap">
+            <div className="kit">
               <div>
-                <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">Agent marketing portal</p>
-                <h2 className="font-serif text-4xl text-white mb-5 font-normal">
-                  Every agent gets a professional listing kit. Automatically.
-                </h2>
-                <p className="text-white/50 leading-relaxed mb-7">
-                  When you deliver a gallery, the agent gets everything they need to market the listing, with no extra work from you. It&apos;s a reason for them to keep booking you.
-                </p>
-                <ul className="space-y-3 mb-8">
-                  {[
-                    "Branded property website with full listing details",
-                    "Print-ready brochure for open houses",
-                    "QR code for print and signage",
-                    "3D Matterport and video tour embedded",
-                    "Private link, no agent account required",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-sm text-white/70">
-                      <span className="w-4 h-4 rounded-full bg-gold/20 border border-gold/30 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <svg width="7" height="7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3" className="text-gold">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      </span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/auth/register"
-                  className="inline-block bg-gold text-navy font-semibold px-7 py-3 rounded-xl hover:bg-gold/90 transition-colors text-sm"
-                >
-                  Get started
-                </Link>
-              </div>
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-10 h-10 rounded-full bg-gold/20 border border-gold/30 flex items-center justify-center flex-shrink-0">
-                    <span className="text-gold text-sm font-bold">S</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-white text-sm">Sarah Chen · Compass Realty</p>
-                    <p className="text-xs text-white/35">1842 Ocean View Dr, Coronado CA</p>
-                  </div>
+                <span className="eyebrow">Agent marketing kit</span>
+                <h2>Every agent gets a professional listing kit. Automatically.</h2>
+                <p className="lede">When you deliver a gallery, the agent gets everything they need to market the listing, with no extra work from you. It&apos;s a reason for them to keep booking you.</p>
+                <div className="feats">
+                  <div className="feat"><i>✓</i>Branded property website with full listing details</div>
+                  <div className="feat"><i>✓</i>Print-ready brochure for open houses</div>
+                  <div className="feat"><i>✓</i>QR code for print and signage</div>
+                  <div className="feat"><i>✓</i>3D Matterport and video tour embedded</div>
+                  <div className="feat"><i>✓</i>Private link, no agent account required</div>
                 </div>
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {[
-                    {
-                      icon: (
-                        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      ),
-                      label: "Gallery",
-                      sub: "48 photos",
-                    },
-                    {
-                      icon: (
-                        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                        </svg>
-                      ),
-                      label: "Website",
-                      sub: "Share link",
-                    },
-                    {
-                      icon: (
-                        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                      ),
-                      label: "Brochure",
-                      sub: "Print ready",
-                    },
-                  ].map((c) => (
-                    <div key={c.label} className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                      <div className="flex items-center justify-center h-6 mb-1.5 text-white/60">{c.icon}</div>
-                      <p className="text-xs font-semibold text-white/75">{c.label}</p>
-                      <p className="text-[10px] text-white/30">{c.sub}</p>
-                    </div>
-                  ))}
+                <div style={{ marginTop: 30 }}><Link className="btn btn-ink" href="/auth/register">Get started</Link></div>
+              </div>
+              <div className="kcard">
+                <div className="ph"><div><b>1842 Ocean View Dr</b><s>Listing kit · ready to share</s></div></div>
+                <div className="body">
+                  <div className="cell"><b>48</b><s>Photos</s></div>
+                  <div className="cell"><b>2</b><s>Videos</s></div>
+                  <div className="cell"><b>Live</b><s>Property site</s></div>
+                  <div className="cell"><b>PDF</b><s>Brochure</s></div>
+                  <div className="cell"><b>QR</b><s>Signage code</s></div>
+                  <div className="cell"><b>3D</b><s>Tour embed</s></div>
                 </div>
               </div>
             </div>
@@ -340,301 +422,111 @@ export default function MarketingPage() {
         </section>
 
         {/* TESTIMONIALS */}
-        <section className="bg-cream py-20 px-6">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="font-serif text-3xl text-navy mb-3 font-normal">
-                Built for photographers who mean business.
-              </h2>
-              <p className="text-gray-500 text-sm">Set up in under an hour. Running on autopilot after day one.</p>
+        <section className="block" style={{ paddingTop: 0 }}>
+          <div className="wrap">
+            <div className="sec-head">
+              <h2>Built for photographers who mean business.</h2>
             </div>
-            <div className="grid md:grid-cols-3 gap-6">
-              {TESTIMONIALS.map((t) => (
-                <div key={t.name} className="bg-white rounded-2xl border border-gray-100 p-7">
-                  <div className="flex gap-0.5 mb-4">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <svg key={s} width="13" height="13" viewBox="0 0 24 24" fill="#c9a96e">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                      </svg>
-                    ))}
-                  </div>
-                  <p className="text-gray-600 text-sm leading-relaxed mb-5 italic">&quot;{t.quote}&quot;</p>
-                  <div>
-                    <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
-                    <p className="text-xs text-gray-400">{t.role}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* TRUST / POSITIONING */}
-        <section className="py-16 px-6 border-y border-gray-100">
-          <div className="max-w-5xl mx-auto">
-            <div className="grid md:grid-cols-3 gap-8 text-center">
-              {[
-                {
-                  label: "01",
-                  title: "Purpose-built for real estate media",
-                  desc: "Not adapted from generic booking software. Designed around how real estate shoots actually work: MLS delivery, agent portals, and shoot-day logistics.",
-                },
-                {
-                  label: "02",
-                  title: "Replaces 4 to 6 separate tools",
-                  desc: "Calendly, Dropbox, HoneyBook, Wave, and your group chat. One platform. One monthly cost. Everything connected.",
-                },
-                {
-                  label: "03",
-                  title: "Designed for real workflows",
-                  desc: "Shoot cycles, photographer dispatch, gallery delivery, and agent marketing, all built in the right order for the way your business actually runs.",
-                },
-              ].map((item) => (
-                <div key={item.label}>
-                  <span className="font-serif text-4xl text-navy/10 block mb-3">{item.label}</span>
-                  <h3 className="font-semibold text-navy text-sm mb-2">{item.title}</h3>
-                  <p className="text-gray-500 text-xs leading-relaxed">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* EXPLORE FEATURES */}
-        <section className="py-20 px-6 bg-gray-50 border-b border-gray-100">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-10">
-              <p className="text-gold text-xs tracking-[0.2em] uppercase mb-3">Platform overview</p>
-              <h2 className="font-serif text-3xl text-navy font-normal mb-2">Explore features</h2>
-              <p className="text-gray-500 text-sm max-w-md mx-auto">
-                Everything you need to run your business, in one place.
-              </p>
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {FEATURE_LINKS.map((f) => (
-                <Link
-                  key={f.slug}
-                  href={`/features/${f.slug}`}
-                  className="group bg-white border border-gray-200 rounded-2xl p-6 hover:border-navy/25 hover:shadow-sm transition-all block"
-                >
-                  <h3 className="font-semibold text-navy text-sm mb-2">{f.title}</h3>
-                  <p className="text-xs text-gray-500 leading-relaxed mb-3">{f.desc}</p>
-                  <span className="text-xs text-gold font-medium group-hover:underline">Learn more</span>
-                </Link>
-              ))}
+            <div className="quotes">
+              <div className="quote"><div className="stars">★★★★★</div><p>&quot;I used to spend half my Friday chasing down payment requests. Now the balance just shows up in my account before I even think about it. The whole system runs itself.&quot;</p><div className="who"><span className="av" style={{ background: "var(--sage)" }}>MW</span><div><b>Marcus W.</b><s>Real estate photographer, San Diego CA</s></div></div></div>
+              <div className="quote"><div className="stars">★★★★★</div><p>&quot;Assigning shoots to my team used to be a group text. Now I open the booking, see who is available, tap their name, and they get notified. Game changer for us.&quot;</p><div className="who"><span className="av" style={{ background: "var(--clay)" }}>DT</span><div><b>Devon T.</b><s>Photography team owner, Phoenix AZ</s></div></div></div>
+              <div className="quote"><div className="stars">★★★★★</div><p>&quot;I was nervous it would take forever to set up. I had my booking page live, Stripe connected, and my first real booking confirmed within the same afternoon.&quot;</p><div className="who"><span className="av" style={{ background: "var(--teal)" }}>BS</span><div><b>Brooke S.</b><s>Solo photographer, Nashville TN</s></div></div></div>
             </div>
           </div>
         </section>
 
         {/* PRICING */}
-        <PricingSection />
+        <section className="block" id="pricing" style={{ background: "var(--bg-2)" }}>
+          <div className="wrap">
+            <div className="sec-head">
+              <h2>Everything you need to run your business, in one place.</h2>
+              <p>Every plan includes booking, scheduling, galleries, payments, and the agent portal. No setup fees, no contracts.</p>
+            </div>
+
+            <div className="price-grid">
+              {PRICE_PLANS.map((plan) => (
+                <div key={plan.id} className={`plan${plan.featured ? " featured" : ""}`}>
+                  {plan.featured && <div className="ribbon">Most popular</div>}
+                  <div className="pn">{plan.name}</div>
+                  <div className="pp">${PLANS[plan.id].monthlyPrice}<span>/mo</span></div>
+                  <div className="pd">{plan.desc}</div>
+                  <ul>
+                    {plan.features.map((f) => (
+                      <li key={f}><span className="ck">✓</span>{f}</li>
+                    ))}
+                  </ul>
+                  <Link className={`btn ${plan.btn}`} href="/auth/register">Get Started</Link>
+                </div>
+              ))}
+            </div>
+
+            <div className="scale-bar">
+              <div className="left">
+                <div className="nm">Scale</div>
+                <div className="ds">For large teams with high-volume operations.</div>
+              </div>
+              <div className="spec"><b>${PLANS.scale.monthlyPrice}</b><s>/mo</s></div>
+              <div className="vd"></div>
+              <div className="spec"><b>{PLANS.scale.activeListings.toLocaleString()}</b><s>Listing credits / year</s></div>
+              <div className="vd"></div>
+              <div className="spec"><b>{PLANS.scale.teamSeats}</b><s>Seats</s></div>
+              <Link className="btn btn-ink btn-sm" href="/auth/register">Get Started</Link>
+            </div>
+          </div>
+        </section>
 
         {/* FINAL CTA */}
-        <section className="bg-navy py-28 px-6 text-center">
-          <div className="max-w-2xl mx-auto">
-            <p className="text-gold text-xs tracking-[0.2em] uppercase mb-4">One system. Every job.</p>
-            <h2 className="font-serif text-4xl text-white mb-4 font-normal">
-              Run your entire media business<br />from one system.
-            </h2>
-            <p className="text-white/50 mb-8 text-lg leading-relaxed max-w-xl mx-auto">
-              Booking, scheduling, delivery, and payments. Everything connected and automated.
-            </p>
-            <Link
-              href="/auth/register"
-              className="inline-block bg-gold text-navy font-semibold px-10 py-4 rounded-xl hover:bg-gold/90 transition-colors text-base"
-            >
-              Get Started
-            </Link>
-            <p className="text-white/25 text-xs mt-5">From $49/month. No contract. Cancel anytime.</p>
+        <section className="final">
+          <div className="wrap">
+            <div className="card">
+              <h2>Run your entire media business from one system.</h2>
+              <p>Booking, scheduling, delivery, and payments. Everything connected and automated.</p>
+              <Link className="btn btn-gold" href="/auth/register">Get Started</Link>
+              <p className="micro">From ${PLANS.solo.monthlyPrice}/month. No contract. Cancel anytime.</p>
+            </div>
           </div>
         </section>
 
         {/* FOOTER */}
-        <footer className="bg-navy border-t border-white/10 py-10 px-6">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-8">
+        <footer className="footer">
+          <div className="wrap">
+            <div className="cols">
               <div>
-                <img src="/kyoriaos-logo.png" alt="Kyoria OS" className="h-9 w-auto object-contain mb-3 brightness-0 invert" />
-                <p className="text-white/35 text-xs max-w-xs leading-relaxed">
-                  The complete system for real estate photography businesses.
-                </p>
+                <Link className="logo" href="/" style={{ marginBottom: 14, display: "inline-flex" }}>
+                  <span className="mark">K</span>
+                  <span className="nm">Kyoria OS</span>
+                </Link>
+                <p style={{ maxWidth: 260, fontSize: 13, lineHeight: 1.7, color: "var(--muted-2)" }}>The complete system for real estate photography businesses.</p>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 text-xs">
-                <div>
-                  <p className="text-white/60 font-semibold uppercase tracking-widest mb-3 text-[10px]">Features</p>
-                  <ul className="space-y-2">
-                    <li><Link href="/features/booking-scheduling" className="text-white/35 hover:text-white/65 transition-colors">Booking and Scheduling</Link></li>
-                    <li><Link href="/features/team-management" className="text-white/35 hover:text-white/65 transition-colors">Team Management</Link></li>
-                    <li><Link href="/features/gallery-delivery" className="text-white/35 hover:text-white/65 transition-colors">Gallery Delivery</Link></li>
-                    <li><Link href="/features/service-areas" className="text-white/35 hover:text-white/65 transition-colors">Service Areas</Link></li>
-                    <li><Link href="/features/client-portal" className="text-white/35 hover:text-white/65 transition-colors">Client and Agent Portal</Link></li>
-                    <li><Link href="/features/payments-automation" className="text-white/35 hover:text-white/65 transition-colors">Payments and Automation</Link></li>
-                  </ul>
-                </div>
-                <div>
-                  <p className="text-white/60 font-semibold uppercase tracking-widest mb-3 text-[10px]">Compare</p>
-                  <ul className="space-y-2">
-                    <li><Link href="/compare/aryeo-vs-kyoria-os" className="text-white/35 hover:text-white/65 transition-colors">vs Aryeo</Link></li>
-                    <li><Link href="/compare/honeybook-vs-kyoria-os" className="text-white/35 hover:text-white/65 transition-colors">vs HoneyBook</Link></li>
-                    <li><Link href="/compare/spiro-vs-kyoria-os" className="text-white/35 hover:text-white/65 transition-colors">vs Spiro</Link></li>
-                    <li><Link href="/blog" className="text-white/35 hover:text-white/65 transition-colors">Blog</Link></li>
-                  </ul>
-                </div>
-                <div>
-                  <p className="text-white/60 font-semibold uppercase tracking-widest mb-3 text-[10px]">Legal</p>
-                  <ul className="space-y-2">
-                    <li><a href="/privacy" className="text-white/35 hover:text-white/65 transition-colors">Privacy Policy</a></li>
-                    <li><a href="/terms" className="text-white/35 hover:text-white/65 transition-colors">Terms of Service</a></li>
-                    <li><a href="/sms-consent" className="text-white/35 hover:text-white/65 transition-colors">SMS Consent</a></li>
-                    <li><a href="mailto:contact@kyoriaos.com" className="text-white/35 hover:text-white/65 transition-colors">Support</a></li>
-                  </ul>
-                </div>
+              <div>
+                <h4>Features</h4>
+                <a href="#features">Online booking</a>
+                <a href="#features">Gallery delivery</a>
+                <a href="#features">Property websites</a>
+                <a href="#features">Agent portal</a>
+                <a href="#features">Payments</a>
+              </div>
+              <div>
+                <h4>Compare</h4>
+                <Link href="/compare/aryeo-vs-kyoria-os">vs Aryeo</Link>
+                <Link href="/compare/honeybook-vs-kyoria-os">vs HoneyBook</Link>
+                <Link href="/compare/spiro-vs-kyoria-os">vs Spiro</Link>
+              </div>
+              <div>
+                <h4>Company</h4>
+                <Link href="/blog">Blog</Link>
+                <Link href="/terms">Terms</Link>
+                <Link href="/privacy">Privacy</Link>
+                <Link href="/contact-sales">Contact</Link>
               </div>
             </div>
-            <div className="border-t border-white/10 pt-6 text-white/25 text-xs">
-              <span>&copy; {new Date().getFullYear()} Kyoria OS. All rights reserved.</span>
+            <div className="base">
+              <span>© 2026 Kyoria OS. All rights reserved.</span>
+              <span>Made for real estate media teams</span>
             </div>
           </div>
         </footer>
-
       </div>
     </>
   );
 }
-
-// ─── DATA ───────────────────────────────────────────────────────────────────
-
-const HOW_IT_WORKS = [
-  {
-    title: "Client books online",
-    desc: "Package selection, property details, and deposit, all handled in one guided flow. No back-and-forth.",
-  },
-  {
-    title: "You schedule in seconds",
-    desc: "See your team's real-time availability, assign a photographer, and they're notified instantly.",
-  },
-  {
-    title: "Shoot, upload, deliver",
-    desc: "Upload the gallery and hit send. Balance is collected automatically before they can download.",
-  },
-  {
-    title: "Everyone gets everything",
-    desc: "Client portal, agent portal, and property website, all delivered automatically when photos go live.",
-  },
-];
-
-const BENEFITS = [
-  {
-    title: "Save hours every week",
-    desc: "Deposits, reminders, delivery, and follow-ups are all automated. Stop managing things the system handles for you.",
-    icon: (
-      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
-  {
-    title: "Get paid every time",
-    desc: "Deposit at booking. Balance locked behind the gallery. No more unpaid invoices or awkward follow-ups.",
-    icon: (
-      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-      </svg>
-    ),
-  },
-  {
-    title: "Look like the business you are",
-    desc: "Branded booking pages, gallery links, and agent portals. Every client touchpoint looks polished and professional.",
-    icon: (
-      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  {
-    title: "Scale without the chaos",
-    desc: "Handle twice the volume with the same team. Clear workflows mean nothing falls through the cracks.",
-    icon: (
-      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-      </svg>
-    ),
-  },
-];
-
-const SCREENSHOTS = [
-  {
-    src: "/screenshots/customers.png",
-    title: "Agent and Client CRM",
-    desc: "All your agents and clients in one place. Track orders, contact history, and lifetime value per account.",
-  },
-  {
-    src: "/screenshots/schedule.png",
-    title: "Team Schedule and Calendar",
-    desc: "Every photographer's week at a glance. Assign shoots, track availability, and manage your team from one view.",
-  },
-  {
-    src: "/screenshots/service-areas.png",
-    title: "Service Area Map",
-    desc: "Define exactly where you work. Assign photographers per zone and auto-route bookings to the right person.",
-  },
-  {
-    src: "/screenshots/zone-setup.png",
-    title: "Booking Setup",
-    desc: "Set up packages, zones, and team assignments in minutes. Your booking page is live the same day.",
-  },
-];
-
-const TESTIMONIALS = [
-  {
-    name: "Marcus W.",
-    role: "Real estate photographer, San Diego CA",
-    quote:
-      "I used to spend half my Friday chasing down payment requests. Now the balance just shows up in my account before I even think about it. The whole system runs itself.",
-  },
-  {
-    name: "Devon T.",
-    role: "Photography team owner, Phoenix AZ",
-    quote:
-      "Assigning shoots to my team used to be a group text. Now I open the booking, see who is available, tap their name, and they get notified. Game changer for us.",
-  },
-  {
-    name: "Brooke S.",
-    role: "Solo photographer, Nashville TN",
-    quote:
-      "I was nervous it would take forever to set up. I had my booking page live, Stripe connected, and my first real booking confirmed within the same afternoon.",
-  },
-];
-
-const FEATURE_LINKS = [
-  {
-    title: "Booking and Scheduling",
-    slug: "booking-scheduling",
-    desc: "A guided online booking flow that collects deposits, schedules shoots, and confirms everything automatically.",
-  },
-  {
-    title: "Gallery Delivery",
-    slug: "gallery-delivery",
-    desc: "Upload your work and send it in one click. The gallery stays locked until the client pays their balance.",
-  },
-  {
-    title: "Team Management",
-    slug: "team-management",
-    desc: "See every photographer's availability, assign jobs, and keep your crew in sync without a group chat.",
-  },
-  {
-    title: "Client and Agent Portal",
-    slug: "client-portal",
-    desc: "Every client gets a portal. Every agent gets a branded listing kit with gallery, website, and brochure.",
-  },
-  {
-    title: "Payments and Automation",
-    slug: "payments-automation",
-    desc: "Deposits, balances, and reminders handled automatically. Get paid without chasing anyone.",
-  },
-  {
-    title: "Service Area Routing",
-    slug: "service-areas",
-    desc: "Draw coverage zones on a map, assign photographers per territory, and route bookings to the right person.",
-  },
-];
