@@ -10,7 +10,14 @@ import { onAuthStateChanged } from "firebase/auth";
 // being asked to sign up for something they already have.
 export default function GuideCTA() {
   const [signedIn, setSignedIn] = useState(null);
-  useEffect(() => onAuthStateChanged(auth, (u) => setSignedIn(!!u)), []);
+  const [embedded, setEmbedded] = useState(false);
+  useEffect(() => {
+    try { if (window.self !== window.top) setEmbedded(true); } catch { setEmbedded(true); }
+    return onAuthStateChanged(auth, (u) => setSignedIn(!!u));
+  }, []);
+
+  // Hidden when embedded inside the dashboard help frame.
+  if (embedded) return null;
 
   if (signedIn) {
     return (
