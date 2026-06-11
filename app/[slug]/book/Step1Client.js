@@ -171,7 +171,9 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
 
   // ── Pricing gate (sqft / photo count) ─────────────────────────────────────
   if (usesGate && !confirmed) {
-    const canConfirm = pricingMode === "photos" ? !!sqftInput : !!tier;
+    const cap = pricingConfig.cap || {};
+    const overCap = cap.enabled && Number(cap.max) > 0 && Number(sqftInput) > Number(cap.max);
+    const canConfirm = (pricingMode === "photos" ? !!sqftInput : !!tier) && !overCap;
     return (
       <>
         <StepProgress current={1} />
@@ -202,6 +204,11 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                     : gateLabel
                 }
               </p>
+              {overCap && (
+                <p className="text-xs text-red-500 mb-4 leading-relaxed">
+                  We don&apos;t take online bookings above {Number(cap.max).toLocaleString()} {pricingMode === "photos" ? "photos" : pricingMode === "custom" ? customLabel : "sq ft"}. Please contact us directly for a custom quote.
+                </p>
+              )}
               <button onClick={confirmSqft} disabled={!canConfirm} className="btn-primary w-full py-3.5">
                 Show Pricing →
               </button>

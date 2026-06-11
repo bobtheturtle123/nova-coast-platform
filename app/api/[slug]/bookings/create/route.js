@@ -61,6 +61,12 @@ export async function POST(req, { params }) {
       return Response.json({ error: "Missing client information" }, { status: 400 });
     }
 
+    // Enforce the optional maximum-size cap server-side (defense in depth).
+    const cap = tenant.pricingConfig?.cap;
+    if (cap?.enabled && Number(cap.max) > 0 && Number(squareFootage) > Number(cap.max)) {
+      return Response.json({ error: `Online bookings above ${Number(cap.max).toLocaleString()} are not available. Please contact us for a custom quote.` }, { status: 400 });
+    }
+
     // Re-calculate server-side to prevent tampering (pass squareFootage for tier pricing)
     const catalog = await getTenantCatalog(tenant.id);
     const pricing = calculateTenantPrice(packageIds, serviceIds, addonIds, travelFee || 0, catalog, squareFootage || 0);

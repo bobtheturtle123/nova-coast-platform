@@ -596,6 +596,9 @@ export default function SettingsPage() {
   const [tiers,           setTiers]           = useState([]);
   const [customGateLabel, setCustomGateLabel] = useState("Custom value");
   const [savingTiers,     setSavingTiers]     = useState(false);
+  // Optional hard cap — properties above this value can't be booked online.
+  const [capEnabled,      setCapEnabled]      = useState(false);
+  const [capMax,          setCapMax]          = useState("");
 
   // Booking config state
   const [depositType,   setDepositType]   = useState("percent"); // "percent" | "fixed" | "none"
@@ -973,6 +976,7 @@ export default function SettingsPage() {
           setPricingMode(pc?.mode || "sqft");
           setTiers(pc?.tiers?.length ? pc.tiers : DEFAULT_TIERS);
           if (pc?.customGateLabel) setCustomGateLabel(pc.customGateLabel);
+          if (pc?.cap?.enabled) { setCapEnabled(true); setCapMax(pc.cap.max != null ? String(pc.cap.max) : ""); }
           setTenantLoaded(true);
         }
         // Load booking config
@@ -1146,7 +1150,11 @@ export default function SettingsPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          pricingConfig: { mode: pricingMode, tiers, ...(pricingMode === "custom" ? { customGateLabel } : {}) },
+          pricingConfig: {
+            mode: pricingMode, tiers,
+            ...(pricingMode === "custom" ? { customGateLabel } : {}),
+            cap: { enabled: capEnabled && Number(capMax) > 0, max: Number(capMax) || 0 },
+          },
         }),
       });
       if (res.ok) showMsg("Pricing configuration saved.");
@@ -1845,6 +1853,30 @@ export default function SettingsPage() {
               onChange={(e) => setCustomGateLabel(e.target.value)}
               className="input-field w-full text-sm"
               placeholder="e.g. Number of rooms" />
+          </div>
+        )}
+
+        {/* Maximum cap — turn off "unlimited" and refuse jobs above a size */}
+        {pricingMode !== "flat" && (
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <div>
+                <p className="text-sm font-medium text-[#0F172A]">Set a maximum I'll accept</p>
+                <p className="text-xs text-gray-400">Turn off unlimited. Online bookings above this {pricingMode === "custom" ? (customGateLabel || "value").toLowerCase() : (modeLabels[pricingMode]?.gate?.toLowerCase() || "size")} are blocked (clients are told to contact you).</p>
+              </div>
+              <button type="button" onClick={() => setCapEnabled((v) => !v)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${capEnabled ? "bg-[#3486cf]" : "bg-gray-300"}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${capEnabled ? "translate-x-6" : "translate-x-1"}`} />
+              </button>
+            </label>
+            {capEnabled && (
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-xs text-gray-500">Maximum</span>
+                <input type="number" min="1" value={capMax} onChange={(e) => setCapMax(e.target.value)}
+                  className="input-field py-2 text-sm w-40" placeholder={pricingMode === "sqft" ? "e.g. 20000" : "e.g. 50"} />
+                <span className="text-xs text-gray-500">{pricingMode === "custom" ? (customGateLabel || "") : (modeLabels[pricingMode]?.gate || "")}</span>
+              </div>
+            )}
           </div>
         )}
 
