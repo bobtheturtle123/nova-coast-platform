@@ -293,13 +293,20 @@ export default function BillingPage() {
     setDiscountSaving(true);
     try {
       const token = await auth.currentUser.getIdToken();
-      await fetch("/api/billing/cancel-feedback", {
+      const res = await fetch("/api/billing/cancel-feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ reason: cancelReason, note: cancelNote, applyDiscount }),
       });
+      const data = await res.json().catch(() => ({}));
       if (applyDiscount) {
-        setMsg({ text: "$20/month discount applied for 3 months! It will appear on your next invoice.", type: "success" });
+        if (data.discountApplied) {
+          // Reflect the active discount immediately so it's clearly visible.
+          setTenant((t) => ({ ...(t || {}), retentionDiscount: { active: true, amountOffCents: 2000, months: 3, appliedAt: new Date().toISOString() } }));
+          setMsg({ text: "Discount applied: $20/month off your next 3 invoices. You'll see it on your billing page below.", type: "success" });
+        } else {
+          setMsg({ text: "This discount has already been used on your account.", type: "error" });
+        }
         setCancelStep(null); setCancelReason(""); setCancelNote("");
       } else {
         setCancelStep(null); setCancelReason(""); setCancelNote("");
@@ -322,6 +329,28 @@ export default function BillingPage() {
     <div className="p-8 max-w-3xl">
       <h1 className="page-title mb-1">Billing</h1>
       <p className="page-subtitle mb-8">Manage your subscription and payment settings.</p>
+
+      {/* Active retention discount — persistent so the tenant can confirm it worked.
+          Hidden once the (repeating, N-month) discount has run its course. */}
+      {tenant?.retentionDiscount?.active && (() => {
+        const r = tenant.retentionDiscount;
+        const appliedMs = r.appliedAt ? new Date(r.appliedAt).getTime() : Date.now();
+        const expiresMs = appliedMs + (r.months || 3) * 31 * 24 * 60 * 60 * 1000;
+        return Date.now() < expiresMs;
+      })() && (
+        <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-6">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" className="flex-shrink-0 mt-0.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          <div>
+            <p className="text-sm font-semibold text-emerald-800">
+              ${((tenant.retentionDiscount.amountOffCents || 2000) / 100).toFixed(0)}/month discount active
+              {tenant.retentionDiscount.months ? ` for ${tenant.retentionDiscount.months} months` : ""}
+            </p>
+            <p className="text-xs text-emerald-700">
+              Applied{tenant.retentionDiscount.appliedAt ? ` ${new Date(tenant.retentionDiscount.appliedAt).toLocaleDateString()}` : ""}. It comes off your next {tenant.retentionDiscount.months || 3} invoices automatically.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Feedback message */}
       {msg.text && (

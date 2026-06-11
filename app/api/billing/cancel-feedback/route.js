@@ -68,10 +68,21 @@ export async function POST(req) {
         name:                "Retention discount",
       });
       await stripe.subscriptions.update(tenant.stripeSubscriptionId, { coupon: coupon.id });
-      await tenantRef.update({ churnDiscountOffered: true, churnDiscountOfferedAt: new Date() });
+      await tenantRef.update({
+        churnDiscountOffered: true,
+        churnDiscountOfferedAt: new Date(),
+        // Persisted so the billing page can show the active discount clearly.
+        retentionDiscount: {
+          active:        true,
+          amountOffCents: 2000,
+          months:        3,
+          appliedAt:     new Date().toISOString(),
+        },
+      });
+      return Response.json({ ok: true, discountApplied: true });
     }
 
-    return Response.json({ ok: true });
+    return Response.json({ ok: true, discountApplied: false });
   } catch (err) {
     console.error("cancel-feedback error:", err);
     return Response.json({ error: "Failed to process" }, { status: 500 });
