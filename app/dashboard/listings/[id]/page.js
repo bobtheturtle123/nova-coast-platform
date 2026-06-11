@@ -368,8 +368,27 @@ const [listingUrl,       setListingUrl]        = useState("");
       const { booking: b } = await bRes.json();
       setBooking(b);
       setEmailSubject(`Your listing media is ready | ${b.fullAddress || b.address || ""}`);
-      if (b.propertyWebsite) setPropSite(b.propertyWebsite);
-      else setPropSite({ address: b.fullAddress || b.address || "" });
+      // Auto-fill the listing agent from the customer who booked (in real estate
+      // media the client IS the listing agent). Only fills blanks so manual
+      // edits are preserved.
+      const agentDefaults = {
+        agentName:      b.clientName  || "",
+        agentEmail:     b.clientEmail || "",
+        agentPhone:     b.clientPhone || "",
+        agentBrokerage: b.clientCompany || b.clientBrokerage || b.brokerage || "",
+      };
+      if (b.propertyWebsite) {
+        const pw = b.propertyWebsite;
+        setPropSite({
+          ...pw,
+          agentName:      pw.agentName      || agentDefaults.agentName,
+          agentEmail:     pw.agentEmail     || agentDefaults.agentEmail,
+          agentPhone:     pw.agentPhone     || agentDefaults.agentPhone,
+          agentBrokerage: pw.agentBrokerage || agentDefaults.agentBrokerage,
+        });
+      } else {
+        setPropSite({ address: b.fullAddress || b.address || "", ...agentDefaults });
+      }
     }
     if (gRes.ok) {
       const { gallery: g } = await gRes.json();
