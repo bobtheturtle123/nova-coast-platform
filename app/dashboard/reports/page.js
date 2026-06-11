@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { auth } from "@/lib/firebase";
 import { useDashboardPermissions } from "@/lib/dashboardPermissions";
+import { isDemo, getDemoReports } from "@/lib/demoData";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -127,6 +128,13 @@ export default function ReportsPage() {
   const [period,    setPeriod]    = useState("12");
 
   useEffect(() => {
+    if (isDemo()) {
+      const d = getDemoReports();
+      setBookings(d.bookings);
+      setCatalog(d.catalog);
+      setLoading(false);
+      return;
+    }
     if (!canViewReports) { setLoading(false); return; }
     const user = auth.currentUser;
     if (!user) { setLoading(false); return; }

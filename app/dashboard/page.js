@@ -10,6 +10,7 @@ import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 import { payLabel, paidAmount } from "@/lib/payment";
 import { avatarColor, initials } from "@/lib/avatar";
 import { getEffectivePlan } from "@/lib/plans";
+import { isDemo, getDemoDashboard } from "@/lib/demoData";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 // Statuses that count as "in production" — excludes completed and cancelled
@@ -170,6 +171,17 @@ export default function DashboardHome() {
   }, []);
 
   async function loadAll() {
+    if (isDemo()) {
+      const d = getDemoDashboard();
+      setTenant(d.tenant);
+      setHasProducts(true);
+      setListings(d.listings);
+      setTeamMembers(d.team);
+      setZones(d.zones);
+      setPendingRevisions(d.revisions);
+      setLoading(false);
+      return;
+    }
     const result = await auth.currentUser?.getIdTokenResult(true);
     if (!result) return;
     const token = result.token;

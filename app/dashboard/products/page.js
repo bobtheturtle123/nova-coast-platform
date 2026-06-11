@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/components/Toast";
+import { isDemo, getDemoProducts } from "@/lib/demoData";
 
 async function uploadProductMedia(file) {
   const token = await auth.currentUser.getIdToken();
@@ -940,6 +941,14 @@ export default function ProductsPage() {
 
   useEffect(() => {
     async function load() {
+      if (isDemo()) {
+        const d = getDemoProducts();
+        setItems(d.items);
+        setTeamMembers(d.teamMembers);
+        setPricingConfig(d.pricingConfig);
+        setLoading(false);
+        return;
+      }
       const token = await getToken();
       const [pkgRes, svcRes, adnRes, retRes, teamRes, tenantRes] = await Promise.all([
         fetch("/api/dashboard/products?type=packages",  { headers: { Authorization: `Bearer ${token}` } }),
