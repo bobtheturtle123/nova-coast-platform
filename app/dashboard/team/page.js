@@ -1755,6 +1755,32 @@ export default function TeamPage() {
     load();
   }, []);
 
+  // Auto-sync connected Google Calendars once when the team page loads, so the
+  // calendar is up to date (added + removed events) without manually clicking
+  // Sync. Per-member server-side rate limiting prevents this from hammering
+  // Google on rapid reloads.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await getToken();
+        const res = await fetch("/api/dashboard/team/google-connected", { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) return;
+        const { ids } = await res.json();
+        if (cancelled || !ids?.length) return;
+        await Promise.allSettled(ids.map((memberId) =>
+          fetch("/api/dashboard/team/google-sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ memberId }),
+          })
+        ));
+        if (!cancelled) window.dispatchEvent(new CustomEvent("kyoria:blocks-updated"));
+      } catch { /* best-effort */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // Refresh busy blocks the moment a Google sync runs (or another tab syncs),
   // so newly-synced events appear — and events deleted in Google disappear —
   // immediately, without a page reload.

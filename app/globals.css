@@ -223,13 +223,14 @@
 
   /* ── Filter chips ────────────────────────────────────────────────────── */
   .fchip {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full border cursor-pointer transition-all;
+    /* Larger tap target so team chips are easy to select */
+    @apply inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-medium rounded-full border cursor-pointer transition-all;
     border-color: var(--border);
     color: #6B7280;
     background: white;
   }
   .fchip:hover    { border-color: #3486cf; color: #3486cf; background: #EEF4FA; }
-  .fchip-active   { border-color: #3486cf !important; color: #3486cf !important; background: #EEF4FA !important; }
+  .fchip-active   { border-color: #3486cf !important; color: #3486cf !important; background: #EEF4FA !important; font-weight: 600; box-shadow: 0 0 0 2px rgba(52,134,207,0.15); }
 
   /* ── Segmented control ───────────────────────────────────────────────── */
   .seg {
