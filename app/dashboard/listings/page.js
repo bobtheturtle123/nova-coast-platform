@@ -7,6 +7,7 @@ import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 import { avatarColor, initials } from "@/lib/avatar";
+import { isDemo, getDemoListings } from "@/lib/demoData";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ACTIVE_STAGES = ["booked","appointment_confirmed","photographer_assigned","shot_completed","editing_complete","qa_review","postponed"];
@@ -230,6 +231,14 @@ export default function ListingsPage() {
   const [pendingRevCounts, setPendingRevCounts] = useState({});
 
   useEffect(() => {
+    if (isDemo()) {
+      const d = getDemoListings();
+      setListings(d.listings);
+      setPendingRevCounts(d.pendingRevCounts);
+      setHasMore(false);
+      setLoading(false);
+      return;
+    }
     auth.currentUser?.getIdToken(true).then(async (token) => {
       const headers = { Authorization: `Bearer ${token}` };
       const [listRes, revRes] = await Promise.all([

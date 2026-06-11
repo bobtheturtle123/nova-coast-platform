@@ -12,6 +12,7 @@ import { avatarColor, initials } from "@/lib/avatar";
 import { ZONE_COLORS } from "@/lib/zoneColors";
 import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 import { getEffectivePlan, getSeatLimit } from "@/lib/plans";
+import { isDemo, getDemoTeam } from "@/lib/demoData";
 import {
   ROLES as ROLE_DEFS, ROLE_IDS, DASHBOARD_ROLES, NON_SHOOTING,
   normalizeRole, defaultPermissions, roleLabel, shootsSchedule,
@@ -1728,6 +1729,16 @@ export default function TeamPage() {
 
   useEffect(() => {
     async function load() {
+      if (isDemo()) {
+        const d = getDemoTeam();
+        setTenant(d.tenant);
+        setMembers(d.members);
+        setBookings(d.bookings);
+        setProducts(d.products);
+        setTimeBlocks(d.timeBlocks);
+        setLoading(false);
+        return;
+      }
       const token = await getToken(true);
       const [teamRes, listRes, svcRes, pkgRes, adnRes, blocksRes, tenantRes] = await Promise.all([
         fetch("/api/dashboard/team",                   { headers: { Authorization: `Bearer ${token}` } }),
@@ -1760,6 +1771,7 @@ export default function TeamPage() {
   // Sync. Per-member server-side rate limiting prevents this from hammering
   // Google on rapid reloads.
   useEffect(() => {
+    if (isDemo()) return;
     let cancelled = false;
     (async () => {
       try {
