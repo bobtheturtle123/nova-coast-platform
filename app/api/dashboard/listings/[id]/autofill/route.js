@@ -54,7 +54,7 @@ export async function POST(req) {
   const ogDesc = decode(meta(html, "og:description") || meta(html, "twitter:description") || meta(html, "description"));
   const ogTitle = decode(meta(html, "og:title") || meta(html, "twitter:title"));
 
-  let beds, baths, price, sqft, jsonDesc;
+  let beds, baths, price, sqft, jsonDesc, yearBuilt, lotSqft, lotAcres, parking;
 
   // Deep-walk every JSON-LD block for real-estate fields, wherever they're nested.
   const num = (v) => {
@@ -71,7 +71,10 @@ export async function POST(req) {
       if (beds  === undefined && /(numberofbedrooms|bedrooms|beds)/.test(key))            beds  = num(v);
       if (baths === undefined && /(numberofbathrooms|bathroomstotal|bathrooms|baths)/.test(key)) baths = num(v);
       if (price === undefined && /(^price$|listprice|offers)/.test(key))                  price = num(v?.price ?? v);
-      if (sqft  === undefined && /(floorsize|livingarea|sqft|squarefeet)/.test(key))      sqft  = num(v);
+      if (sqft  === undefined && /(floorsize|livingarea|sqft|squarefeet)/.test(key) && !/lot/.test(key)) sqft = num(v);
+      if (yearBuilt === undefined && /(yearbuilt|yearconstructed)/.test(key))             yearBuilt = num(v);
+      if (lotSqft === undefined && /lotsize/.test(key))                                   lotSqft = num(v);
+      if (parking === undefined && /(parking|garage)/.test(key))                          parking = num(v);
       if (!jsonDesc && key === "description" && typeof v === "string" && v.length > 30)    jsonDesc = decode(v);
       if (v && typeof v === "object") walk(v, depth + 1);
     }
@@ -81,12 +84,18 @@ export async function POST(req) {
   }
 
   // Regex fallbacks — Redfin/Zillow put "3 beds, 2 baths, 1,500 sq ft" in the
-  // og:title/description even when JSON-LD is incomplete.
-  const hay = `${ogTitle} ${ogDesc}`;
+  // og:title/description, and stats like year built / acres / garage in the body.
+  const hay  = `${ogTitle} ${ogDesc}`;
+  const body = html.replace(/<[^>]+>/g, " ").slice(0, 200000); // strip tags for text search
   if (beds  === undefined) beds  = num((hay.match(/([\d.]+)\s*(?:beds?|bd|bedrooms?)/i) || [])[1]);
   if (baths === undefined) baths = num((hay.match(/([\d.]+)\s*(?:baths?|ba|bathrooms?)/i) || [])[1]);
   if (sqft  === undefined) sqft  = num((hay.match(/([\d,]+)\s*(?:sq\.?\s*ft|square\s*feet|sqft)/i) || [])[1]);
   if (price === undefined) price = num((hay.match(/\$\s?([\d,]+)/) || [])[1]);
+  if (yearBuilt === undefined) yearBuilt = num((body.match(/(?:built in|year built[:\s]+|yr built[:\s]+)\s*(\d{4})/i) || [])[1]);
+  if (lotAcres === undefined)  lotAcres  = num((body.match(/([\d.]+)\s*acres?\b/i) || [])[1]);
+  if (lotAcres === undefined && lotSqft) lotAcres = Math.round((lotSqft / 43560) * 100) / 100;
+  if (lotSqft  && !lotAcres && lotSqft > 5) lotAcres = Math.round((lotSqft / 43560) * 100) / 100;
+  if (parking === undefined) parking = num((body.match(/(\d+)\s*(?:-|\s)?car\s*garage/i) || body.match(/(\d+)\s*(?:garage|parking)\s*spaces?/i) || [])[1]);
 
   // Prefer a real marketing description over the short meta string.
   const description = (jsonDesc && jsonDesc.length > (ogDesc?.length || 0)) ? jsonDesc : ogDesc;
@@ -94,7 +103,10 @@ export async function POST(req) {
   if (beds  != null) fields.beds  = String(beds);
   if (baths != null) fields.baths = String(baths);
   if (price != null) fields.price = String(price);
-  if (sqft  != null) fields.squareFootage = String(sqft);
+  if (sqft  != null) fields.sqft = Math.round(sqft).toLocaleString();
+  if (yearBuilt != null && yearBuilt > 1700 && yearBuilt < 2100) fields.yearBuilt = String(Math.round(yearBuilt));
+  if (lotAcres != null && lotAcres > 0) fields.lotAcres = String(lotAcres);
+  if (parking != null && parking > 0) fields.parking = String(Math.round(parking));
 
   if (Object.keys(fields).length === 0) {
     return Response.json({ ok: true, fields: {}, message: "Couldn't read details from that page (some sites block automatic import). Enter details manually." });

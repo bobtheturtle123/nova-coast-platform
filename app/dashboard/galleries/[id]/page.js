@@ -108,9 +108,10 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
         </div>
       </div>
 
-      {/* Hover overlay — controls only; a light bottom gradient (not a full
-          black wash) keeps the photo visible on hover. */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-end justify-end gap-1 p-1.5">
+      {/* Hover controls — no image darkening at all. The container is click-through
+          (pointer-events-none) so it never blocks drag/select; the buttons inside
+          re-enable pointer events and carry their own backgrounds. */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-end justify-end gap-1 p-1.5 pointer-events-none [&>*]:pointer-events-auto">
         {/* Delete button (top-right) */}
         <button
           onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
