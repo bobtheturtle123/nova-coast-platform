@@ -788,6 +788,14 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                           also keeps old galleries playable after the full-res
                           original is removed for storage management. */}
                       <video src={v.webVideoUrl || v.url} className="w-full h-full" controls />
+                      {/* Very subtle watermark over gallery playback (doesn't block controls;
+                          not baked into the downloadable file). */}
+                      {name && (
+                        <div className="absolute top-2 left-3 pointer-events-none select-none text-white/25 text-[11px] font-semibold tracking-wide"
+                          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.45)" }}>
+                          {name}
+                        </div>
+                      )}
                       {unlocked && v.key && (
                         <a
                           href={`/api/gallery/video-download?token=${gallery.accessToken}&key=${encodeURIComponent(v.key)}&name=${encodeURIComponent(v.fileName || "video.mp4")}`}
