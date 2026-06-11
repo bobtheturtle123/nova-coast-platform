@@ -23,12 +23,16 @@ export async function GET(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [snap, bookingsSnap] = await Promise.all([
+  const [snap, bookingsSnap, tenantSnap] = await Promise.all([
     adminDb.collection("tenants").doc(ctx.tenantId)
       .collection("agents").orderBy("totalOrders", "desc").limit(2000).get(),
     adminDb.collection("tenants").doc(ctx.tenantId)
       .collection("bookings").limit(5000).get(),
+    adminDb.collection("tenants").doc(ctx.tenantId).get(),
   ]);
+
+  // The tenant's own (owner) email should never appear as one of their customers.
+  const ownerEmail = (tenantSnap.data()?.email || "").toLowerCase().trim();
 
   // Compute COLLECTED revenue per client email from real bookings.
   // We never count money that hasn't been paid, so totalSpent reflects cash only.
@@ -46,12 +50,15 @@ export async function GET(req) {
     collectedByEmail[email] = (collectedByEmail[email] || 0) + sum;
   });
 
-  const agents = snap.docs.map((d) => {
-    const data = serialize(d.data());
-    const email = (data.email || "").toLowerCase().trim();
-    // Override denormalized totalSpent with collected-only revenue.
-    return { id: d.id, ...data, totalSpent: collectedByEmail[email] || 0 };
-  });
+  const agents = snap.docs
+    .map((d) => {
+      const data = serialize(d.data());
+      const email = (data.email || "").toLowerCase().trim();
+      // Override denormalized totalSpent with collected-only revenue.
+      return { id: d.id, ...data, _email: email, totalSpent: collectedByEmail[email] || 0 };
+    })
+    .filter((a) => !ownerEmail || a._email !== ownerEmail)
+    .map(({ _email, ...a }) => a);
   return Response.json({ agents });
 }
 

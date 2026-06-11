@@ -1,5 +1,6 @@
 import Link from "next/link";
 import GuideBackLink from "@/components/GuideBackLink";
+import GuideCTA from "@/components/GuideCTA";
 
 // Shared chrome for every /guides/* page so they look consistent and cross-link.
 export const ALL_GUIDES = [
@@ -51,15 +52,8 @@ export default function GuideShell({ eyebrow = "Guide", title, intro, currentSlu
           </div>
         </div>
 
-        {/* CTA */}
-        <div className="mt-10 bg-[#0F172A] rounded-2xl p-8 text-center">
-          <p className="text-white text-lg font-semibold mb-1">Ready to get started?</p>
-          <p className="text-white/60 text-sm mb-5">Set up your studio in minutes and take your first booking.</p>
-          <Link href="/auth/register"
-            className="inline-block bg-white text-[#0F172A] font-semibold text-sm px-6 py-3 rounded-xl hover:opacity-90 transition-opacity">
-            Start free →
-          </Link>
-        </div>
+        {/* CTA — auth-aware (sign-up for visitors, dashboard for tenants) */}
+        <GuideCTA />
       </div>
     </main>
   );

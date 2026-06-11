@@ -37,10 +37,10 @@ function CopyButton({ text }) {
 function ShareButton({ referralUrl }) {
   const subject = encodeURIComponent("Try KyoriaOS - real estate photography business software");
   const body    = encodeURIComponent(
-    `Hey,\n\nI've been using KyoriaOS to manage my real estate photography bookings and payments. Thought you might find it useful too.\n\nSign up with my link and we both get $20 in account credit:\n${referralUrl}\n\nNo credit card required to start.`
+    `Hey,\n\nI've been using KyoriaOS to manage my real estate photography bookings and payments. Thought you might find it useful too.\n\nSign up with my link and we both get $20 in account credit:\n${referralUrl}\n\nIt only takes a few minutes to set up.`
   );
   return (
-    <a href={`mailto:?subject=${subject}&body=${body}`}
+    <a href={`mailto:?subject=${subject}&body=${body}`} target="_blank" rel="noopener noreferrer"
       className="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-500 hover:border-[#3486cf]/40 hover:text-[#3486cf] transition-all font-medium flex-shrink-0">
       Share via Email
     </a>

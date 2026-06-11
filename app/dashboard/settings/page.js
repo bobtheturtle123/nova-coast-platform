@@ -3007,12 +3007,12 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-400">Sent when you deliver a gallery. Can be customized per delivery from the gallery editor.</p>
             <div>
               <label className="label-field">Subject Line</label>
-              <input type="text" value={emailTplSubject} onChange={(e) => setEmailTplSubject(e.target.value)}
+              <input type="text" value={emailTplSubject} onChange={(e) => setEmailTplSubject(e.target.value)} onFocus={(e) => { if (!emailTplSubject) setEmailTplSubject(e.target.placeholder); }}
                 className="input-field w-full" placeholder="Your listing media is ready — {{address}}" />
             </div>
             <div>
               <label className="label-field">Message Body</label>
-              <textarea data-emailbody="1" value={emailTplBody} onChange={(e) => setEmailTplBody(e.target.value)} rows={8}
+              <textarea data-emailbody="1" value={emailTplBody} onChange={(e) => setEmailTplBody(e.target.value)} onFocus={(e) => { if (!emailTplBody) setEmailTplBody(e.target.placeholder); }} rows={8}
                 placeholder={"Hi {{clientName}},\n\nYour media for {{address}} is ready to view and download.\n\nLet me know if you need any adjustments.\n\nBest,\n" + (tenant?.businessName || "Your Photographer")}
                 className="input-field w-full text-sm leading-relaxed resize-y" />
               <p className="text-xs text-gray-400 mt-1">Appears above the gallery button in the email.</p>
@@ -3025,12 +3025,12 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-400">Sent automatically when a client submits a booking and pays their deposit.</p>
             <div>
               <label className="label-field">Subject Line</label>
-              <input type="text" value={bookingReceivedSubject} onChange={(e) => setBookingReceivedSubject(e.target.value)}
+              <input type="text" value={bookingReceivedSubject} onChange={(e) => setBookingReceivedSubject(e.target.value)} onFocus={(e) => { if (!bookingReceivedSubject) setBookingReceivedSubject(e.target.placeholder); }}
                 className="input-field w-full" placeholder="Booking received — {{address}}" />
             </div>
             <div>
               <label className="label-field">Message Body</label>
-              <textarea data-emailbody="1" value={bookingReceivedBody} onChange={(e) => setBookingReceivedBody(e.target.value)} rows={8}
+              <textarea data-emailbody="1" value={bookingReceivedBody} onChange={(e) => setBookingReceivedBody(e.target.value)} onFocus={(e) => { if (!bookingReceivedBody) setBookingReceivedBody(e.target.placeholder); }} rows={8}
                 placeholder={"Hi {{clientName}},\n\nThanks for booking with us! Your shoot request for {{address}} is under review. We'll confirm within 24 hours.\n\nLooking forward to it,\n" + (tenant?.businessName || "Your Photographer")}
                 className="input-field w-full text-sm leading-relaxed resize-y" />
               <p className="text-xs text-gray-400 mt-1">Appears above the booking details in the email.</p>
@@ -3043,12 +3043,12 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-400">Sent when you approve a booking and assign a shoot date.</p>
             <div>
               <label className="label-field">Subject Line</label>
-              <input type="text" value={bookingApprovedSubject} onChange={(e) => setBookingApprovedSubject(e.target.value)}
+              <input type="text" value={bookingApprovedSubject} onChange={(e) => setBookingApprovedSubject(e.target.value)} onFocus={(e) => { if (!bookingApprovedSubject) setBookingApprovedSubject(e.target.placeholder); }}
                 className="input-field w-full" placeholder="Shoot confirmed — {{address}}" />
             </div>
             <div>
               <label className="label-field">Message Body</label>
-              <textarea data-emailbody="1" value={bookingApprovedBody} onChange={(e) => setBookingApprovedBody(e.target.value)} rows={8}
+              <textarea data-emailbody="1" value={bookingApprovedBody} onChange={(e) => setBookingApprovedBody(e.target.value)} onFocus={(e) => { if (!bookingApprovedBody) setBookingApprovedBody(e.target.placeholder); }} rows={8}
                 placeholder={"Hi {{clientName}},\n\nGreat news — your shoot at {{address}} is confirmed for {{date}}. We'll be in touch with any details beforehand.\n\nSee you then,\n" + (tenant?.businessName || "Your Photographer")}
                 className="input-field w-full text-sm leading-relaxed resize-y" />
             </div>
@@ -3060,12 +3060,12 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-400">Sent manually from the Orders tab when a client has an outstanding balance after gallery delivery.</p>
             <div>
               <label className="label-field">Subject Line</label>
-              <input type="text" value={paymentReminderSubject} onChange={(e) => setPaymentReminderSubject(e.target.value)}
+              <input type="text" value={paymentReminderSubject} onChange={(e) => setPaymentReminderSubject(e.target.value)} onFocus={(e) => { if (!paymentReminderSubject) setPaymentReminderSubject(e.target.placeholder); }}
                 className="input-field w-full" placeholder="Friendly reminder — balance due for {{address}}" />
             </div>
             <div>
               <label className="label-field">Message Body</label>
-              <textarea data-emailbody="1" value={paymentReminderBody} onChange={(e) => setPaymentReminderBody(e.target.value)} rows={8}
+              <textarea data-emailbody="1" value={paymentReminderBody} onChange={(e) => setPaymentReminderBody(e.target.value)} onFocus={(e) => { if (!paymentReminderBody) setPaymentReminderBody(e.target.placeholder); }} rows={8}
                 placeholder={"Hi {{clientName}},\n\nJust a quick reminder that your remaining balance of ${{balance}} is due for {{address}}. You can pay directly from your gallery — it only takes a minute.\n\nThanks!\n" + (tenant?.businessName || "Your Photographer")}
                 className="input-field w-full text-sm leading-relaxed resize-y" />
               <p className="text-xs text-gray-400 mt-1">Appears above the Pay &amp; Download button in the email.</p>
@@ -3192,6 +3192,7 @@ export default function SettingsPage() {
               <textarea
                 value={tab.val}
                 onChange={(e) => tab.set(e.target.value)}
+                onFocus={(e) => { if (!tab.val) tab.set(e.target.placeholder); }}
                 rows={4}
                 placeholder={tab.placeholder}
                 className="input-field w-full text-sm leading-relaxed resize-y font-mono"
