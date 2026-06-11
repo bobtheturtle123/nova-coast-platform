@@ -418,7 +418,12 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
           </>
         )}
 
-        <div className="flex justify-end">
+        <div className={`flex ${usesGate ? "justify-between" : "justify-end"} mt-8`}>
+          {usesGate && (
+            <button onClick={() => setConfirmed(false)} className="btn-outline">
+              ← Back
+            </button>
+          )}
           <button onClick={() => router.push(`/${slug}/book/addons`)}
             disabled={!hasSelections()} className="btn-primary px-12">
             Continue →

@@ -51,31 +51,53 @@ export async function POST(req) {
   }
 
   const fields = {};
-  const description = decode(meta(html, "og:description") || meta(html, "description"));
-  if (description) fields.description = description.slice(0, 1200);
+  const ogDesc = decode(meta(html, "og:description") || meta(html, "twitter:description") || meta(html, "description"));
+  const ogTitle = decode(meta(html, "og:title") || meta(html, "twitter:title"));
 
-  // JSON-LD often carries structured real-estate data.
-  let beds, baths, price, sqft;
-  for (const m of html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
-    try {
-      const json = JSON.parse(m[1].trim());
-      const nodes = Array.isArray(json) ? json : [json, ...(json["@graph"] || [])];
-      for (const n of nodes) {
-        if (!n || typeof n !== "object") continue;
-        beds  = beds  ?? n.numberOfBedrooms ?? n.numberOfRooms;
-        baths = baths ?? n.numberOfBathroomsTotal ?? n.numberOfBathrooms;
-        price = price ?? n.offers?.price ?? n.price;
-        const fs = n.floorSize?.value ?? n.floorSize;
-        sqft = sqft ?? (typeof fs === "number" || /^\d/.test(String(fs || "")) ? fs : undefined);
-      }
-    } catch { /* skip bad block */ }
+  let beds, baths, price, sqft, jsonDesc;
+
+  // Deep-walk every JSON-LD block for real-estate fields, wherever they're nested.
+  const num = (v) => {
+    if (v == null) return undefined;
+    if (typeof v === "object") v = v.value ?? v.price ?? v["@value"];
+    const n = parseFloat(String(v).replace(/[^0-9.]/g, ""));
+    return Number.isFinite(n) ? n : undefined;
+  };
+  function walk(n, depth = 0) {
+    if (!n || typeof n !== "object" || depth > 6) return;
+    if (Array.isArray(n)) { n.forEach((x) => walk(x, depth + 1)); return; }
+    for (const [k, v] of Object.entries(n)) {
+      const key = k.toLowerCase();
+      if (beds  === undefined && /(numberofbedrooms|bedrooms|beds)/.test(key))            beds  = num(v);
+      if (baths === undefined && /(numberofbathrooms|bathroomstotal|bathrooms|baths)/.test(key)) baths = num(v);
+      if (price === undefined && /(^price$|listprice|offers)/.test(key))                  price = num(v?.price ?? v);
+      if (sqft  === undefined && /(floorsize|livingarea|sqft|squarefeet)/.test(key))      sqft  = num(v);
+      if (!jsonDesc && key === "description" && typeof v === "string" && v.length > 30)    jsonDesc = decode(v);
+      if (v && typeof v === "object") walk(v, depth + 1);
+    }
   }
-  if (beds  != null && fields.beds  === undefined) fields.beds  = String(beds);
-  if (baths != null && fields.baths === undefined) fields.baths = String(baths);
+  for (const m of html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
+    try { walk(JSON.parse(m[1].trim())); } catch { /* skip bad block */ }
+  }
+
+  // Regex fallbacks — Redfin/Zillow put "3 beds, 2 baths, 1,500 sq ft" in the
+  // og:title/description even when JSON-LD is incomplete.
+  const hay = `${ogTitle} ${ogDesc}`;
+  if (beds  === undefined) beds  = num((hay.match(/([\d.]+)\s*(?:beds?|bd|bedrooms?)/i) || [])[1]);
+  if (baths === undefined) baths = num((hay.match(/([\d.]+)\s*(?:baths?|ba|bathrooms?)/i) || [])[1]);
+  if (sqft  === undefined) sqft  = num((hay.match(/([\d,]+)\s*(?:sq\.?\s*ft|square\s*feet|sqft)/i) || [])[1]);
+  if (price === undefined) price = num((hay.match(/\$\s?([\d,]+)/) || [])[1]);
+
+  // Prefer a real marketing description over the short meta string.
+  const description = (jsonDesc && jsonDesc.length > (ogDesc?.length || 0)) ? jsonDesc : ogDesc;
+  if (description) fields.description = description.slice(0, 1200);
+  if (beds  != null) fields.beds  = String(beds);
+  if (baths != null) fields.baths = String(baths);
   if (price != null) fields.price = String(price);
+  if (sqft  != null) fields.squareFootage = String(sqft);
 
   if (Object.keys(fields).length === 0) {
-    return Response.json({ ok: true, fields: {}, message: "No structured details found on that page. Enter details manually." });
+    return Response.json({ ok: true, fields: {}, message: "Couldn't read details from that page (some sites block automatic import). Enter details manually." });
   }
   return Response.json({ ok: true, fields, message: "Imported what we could — review and save." });
 }

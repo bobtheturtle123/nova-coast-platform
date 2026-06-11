@@ -1003,7 +1003,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                                 );
                               })}
                           </div>
-                          <p className="text-[11px] text-gray-400 mt-1.5">Recurring plans are recorded on the booking and billed separately — not added to this booking's total.</p>
+                          <p className="text-[11px] text-gray-400 mt-1.5">Invoiced separately — recorded on the booking but not added to this total. Create and send the retainer order afterward.</p>
                         </div>
                       )}
 

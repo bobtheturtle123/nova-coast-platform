@@ -168,7 +168,7 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
                     );
                   })}
                 </div>
-                <p className="text-xs text-gray-400 mt-2">Billed separately on a recurring basis — not added to this booking&apos;s total. We&apos;ll set it up with you.</p>
+                <p className="text-xs text-gray-400 mt-2">Invoiced separately — not added to this booking&apos;s total. We&apos;ll send the retainer setup after your booking.</p>
               </div>
             )}
 

@@ -1763,6 +1763,15 @@ export default function TeamPage() {
     let cancelled = false;
     (async () => {
       try {
+        // Cost protection: only auto-sync if it's been > 15 min since the last
+        // auto-sync (the server also rate-limits per member as a backstop).
+        const AUTO_SYNC_MIN_MS = 15 * 60 * 1000;
+        try {
+          const last = Number(localStorage.getItem("kyoria_autosync_ts") || 0);
+          if (Date.now() - last < AUTO_SYNC_MIN_MS) return;
+          localStorage.setItem("kyoria_autosync_ts", String(Date.now()));
+        } catch { /* localStorage unavailable — fall through, server still throttles */ }
+
         const token = await getToken();
         const res = await fetch("/api/dashboard/team/google-connected", { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) return;
