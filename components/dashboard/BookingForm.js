@@ -109,6 +109,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
     packageId:               init.packageId               || "",
     serviceIds:              init.serviceIds              || [],
     addonIds:                init.addonIds                || [],
+    retainerIds:             init.retainerIds             || [],
     customLineItems:         [],
     depositPaid:             init.depositPaid             || false,
     photographerId:          init.photographerId          || "",
@@ -121,7 +122,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
     workflowStatus:          init.workflowStatus          || (isEdit ? "booked" : "booked"),
   });
 
-  const [catalog,       setCatalog]       = useState({ packages: [], services: [], addons: [], pricingConfig: null });
+  const [catalog,       setCatalog]       = useState({ packages: [], services: [], addons: [], retainers: [], pricingConfig: null });
   const [team,          setTeam]          = useState([]);
   const [timeBlocks,    setTimeBlocks]    = useState([]);
   const [bookings,      setBookings]      = useState([]);
@@ -193,10 +194,11 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
             .then((r) => (r.ok ? r.json() : {}))
             .catch(() => ({}));
 
-        const [svc, pkg, adn, teamData, blocks, list, tenantData, agentsData] = await Promise.all([
+        const [svc, pkg, adn, ret, teamData, blocks, list, tenantData, agentsData] = await Promise.all([
           safeFetch("/api/dashboard/products?type=services"),
           safeFetch("/api/dashboard/products?type=packages"),
           safeFetch("/api/dashboard/products?type=addons"),
+          safeFetch("/api/dashboard/products?type=retainers"),
           safeFetch("/api/dashboard/team"),
           safeFetch("/api/dashboard/team/blocks"),
           safeFetch("/api/dashboard/listings"),
@@ -209,6 +211,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
           packages:      pkg.items  || [],
           services:      svc.items  || [],
           addons:        adn.items  || [],
+          retainers:     ret.items  || [],
           pricingConfig: tenantDoc.pricingConfig || null,
           bookingConfig: tenantDoc.bookingConfig || null,
           showWeather:   tenantDoc.availability?.showWeather ?? true,
@@ -501,6 +504,11 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   function toggleAddon(id) {
     setForm((f) => ({ ...f, addonIds: f.addonIds.includes(id) ? f.addonIds.filter((x) => x !== id) : [...f.addonIds, id] }));
   }
+  // Retainers are recurring (monthly) — recorded on the booking but NOT added to
+  // the one-time price total, which is billed separately.
+  function toggleRetainer(id) {
+    setForm((f) => ({ ...f, retainerIds: f.retainerIds.includes(id) ? f.retainerIds.filter((x) => x !== id) : [...f.retainerIds, id] }));
+  }
 
   function assignPhotographer(member) {
     setForm((f) => ({
@@ -577,6 +585,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
             packageId:               form.packageId,
             serviceIds:              form.serviceIds,
             addonIds:                form.addonIds,
+            retainerIds:             form.retainerIds,
             totalPrice:              pricing.total,
             depositPaid:             form.depositPaid,
             photographerId:          form.photographerId,
@@ -782,7 +791,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
             </div>
 
             {/* Services — compact summary + modal picker */}
-            {(catalog.packages.length > 0 || catalog.services.length > 0 || catalog.addons.length > 0) && (() => {
+            {(catalog.packages.length > 0 || catalog.services.length > 0 || catalog.addons.length > 0 || (catalog.retainers || []).length > 0) && (() => {
               const selectedPkg   = catalog.packages.find((p) => p.id === form.packageId);
               const selectedSvcs  = catalog.services.filter((s) => form.serviceIds.includes(s.id));
               const selectedAddns = catalog.addons.filter((a) => form.addonIds.includes(a.id));
@@ -967,7 +976,38 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                         </div>
                       )}
 
-                      {activePkgs.length === 0 && activeSvcs.length === 0 && activeAddns.length === 0 && (
+                      {(catalog.retainers || []).filter((r) => r.active !== false && (!servicesSearch.trim() || r.name.toLowerCase().includes(servicesSearch.trim().toLowerCase()))).length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Retainers (monthly)</p>
+                          <div className="space-y-2">
+                            {(catalog.retainers || [])
+                              .filter((r) => r.active !== false && (!servicesSearch.trim() || r.name.toLowerCase().includes(servicesSearch.trim().toLowerCase())))
+                              .map((r) => {
+                                const selected = form.retainerIds.includes(r.id);
+                                const priceLabel = Number(r.price) > 0 ? `${formatPrice(r.price)}/${r.interval === "year" ? "yr" : "mo"}` : "";
+                                return (
+                                  <button key={r.id} type="button" onClick={() => toggleRetainer(r.id)}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm transition-all ${
+                                      selected ? "border-teal-400 bg-teal-50" : "border-gray-200 hover:border-gray-300 bg-white"
+                                    }`}>
+                                    <p className={`font-medium text-left ${selected ? "text-teal-800" : "text-[#0F172A]"}`}>{r.name}</p>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                      <span className={`text-sm font-semibold ${selected ? "text-teal-700" : "text-gray-600"}`}>{priceLabel}</span>
+                                      <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
+                                        selected ? "bg-teal-400 border-teal-400" : "border-gray-300"
+                                      }`}>
+                                        {selected && <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>}
+                                      </div>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                          </div>
+                          <p className="text-[11px] text-gray-400 mt-1.5">Recurring plans are recorded on the booking and billed separately — not added to this booking's total.</p>
+                        </div>
+                      )}
+
+                      {activePkgs.length === 0 && activeSvcs.length === 0 && activeAddns.length === 0 && (catalog.retainers || []).filter((r) => r.active !== false).length === 0 && (
                         <p className="text-center text-sm text-gray-400 py-8">No results for "{servicesSearch}"</p>
                       )}
                     </div>
