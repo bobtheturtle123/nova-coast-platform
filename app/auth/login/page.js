@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { exitDemo } from "@/lib/demoData";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,6 +16,9 @@ export default function LoginPage() {
   const [error,    setError]    = useState("");
   const [info,     setInfo]     = useState("");
   const [loading,  setLoading]  = useState(false);
+
+  // Reaching the login page always ends any lingering demo session in this tab.
+  useEffect(() => { exitDemo(); }, []);
 
   async function handleLogin(e) {
     e.preventDefault();

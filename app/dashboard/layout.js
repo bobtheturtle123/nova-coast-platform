@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/firebase";
@@ -153,9 +153,13 @@ export default function DashboardLayout({ children }) {
   const [tenantSettings,     setTenantSettings]     = useState({ tempUnit: "F", locale: "en-US", currency: "USD" });
   const [subscriptionLapsed, setSubscriptionLapsed] = useState(false);
 
+  const hadRealUser = useRef(false);
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) {
+        // If a REAL session just ended in this tab (sign-out / account deletion),
+        // never fall into demo — clear the flag and go to login.
+        if (hadRealUser.current) { exitDemo(); router.push("/auth/login"); return; }
         // No real user. If this is a genuine view-only demo visit, render the
         // shell with a sample tenant and skip auth/subscription gating.
         if (isDemo()) {
@@ -168,6 +172,7 @@ export default function DashboardLayout({ children }) {
         router.push("/auth/login"); return;
       }
       // A real user is signed in — make sure demo mode can't linger in this tab.
+      hadRealUser.current = true;
       if (isDemo()) exitDemo();
       // Force-refresh so custom claims (tenantId, role) are always current
       await u.getIdToken(true);

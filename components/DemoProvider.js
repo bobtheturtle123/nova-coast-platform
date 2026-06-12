@@ -12,7 +12,7 @@
 // It does NOTHING when demo mode is off, so real users are never affected.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -43,13 +43,16 @@ export default function DemoProvider({ children }) {
   const [demo, setDemo]       = useState(false);
   const [toast, setToast]     = useState(false);
 
-  // Demo mode ONLY applies when no real user is signed in. If a real user is
-  // present, force demo off and clear the flag — this prevents a stale ky_demo
-  // (from earlier visiting the demo) from blocking a real session in the same tab.
+  // Demo mode ONLY applies when no real user is signed in AND no real session has
+  // ended in this tab. A real user (or a just-ended real session, e.g. sign-out /
+  // account deletion) forces demo off and clears the flag, so a stale ky_demo can
+  // never hijack a real login.
+  const hadRealUser = useRef(false);
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
-      if (u) { exitDemo(); setDemo(false); }
-      else   { setDemo(isDemo()); }
+      if (u) { hadRealUser.current = true; exitDemo(); setDemo(false); }
+      else if (hadRealUser.current) { exitDemo(); setDemo(false); }
+      else { setDemo(isDemo()); }
     });
     return unsub;
   }, []);
