@@ -93,10 +93,12 @@ export default function PlanSelectionPage() {
     setError("");
     try {
       const token = await auth.currentUser.getIdToken();
+      let promoCode;
+      try { promoCode = window.localStorage.getItem("ky_promo") || undefined; } catch {}
       const res   = await fetch("/api/billing/subscribe", {
         method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ plan: planId, successPath: "/onboarding" }),
+        body:    JSON.stringify({ plan: planId, successPath: "/onboarding", promoCode }),
       });
       const data = await res.json();
       if (data.url) {

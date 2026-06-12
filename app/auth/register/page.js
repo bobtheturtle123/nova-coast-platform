@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -22,6 +22,15 @@ export default function RegisterPage() {
   const [error,       setError]       = useState("");
   const [loading,     setLoading]     = useState(false);
   const [showCode,    setShowCode]    = useState(false);
+
+  // Persist a promo code (e.g. DEMO50 from the demo CTA) so it can be applied at
+  // checkout on the plan page.
+  useEffect(() => {
+    try {
+      const promo = new URLSearchParams(window.location.search).get("promo");
+      if (promo) window.localStorage.setItem("ky_promo", promo);
+    } catch {}
+  }, []);
 
   function set(field) {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));

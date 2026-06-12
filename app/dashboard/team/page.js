@@ -61,6 +61,55 @@ const DEFAULT_WORKING_HOURS = {
   sat: { enabled: false, start: "09:00", end: "17:00" },
 };
 
+// ── Availability: compute a photographer's next open booking slot ─────────────
+const DOW_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+function hmToMin(t) { const [h, m] = String(t || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); }
+function minToLabel(min) {
+  let h = Math.floor(min / 60); const m = min % 60;
+  const ap = h < 12 ? "AM" : "PM"; let hh = h % 12; if (hh === 0) hh = 12;
+  return `${hh}:${String(m).padStart(2, "0")} ${ap}`;
+}
+function ymdLocal(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+
+// Returns the next free slot { day:Date, min } within the member's working hours
+// over the next 21 days, skipping booked times and time blocks. null if booked out.
+function nextAvailableSlot(member, bookings, timeBlocks, slotMin = 60) {
+  const wh = member.workingHours || DEFAULT_WORKING_HOURS;
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  for (let d = 0; d < 21; d++) {
+    const day = new Date(now); day.setDate(now.getDate() + d);
+    const cfg = wh[DOW_KEYS[day.getDay()]];
+    if (!cfg || !cfg.enabled) continue;
+    const dateStr  = ymdLocal(day);
+    const startMin = hmToMin(cfg.start || "09:00");
+    const endMin   = hmToMin(cfg.end   || "17:00");
+    const taken = bookings
+      .filter((b) => b.photographerId === member.id && b.shootDate === dateStr && b.shootTime)
+      .map((b) => hmToMin(b.shootTime));
+    const blocks = (timeBlocks || []).filter((tb) => (tb.memberId === member.id || tb.photographerId === member.id) && (tb.date === dateStr || !tb.date));
+    for (let s = startMin; s + slotMin <= endMin; s += slotMin) {
+      if (d === 0 && s <= nowMin) continue;
+      if (taken.some((t) => t >= s && t < s + slotMin)) continue;
+      const blocked = blocks.some((tb) => {
+        const bs = tb.start ? hmToMin(tb.start) : startMin;
+        const be = tb.end   ? hmToMin(tb.end)   : endMin;
+        return s < be && s + slotMin > bs;
+      });
+      if (blocked) continue;
+      return { day, min: s };
+    }
+  }
+  return null;
+}
+function formatSlot(slot) {
+  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  const d0 = new Date(slot.day.getFullYear(), slot.day.getMonth(), slot.day.getDate());
+  const diff = Math.round((d0 - t0) / 86400000);
+  const dlabel = diff === 0 ? "Today" : diff === 1 ? "Tomorrow" : `${DAYS_SHORT[slot.day.getDay()]} ${slot.day.getMonth() + 1}/${slot.day.getDate()}`;
+  return `${dlabel} · ${minToLabel(slot.min)}`;
+}
+
 const SKILL_LABELS = {
   classicDaytime:         "Classic Daytime",
   luxuryDaytime:          "Luxury Daytime",
@@ -2246,6 +2295,19 @@ export default function TeamPage() {
                 {m.skills?.length > 0 && <span className="text-[10px] text-gray-400">{m.skills.length} skills</span>}
               </div>
             </button>
+            {normalizeRole(m.role) === "photographer" && (() => {
+              const slot = nextAvailableSlot(m, bookings, timeBlocks, tenant?.bookingConfig?.slotDuration || 60);
+              return slot ? (
+                <span className="ml-auto text-[11px] px-2 py-1 rounded-full border border-green-200 bg-green-50 text-green-700 font-medium whitespace-nowrap flex items-center gap-1" title="Next open booking slot">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                  Next free: {formatSlot(slot)}
+                </span>
+              ) : (
+                <span className="ml-auto text-[11px] px-2 py-1 rounded-full border border-amber-200 bg-amber-50 text-amber-700 font-medium whitespace-nowrap" title="No open slots in the next 3 weeks">
+                  Booked 3 wks
+                </span>
+              );
+            })()}
             <button
               onClick={() => setCalModal(m)}
               title={m.googleCalendar?.refreshToken ? `Last synced: ${m.googleCalendar.lastSynced ? new Date(m.googleCalendar.lastSynced).toLocaleDateString() : "never"}` : "Not connected — member connects from their profile"}

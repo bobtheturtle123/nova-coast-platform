@@ -69,7 +69,8 @@ const CSS = `
 .lp .hero-shot .bar{display:flex;align-items:center;gap:6px;padding:13px 18px;border-bottom:1px solid var(--line);background:var(--bg-2);}
 .lp .hero-shot .bar i{width:10px;height:10px;border-radius:50%;font-style:normal;background:var(--line);}
 .lp .hero-shot .bar .url{flex:1;max-width:340px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:8px;font-size:11.5px;color:var(--muted-2);text-align:center;padding:4px 12px;}
-.lp .hero-shot .img{aspect-ratio:16/7.6;background:repeating-linear-gradient(45deg,rgba(24,27,32,0.025) 0 1px,transparent 1px 10px),linear-gradient(135deg,#F3F1EC,#EAE7DF);display:flex;align-items:center;justify-content:center;color:var(--muted-2);font-size:13px;letter-spacing:0.06em;text-transform:uppercase;}
+.lp .hero-shot .img{aspect-ratio:16/7.6;background:repeating-linear-gradient(45deg,rgba(24,27,32,0.025) 0 1px,transparent 1px 10px),linear-gradient(135deg,#F3F1EC,#EAE7DF);display:flex;align-items:center;justify-content:center;color:var(--muted-2);font-size:13px;letter-spacing:0.06em;text-transform:uppercase;overflow:hidden;}
+.lp .hero-shot .img img,.lp .shot .img img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;}
 
 /* SECTIONS */
 .lp section.block{padding:96px 0;}
@@ -304,7 +305,7 @@ export default function MarketingPage() {
                 <i></i><i></i><i></i>
                 <span className="url">app.kyoriaos.com/dashboard</span>
               </div>
-              <div className="img">Dashboard screenshot</div>
+              <div className="img"><img src="/screenshots/Dashboard.png" alt="KyoriaOS dashboard" /></div>
             </div>
           </div>
         </section>
@@ -382,10 +383,10 @@ export default function MarketingPage() {
               <p>Not renders. Not mockups. The actual platform, running live businesses today.</p>
             </div>
             <div className="shots">
-              <div className="shot"><div className="img">Dashboard screenshot</div><div className="cap"><h3>The morning command center</h3><p>Today&apos;s shoots, team on duty, and anything that needs you, in one glance.</p></div></div>
-              <div className="shot"><div className="img">Listing screenshot</div><div className="cap"><h3>Every listing, one record</h3><p>Workflow, media, payments, property site, and revisions, all attached to the job itself.</p></div></div>
-              <div className="shot"><div className="img">Gallery screenshot</div><div className="cap"><h3>Delivery agents love</h3><p>Fast, clean galleries with downloads that unlock on payment.</p></div></div>
-              <div className="shot"><div className="img">Booking page screenshot</div><div className="cap"><h3>A booking page that sells</h3><p>Packages, add-ons, and instant scheduling, priced by square footage automatically.</p></div></div>
+              <div className="shot"><div className="img"><img src="/screenshots/Dashboard.png" alt="Dashboard" /></div><div className="cap"><h3>The morning command center</h3><p>Today&apos;s shoots, team on duty, and anything that needs you, in one glance.</p></div></div>
+              <div className="shot"><div className="img"><img src="/screenshots/Listings%20page.png" alt="Listings" /></div><div className="cap"><h3>Every listing, one record</h3><p>Workflow, media, payments, property site, and revisions, all attached to the job itself.</p></div></div>
+              <div className="shot"><div className="img"><img src="/screenshots/schedule.png" alt="Team schedule" /></div><div className="cap"><h3>Your team&apos;s whole week</h3><p>See who&apos;s shooting, who&apos;s free, and every photographer&apos;s next open slot at a glance.</p></div></div>
+              <div className="shot"><div className="img"><img src="/screenshots/bookings.png" alt="Bookings" /></div><div className="cap"><h3>A booking page that sells</h3><p>Packages, add-ons, and instant scheduling, priced by square footage automatically.</p></div></div>
             </div>
           </div>
         </section>

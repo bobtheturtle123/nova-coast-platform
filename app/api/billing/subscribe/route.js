@@ -16,9 +16,19 @@ export async function POST(req) {
     const ctx = await getCtx(req);
     if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { plan, successPath } = await req.json();
+    const { plan, successPath, promoCode } = await req.json();
     const priceId  = PLAN_PRICE_IDS[plan];
     if (!priceId) return Response.json({ error: "Invalid plan" }, { status: 400 });
+
+    // If a promo code came through (e.g. DEMO50 from the demo CTA), try to
+    // pre-apply it. Falls back to manual entry if the code isn't configured.
+    let promoDiscount = null;
+    if (promoCode) {
+      try {
+        const found = await stripe.promotionCodes.list({ code: String(promoCode).trim(), active: true, limit: 1 });
+        if (found.data[0]) promoDiscount = found.data[0].id;
+      } catch { /* ignore — fall back to allow_promotion_codes */ }
+    }
 
     const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
     const tenant    = tenantDoc.data();
@@ -40,7 +50,10 @@ export async function POST(req) {
       mode:                   "subscription",
       customer:               customerId,
       line_items:             [{ price: priceId, quantity: 1 }],
-      allow_promotion_codes:  true,
+      // Stripe disallows allow_promotion_codes together with discounts.
+      ...(promoDiscount
+        ? { discounts: [{ promotion_code: promoDiscount }] }
+        : { allow_promotion_codes: true }),
       // Session-level metadata lets checkout.session.completed update the tenant immediately
       metadata: { tenantId: ctx.tenantId, plan },
       success_url:  successPath ? `${getAppUrl()}${successPath}` : `${getAppUrl()}/dashboard/billing?subscribed=true`,

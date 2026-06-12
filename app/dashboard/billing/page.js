@@ -408,7 +408,7 @@ export default function BillingPage() {
         )}
         {subscribed ? (
           <div className="flex flex-wrap gap-2 mt-4 pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-            {isOwner && (
+            {isOwner && !isDemo() && (
               <>
                 <button onClick={openPortal} disabled={working} className="btn-outline">
                   {working ? "Loading…" : "Manage subscription →"}

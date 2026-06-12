@@ -100,7 +100,7 @@ export default function DemoProvider({ children }) {
         <span style={{ color: "rgba(255,255,255,0.72)", flex: "1 1 260px", minWidth: 0 }}>
           You&apos;re exploring a view-only KyoriaOS workspace with sample data. Actions are disabled.
         </span>
-        <Link href={SIGNUP_URL}
+        <Link href="/auth/register"
           style={{ background: "#fff", color: "#181B20", fontWeight: 600, fontSize: 13,
                    padding: "8px 16px", borderRadius: 10, whiteSpace: "nowrap" }}>
           Start Your Workspace
@@ -112,8 +112,8 @@ export default function DemoProvider({ children }) {
         </Link>
         <button
           onClick={() => { exitDemo(); window.location.href = "/"; }}
-          style={{ background: "transparent", color: "rgba(255,255,255,0.5)", fontSize: 12.5,
-                   border: "1px solid rgba(255,255,255,0.18)", padding: "7px 12px", borderRadius: 10,
+          style={{ background: "transparent", color: "rgba(255,255,255,0.45)", fontSize: 12.5,
+                   border: "none", padding: "7px 4px", textDecoration: "underline",
                    cursor: "pointer", whiteSpace: "nowrap" }}>
           Exit demo
         </button>
