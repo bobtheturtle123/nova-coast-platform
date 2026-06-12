@@ -351,6 +351,9 @@ export default function ServiceAreaStep() {
 
   const [zones,           setZones]           = useState([]);
   const [teamMembers,     setTeamMembers]     = useState([]);
+  // Owner can cover a zone too (when they personally shoot).
+  const ownerMember = { id: "__owner__", name: tenant?.ownerName || tenant?.businessName || "You", color: tenant?.branding?.primaryColor || "#3486cf", role: "photographer" };
+  const assignableMembers = (tenant?.ownerShoots !== false) ? [ownerMember, ...teamMembers] : teamMembers;
   const [mapsReady,       setMapsReady]       = useState(false);
   const [mapInitialized,  setMapInitialized]  = useState(false);
   const [editing,         setEditing]         = useState(null);
@@ -799,7 +802,7 @@ export default function ServiceAreaStep() {
             style={{ height: 30, padding: "0 12px", borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: "pointer", border: filterPhotog === "all" ? "1.5px solid #3486cf" : "1px solid #E9ECF0", background: filterPhotog === "all" ? "#3486cf" : "#fff", color: filterPhotog === "all" ? "#fff" : "#475569", transition: "all 0.12s" }}>
             All Zones
           </button>
-          {teamMembers.filter(m => m.role === "photographer" || !m.role).map(m => (
+          {assignableMembers.filter(m => m.role === "photographer" || !m.role).map(m => (
             <button key={m.id} onClick={() => setFilterPhotog(m.id)}
               style={{ height: 30, padding: "0 12px 0 4px", borderRadius: 99, fontSize: 12, cursor: "pointer", border: filterPhotog === m.id ? "1.5px solid #3486cf" : "1px solid #E9ECF0", background: filterPhotog === m.id ? "#EEF4FA" : "#fff", color: filterPhotog === m.id ? "#1E5A8A" : "#475569", display: "inline-flex", alignItems: "center", gap: 6, transition: "all 0.12s" }}>
               <div style={{ width: 22, height: 22, borderRadius: "50%", background: m.color || avatarColor(m.name || "?"), color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -916,7 +919,7 @@ export default function ServiceAreaStep() {
                   {zone.assignedTo?.length > 0 && (
                     <div style={{ display: "flex", alignItems: "center", gap: 0, marginTop: 6 }}>
                       {zone.assignedTo.slice(0, 4).map((uid, k) => {
-                        const m = teamMembers.find(t => t.id === uid);
+                        const m = assignableMembers.find(t => t.id === uid);
                         return (
                           <div key={uid} style={{ width: 20, height: 20, borderRadius: "50%", background: m?.color || avatarColor(m?.name || uid), color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff", marginLeft: k > 0 ? -6 : 0, zIndex: k, flexShrink: 0 }}>
                             {initials(m?.name || "?").slice(0, 1)}
@@ -944,7 +947,7 @@ export default function ServiceAreaStep() {
       {editing && (
         <ZoneModal
           zone={editing?.isNew ? (editing.name ? { name: editing.name } : null) : editing}
-          teamMembers={teamMembers}
+          teamMembers={assignableMembers}
           firstTime={editing?.isNew && !firstZoneDone}
           onSave={saveZone}
           onDelete={deleteZone}

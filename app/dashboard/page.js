@@ -349,7 +349,7 @@ export default function DashboardHome() {
   // Starter guide steps — sequential: each step unlocks only after the previous is done
   const isSoloTenant = getEffectivePlan(tenant) === "solo";
   const starterSteps = tenant ? [
-    { id: "booking",     num: 1, done: !!(tenant.bookingConfig?.slotDuration || tenant.bookingConfig?.availableDays), label: "Booking settings",  desc: "Set your availability, time slots, and booking policies", href: "/dashboard/settings#settings-booking" },
+    { id: "booking",     num: 1, done: !!((tenant.bookingConfig && Object.keys(tenant.bookingConfig).length > 0) || (tenant.pricingConfig && Object.keys(tenant.pricingConfig).length > 0)), label: "Booking settings",  desc: "Set your availability, time slots, and booking policies", href: "/dashboard/settings#settings-booking" },
     { id: "serviceArea", num: 2, done: zones.length > 0,                                                              label: "Service area",       desc: "Draw the zones where you accept shoots",                  href: "/dashboard/service-areas" },
     { id: "products",    num: 3, done: hasProducts,                                                                   label: "Add services",       desc: "Create the packages and add-ons clients can book",        href: "/dashboard/products" },
     { id: "team",        num: 4, done: isSoloTenant || teamMembers.length > 0,                                        label: "Add team members",   desc: isSoloTenant ? "Upgrade to Studio to add teammates" : "Invite photographers, editors, and managers", href: isSoloTenant ? "/dashboard/billing" : "/dashboard/team", isSoloPlan: isSoloTenant },

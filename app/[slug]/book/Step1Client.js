@@ -228,7 +228,11 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
           <div>
             <p className="section-label mb-2">Step 1 of 6</p>
             <h1 className="font-display text-4xl text-brand mb-1">Choose your services.</h1>
-            <p className="font-body text-gray-500">Select one or more packages, then add individual services below.</p>
+            <p className="font-body text-gray-500">
+              {packages.length > 0
+                ? "Select one or more packages, then add individual services below."
+                : "Select the services you'd like to book."}
+            </p>
           </div>
           {usesGate && (
             <button
@@ -240,7 +244,8 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
           )}
         </div>
 
-        {/* Packages */}
+        {/* Packages — hidden entirely when the studio offers none */}
+        {packages.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
           {packages.map((pkg) => {
             const selected = packageIds.includes(pkg.id);
@@ -333,12 +338,13 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
             );
           })}
         </div>
+        )}
 
         {services.length > 0 && (
           <>
             <div className="flex items-center gap-4 mb-8">
               <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-gray-400 uppercase tracking-widest">Add individual services</span>
+              <span className="text-xs text-gray-400 uppercase tracking-widest">{packages.length > 0 ? "Add individual services" : "Services"}</span>
               <div className="flex-1 h-px bg-gray-200" />
             </div>
             <div className="space-y-3 mb-12">

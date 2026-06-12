@@ -1,5 +1,4 @@
 import { verifyState, exchangeCodeAndStore, clientDebug } from "@/lib/dropbox";
-import { getAppUrl } from "@/lib/appUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -7,8 +6,11 @@ export const dynamic = "force-dynamic";
 // (CSRF), exchange the code for tokens, store them encrypted for the tenant, and
 // bounce back to Settings → Integrations.
 export async function GET(req) {
-  const { searchParams } = new URL(req.url);
-  const settings = `${getAppUrl()}/dashboard/settings`;
+  const url = new URL(req.url);
+  const { searchParams } = url;
+  // Return to the SAME origin that handled this callback, so the user's logged-in
+  // session (which is per-origin) is preserved and they aren't bounced to login.
+  const settings = `${url.origin}/dashboard/settings`;
 
   const error = searchParams.get("error");
   if (error) return Response.redirect(`${settings}?dropbox=error`, 302);

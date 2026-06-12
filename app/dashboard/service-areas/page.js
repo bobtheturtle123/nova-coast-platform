@@ -320,6 +320,10 @@ export default function ServiceAreasPage() {
   const [teamMembers,    setTeamMembers]    = useState([]);
   const [tenant,         setTenant]         = useState(null);
   const [loading,        setLoading]        = useState(true);
+  // When the owner personally shoots, include them as an assignable photographer
+  // (same "__owner__" identity used by scheduling) so they can cover a zone too.
+  const ownerMember = { id: "__owner__", name: tenant?.ownerName || tenant?.businessName || "You", color: tenant?.branding?.primaryColor || "#3486cf", role: "photographer" };
+  const assignableMembers = (tenant?.ownerShoots !== false) ? [ownerMember, ...teamMembers] : teamMembers;
   const [mapsReady,      setMapsReady]      = useState(false);
   const [mapInitialized, setMapInitialized] = useState(false);
   const [editing,        setEditing]        = useState(null);
@@ -817,14 +821,14 @@ export default function ServiceAreasPage() {
       </div>
 
       {/* Filter row */}
-      {teamMembers.length > 0 && (
+      {assignableMembers.length > 0 && (
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <span style={{ fontSize: 10.5, fontWeight: 700, color: "#6B7280", letterSpacing: "0.08em", textTransform: "uppercase", marginRight: 4 }}>View:</span>
           <button onClick={() => setFilterPhotog("all")}
             style={{ height: 30, padding: "0 14px", borderRadius: 99, border: "1px solid", borderColor: filterPhotog === "all" ? "#3486cf" : "#E9ECF0", background: filterPhotog === "all" ? "#3486cf" : "#fff", color: filterPhotog === "all" ? "#fff" : "#4B5261", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center" }}>
             All Zones
           </button>
-          {teamMembers.map(m => {
+          {assignableMembers.map(m => {
             const on = filterPhotog === m.id;
             return (
               <button key={m.id} onClick={() => setFilterPhotog(m.id)}
@@ -969,7 +973,7 @@ export default function ServiceAreasPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {sortedVisibleZones.map(zone => {
               const dotColor  = zone.type === "exclude" ? "#EF4444" : (zone.color || "#3B82F6");
-              const assigned  = (zone.assignedTo || []).map(uid => teamMembers.find(m => m.id === uid)).filter(Boolean);
+              const assigned  = (zone.assignedTo || []).map(uid => assignableMembers.find(m => m.id === uid)).filter(Boolean);
               const isExclude = zone.type === "exclude";
               return (
                 <div key={zone.id} onClick={() => setEditing(zone)}
@@ -1019,7 +1023,7 @@ export default function ServiceAreasPage() {
       {editing && (
         <ZoneModal
           zone={editing.isNew ? (editing.name ? { name: editing.name } : null) : editing}
-          teamMembers={teamMembers}
+          teamMembers={assignableMembers}
           onSave={saveZone}
           onDelete={deleteZone}
           onClose={cancelDrawing}
