@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { useOnboarding, StepCard } from "../ctx";
@@ -22,6 +22,19 @@ export default function BrandingStep() {
   const dropRef   = useRef(null);
   const fileRef   = useRef(null);
   const [dragging, setDragging] = useState(false);
+
+  // Pre-fill from the tenant once it loads (name comes from signup). Only fills
+  // empty fields so it never clobbers what the user has typed.
+  useEffect(() => {
+    if (!tenant) return;
+    const tName = tenant.branding?.name || tenant.businessName || "";
+    setName((n) => (n ? n : tName));
+    if (tenant.branding?.primaryColor) {
+      setPrimaryColor((c) => (c && c !== "#3486cf" ? c : tenant.branding.primaryColor));
+      setHexInput((c) => (c && c !== "#3486cf" ? c : tenant.branding.primaryColor));
+    }
+    if (tenant.branding?.logoUrl) setLogoUrl((l) => l || tenant.branding.logoUrl);
+  }, [tenant]);
 
   function handleColorChange(hex) {
     setPrimaryColor(hex);
@@ -52,7 +65,7 @@ export default function BrandingStep() {
       const res   = await fetch("/api/dashboard/upload-image", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ fileName: file.name, contentType: file.type, folder: "branding" }),
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, folder: "branding" }),
       });
       if (!res.ok) throw new Error();
       const { uploadUrl, publicUrl } = await res.json();
