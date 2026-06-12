@@ -1,4 +1,5 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { isSuperAdminEmail } from "@/lib/plans";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -6,7 +7,7 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId, role: decoded.role || "member" };
+    return { tenantId: decoded.tenantId, role: decoded.role || "member", email: decoded.email || "" };
   } catch { return null; }
 }
 
@@ -17,7 +18,20 @@ export async function GET(req) {
   const doc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
   if (!doc.exists) return Response.json({ error: "Not found" }, { status: 404 });
 
-  return Response.json({ tenant: doc.data() });
+  let tenant = doc.data();
+
+  // Owner / super-admin accounts get the free lifetime unlimited plan. Stamp it
+  // on the doc (once) keyed off the authenticated email, so every limit check and
+  // the UI see "unlimited" regardless of what was stored at signup.
+  if ((isSuperAdminEmail(ctx.email) || ctx.role === "superadmin") &&
+      (tenant.unlimited !== true || tenant.permanentPlan !== "scale")) {
+    try {
+      await doc.ref.update({ unlimited: true, permanentPlan: "scale" });
+      tenant = { ...tenant, unlimited: true, permanentPlan: "scale" };
+    } catch { /* non-fatal */ }
+  }
+
+  return Response.json({ tenant });
 }
 
 // Allowed top-level tenant settings fields that can be updated via this route

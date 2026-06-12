@@ -28,7 +28,11 @@ export default function StripeStep() {
     setConnecting(true); setError("");
     try {
       const token = await auth.currentUser.getIdToken();
-      const res   = await fetch("/api/connect/onboard", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      const res   = await fetch("/api/connect/onboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ from: "onboarding" }),
+      });
       const data  = await res.json();
       if (data.url) {
         await patch({ onboarding: { ...(onboarding || {}), currentStep: 2 } }).catch(() => {});

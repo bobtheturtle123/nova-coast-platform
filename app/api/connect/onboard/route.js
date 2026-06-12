@@ -14,6 +14,9 @@ export async function POST(req) {
     const ctx = await getCtx(req);
     if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+    const body = await req.json().catch(() => ({}));
+    const returnTo = body.from === "onboarding" ? "onboarding" : "billing";
+
     const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
     const tenantDoc = await tenantRef.get();
     const tenant    = tenantDoc.data();
@@ -31,7 +34,7 @@ export async function POST(req) {
     }
 
     // Generate onboarding link
-    const url = await createConnectOnboardingLink(accountId);
+    const url = await createConnectOnboardingLink(accountId, returnTo);
     return Response.json({ url });
   } catch (err) {
     console.error("Connect onboard error:", err);
