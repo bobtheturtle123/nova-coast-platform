@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { auth } from "@/lib/firebase";
+import { isDemo, getDemoAgents } from "@/lib/demoData";
 import Link from "next/link";
 import { avatarColor, initials } from "@/lib/avatar";
 import { useDashboardPermissions } from "@/lib/dashboardPermissions";
@@ -457,6 +458,13 @@ export default function AgentsPage() {
   useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
+    if (isDemo()) {
+      const d = getDemoAgents();
+      setAgents(d.agents);
+      setTeams(d.teams);
+      setLoading(false);
+      return;
+    }
     const token = await auth.currentUser?.getIdToken(true);
     const [agentsRes, teamsRes] = await Promise.all([
       fetch("/api/dashboard/agents",         { headers: { Authorization: `Bearer ${token}` } }),

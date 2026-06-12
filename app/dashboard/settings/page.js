@@ -6,6 +6,7 @@ const VIMEO_ENABLED = false;
 
 import { useEffect, useState, useCallback } from "react";
 import { auth } from "@/lib/firebase";
+import { isDemo, getDemoSettingsTenant, DEMO_TEAM } from "@/lib/demoData";
 import { useToast } from "@/components/Toast";
 import { useTenantSettings } from "@/lib/TenantSettingsContext";
 import { getAppUrl } from "@/lib/appUrl";
@@ -76,6 +77,7 @@ function StaffAccessSection({ tenant }) {
   const [msg,         setMsg]         = useState("");
 
   function loadMembers() {
+    if (isDemo()) { setMembers(DEMO_TEAM); setLoading(false); return; }
     auth.currentUser?.getIdToken().then(async (token) => {
       const res = await fetch("/api/dashboard/team", { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) { const d = await res.json(); setMembers(d.members || d.team || []); }
@@ -961,10 +963,10 @@ export default function SettingsPage() {
   }
 
   useEffect(() => {
-    auth.currentUser?.getIdToken().then(async (token) => {
-      const res = await fetch("/api/dashboard/tenant", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    const loadTenant = async (token) => {
+      const res = isDemo()
+        ? { ok: true, json: async () => ({ tenant: getDemoSettingsTenant() }) }
+        : await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         setTenant(data.tenant);
@@ -1093,7 +1095,9 @@ export default function SettingsPage() {
         }
       }
       setLoading(false);
-    });
+    };
+    if (isDemo()) loadTenant(null);
+    else auth.currentUser?.getIdToken().then(loadTenant);
   }, []);
 
   function set(field) {

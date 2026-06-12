@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
+import { isDemo, getDemoCalendar } from "@/lib/demoData";
 import Link from "next/link";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
@@ -529,6 +530,12 @@ export default function SchedulePage() {
 
   async function fetchData() {
     try {
+      if (isDemo()) {
+        const d = getDemoCalendar();
+        setListings(d.listings);
+        setBlocks(d.blocks);
+        return;
+      }
       const token = await auth.currentUser?.getIdToken();
       if (!token) return;
       const headers = { Authorization: `Bearer ${token}` };

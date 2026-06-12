@@ -270,6 +270,7 @@ export default function MarketingPage() {
               <Link href="/blog">Blog</Link>
             </nav>
             <div className="cta">
+              <Link className="signin" href="/demo">View demo</Link>
               <Link className="signin" href="/auth/login">Sign in</Link>
               <Link className="btn btn-ink btn-sm" href="/auth/register">Get Started</Link>
             </div>
@@ -285,7 +286,7 @@ export default function MarketingPage() {
               <p className="lede">Kyoria OS connects booking, scheduling, gallery delivery, and payments into one system, so you can stop patching tools together and start running a real business.</p>
               <div className="ctas">
                 <Link className="btn btn-ink" href="/auth/register">Get Started</Link>
-                <a className="btn btn-ghost" href="#pricing">See Plans</a>
+                <Link className="btn btn-ghost" href="/demo">Explore the live demo</Link>
               </div>
               <p className="micro">Replace your booking tools, delivery platforms, and client communication with one system.</p>
               <div className="chips">

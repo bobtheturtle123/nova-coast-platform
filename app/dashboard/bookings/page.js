@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
+import { isDemo, getDemoBookingsTab } from "@/lib/demoData";
 import Link from "next/link";
 import { getSqftTier, getItemPrice, calculateTenantPrice, getActiveTiers, formatPrice } from "@/lib/catalogUtils";
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
@@ -323,6 +324,15 @@ export default function BookingsPage() {
   }, [form.address, form.city, form.state, form.zip]);
 
   async function loadCatalog() {
+    if (isDemo()) {
+      const d = getDemoBookingsTab();
+      setCatalog(d.catalog);
+      setAgents(d.agents);
+      setTeamMembers(d.teamMembers);
+      tenantSlugRef.current = d.tenant.slug;
+      setTenantSlug(d.tenant.slug);
+      return;
+    }
     const token = await auth.currentUser?.getIdToken();
     if (!token) return;
     const tenantRes = await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } });
@@ -392,6 +402,12 @@ export default function BookingsPage() {
 
   async function loadBookings(afterCursor = null, append = false) {
     try {
+      if (isDemo()) {
+        setBookings(getDemoBookingsTab().bookings);
+        setHasMore(false);
+        setLoading(false);
+        return;
+      }
       const token = await auth.currentUser?.getIdToken();
       if (!token) { if (!append) setLoading(false); return; }
       const url = afterCursor

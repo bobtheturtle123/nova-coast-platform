@@ -10,6 +10,8 @@ import NotificationBell from "@/components/NotificationBell";
 import { ToastProvider } from "@/components/Toast";
 import { DashboardPermissionsContext } from "@/lib/dashboardPermissions";
 import { TenantSettingsContext } from "@/lib/TenantSettingsContext";
+import DemoProvider from "@/components/DemoProvider";
+import { isDemo, DEMO_TENANT } from "@/lib/demoData";
 
 // permKey: required permission for non-owners. ownerOnly: only owner/admin sees it.
 const NAV = [
@@ -150,6 +152,15 @@ export default function DashboardLayout({ children }) {
   const [subscriptionLapsed, setSubscriptionLapsed] = useState(false);
 
   useEffect(() => {
+    // View-only demo workspace: render the shell with a sample tenant and skip
+    // all auth/subscription gating. No real account is required or touched.
+    if (isDemo()) {
+      setUser({ email: "demo@aperturemedia.co", getIdToken: async () => "demo-token" });
+      setUserRole("owner");
+      setTenantName(DEMO_TENANT.businessName);
+      setTenantPlan(DEMO_TENANT.subscriptionPlan);
+      return;
+    }
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (!u) { router.push("/auth/login"); return; }
       // Force-refresh so custom claims (tenantId, role) are always current
@@ -385,6 +396,7 @@ export default function DashboardLayout({ children }) {
   );
 
   return (
+    <DemoProvider>
     <ToastProvider>
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         {/* Desktop sidebar — fixed position, see .ky-sidebar */}
@@ -445,5 +457,6 @@ export default function DashboardLayout({ children }) {
         <AiChatButton />
       </div>
     </ToastProvider>
+    </DemoProvider>
   );
 }

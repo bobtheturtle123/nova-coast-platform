@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { auth } from "@/lib/firebase";
 import { ZONE_COLORS } from "@/lib/zoneColors";
 import { useDashboardPermissions } from "@/lib/dashboardPermissions";
+import { isDemo, getDemoServiceAreas } from "@/lib/demoData";
 
 // ── Zone modal ────────────────────────────────────────────────────────────────
 
@@ -313,6 +314,14 @@ export default function ServiceAreasPage() {
 
   // Load data
   useEffect(() => {
+    if (isDemo()) {
+      const d = getDemoServiceAreas();
+      setZones(d.zones);
+      setTeamMembers(d.teamMembers);
+      setTenant(d.tenant);
+      setLoading(false);
+      return;
+    }
     auth.currentUser?.getIdToken().then(async token => {
       const h = { Authorization: `Bearer ${token}` };
       const [zonesRes, teamRes, tenantRes] = await Promise.all([

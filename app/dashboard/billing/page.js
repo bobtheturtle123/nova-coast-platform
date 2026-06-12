@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
+import { isDemo, getDemoBilling } from "@/lib/demoData";
 
 const PLANS = [
   { id: "solo",   name: "Solo",   price: 49,  desc: "125 listings / year · 1 team member",   tagline: "Solo real estate media photographers" },
@@ -68,6 +69,14 @@ export default function BillingPage() {
   }, [searchParams]);
 
   useEffect(() => {
+    if (isDemo()) {
+      const d = getDemoBilling();
+      setTenant(d.tenant);
+      setListingsThisYear(d.listingsThisYear);
+      setTeamMemberCount(d.teamMemberCount);
+      setLoading(false);
+      return;
+    }
     auth.currentUser?.getIdTokenResult().then(async (result) => {
       // Manager/staff cannot manage billing; admin and owner can.
       const role = result.claims.role;

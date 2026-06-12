@@ -3,12 +3,18 @@
 import { useEffect, useState, useRef } from "react";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
+import { isDemo, getDemoGalleries } from "@/lib/demoData";
 
 export default function GalleriesPage() {
   const [galleries, setGalleries] = useState([]);
   const [loading,   setLoading]   = useState(true);
 
   useEffect(() => {
+    if (isDemo()) {
+      setGalleries(getDemoGalleries().galleries);
+      setLoading(false);
+      return;
+    }
     auth.currentUser?.getIdToken().then(async (token) => {
       const res = await fetch("/api/dashboard/galleries", {
         headers: { Authorization: `Bearer ${token}` },
