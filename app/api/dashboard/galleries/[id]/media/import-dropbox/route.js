@@ -33,17 +33,51 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId };
+    return { tenantId: decoded.tenantId, decoded };
   } catch { return null; }
+}
+
+// Owner/admin always allowed; other roles need canImportDropbox (off by default).
+async function canUseDropbox(decoded) {
+  if (decoded.role === "owner" || decoded.role === "admin") return true;
+  const teamRef = adminDb.collection("tenants").doc(decoded.tenantId).collection("team");
+  let member = null;
+  if (decoded.memberId) { const d = await teamRef.doc(decoded.memberId).get(); if (d.exists) member = d.data(); }
+  if (!member && decoded.uid)   { const s = await teamRef.where("uid", "==", decoded.uid).limit(1).get(); if (!s.empty) member = s.docs[0].data(); }
+  if (!member && decoded.email) { const s = await teamRef.where("email", "==", String(decoded.email).toLowerCase()).limit(1).get(); if (!s.empty) member = s.docs[0].data(); }
+  return !!member?.permissions?.canImportDropbox;
+}
+
+async function getDropboxRoot(tenantId) {
+  try {
+    const doc = await adminDb.collection("tenants").doc(tenantId).get();
+    const p = doc.data()?.integrations?.dropbox?.rootPath || doc.data()?.dropboxRootPath || "";
+    return typeof p === "string" ? p.replace(/\/+$/, "") : "";
+  } catch { return ""; }
+}
+function withinRoot(path, root) {
+  if (!root) return true;
+  return path === root || (typeof path === "string" && path.startsWith(root + "/"));
 }
 
 export async function POST(req, { params }) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+  if (!(await canUseDropbox(ctx.decoded))) {
+    return Response.json({ error: "You don't have permission to import from Dropbox. Ask an owner to enable it." }, { status: 403 });
+  }
+
   const { items } = await req.json().catch(() => ({}));
   if (!Array.isArray(items) || items.length === 0) {
     return Response.json({ error: "No files selected." }, { status: 400 });
+  }
+
+  // Enforce the tenant's Dropbox root-folder restriction (if configured): every
+  // imported file must live inside it.
+  const root = await getDropboxRoot(ctx.tenantId);
+  if (root && items.some((it) => !withinRoot(it?.path, root))) {
+    return Response.json({ error: `Imports are restricted to your configured Dropbox folder (${root}).` }, { status: 403 });
   }
 
   if (!process.env.R2_ENDPOINT || !process.env.R2_BUCKET_NAME) {

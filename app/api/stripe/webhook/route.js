@@ -7,7 +7,20 @@ import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendBookingConfirmedSms } from "@/lib/sms";
 import { getTenantByStripeCustomerId, triggerReferralReward, applyPendingReferralCredits } from "@/lib/referral";
 
-export const dynamic = "force-dynamic";
+export const dynamic     = "force-dynamic";
+export const maxDuration = 60;
+
+// Notifications (email/SMS/agent portal) can be slow. We never let them hold the
+// webhook response past this bound — Stripe treats a slow/no response as a failed
+// delivery and retries, which is exactly the "other errors" we want to avoid. The
+// critical Firestore writes are always awaited; only the side-effects are capped.
+const NOTIFY_TIMEOUT_MS = 8000;
+function withTimeout(promise, ms = NOTIFY_TIMEOUT_MS) {
+  return Promise.race([
+    Promise.resolve(promise).catch(() => {}),
+    new Promise((resolve) => setTimeout(resolve, ms)),
+  ]);
+}
 
 // GET — liveness probe. Stripe (and you) can hit this to confirm the endpoint is reachable.
 export async function GET() {
@@ -71,11 +84,11 @@ export async function POST(req) {
             try {
               const tenant = await getTenantById(tenantId);
               if (tenant) {
-                await sendBookingCreatedNotifications({
+                await withTimeout(sendBookingCreatedNotifications({
                   booking: { ...booking, depositPaid: true },
                   tenant,
                   adminEmail: tenant.email || null,
-                });
+                }));
                 sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" })
                   .catch((e) => console.error("[stripe/webhook] agent portal FAILED:", e?.message || e));
                 sendBookingConfirmedSms({ booking, tenant })
@@ -115,11 +128,11 @@ export async function POST(req) {
             try {
               const tenant = await getTenantById(tenantId);
               if (tenant) {
-                await sendBookingCreatedNotifications({
+                await withTimeout(sendBookingCreatedNotifications({
                   booking: { ...booking, depositPaid: true },
                   tenant,
                   adminEmail: tenant.email || null,
-                });
+                }));
                 sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" })
                   .catch((e) => console.error("[stripe/webhook] agent portal FAILED:", e?.message || e));
                 sendBookingConfirmedSms({ booking, tenant })
@@ -233,11 +246,11 @@ export async function POST(req) {
             try {
               const tenant = await getTenantById(tenantId);
               if (tenant) {
-                await sendBookingCreatedNotifications({
+                await withTimeout(sendBookingCreatedNotifications({
                   booking: { ...booking, depositPaid: true },
                   tenant,
                   adminEmail: tenant.email || null,
-                });
+                }));
                 sendAgentPortalEmail({ tenantId, booking, tenant, reason: "booking" }).catch(() => {});
                 sendBookingConfirmedSms({ booking, tenant }).catch(() => {});
               }

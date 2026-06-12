@@ -30,6 +30,7 @@ const PERMISSION_DEFS = [
   { key: "canManageTeam",     label: "Manage Team",            desc: "Add, edit, and remove team members" },
   { key: "canManageProducts", label: "Manage Products",        desc: "Create and edit services, packages, and add-ons" },
   { key: "canEditSettings",   label: "Edit Settings",          desc: "Change branding, availability, and booking settings" },
+  { key: "canImportDropbox",  label: "Import from Dropbox",     desc: "Use the studio's connected Dropbox to import gallery media (off by default for security)" },
 ];
 
 const DEFAULT_PERMISSIONS = Object.fromEntries(ROLE_IDS.map((id) => [id, { ...ROLE_DEFS[id].permissions }]));
