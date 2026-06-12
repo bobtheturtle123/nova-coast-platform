@@ -9,7 +9,7 @@ import { avatarColor, initials } from "@/lib/avatar";
 
 // ── ZoneModal ─────────────────────────────────────────────────────────────────
 
-function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose, firstTime }) {
+function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose, firstTime, onAdjustShape }) {
   const [form, setForm] = useState({
     name:       zone?.name       || "",
     type:       zone?.type       || "include",
@@ -155,13 +155,21 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose, firstTime }) 
         </div>
 
         <div style={{ padding: "12px 20px", borderTop: "1px solid #E9ECF0", background: "#FAFAFA", borderRadius: "0 0 18px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
+          <div style={{ display: "flex", gap: 8 }}>
             {zone?.id && (
               <button onClick={onDelete}
                 style={{ height: 34, padding: "0 14px", border: "1px solid transparent", background: "transparent", color: "#DC2626", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.borderColor = "#FECACA"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent"; }}>
                 Delete zone
+              </button>
+            )}
+            {zone?.id && zone?.paths?.length >= 3 && onAdjustShape && (
+              <button onClick={() => onAdjustShape(zone)}
+                style={{ height: 34, padding: "0 14px", border: "1px solid #E9ECF0", background: "#fff", color: "#475569", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer" }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = "#C7D2E8"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = "#E9ECF0"}>
+                Adjust pins
               </button>
             )}
           </div>
@@ -183,7 +191,7 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose, firstTime }) 
 
 // ── AddressSearch (Nominatim — no API key needed) ─────────────────────────────
 
-function AddressSearch({ mapRef, mapReady, onFirstSelect }) {
+function AddressSearch({ mapRef, mapReady, onFirstSelect, onUseArea, creatingArea }) {
   const [query,     setQuery]     = useState("");
   const [results,   setResults]   = useState([]);
   const [open,      setOpen]      = useState(false);
@@ -292,14 +300,26 @@ function AddressSearch({ mapRef, mapReady, onFirstSelect }) {
         <div style={{ marginTop: 4, background: "#fff", border: "1px solid #E9ECF0", borderRadius: 10, boxShadow: "0 8px 24px rgba(15,23,42,0.10)", overflow: "hidden" }}>
           {results.map((r, i) => {
             const parts = (r.display_name || "").split(",");
+            const isArea = ["administrative", "boundary", "city", "town", "county", "state", "region", "village", "municipality"].includes(r.type)
+              || r.class === "administrative" || r.class === "boundary";
             return (
-              <button key={r.place_id || i} onClick={() => selectResult(r)}
-                style={{ width: "100%", padding: "9px 14px", borderBottom: i < results.length - 1 ? "1px solid #F3F4F6" : "none", display: "block", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
+              <div key={r.place_id || i}
+                style={{ display: "flex", alignItems: "center", borderBottom: i < results.length - 1 ? "1px solid #F3F4F6" : "none" }}
                 onMouseEnter={e => e.currentTarget.style.background = "#F9FAFB"}
                 onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{parts[0]?.trim()}</p>
-                <p style={{ margin: "2px 0 0", fontSize: 11.5, color: "#9CA3AF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{parts.slice(1, 3).join(",").trim()}</p>
-              </button>
+                <button onClick={() => selectResult(r)}
+                  style={{ flex: 1, minWidth: 0, padding: "9px 14px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{parts[0]?.trim()}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 11.5, color: "#9CA3AF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{parts.slice(1, 3).join(",").trim()}</p>
+                </button>
+                {isArea && (
+                  <button onClick={() => { onUseArea?.(r); setOpen(false); }} disabled={creatingArea}
+                    title="Create a service area from this place's real boundary"
+                    style={{ flexShrink: 0, margin: "0 10px", padding: "5px 10px", fontSize: 11.5, fontWeight: 600, color: "#1E5A8A", background: "#EEF5FC", border: "1px solid #CFE3F5", borderRadius: 7, cursor: "pointer", whiteSpace: "nowrap" }}>
+                    {creatingArea ? "Adding…" : "+ Add area"}
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
@@ -341,6 +361,11 @@ export default function ServiceAreaStep() {
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
   const [filterPhotog,    setFilterPhotog]    = useState("all");
   const [msg,             setMsg]             = useState({ text: "", type: "success" });
+  const [creatingArea,    setCreatingArea]    = useState(false);
+  const [shapeEditing,    setShapeEditing]    = useState(null);
+  const shapeMarkersRef   = useRef([]);
+  const shapePolyRef      = useRef(null);
+  const shapePathsRef     = useRef([]);
   const [loading,         setLoading]         = useState(true);
 
   // Fetch zones + team members
@@ -604,6 +629,99 @@ export default function ServiceAreaStep() {
     await patch({ defaultCoords: coords }).catch(() => {});
   }
 
+  // Build an accurate service-area polygon from a typed place (city/county/state)
+  // using OpenStreetMap's real administrative boundary — no API key needed.
+  async function createAreaFromResult(r) {
+    if (!window.L || !mapRef.current) return;
+    setCreatingArea(true);
+    try {
+      const prefix = { node: "N", way: "W", relation: "R" }[r.osm_type] || "R";
+      const url = `https://nominatim.openstreetmap.org/lookup?osm_ids=${prefix}${r.osm_id}&format=json&polygon_geojson=1&polygon_threshold=0.001`;
+      const data = await fetch(url, { headers: { "Accept-Language": "en" } }).then(res => res.json()).catch(() => null);
+      const geo = data?.[0]?.geojson;
+      if (!geo) { showMsg("Couldn't load that area's boundary. Try drawing it instead.", "warn"); return; }
+      let ring = null;
+      if (geo.type === "Polygon") ring = geo.coordinates[0];
+      else if (geo.type === "MultiPolygon") ring = geo.coordinates.map(p => p[0]).sort((a, b) => b.length - a.length)[0];
+      if (!ring || ring.length < 3) { showMsg("That place has no usable boundary. Try a city or county.", "warn"); return; }
+      const MAX = 150;
+      const step = Math.max(1, Math.floor(ring.length / MAX));
+      const paths = ring.filter((_, i) => i % step === 0).map(([lng, lat]) => ({ lat, lng }));
+
+      drawCleanupRef.current?.();
+      if (pendingLayerRef.current) { try { mapRef.current.removeLayer(pendingLayerRef.current); } catch {} pendingLayerRef.current = null; }
+      const latlngs = paths.map(p => [p.lat, p.lng]);
+      const polygon = window.L.polygon(latlngs, { color: "#3486cf", fillColor: "#3486cf", fillOpacity: 0.15, weight: 2 });
+      polygon.addTo(mapRef.current);
+      pendingLayerRef.current = polygon;
+      try { mapRef.current.fitBounds(latlngs, { padding: [40, 40], maxZoom: 12 }); } catch {}
+      const name = (r.display_name || "").split(",")[0]?.trim() || "Service area";
+      setPendingPaths(paths);
+      setEditing({ isNew: true, paths, name });
+      setDrawingMode(false);
+      if (!firstZoneDone) setFirstZoneDone(true);
+    } catch {
+      showMsg("Couldn't create that area. Try again or draw it manually.", "warn");
+    } finally {
+      setCreatingArea(false);
+    }
+  }
+
+  // ── Adjust pins: drag a saved zone's vertices on the map ────────────────────
+  function startShapeEdit(zone) {
+    setEditing(null);
+    if (!window.L || !mapRef.current) return;
+    const map = mapRef.current;
+    const paths = (zone.paths || []).map(p => ({ lat: p.lat, lng: p.lng }));
+    if (paths.length < 3) return;
+    shapePathsRef.current = paths;
+    const color = zone.type === "exclude" ? "#EF4444" : (zone.color || "#3486cf");
+    const poly = window.L.polygon(paths.map(p => [p.lat, p.lng]), { color, fillColor: color, fillOpacity: 0.15, weight: 2, dashArray: "5 4" }).addTo(map);
+    shapePolyRef.current = poly;
+    shapeMarkersRef.current = paths.map((p, i) => {
+      const m = window.L.marker([p.lat, p.lng], {
+        draggable: true,
+        icon: window.L.divIcon({ className: "", iconSize: [14, 14], iconAnchor: [7, 7],
+          html: `<div style="width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid ${color};box-shadow:0 1px 4px rgba(0,0,0,0.35);cursor:grab"></div>` }),
+      }).addTo(map);
+      m.on("drag", (e) => {
+        const ll = e.target.getLatLng();
+        shapePathsRef.current[i] = { lat: ll.lat, lng: ll.lng };
+        shapePolyRef.current?.setLatLngs(shapePathsRef.current.map(q => [q.lat, q.lng]));
+      });
+      return m;
+    });
+    try { map.fitBounds(paths.map(p => [p.lat, p.lng]), { padding: [70, 70], maxZoom: 14 }); } catch {}
+    setShapeEditing(zone);
+  }
+
+  function teardownShapeEdit() {
+    const map = mapRef.current;
+    shapeMarkersRef.current.forEach(m => { try { map?.removeLayer(m); } catch {} });
+    shapeMarkersRef.current = [];
+    if (shapePolyRef.current) { try { map?.removeLayer(shapePolyRef.current); } catch {} shapePolyRef.current = null; }
+    shapePathsRef.current = [];
+  }
+
+  async function saveShapeEdit() {
+    const zone  = shapeEditing;
+    const paths = shapePathsRef.current.map(p => ({ lat: p.lat, lng: p.lng }));
+    try {
+      const token = await auth.currentUser.getIdToken();
+      await fetch(`/api/dashboard/service-areas/${zone.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ paths }),
+      });
+      setZones(prev => prev.map(z => z.id === zone.id ? { ...z, paths } : z));
+      showMsg("Boundary updated.", "success");
+    } catch { showMsg("Couldn't save the boundary.", "warn"); }
+    teardownShapeEdit();
+    setShapeEditing(null);
+  }
+
+  function cancelShapeEdit() { teardownShapeEdit(); setShapeEditing(null); }
+
   function recenterMap() {
     const allCoords = zones.flatMap(z => (z.paths || []).map(p => [p.lat, p.lng]));
     if (allCoords.length >= 2 && mapRef.current) {
@@ -730,7 +848,25 @@ export default function ServiceAreaStep() {
           )}
           <div ref={mapContainerRef} style={{ width: "100%", height: "100%" }} />
 
-          <AddressSearch mapRef={mapRef} mapReady={mapInitialized} onFirstSelect={handleFirstSelect} />
+          <AddressSearch mapRef={mapRef} mapReady={mapInitialized} onFirstSelect={handleFirstSelect} onUseArea={createAreaFromResult} creatingArea={creatingArea} />
+
+          {shapeEditing && (
+            <div style={{ position: "absolute", bottom: 14, left: "50%", transform: "translateX(-50%)", zIndex: 1002,
+              background: "#181B20", color: "#fff", borderRadius: 12, boxShadow: "0 12px 32px rgba(0,0,0,0.3)",
+              display: "flex", alignItems: "center", gap: 14, padding: "10px 14px" }}>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                Drag the dots to reshape <strong>{shapeEditing.name}</strong>
+              </span>
+              <button onClick={cancelShapeEdit}
+                style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", background: "transparent", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={saveShapeEdit}
+                style={{ fontSize: 13, fontWeight: 600, color: "#181B20", background: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer" }}>
+                Save shape
+              </button>
+            </div>
+          )}
 
           {!drawingMode && mapInitialized && (
             <div style={{ position: "absolute", top: 14, right: 14, display: "flex", flexDirection: "column", gap: 6, zIndex: 1001 }}>
@@ -807,12 +943,13 @@ export default function ServiceAreaStep() {
       {/* Zone modal */}
       {editing && (
         <ZoneModal
-          zone={editing?.isNew ? null : editing}
+          zone={editing?.isNew ? (editing.name ? { name: editing.name } : null) : editing}
           teamMembers={teamMembers}
           firstTime={editing?.isNew && !firstZoneDone}
           onSave={saveZone}
           onDelete={deleteZone}
           onClose={cancelDrawing}
+          onAdjustShape={startShapeEdit}
         />
       )}
     </StepCard>
