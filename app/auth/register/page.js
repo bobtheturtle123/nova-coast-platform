@@ -28,7 +28,9 @@ export default function RegisterPage() {
   useEffect(() => {
     try {
       const promo = new URLSearchParams(window.location.search).get("promo");
-      if (promo) window.localStorage.setItem("ky_promo", promo);
+      // Session-scoped: only carries over for this signup flow (e.g. coming from
+      // the demo CTA). A normal "Get Started" with no ?promo never applies one.
+      if (promo) window.sessionStorage.setItem("ky_promo", promo);
     } catch {}
   }, []);
 

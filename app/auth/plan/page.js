@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { isUnlimitedTenant } from "@/lib/plans";
 
 const PLANS = [
   {
@@ -55,6 +56,17 @@ export default function PlanSelectionPage() {
   const [ready,      setReady]      = useState(false);
   const [loading,    setLoading]    = useState(null); // plan id being submitted
   const [error,      setError]      = useState("");
+  const [promo,      setPromo]      = useState("");
+  const [fromDemo,   setFromDemo]   = useState(false);
+
+  // A promo code only carries over if the signup originated from the demo (the
+  // demo CTA stashes it in sessionStorage). It stays fully editable/removable.
+  useEffect(() => {
+    try {
+      const p = window.sessionStorage.getItem("ky_promo");
+      if (p) { setPromo(p); setFromDemo(true); }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -64,8 +76,8 @@ export default function PlanSelectionPage() {
         const res   = await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token}` } });
         if (res.ok) {
           const { tenant } = await res.json();
-          // Already paid - skip to dashboard if onboarding done, otherwise continue onboarding
-          if (tenant?.stripeSubscriptionId || tenant?.permanentPlan) {
+          // Already paid (or lifetime/unlimited account) - skip plan selection
+          if (tenant?.stripeSubscriptionId || tenant?.permanentPlan || isUnlimitedTenant(tenant)) {
             router.replace(tenant?.onboardingCompleted ? "/dashboard" : "/onboarding");
             return;
           }
@@ -93,8 +105,7 @@ export default function PlanSelectionPage() {
     setError("");
     try {
       const token = await auth.currentUser.getIdToken();
-      let promoCode;
-      try { promoCode = window.localStorage.getItem("ky_promo") || undefined; } catch {}
+      const promoCode = promo.trim() || undefined;
       const res   = await fetch("/api/billing/subscribe", {
         method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -137,6 +148,28 @@ export default function PlanSelectionPage() {
             {error}
           </div>
         )}
+
+        {/* Promo code — pre-filled only when arriving from the demo, always editable */}
+        <div className="max-w-md mx-auto mb-8">
+          <label className="block text-xs font-medium text-gray-500 mb-1.5 text-center">
+            Promo code {fromDemo && <span className="text-[#3486cf]">· 50% off your first month applied</span>}
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              value={promo}
+              onChange={(e) => setPromo(e.target.value.toUpperCase())}
+              placeholder="Enter a promo code (optional)"
+              className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#3486cf] focus:ring-1 focus:ring-[#3486cf]/20"
+            />
+            {promo && (
+              <button onClick={() => { setPromo(""); setFromDemo(false); try { window.sessionStorage.removeItem("ky_promo"); } catch {} }}
+                className="text-xs text-gray-400 hover:text-gray-600 px-2 py-2 whitespace-nowrap">
+                Remove
+              </button>
+            )}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1.5 text-center">Applied automatically at checkout, or change it here. You can also enter one on the payment page.</p>
+        </div>
 
         {/* Plan cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

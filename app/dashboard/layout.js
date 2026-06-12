@@ -12,6 +12,7 @@ import { DashboardPermissionsContext } from "@/lib/dashboardPermissions";
 import { TenantSettingsContext } from "@/lib/TenantSettingsContext";
 import DemoProvider from "@/components/DemoProvider";
 import { isDemo, DEMO_TENANT } from "@/lib/demoData";
+import { isUnlimitedTenant, getEffectivePlan } from "@/lib/plans";
 
 // permKey: required permission for non-owners. ownerOnly: only owner/admin sees it.
 const NAV = [
@@ -195,13 +196,13 @@ export default function DashboardLayout({ children }) {
         const d = await res.json();
         if (d.tenant?.businessName) setTenantName(d.tenant.businessName);
         if (d.tenant?.branding?.logoUrl) setTenantLogo(d.tenant.branding.logoUrl);
-        setTenantPlan(d.tenant?.permanentPlan || d.tenant?.subscriptionPlan || "starter");
+        setTenantPlan(getEffectivePlan(d.tenant));
         setTenantSettings({
           tempUnit: d.tenant?.tempUnit || "F",
           locale:   d.tenant?.locale   || "en-US",
           currency: d.tenant?.currency || "USD",
         });
-        const hasSub = !!(d.tenant?.stripeSubscriptionId || d.tenant?.permanentPlan);
+        const hasSub = !!(d.tenant?.stripeSubscriptionId || d.tenant?.permanentPlan) || isUnlimitedTenant(d.tenant);
         if (!hasSub) {
           router.push("/auth/plan");
           return;
