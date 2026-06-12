@@ -14,6 +14,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { isDemo, exitDemo, DEMO_VIEW_ONLY_MESSAGE } from "@/lib/demoData";
 
 // Live signup with the 50%-off-first-month offer pre-applied.
@@ -41,8 +43,16 @@ export default function DemoProvider({ children }) {
   const [demo, setDemo]       = useState(false);
   const [toast, setToast]     = useState(false);
 
-  // Detect demo mode on mount (client only).
-  useEffect(() => { setDemo(isDemo()); }, []);
+  // Demo mode ONLY applies when no real user is signed in. If a real user is
+  // present, force demo off and clear the flag — this prevents a stale ky_demo
+  // (from earlier visiting the demo) from blocking a real session in the same tab.
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (u) { exitDemo(); setDemo(false); }
+      else   { setDemo(isDemo()); }
+    });
+    return unsub;
+  }, []);
 
   const showToast = useCallback(() => {
     setToast(true);

@@ -11,7 +11,7 @@ import { ToastProvider } from "@/components/Toast";
 import { DashboardPermissionsContext } from "@/lib/dashboardPermissions";
 import { TenantSettingsContext } from "@/lib/TenantSettingsContext";
 import DemoProvider from "@/components/DemoProvider";
-import { isDemo, DEMO_TENANT } from "@/lib/demoData";
+import { isDemo, exitDemo, DEMO_TENANT } from "@/lib/demoData";
 import { isUnlimitedTenant, getEffectivePlan } from "@/lib/plans";
 
 // permKey: required permission for non-owners. ownerOnly: only owner/admin sees it.
@@ -154,17 +154,21 @@ export default function DashboardLayout({ children }) {
   const [subscriptionLapsed, setSubscriptionLapsed] = useState(false);
 
   useEffect(() => {
-    // View-only demo workspace: render the shell with a sample tenant and skip
-    // all auth/subscription gating. No real account is required or touched.
-    if (isDemo()) {
-      setUser({ email: "demo@aperturemedia.co", getIdToken: async () => "demo-token" });
-      setUserRole("owner");
-      setTenantName(DEMO_TENANT.businessName);
-      setTenantPlan(DEMO_TENANT.subscriptionPlan);
-      return;
-    }
     const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) { router.push("/auth/login"); return; }
+      if (!u) {
+        // No real user. If this is a genuine view-only demo visit, render the
+        // shell with a sample tenant and skip auth/subscription gating.
+        if (isDemo()) {
+          setUser({ email: "demo@aperturemedia.co", getIdToken: async () => "demo-token" });
+          setUserRole("owner");
+          setTenantName(DEMO_TENANT.businessName);
+          setTenantPlan(DEMO_TENANT.subscriptionPlan);
+          return;
+        }
+        router.push("/auth/login"); return;
+      }
+      // A real user is signed in — make sure demo mode can't linger in this tab.
+      if (isDemo()) exitDemo();
       // Force-refresh so custom claims (tenantId, role) are always current
       await u.getIdToken(true);
       const tokenResult = await u.getIdTokenResult();

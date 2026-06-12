@@ -3,19 +3,23 @@ import { createTenant, toSlug, isSlugTaken } from "@/lib/tenants";
 import { sendWelcomeEmail } from "@/lib/email";
 import { rateLimit } from "@/lib/rateLimit";
 import { generateReferralCode, getTenantByReferralCode, createReferralRecord } from "@/lib/referral";
+import { isSuperAdminEmail } from "@/lib/plans";
 
 export async function POST(req) {
-  // 3 registrations per IP per hour — prevents account spam
-  const rl = await rateLimit(req, "tenant-register", 3, 3600);
-  if (rl.limited) {
-    return Response.json({ error: "Too many registration attempts. Please try again later." }, { status: 429 });
-  }
-
   try {
     const { uid, email, ownerName = "", businessName, phone = "", accessCode = "" } = await req.json();
 
     if (!uid || !email || !businessName) {
       return Response.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Registrations per IP per hour — prevents account spam. Owner/super-admin
+    // emails are exempt so they can freely create + test accounts.
+    if (!isSuperAdminEmail(email)) {
+      const rl = await rateLimit(req, "tenant-register", 8, 3600);
+      if (rl.limited) {
+        return Response.json({ error: "Too many registration attempts. Please try again later." }, { status: 429 });
+      }
     }
 
     // Verify the uid is a valid Firebase user
