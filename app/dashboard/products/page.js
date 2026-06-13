@@ -668,7 +668,7 @@ function fmtMoney(v) {
 }
 
 // ─── Product row ──────────────────────────────────────────────────────────────
-function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate }) {
+function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate, selectable, selected, onSelectToggle }) {
   const tierVals = item.priceTiers ? Object.values(item.priceTiers).filter(v => v > 0) : [];
   const intervalSuffix = type === "retainers"
     ? { month: "/mo", quarter: "/qtr", year: "/yr" }[item.billingInterval || "month"]
@@ -684,6 +684,11 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
     <div className="flex items-center gap-4 px-4 py-3 transition-colors"
       style={{ borderBottom: "1px solid var(--border-subtle)", background: hovered ? "rgb(15 23 42 / 0.022)" : "transparent" }}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      {/* Bulk-select checkbox */}
+      {selectable && (
+        <input type="checkbox" checked={!!selected} onChange={onSelectToggle}
+          className="rounded border-gray-300 text-[#3486cf] flex-shrink-0 w-4 h-4 cursor-pointer" />
+      )}
       {/* Thumb */}
       <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
         {item.thumbnailUrl
@@ -751,6 +756,9 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
   const [importing,  setImporting]  = useState(false);
   const [msg,        setMsg]        = useState("");
   const [mode,       setMode]       = useState("csv"); // "csv" | "text" | "url"
+  const [preview,    setPreview]    = useState(null);  // { items, tierDefs, tiersDiffer }
+  const [previewContent, setPreviewContent] = useState("");
+  const [syncTiers,  setSyncTiers]  = useState(false);
   const csvInputRef = useRef(null);
 
   function getTiers() {
@@ -822,6 +830,23 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
     setImporting(true); setMsg("");
     try {
       const token = await auth.currentUser.getIdToken();
+      // CSV → review a preview first (and offer tier sync). AI modes import directly.
+      if (mode === "csv") {
+        const res = await fetch("/api/dashboard/products/import", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body:    JSON.stringify({ mode, content, targetType: activeType, preview: true }),
+        });
+        const data = await res.json();
+        if (res.ok && data.preview) {
+          setPreview(data);
+          setPreviewContent(content);
+          setSyncTiers(!!data.tiersDiffer);
+        } else {
+          setMsg(data.error || "No items found. Check your file and try again.");
+        }
+        return;
+      }
       const res = await fetch("/api/dashboard/products/import", {
         method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -831,7 +856,7 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
       if (res.ok && data.imported > 0) {
         setMsg(`✓ Imported ${data.imported} item${data.imported !== 1 ? "s" : ""}. They're saved as drafts — toggle Active when ready.`);
         if (onImport) onImport(data.items || {});
-        setTimeout(() => { setOpen(false); setMsg(""); setUrl(""); setText(""); setCsvFile(null); }, 3500);
+        setTimeout(close, 3500);
       } else {
         setMsg(data.error || "No items found. Check your file and try again.");
       }
@@ -842,7 +867,39 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
     }
   }
 
-  function close() { setOpen(false); setMsg(""); setUrl(""); setText(""); setCsvFile(null); }
+  async function confirmImport() {
+    setImporting(true); setMsg("");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/products/import", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body:    JSON.stringify({
+          mode: "csv", content: previewContent, targetType: activeType,
+          applyTiers: syncTiers ? preview?.tierDefs : null,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.imported > 0) {
+        if (onImport) onImport(data.items || {});
+        if (data.tiersApplied) {
+          setMsg(`✓ Imported ${data.imported} items and updated your pricing tiers. Refreshing…`);
+          setTimeout(() => window.location.reload(), 1300);
+        } else {
+          setMsg(`✓ Imported ${data.imported} item${data.imported !== 1 ? "s" : ""}. Saved as drafts — toggle Active when ready.`);
+          setTimeout(close, 3000);
+        }
+      } else {
+        setMsg(data.error || "Import failed. Please try again.");
+      }
+    } catch {
+      setMsg("Something went wrong. Please try again.");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function close() { setOpen(false); setMsg(""); setUrl(""); setText(""); setCsvFile(null); setPreview(null); setPreviewContent(""); }
 
   if (!open) {
     return (
@@ -865,6 +922,64 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
         </div>
         <div className="p-6 space-y-4">
 
+          {preview && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-[#0F172A] mb-1">Review before importing</p>
+                <p className="text-xs text-gray-500">{preview.count} item{preview.count !== 1 ? "s" : ""} found. They&apos;ll be saved as inactive drafts.</p>
+              </div>
+
+              {/* Tier sync */}
+              {preview.tierDefs?.length > 0 && (
+                <div className={`rounded-lg border p-3 ${preview.tiersDiffer ? "border-amber-200 bg-amber-50" : "border-gray-200 bg-gray-50"}`}>
+                  {preview.tiersDiffer ? (
+                    <>
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input type="checkbox" checked={syncTiers} onChange={(e) => setSyncTiers(e.target.checked)} className="rounded mt-0.5" />
+                        <span className="text-xs text-amber-900">
+                          <strong>Update my square-footage tiers to match this file</strong> so the imported prices apply correctly.
+                          <span className="block mt-1 text-amber-700">
+                            New tiers: {preview.tierDefs.map((t) => t.name).join(", ")}
+                          </span>
+                        </span>
+                      </label>
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-500">Tier columns match your current tiers — prices will apply directly.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Item preview */}
+              <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                {preview.items.map((it, i) => {
+                  const tierVals = it.priceTiers ? Object.values(it.priceTiers).filter((v) => v > 0) : [];
+                  const priceLabel = tierVals.length ? `From $${Math.min(...tierVals).toLocaleString()}` : `$${Number(it.price || 0).toLocaleString()}`;
+                  return (
+                    <div key={i} className="flex items-center gap-3 px-3 py-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 w-16 flex-shrink-0">
+                        {it.type === "packages" ? "Package" : it.type === "addons" ? "Add-on" : "Service"}
+                      </span>
+                      <span className="text-sm text-[#0F172A] flex-1 truncate">{it.name}</span>
+                      <span className="text-sm font-semibold text-[#3486cf] flex-shrink-0">{priceLabel}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {msg && <p className={`text-sm ${msg.startsWith("✓") ? "text-green-600" : "text-red-500"}`}>{msg}</p>}
+
+              <div className="flex gap-3">
+                <button onClick={confirmImport} disabled={importing}
+                  className="btn-primary px-6 py-2 text-sm flex-1 disabled:opacity-40">
+                  {importing ? "Importing…" : `Import ${preview.count} item${preview.count !== 1 ? "s" : ""}`}
+                </button>
+                <button onClick={() => { setPreview(null); setMsg(""); }} disabled={importing} className="btn-outline px-4 py-2 text-sm">Back</button>
+              </div>
+            </div>
+          )}
+
+          {!preview && <>
           {/* Mode tabs */}
           <div className="flex border border-gray-200 rounded-xl overflow-hidden text-xs">
             {[["csv", "CSV File"], ["text", "Paste Text"], ["url", "From URL"]].map(([m, label]) => (
@@ -891,6 +1006,10 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
                   className="text-xs font-semibold text-blue-700 hover:text-blue-900 underline underline-offset-2">
                   ↓ Download CSV template
                 </button>
+                <p className="text-[11px] text-blue-600/80 leading-relaxed pt-1">
+                  Coming from <strong>Aryeo</strong> or <strong>HD Photo Hub</strong>? Export your services/pricing to CSV there and upload it
+                  here — common column names (Title, Cost, Description, etc.) are recognized automatically. You&apos;ll preview everything before it saves.
+                </p>
               </div>
 
               <div>
@@ -944,13 +1063,14 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
           <div className="flex gap-3">
             <button onClick={handleImport} disabled={importing || !canImport}
               className="btn-primary px-6 py-2 text-sm flex-1 disabled:opacity-40">
-              {importing ? "Importing…" : "Import"}
+              {importing ? "Working…" : mode === "csv" ? "Review →" : "Import"}
             </button>
             <button onClick={close} className="btn-outline px-4 py-2 text-sm">Cancel</button>
           </div>
           <p className="text-xs text-gray-400">
             All imported items are saved as inactive drafts. Toggle them Active when you're ready to publish.
           </p>
+          </>}
         </div>
       </div>
     </div>
@@ -969,6 +1089,9 @@ export default function ProductsPage() {
   const [teamMembers, setTeamMembers] = useState([]);
   const [pricingConfig, setPricingConfig] = useState(null);
   const [tenant, setTenant] = useState(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // When the owner personally shoots, they're an assignable photographer too —
   // same "__owner__" identity used everywhere else (schedule, service areas).
@@ -1069,6 +1192,37 @@ export default function ProductsPage() {
     toast("Product deleted.");
   }
 
+  function toggleSelect(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+  function exitSelectMode() { setSelectMode(false); setSelectedIds(new Set()); }
+
+  async function bulkDelete() {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    if (!window.confirm(`Delete ${ids.length} ${TYPE_META[activeType].label.toLowerCase()}? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    const token = await getToken();
+    const results = await Promise.allSettled(
+      ids.map((id) => fetch(`/api/dashboard/products/${id}?type=${activeType}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }))
+    );
+    const deleted = ids.filter((_, i) => results[i].status === "fulfilled" && results[i].value.ok);
+    setItems((prev) => ({ ...prev, [activeType]: prev[activeType].filter((i) => !deleted.includes(i.id)) }));
+    setBulkDeleting(false);
+    exitSelectMode();
+    toast(deleted.length === ids.length
+      ? `Deleted ${deleted.length} ${TYPE_META[activeType].label.toLowerCase()}.`
+      : `Deleted ${deleted.length} of ${ids.length}. Some couldn't be removed — try again.`,
+      deleted.length === ids.length ? "success" : "error");
+  }
+
   async function duplicateItem(item, type) {
     const token = await getToken();
     const { id: _id, ...rest } = item;
@@ -1155,6 +1309,19 @@ export default function ProductsPage() {
           <p className="page-subtitle">Customize the services that appear on your booking page</p>
         </div>
         <div className="flex items-center gap-2">
+          {current.length > 0 && (
+            selectMode ? (
+              <button onClick={exitSelectMode}
+                className="text-sm px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 transition-colors">
+                Done
+              </button>
+            ) : (
+              <button onClick={() => setSelectMode(true)}
+                className="text-sm px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 transition-colors">
+                Select
+              </button>
+            )
+          )}
           <ImportPricingButton
             onImport={(imported) => {
               setItems((prev) => ({
@@ -1207,6 +1374,25 @@ export default function ProductsPage() {
         />
       </div>
 
+      {/* Bulk selection bar */}
+      {selectMode && (
+        <div className="flex items-center gap-3 mb-3 px-4 py-2.5 rounded-xl bg-[#0F172A] text-white">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox"
+              checked={current.length > 0 && current.every((i) => selectedIds.has(i.id))}
+              onChange={(e) => setSelectedIds(e.target.checked ? new Set(current.map((i) => i.id)) : new Set())}
+              className="rounded" />
+            Select all
+          </label>
+          <span className="text-sm text-white/60">{selectedIds.size} selected</span>
+          <div className="flex-1" />
+          <button onClick={bulkDelete} disabled={selectedIds.size === 0 || bulkDeleting}
+            className="text-sm font-semibold px-4 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-40">
+            {bulkDeleting ? "Deleting…" : `Delete${selectedIds.size ? ` (${selectedIds.size})` : ""}`}
+          </button>
+        </div>
+      )}
+
       {/* Product list */}
       <div className="card-section overflow-hidden">
         {/* Header */}
@@ -1245,6 +1431,9 @@ export default function ProductsPage() {
               onEdit={(i) => setEditing({ item: i, type: activeType })}
               onToggleActive={(i) => toggleActive(i, activeType)}
               onDuplicate={(i) => duplicateItem(i, activeType)}
+              selectable={selectMode}
+              selected={selectedIds.has(item.id)}
+              onSelectToggle={() => toggleSelect(item.id)}
             />
           ))
         )}

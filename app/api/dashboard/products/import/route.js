@@ -18,7 +18,7 @@ export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { mode, content, targetType = "services", useTiers = false } = await req.json();
+  const { mode, content, targetType = "services", useTiers = false, preview = false, applyTiers = null } = await req.json();
   if (!content) return Response.json({ error: "content required" }, { status: 400 });
 
   // AI-backed modes require the key + rate limit; CSV is parsed locally so skip those checks
@@ -79,13 +79,14 @@ export async function POST(req) {
     const colf = (...names) => { for (const n of names) { const i = col(n); if (i >= 0) return i; } return -1; };
 
     // Support both our simple format and the extended format
-    const typeIdx         = colf("type", "category");
-    const nameIdx         = colf("name", "service name");
-    const descIdx         = colf("description");
-    const priceIdx        = colf("price", "fixed price / unit", "fixed price", "unit price");
-    const taglineIdx      = colf("tagline", "tier tag");
-    const marketingIdx    = col("marketing summary");
-    const featureIdx      = colf("feature list", "deliverables");
+    // Generous aliases so exports from Aryeo, HD Photo Hub, Spiro, etc. map too.
+    const typeIdx         = colf("type", "category", "kind", "product type");
+    const nameIdx         = colf("name", "service name", "title", "product", "product name", "package name", "item", "item name");
+    const descIdx         = colf("description", "summary", "details");
+    const priceIdx        = colf("price", "fixed price / unit", "fixed price", "unit price", "cost", "amount", "rate", "base price");
+    const taglineIdx      = colf("tagline", "tier tag", "subtitle");
+    const marketingIdx    = colf("marketing summary", "marketing");
+    const featureIdx      = colf("feature list", "deliverables", "features", "includes", "what's included");
     const badgeIdx        = col("badge");
     const pricingModelIdx = colf("pricing model");
     const imageIdx        = colf("image url", "image");
@@ -101,9 +102,33 @@ export async function POST(req) {
     // If the CSV has tier columns, treat it as tiered regardless of the checkbox
     const hasTierCols = tierCols.length > 0;
 
+    // Derive sqft tier definitions ({ name, label, max }) from the Price_* column
+    // headers, so we can offer to sync the studio's tiers to match the file.
+    function buildTierDefs() {
+      const defs = tierCols.map(({ name, idx }) => {
+        const raw      = rawHeaders[idx] || "";
+        const afterPx  = raw.replace(/^price_/i, "");
+        const labelRaw = afterPx.slice(name.length).replace(/^_+/, "");
+        const label    = labelRaw.replace(/_/g, " ").trim();
+        const nums     = (label.match(/\d[\d,]*/g) || []).map((n) => Number(n.replace(/,/g, "")));
+        let max = null;
+        if (/\+|plus|over|above|and\s*up|up\b/i.test(label)) max = 999999;
+        else if (nums.length) max = nums[nums.length - 1];
+        return { name, label: label || name, max };
+      });
+      for (let i = 0; i < defs.length; i++) {
+        if (defs[i].max == null) {
+          defs[i].max = i === defs.length - 1 ? 999999 : (defs[i - 1]?.max ? defs[i - 1].max + 1500 : 1500 * (i + 1));
+        }
+      }
+      if (defs.length) defs[defs.length - 1].max = 999999;
+      return defs;
+    }
+    const tierDefs = hasTierCols ? buildTierDefs() : [];
+
     const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
-    const batch     = adminDb.batch();
     const created   = { packages: [], services: [], addons: [] };
+    const parsed    = []; // flat preview list
     let count = 0;
 
     for (const row of rows.slice(1)) {
@@ -165,16 +190,12 @@ export async function POST(req) {
         if (Object.keys(priceTiers).length === 0) priceTiers = null;
       }
 
-      const ref = tenantRef.collection(type).doc();
       const doc = {
-        id:          ref.id,
         type,
         name:        String(rawName).slice(0, 100),
         description: String(description).slice(0, 500),
         price:       priceTiers ? 0 : flatPrice,
         active:      false,
-        createdAt:   new Date(),
-        importedAt:  new Date(),
         ...(tagline          ? { tagline: String(tagline).slice(0, 200) } : {}),
         ...(deliverables.length ? { deliverables } : {}),
         ...(priceTiers       ? { priceTiers }       : {}),
@@ -182,8 +203,7 @@ export async function POST(req) {
         ...(badgeText && !isFeatured ? { badge: badgeText.slice(0, 50) } : {}),
         ...(thumbnailUrl     ? { thumbnailUrl, mediaUrls: [thumbnailUrl] } : {}),
       };
-      batch.set(ref, doc);
-      created[type].push(doc);
+      parsed.push(doc);
       count++;
     }
 
@@ -191,8 +211,37 @@ export async function POST(req) {
       return Response.json({ error: "No valid rows found. Make sure the CSV has a 'name' or 'Service Name' column." }, { status: 422 });
     }
 
+    // Compare detected tiers to the studio's current tiers (names, in order).
+    const tenantSnap   = await tenantRef.get();
+    const currentTiers = tenantSnap.data()?.pricingConfig?.tiers || [];
+    const tiersDiffer  = tierDefs.length > 0 &&
+      JSON.stringify(currentTiers.map((t) => t.name)) !== JSON.stringify(tierDefs.map((t) => t.name));
+
+    // PREVIEW: parse only, commit nothing.
+    if (preview) {
+      return Response.json({ preview: true, items: parsed, tierDefs, tiersDiffer, count });
+    }
+
+    // COMMIT
+    const batch = adminDb.batch();
+    for (const doc of parsed) {
+      const ref = tenantRef.collection(doc.type).doc();
+      const full = { ...doc, id: ref.id, createdAt: new Date(), importedAt: new Date() };
+      batch.set(ref, full);
+      created[doc.type].push(full);
+    }
+    // Optionally sync the studio's sqft tiers to match the imported file so the
+    // tier prices line up and produce accurate booking prices.
+    if (Array.isArray(applyTiers) && applyTiers.length > 0) {
+      const cleanTiers = applyTiers
+        .filter((t) => t && t.name)
+        .map((t) => ({ name: String(t.name).slice(0, 40), label: String(t.label || t.name).slice(0, 60), max: Number(t.max) || 999999 }));
+      const existingPC = tenantSnap.data()?.pricingConfig || {};
+      batch.update(tenantRef, { pricingConfig: { ...existingPC, mode: existingPC.mode || "sqft", tiers: cleanTiers } });
+    }
+
     await batch.commit();
-    return Response.json({ imported: count, items: created });
+    return Response.json({ imported: count, items: created, tiersApplied: Array.isArray(applyTiers) && applyTiers.length > 0 });
   }
 
   let text = content;
