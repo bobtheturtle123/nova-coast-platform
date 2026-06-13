@@ -1,5 +1,5 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
-import { getKey, fetchCategories, fetchProducts, enrichProducts, mapProductsToServices } from "@/lib/aryeo";
+import { getKey, fetchCategories, fetchProducts, mapProductsToServices } from "@/lib/aryeo";
 
 export const dynamic     = "force-dynamic";
 export const maxDuration = 60;
@@ -54,7 +54,6 @@ export async function POST(req) {
     try {
       categories = await fetchCategories(apiKey).catch(() => []);
       products   = await fetchProducts(apiKey);
-      products   = await enrichProducts(apiKey, products).catch(() => products);
     } catch (e) {
       return Response.json({ error: "Couldn't fetch from Aryeo. Re-check your API key and try again." }, { status: 502 });
     }
@@ -92,10 +91,6 @@ export async function POST(req) {
         services: items.length,
         duplicates: items.filter((i) => i.duplicate).length,
       },
-      // Diagnostic: the raw shape of the first product (and a category) so the
-      // exact image/price/category fields can be mapped if anything looks off.
-      sampleProduct: products[0] || null,
-      sampleCategory: categories[0] || null,
     });
   }
 
@@ -121,7 +116,7 @@ export async function POST(req) {
         price:          hasTiers ? 0 : (Number(it.price) || 0),
         ...(hasTiers ? { priceTiers: it.priceTiers } : {}),
         ...(Number(it.duration) ? { duration: Number(it.duration) } : {}),
-        ...(it.category ? { tagline: String(it.category).slice(0, 200) } : {}),
+        ...(it.isTwilight ? { isTwilight: true } : {}),
         ...(it.imageUrl ? { thumbnailUrl: String(it.imageUrl), mediaUrls: [String(it.imageUrl)] } : {}),
         // Provenance + draft flags (NEVER auto-published).
         external_source: "aryeo",

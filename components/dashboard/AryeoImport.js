@@ -236,21 +236,6 @@ export default function AryeoImport({ onImported }) {
               ))}
             </div>
 
-            {/* Diagnostic — helps map fields exactly if images/prices look off */}
-            {preview.sampleProduct && (
-              <details className="px-6 py-2 border-t border-gray-100">
-                <summary className="text-[11px] text-gray-400 cursor-pointer">Raw data (for support)</summary>
-                <div className="mt-2">
-                  <button
-                    onClick={() => { try { navigator.clipboard.writeText(JSON.stringify({ product: preview.sampleProduct, category: preview.sampleCategory }, null, 2)); note("Copied — paste it to support."); } catch {} }}
-                    className="text-[11px] text-[#3486cf] underline mb-1">Copy raw sample</button>
-                  <pre className="text-[10px] bg-gray-50 border border-gray-200 rounded-lg p-2 max-h-40 overflow-auto whitespace-pre-wrap">
-                    {JSON.stringify({ product: preview.sampleProduct, category: preview.sampleCategory }, null, 2).slice(0, 4000)}
-                  </pre>
-                </div>
-              </details>
-            )}
-
             <div className="px-6 py-4 flex items-center justify-between gap-3" style={{ borderTop: "1px solid var(--border-subtle)" }}>
               <p className="text-xs text-gray-500">{toImport} of {preview.items.length} will be imported · all as inactive drafts</p>
               <div className="flex gap-2">
