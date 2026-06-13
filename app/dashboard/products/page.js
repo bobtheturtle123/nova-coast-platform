@@ -146,6 +146,19 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
     moveMedia(idx, 0);
   }
 
+  // Keep only tier keys that match the studio's currently-configured tiers, so
+  // stale/orphan keys (often from imports) can't linger and skew "From $X".
+  function pruneTiers(obj) {
+    const names = (pricingConfig?.tiers || []).map((t) => t.name);
+    if (names.length === 0) return obj || null;
+    const valid = new Set(names);
+    const out = {};
+    for (const [k, v] of Object.entries(obj || {})) {
+      if (valid.has(k)) out[k] = Number(v) || 0;
+    }
+    return out;
+  }
+
   async function handleSave() {
     setSaving(true);
     const payload = {
@@ -161,18 +174,21 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
         recurring:       true,
         priceTiers:      null,
       } : {
-        ...(form.tiered ? { priceTiers: form.priceTiers } : { priceTiers: null }),
+        // Prune to ONLY the currently-configured tiers — drops stale/orphan tier
+        // keys left over from imports (e.g. a hidden "$549" under a tier name that
+        // no longer exists), which is what made "From $549" stick after editing.
+        ...(form.tiered ? { priceTiers: pruneTiers(form.priceTiers) } : { priceTiers: null }),
       }),
       ...(type === "packages" ? { tagline: form.tagline, deliverables: form.deliverables, featured: form.featured, includes: form.includes } : {}),
       ...(type === "addons" ? { showWith: form.showWith } : {}),
       ...((type === "services" || type === "packages") ? { isTwilight: form.isTwilight } : {}),
       ...((type === "services" || type === "packages") ? {
         duration:      !form.tiered && form.duration !== "" ? Number(form.duration) : null,
-        durationTiers: form.tiered && Object.keys(form.durationTiers).length > 0 ? form.durationTiers : null,
+        durationTiers: form.tiered && Object.keys(form.durationTiers).length > 0 ? pruneTiers(form.durationTiers) : null,
       } : {}),
       ...(type !== "retainers" ? {
         payRate:      form.payRate !== "" ? Number(form.payRate) : null,
-        payRateTiers: form.tiered && Object.keys(form.payRateTiers).length > 0 ? form.payRateTiers : null,
+        payRateTiers: form.tiered && Object.keys(form.payRateTiers).length > 0 ? pruneTiers(form.payRateTiers) : null,
       } : {}),
     };
     await onSave(payload, type);
@@ -952,6 +968,17 @@ export default function ProductsPage() {
   const [search,      setSearch]      = useState("");
   const [teamMembers, setTeamMembers] = useState([]);
   const [pricingConfig, setPricingConfig] = useState(null);
+  const [tenant, setTenant] = useState(null);
+
+  // When the owner personally shoots, they're an assignable photographer too —
+  // same "__owner__" identity used everywhere else (schedule, service areas).
+  const assignablePhotographers = (() => {
+    const list = [...(teamMembers || [])];
+    if (tenant?.ownerShoots !== false && !list.some((m) => m.id === "__owner__")) {
+      list.unshift({ id: "__owner__", name: tenant?.ownerName || tenant?.businessName || "You", color: tenant?.branding?.primaryColor || "#3486cf", role: "photographer" });
+    }
+    return list;
+  })();
 
   const getToken = () => auth.currentUser?.getIdToken();
 
@@ -985,6 +1012,7 @@ export default function ProductsPage() {
       });
       setTeamMembers(teamData.members || []);
       setPricingConfig(tenantData.tenant?.pricingConfig || null);
+      setTenant(tenantData.tenant || null);
       setLoading(false);
     }
     auth.currentUser?.getIdToken().then(() => load());
@@ -1233,7 +1261,7 @@ export default function ProductsPage() {
           type={editing.type}
           allServices={items.services}
           allPackages={items.packages}
-          teamMembers={teamMembers}
+          teamMembers={assignablePhotographers}
           pricingConfig={pricingConfig}
           onSave={saveItem}
           onDelete={deleteItem}
