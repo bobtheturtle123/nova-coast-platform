@@ -669,7 +669,7 @@ function fmtMoney(v) {
 }
 
 // ─── Product row ──────────────────────────────────────────────────────────────
-function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate, selectable, selected, onSelectToggle }) {
+function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate, selectable, selected, onSelectToggle, reorderable, canMoveUp, canMoveDown, onMoveUp, onMoveDown }) {
   const tierVals = item.priceTiers ? Object.values(item.priceTiers).filter(v => v > 0) : [];
   const intervalSuffix = type === "retainers"
     ? { month: "/mo", quarter: "/qtr", year: "/yr" }[item.billingInterval || "month"]
@@ -689,6 +689,15 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
       {selectable && (
         <input type="checkbox" checked={!!selected} onChange={onSelectToggle}
           className="rounded border-gray-300 text-[#3486cf] flex-shrink-0 w-4 h-4 cursor-pointer" />
+      )}
+      {/* Reorder controls */}
+      {reorderable && (
+        <div className="flex flex-col flex-shrink-0 -my-1" title="Reorder">
+          <button onClick={() => onMoveUp?.()} disabled={!canMoveUp}
+            className="text-gray-300 hover:text-gray-600 disabled:opacity-20 leading-none text-[11px] px-1">▲</button>
+          <button onClick={() => onMoveDown?.()} disabled={!canMoveDown}
+            className="text-gray-300 hover:text-gray-600 disabled:opacity-20 leading-none text-[11px] px-1">▼</button>
+        </div>
       )}
       {/* Thumb */}
       <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
@@ -1231,6 +1240,24 @@ export default function ProductsPage() {
       deleted.length === ids.length ? "success" : "error");
   }
 
+  async function moveItem(item, dir) {
+    const type = activeType;
+    const ordered = [...(items[type] || [])].sort((a, b) => (a.sortOrder ?? 1e9) - (b.sortOrder ?? 1e9));
+    const idx = ordered.findIndex((i) => i.id === item.id);
+    const swap = idx + dir;
+    if (idx < 0 || swap < 0 || swap >= ordered.length) return;
+    [ordered[idx], ordered[swap]] = [ordered[swap], ordered[idx]];
+    const withOrder = ordered.map((i, n) => ({ ...i, sortOrder: n }));
+    setItems((prev) => ({ ...prev, [type]: withOrder }));
+    try {
+      const token = await getToken();
+      await fetch("/api/dashboard/products/reorder", {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ type, orderedIds: withOrder.map((i) => i.id) }),
+      });
+    } catch { toast("Couldn't save the new order.", "error"); }
+  }
+
   async function duplicateItem(item, type) {
     const token = await getToken();
     const { id: _id, ...rest } = item;
@@ -1269,7 +1296,7 @@ export default function ProductsPage() {
   }, [items]);
 
   const current = useMemo(() => {
-    const list = items[activeType] || [];
+    const list = [...(items[activeType] || [])].sort((a, b) => (a.sortOrder ?? 1e9) - (b.sortOrder ?? 1e9));
     if (!search.trim()) return list;
     const q = search.toLowerCase();
     return list.filter((i) =>
@@ -1433,7 +1460,7 @@ export default function ProductsPage() {
             )}
           </div>
         ) : (
-          current.map((item) => (
+          current.map((item, idx) => (
             <ProductRow key={item.id} item={item} type={activeType}
               extraInfo={getExtraInfo(item)}
               onEdit={(i) => setEditing({ item: i, type: activeType })}
@@ -1442,6 +1469,11 @@ export default function ProductsPage() {
               selectable={selectMode}
               selected={selectedIds.has(item.id)}
               onSelectToggle={() => toggleSelect(item.id)}
+              reorderable={!search.trim() && !selectMode}
+              canMoveUp={idx > 0}
+              canMoveDown={idx < current.length - 1}
+              onMoveUp={() => moveItem(item, -1)}
+              onMoveDown={() => moveItem(item, 1)}
             />
           ))
         )}

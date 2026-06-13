@@ -87,6 +87,10 @@ export async function POST(req) {
         services: items.length,
         duplicates: items.filter((i) => i.duplicate).length,
       },
+      // Diagnostic: the raw shape of the first product (and a category) so the
+      // exact image/price/category fields can be mapped if anything looks off.
+      sampleProduct: products[0] || null,
+      sampleCategory: categories[0] || null,
     });
   }
 
