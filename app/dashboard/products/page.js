@@ -983,7 +983,7 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
           {!preview && <>
           {/* Mode tabs */}
           <div className="flex border border-gray-200 rounded-xl overflow-hidden text-xs">
-            {[["csv", "CSV File"], ["text", "Paste Text"], ["url", "From URL"]].map(([m, label]) => (
+            {[["csv", "CSV File"], ["text", "Paste Text"], ["url", "From URL"], ["aryeo", "From Aryeo"]].map(([m, label]) => (
               <button key={m} onClick={() => setMode(m)}
                 className={`px-4 py-2 flex-1 font-medium transition-colors ${mode === m ? "bg-[#3486cf] text-white" : "text-gray-500 hover:bg-gray-50"}`}>
                 {label}
@@ -1059,18 +1059,25 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
             </div>
           )}
 
-          {msg && <p className={`text-sm ${msg.startsWith("✓") ? "text-green-600" : "text-red-500"}`}>{msg}</p>}
+          {/* Aryeo mode — full connect/import flow with its own buttons */}
+          {mode === "aryeo" && (
+            <AryeoImport onImported={() => setTimeout(() => window.location.reload(), 1200)} />
+          )}
 
-          <div className="flex gap-3">
-            <button onClick={handleImport} disabled={importing || !canImport}
-              className="btn-primary px-6 py-2 text-sm flex-1 disabled:opacity-40">
-              {importing ? "Working…" : mode === "csv" ? "Review →" : "Import"}
-            </button>
-            <button onClick={close} className="btn-outline px-4 py-2 text-sm">Cancel</button>
-          </div>
-          <p className="text-xs text-gray-400">
-            All imported items are saved as inactive drafts. Toggle them Active when you're ready to publish.
-          </p>
+          {mode !== "aryeo" && (<>
+            {msg && <p className={`text-sm ${msg.startsWith("✓") ? "text-green-600" : "text-red-500"}`}>{msg}</p>}
+
+            <div className="flex gap-3">
+              <button onClick={handleImport} disabled={importing || !canImport}
+                className="btn-primary px-6 py-2 text-sm flex-1 disabled:opacity-40">
+                {importing ? "Working…" : mode === "csv" ? "Review →" : "Import"}
+              </button>
+              <button onClick={close} className="btn-outline px-4 py-2 text-sm">Cancel</button>
+            </div>
+            <p className="text-xs text-gray-400">
+              All imported items are saved as inactive drafts. Toggle them Active when you're ready to publish.
+            </p>
+          </>)}
           </>}
         </div>
       </div>
@@ -1090,7 +1097,6 @@ export default function ProductsPage() {
   const [teamMembers, setTeamMembers] = useState([]);
   const [pricingConfig, setPricingConfig] = useState(null);
   const [tenant, setTenant] = useState(null);
-  const [showAryeo, setShowAryeo] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -1324,10 +1330,6 @@ export default function ProductsPage() {
               </button>
             )
           )}
-          <button onClick={() => setShowAryeo(true)}
-            className="text-sm px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 transition-colors">
-            Import from Aryeo
-          </button>
           <ImportPricingButton
             onImport={(imported) => {
               setItems((prev) => ({
@@ -1448,22 +1450,6 @@ export default function ProductsPage() {
       <p className="text-xs text-gray-400 mt-4">
         Changes take effect immediately on your booking page. Active products are visible to clients.
       </p>
-
-      {/* Aryeo import */}
-      {showAryeo && (
-        <div className="modal-backdrop">
-          <div className="absolute inset-0" onClick={() => setShowAryeo(false)} />
-          <div className="modal-card relative w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-              <h2 className="font-semibold text-[#0F172A] text-base">Import from Aryeo</h2>
-              <button onClick={() => setShowAryeo(false)} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
-            </div>
-            <div className="p-6">
-              <AryeoImport onImported={() => setTimeout(() => window.location.reload(), 1200)} />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Edit / create modal */}
       {editing && (
