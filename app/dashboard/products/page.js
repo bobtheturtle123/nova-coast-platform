@@ -332,9 +332,22 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
             {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
           </div>
 
-          {/* Package-specific: tagline, deliverables, featured */}
+          {/* Package-specific: tagline, deliverables, included services, featured */}
           {type === "packages" && (
             <>
+              <div>
+                <label className="label-field">Tagline</label>
+                <input type="text" value={form.tagline} onChange={field("tagline")}
+                  className="input-field w-full"
+                  placeholder="Short subtitle on the booking page, e.g. Photos · Drone · Twilight" />
+                <p className="text-xs text-gray-400 mt-1">Shown under the package name. Leave blank to hide it.</p>
+              </div>
+              <div>
+                <label className="label-field">Deliverables</label>
+                <textarea value={form.deliverables} onChange={field("deliverables")} rows={2}
+                  className="input-field w-full resize-none"
+                  placeholder="What the client receives, e.g. 25 edited photos · Drone footage · Next-day delivery" />
+              </div>
               <div>
                 <label className="label-field">Included Services</label>
                 <div className="border border-gray-200 rounded-xl divide-y divide-gray-100">
@@ -345,6 +358,9 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                       <span className="text-sm text-[#0F172A]">{svc.name}</span>
                     </label>
                   ))}
+                  {allServices.length === 0 && (
+                    <p className="text-xs text-gray-400 px-4 py-3">No services yet — add services first to include them.</p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-3">
