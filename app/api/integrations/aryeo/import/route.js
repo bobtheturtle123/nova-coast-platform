@@ -104,10 +104,12 @@ export async function POST(req) {
       if (action === "skip") { result.skipped++; continue; }
 
       const externalId = it.externalId || externalIdFor(it);
+      const hasTiers = it.priceTiers && typeof it.priceTiers === "object" && Object.keys(it.priceTiers).length > 0;
       const base = {
         name:           String(it.name || "Untitled").slice(0, 100),
         description:    String(it.description || "").slice(0, 500),
-        price:          Number(it.price) || 0,
+        price:          hasTiers ? 0 : (Number(it.price) || 0),
+        ...(hasTiers ? { priceTiers: it.priceTiers } : {}),
         ...(Number(it.duration) ? { duration: Number(it.duration) } : {}),
         ...(it.category ? { tagline: String(it.category).slice(0, 200) } : {}),
         // Provenance + draft flags (NEVER auto-published).

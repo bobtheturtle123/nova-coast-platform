@@ -297,8 +297,17 @@ export default function DashboardHome() {
     return map;
   }, [zones]);
 
+  // The owner counts as a photographer in the team snapshot when they shoot,
+  // using the same "__owner__" identity their assigned shoots carry.
+  const effectiveMembers = useMemo(() => {
+    if (tenant?.ownerShoots === false) return teamMembers;
+    if (teamMembers.some(m => m.id === "__owner__")) return teamMembers;
+    const owner = { id: "__owner__", name: tenant?.ownerName || tenant?.businessName || "You", color: tenant?.branding?.primaryColor || "#3486cf", role: "photographer" };
+    return [owner, ...teamMembers];
+  }, [teamMembers, tenant]);
+
   // Team enriched with scope status
-  const teamWithStatus = useMemo(() => teamMembers.map(m => {
+  const teamWithStatus = useMemo(() => effectiveMembers.map(m => {
     const shoots = scopeListings.filter(l => l.photographerId === m.id);
     const zoneId = shoots[0]?.zoneId || photographerZoneMap[m.id] || null;
     const zone   = zoneId ? zones.find(z => z.id === zoneId) : null;
@@ -310,7 +319,7 @@ export default function DashboardHome() {
       primaryZone:     zone ? { id: zone.id, name: zone.name, color: zone.type === "exclude" ? "#EF4444" : (zone.color || "#3B82F6") } : null,
       hoursToday:      times.length ? `${times[0]} – ${times[times.length - 1]}` : null,
     };
-  }).sort((a, b) => Number(b.workingToday) - Number(a.workingToday)), [teamMembers, scopeListings, zones, photographerZoneMap]);
+  }).sort((a, b) => Number(b.workingToday) - Number(a.workingToday)), [effectiveMembers, scopeListings, zones, photographerZoneMap]);
 
   // Zones enriched with scope shoot counts — only exact zoneId matches to avoid misattribution
   const zonesWithStatus = useMemo(() => zones.map(z => {
@@ -328,7 +337,7 @@ export default function DashboardHome() {
     const grouped = {};
     scopeListings.filter(l => l.photographerId).forEach(l => {
       if (!grouped[l.photographerId]) {
-        const ph = teamMembers.find(m => m.id === l.photographerId);
+        const ph = effectiveMembers.find(m => m.id === l.photographerId);
         grouped[l.photographerId] = {
           photographerId:   l.photographerId,
           photographerName: l.photographerName || ph?.name || "Unassigned",
@@ -634,11 +643,11 @@ export default function DashboardHome() {
           <div className="grid grid-cols-1 md:grid-cols-2" style={{ borderBottom: "1px dashed #E9ECF0" }}>
 
             {/* Team column (hidden when no team members) */}
-            {teamMembers.length > 0 && (
+            {effectiveMembers.length > 0 && (
               <div className="p-4 border-b md:border-b-0 md:border-r" style={{ borderColor: "#E9ECF0" }}>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[14px] font-bold uppercase tracking-[0.09em]" style={{ color: "#9CA3AF" }}>
-                    Team working · {teamWithStatus.filter(m => m.workingToday).length} of {teamMembers.length}
+                    Team working · {teamWithStatus.filter(m => m.workingToday).length} of {effectiveMembers.length}
                   </p>
                   <Link href="/dashboard/team" className="text-[14px] transition-colors" style={{ color: "#9CA3AF" }}>Manage →</Link>
                 </div>
@@ -673,7 +682,7 @@ export default function DashboardHome() {
             )}
 
             {/* Zones column */}
-            <div className={`p-4 ${teamMembers.length === 0 ? "md:col-span-2" : ""}`}>
+            <div className={`p-4 ${effectiveMembers.length === 0 ? "md:col-span-2" : ""}`}>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[14px] font-bold uppercase tracking-[0.09em]" style={{ color: "#9CA3AF" }}>
                   Zones · {activeZoneCount} of {totalZoneCount} active

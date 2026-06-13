@@ -206,7 +206,11 @@ export default function AryeoImport() {
                       )}
                     </div>
                     <p className="text-[11px] text-gray-400 truncate">
-                      ${Number(it.price || 0).toLocaleString()}{it.duration ? ` · ${it.duration} min` : ""}{it.category ? ` · ${it.category}` : ""}
+                      {(() => {
+                        const tv = it.priceTiers ? Object.values(it.priceTiers).filter((v) => v > 0) : [];
+                        return tv.length ? `From $${Math.min(...tv).toLocaleString()} · ${tv.length} tiers` : `$${Number(it.price || 0).toLocaleString()}`;
+                      })()}
+                      {it.duration ? ` · ${it.duration} min` : ""}{it.category ? ` · ${it.category}` : ""}
                     </p>
                   </div>
                   <select value={it.action} onChange={(e) => setItemAction(it.key, e.target.value)}
