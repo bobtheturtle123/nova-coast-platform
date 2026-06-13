@@ -969,7 +969,6 @@ export default function ProductsPage() {
   const [teamMembers, setTeamMembers] = useState([]);
   const [pricingConfig, setPricingConfig] = useState(null);
   const [tenant, setTenant] = useState(null);
-  const [cleaning, setCleaning] = useState(false);
 
   // When the owner personally shoots, they're an assignable photographer too —
   // same "__owner__" identity used everywhere else (schedule, service areas).
@@ -1018,28 +1017,6 @@ export default function ProductsPage() {
     }
     auth.currentUser?.getIdToken().then(() => load());
   }, []);
-
-  async function cleanupTiers() {
-    if (cleaning) return;
-    setCleaning(true);
-    try {
-      const token = await getToken();
-      const res = await fetch("/api/dashboard/products/cleanup-tiers", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        toast(data.message || "Done.");
-        if (data.cleaned > 0) setTimeout(() => window.location.reload(), 900);
-      } else {
-        toast(data.error || "Couldn't clean up tier prices.", "error");
-      }
-    } catch {
-      toast("Couldn't clean up tier prices.", "error");
-    }
-    setCleaning(false);
-  }
 
   async function saveItem(payload, formType) {
     const token = await getToken();
@@ -1178,14 +1155,6 @@ export default function ProductsPage() {
           <p className="page-subtitle">Customize the services that appear on your booking page</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={cleanupTiers}
-            disabled={cleaning}
-            title="Remove leftover tier prices from imports that don't match your configured tiers"
-            className="text-sm px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 transition-colors disabled:opacity-50"
-          >
-            {cleaning ? "Cleaning…" : "Clean up tier prices"}
-          </button>
           <ImportPricingButton
             onImport={(imported) => {
               setItems((prev) => ({
