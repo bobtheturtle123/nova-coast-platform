@@ -469,7 +469,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                               <label className="block text-xs text-gray-500 mb-1">
                                 {tier.label || tier.name}
                                 <span className="text-gray-400 ml-1">
-                                  ({tier.max === 999999 ? "unlimited+" : `to ${(tier.max || 0).toLocaleString()}`})
+                                  ({(!tier.max || tier.max >= 999999) ? "unlimited" : `to ${Number(tier.max).toLocaleString()}`})
                                 </span>
                               </label>
                               <div className="flex items-center gap-1">

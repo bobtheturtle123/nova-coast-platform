@@ -1,5 +1,5 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
-import { getKey, fetchCategories, fetchProducts, mapProductsToServices } from "@/lib/aryeo";
+import { getKey, fetchCategories, fetchProducts, enrichProducts, mapProductsToServices } from "@/lib/aryeo";
 
 export const dynamic     = "force-dynamic";
 export const maxDuration = 60;
@@ -54,11 +54,16 @@ export async function POST(req) {
     try {
       categories = await fetchCategories(apiKey).catch(() => []);
       products   = await fetchProducts(apiKey);
+      products   = await enrichProducts(apiKey, products).catch(() => products);
     } catch (e) {
       return Response.json({ error: "Couldn't fetch from Aryeo. Re-check your API key and try again." }, { status: 502 });
     }
 
-    const mapped = mapProductsToServices(products, categories);
+    // The studio's configured tier names — variant prices map onto these by order.
+    const tenantSnapEarly = await tenantRef.get();
+    const tierNames = (tenantSnapEarly.data()?.pricingConfig?.tiers || []).map((t) => t.name);
+
+    const mapped = mapProductsToServices(products, categories, tierNames);
     const { byName, byExternalId } = await loadExisting(tenantRef);
 
     const items = mapped.map((it) => {
