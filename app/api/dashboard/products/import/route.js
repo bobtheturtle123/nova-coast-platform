@@ -205,14 +205,19 @@ export async function POST(req) {
         if (Object.keys(priceTiers).length === 0) priceTiers = null;
       }
 
+      // Fold tagline + deliverables into the (editable) description so nothing
+      // lands in hidden, uneditable fields. Title + description only.
+      const descParts = [fixText(description)];
+      if (tagline) descParts.unshift(fixText(tagline));
+      if (deliverables.length) descParts.push("Includes: " + deliverables.join(", "));
+      const fullDescription = descParts.filter(Boolean).join("\n").slice(0, 800);
+
       const doc = {
         type,
         name:        fixText(rawName).slice(0, 100),
-        description: fixText(description).slice(0, 500),
+        description: fullDescription,
         price:       priceTiers ? 0 : flatPrice,
         active:      false,
-        ...(tagline          ? { tagline: fixText(tagline).slice(0, 200) } : {}),
-        ...(deliverables.length ? { deliverables } : {}),
         ...(priceTiers       ? { priceTiers }       : {}),
         ...(isFeatured       ? { featured: true }   : {}),
         ...(badgeText && !isFeatured ? { badge: badgeText.slice(0, 50) } : {}),

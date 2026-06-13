@@ -180,7 +180,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
         // no longer exists), which is what made "From $549" stick after editing.
         ...(form.tiered ? { priceTiers: pruneTiers(form.priceTiers) } : { priceTiers: null }),
       }),
-      ...(type === "packages" ? { tagline: form.tagline, deliverables: form.deliverables, featured: form.featured, includes: form.includes } : {}),
+      ...(type === "packages" ? { featured: form.featured, includes: form.includes } : {}),
       ...(type === "addons" ? { showWith: form.showWith } : {}),
       ...((type === "services" || type === "packages") ? { isTwilight: form.isTwilight } : {}),
       ...((type === "services" || type === "packages") ? {
@@ -349,37 +349,38 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
             {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
           </div>
 
-          {/* Package-specific: tagline, deliverables, included services, featured */}
+          {/* Package-specific: included services (collapsed) + featured */}
           {type === "packages" && (
             <>
-              <div>
-                <label className="label-field">Tagline</label>
-                <input type="text" value={form.tagline} onChange={field("tagline")}
-                  className="input-field w-full"
-                  placeholder="Short subtitle on the booking page, e.g. Photos · Drone · Twilight" />
-                <p className="text-xs text-gray-400 mt-1">Shown under the package name. Leave blank to hide it.</p>
-              </div>
-              <div>
-                <label className="label-field">Deliverables</label>
-                <textarea value={form.deliverables} onChange={field("deliverables")} rows={2}
-                  className="input-field w-full resize-none"
-                  placeholder="What the client receives, e.g. 25 edited photos · Drone footage · Next-day delivery" />
-              </div>
-              <div>
-                <label className="label-field">Included Services</label>
-                <div className="border border-gray-200 rounded-xl divide-y divide-gray-100">
-                  {allServices.map((svc) => (
-                    <label key={svc.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
-                      <input type="checkbox" checked={form.includes.includes(svc.id)}
-                        onChange={() => toggleService(svc.id)} className="rounded" />
-                      <span className="text-sm text-[#0F172A]">{svc.name}</span>
-                    </label>
-                  ))}
-                  {allServices.length === 0 && (
-                    <p className="text-xs text-gray-400 px-4 py-3">No services yet — add services first to include them.</p>
-                  )}
+              <details className="border border-gray-200 rounded-lg">
+                <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none hover:bg-gray-50 rounded-lg">
+                  <span className="text-sm font-medium text-[#0F172A]">
+                    Included services
+                    {form.includes.length > 0 && (
+                      <span className="ml-2 text-xs text-gray-400">{form.includes.length} selected</span>
+                    )}
+                  </span>
+                  <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </summary>
+                <div className="px-4 pb-4 pt-1">
+                  <p className="text-xs text-gray-500 mb-2">
+                    Optional. Tick the individual services this package bundles together (e.g. Photography + Drone + Twilight).
+                    This is just for your reference and to show clients what&apos;s included — it doesn&apos;t change the package price.
+                  </p>
+                  <div className="border border-gray-200 rounded-xl divide-y divide-gray-100">
+                    {allServices.map((svc) => (
+                      <label key={svc.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
+                        <input type="checkbox" checked={form.includes.includes(svc.id)}
+                          onChange={() => toggleService(svc.id)} className="rounded" />
+                        <span className="text-sm text-[#0F172A]">{svc.name}</span>
+                      </label>
+                    ))}
+                    {allServices.length === 0 && (
+                      <p className="text-xs text-gray-400 px-4 py-3">No services yet — add services first to include them.</p>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </details>
               <div className="flex items-center gap-3">
                 <input type="checkbox" id="featured" checked={form.featured} onChange={field("featured")} className="rounded" />
                 <label htmlFor="featured" className="text-sm font-medium text-[#0F172A] cursor-pointer">
