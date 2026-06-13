@@ -1,8 +1,11 @@
-import { adminDb } from "@/lib/firebase-admin";
-
 const BASE = "https://kyoriaos.com";
 
 export default async function sitemap() {
+  // Load firebase-admin lazily so a missing service account / env can never 500
+  // the sitemap — the static marketing + guide URLs must always be served.
+  let adminDb = null;
+  try { ({ adminDb } = await import("@/lib/firebase-admin")); } catch { adminDb = null; }
+
   const staticPages = [
     { url: BASE,                    lastModified: new Date(), changeFrequency: "monthly", priority: 1.0 },
     { url: `${BASE}/legal/privacy`, lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },

@@ -245,9 +245,26 @@ const PRICE_PLANS = [
   },
 ];
 
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "KyoriaOS",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  url: "https://kyoriaos.com",
+  description: "The complete system for real estate media businesses: booking, scheduling, gallery delivery, payments, property websites, and an agent portal — all connected.",
+  offers: {
+    "@type": "Offer",
+    price: String(PLANS.solo.monthlyPrice),
+    priceCurrency: "USD",
+  },
+  publisher: { "@type": "Organization", name: "KyoriaOS", url: "https://kyoriaos.com", logo: "https://kyoriaos.com/kyoriaos-logo.png" },
+};
+
 export default function MarketingPage() {
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link
