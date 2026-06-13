@@ -58,6 +58,18 @@ export async function POST(req) {
       return m ? Number(m[0]) : 0;
     }
 
+    // Repair common UTF-8-as-Latin1 mojibake found in exported CSVs (e.g. "Â·"
+    // for "·", curly quotes/dashes) so imported copy reads cleanly.
+    function fixText(str) {
+      return String(str || "")
+        .replace(/â€“/g, "–").replace(/â€”/g, "—")
+        .replace(/â€™/g, "’").replace(/â€˜/g, "‘")
+        .replace(/â€œ/g, "“").replace(/â€/g, "”").replace(/â€¦/g, "…")
+        .replace(/Ã©/g, "é").replace(/Ã¨/g, "è").replace(/Ã±/g, "ñ").replace(/Ã¼/g, "ü")
+        .replace(/Â·/g, "·").replace(/Â°/g, "°").replace(/Â /g, " ").replace(/Â/g, "")
+        .trim();
+    }
+
     // Extract the tier name from a column header like "Price_Tiny_Under_800" → "Tiny"
     // Handles both "price_tiny" and "Price_Tiny_Under_800" styles
     function extractTierName(header) {
@@ -109,10 +121,13 @@ export async function POST(req) {
         const raw      = rawHeaders[idx] || "";
         const afterPx  = raw.replace(/^price_/i, "");
         const labelRaw = afterPx.slice(name.length).replace(/^_+/, "");
-        const label    = labelRaw.replace(/_/g, " ").trim();
-        const nums     = (label.match(/\d[\d,]*/g) || []).map((n) => Number(n.replace(/,/g, "")));
+        // Underscores stand in for spaces/commas. Re-join thousands groups so
+        // "801_2_500" reads as 801 and 2500 (not 801, 2, 500).
+        let cleaned = labelRaw.replace(/_/g, " ").replace(/(\d{1,3})\s+(\d{3})\b/g, "$1$2").trim();
+        const label = cleaned.replace(/\bsqft\b/i, "sqft");
+        const nums  = (cleaned.match(/\d[\d,]*/g) || []).map((n) => Number(n.replace(/,/g, "")));
         let max = null;
-        if (/\+|plus|over|above|and\s*up|up\b/i.test(label)) max = 999999;
+        if (/\+|plus|over|above|and\s*up/i.test(cleaned)) max = 999999;
         else if (nums.length) max = nums[nums.length - 1];
         return { name, label: label || name, max };
       });
@@ -162,15 +177,15 @@ export async function POST(req) {
       let tagline     = taglineIdx >= 0 ? row[taglineIdx] : "";
       if (marketingIdx >= 0 && row[marketingIdx]) {
         const parts = row[marketingIdx].split("|").map((s) => s.trim()).filter(Boolean);
-        if (!tagline && parts[0]) tagline     = parts[0];
-        if (!description && parts[1]) description = parts[1];
-        else if (!description && parts[0]) description = parts[0];
+        if (!tagline && parts[0]) tagline = parts[0];
+        // Use the richest (longest) marketing line as the description.
+        if (!description && parts.length) description = [...parts].sort((a, b) => b.length - a.length)[0];
       }
 
       // Feature list / deliverables
-      const deliverables = featureIdx >= 0
+      const deliverables = (featureIdx >= 0
         ? row[featureIdx].split("|").map((s) => s.trim()).filter(Boolean)
-        : [];
+        : []).map(fixText);
 
       // Badge → featured flag + badge text
       const badgeText    = badgeIdx >= 0 ? row[badgeIdx].trim() : "";
@@ -192,11 +207,11 @@ export async function POST(req) {
 
       const doc = {
         type,
-        name:        String(rawName).slice(0, 100),
-        description: String(description).slice(0, 500),
+        name:        fixText(rawName).slice(0, 100),
+        description: fixText(description).slice(0, 500),
         price:       priceTiers ? 0 : flatPrice,
         active:      false,
-        ...(tagline          ? { tagline: String(tagline).slice(0, 200) } : {}),
+        ...(tagline          ? { tagline: fixText(tagline).slice(0, 200) } : {}),
         ...(deliverables.length ? { deliverables } : {}),
         ...(priceTiers       ? { priceTiers }       : {}),
         ...(isFeatured       ? { featured: true }   : {}),
