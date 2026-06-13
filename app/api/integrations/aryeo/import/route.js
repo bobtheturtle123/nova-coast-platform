@@ -105,6 +105,7 @@ export async function POST(req) {
 
       const externalId = it.externalId || externalIdFor(it);
       const hasTiers = it.priceTiers && typeof it.priceTiers === "object" && Object.keys(it.priceTiers).length > 0;
+      const chosenType = ["packages", "services", "addons"].includes(it.type) ? it.type : "services";
       const base = {
         name:           String(it.name || "Untitled").slice(0, 100),
         description:    String(it.description || "").slice(0, 500),
@@ -112,6 +113,7 @@ export async function POST(req) {
         ...(hasTiers ? { priceTiers: it.priceTiers } : {}),
         ...(Number(it.duration) ? { duration: Number(it.duration) } : {}),
         ...(it.category ? { tagline: String(it.category).slice(0, 200) } : {}),
+        ...(it.imageUrl ? { thumbnailUrl: String(it.imageUrl), mediaUrls: [String(it.imageUrl)] } : {}),
         // Provenance + draft flags (NEVER auto-published).
         external_source: "aryeo",
         external_id:     externalId,
@@ -124,13 +126,13 @@ export async function POST(req) {
       };
 
       if (action === "update" && it.existingId) {
-        // Only updates the specific service the user chose — never bulk-overwrites.
-        const ref = tenantRef.collection(it.existingType === "addons" ? "addons" : it.existingType === "packages" ? "packages" : "services").doc(it.existingId);
-        batch.set(ref, base, { merge: true });
+        // Only updates the specific item the user chose — never bulk-overwrites.
+        const coll = ["addons", "packages", "services"].includes(it.existingType) ? it.existingType : "services";
+        batch.set(tenantRef.collection(coll).doc(it.existingId), base, { merge: true });
         result.updated++;
       } else {
-        const ref = tenantRef.collection("services").doc();
-        batch.set(ref, { id: ref.id, type: "services", active: false, createdAt: now, ...base });
+        const ref = tenantRef.collection(chosenType).doc();
+        batch.set(ref, { id: ref.id, type: chosenType, active: false, createdAt: now, ...base });
         result.imported++;
       }
     } catch {

@@ -10,7 +10,7 @@ import { auth } from "@/lib/firebase";
 
 const ACTION_LABELS = { new: "Import as new", update: "Update existing", skip: "Skip" };
 
-export default function AryeoImport() {
+export default function AryeoImport({ onImported }) {
   const [status,   setStatus]   = useState(null);   // { connected, lastVerifiedAt }
   const [apiKey,   setApiKey]    = useState("");
   const [saving,   setSaving]    = useState(false);
@@ -84,8 +84,8 @@ export default function AryeoImport() {
     finally { setLoadingPreview(false); }
   }
 
-  function setItemAction(key, action) {
-    setPreview((p) => ({ ...p, items: p.items.map((it) => it.key === key ? { ...it, action } : it) }));
+  function setItemField(key, field, value) {
+    setPreview((p) => ({ ...p, items: p.items.map((it) => it.key === key ? { ...it, [field]: value } : it) }));
   }
   function setAll(action) {
     setPreview((p) => ({ ...p, items: p.items.map((it) => ({ ...it, action })) }));
@@ -100,7 +100,7 @@ export default function AryeoImport() {
         body: JSON.stringify({ mode: "commit", items: preview.items }),
       });
       const d = await res.json();
-      if (res.ok) { setResults(d); setPreview(null); }
+      if (res.ok) { setResults(d); setPreview(null); if (onImported) onImported(d); }
       else note(d.error || "Import failed.", "error");
     } catch { note("Import failed.", "error"); }
     finally { setImporting(false); }
@@ -196,6 +196,11 @@ export default function AryeoImport() {
             <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
               {preview.items.map((it) => (
                 <div key={it.key} className="flex items-center gap-3 px-6 py-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
+                    {it.imageUrl
+                      ? <img src={it.imageUrl} alt="" className="w-full h-full object-cover" />
+                      : <div className="w-full h-full flex items-center justify-center text-sm opacity-20">🏠</div>}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-[#0F172A] truncate">{it.name}</span>
@@ -213,7 +218,15 @@ export default function AryeoImport() {
                       {it.duration ? ` · ${it.duration} min` : ""}{it.category ? ` · ${it.category}` : ""}
                     </p>
                   </div>
-                  <select value={it.action} onChange={(e) => setItemAction(it.key, e.target.value)}
+                  <select value={it.type} onChange={(e) => setItemField(it.key, "type", e.target.value)}
+                    disabled={it.action === "skip"}
+                    className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white flex-shrink-0 disabled:opacity-40"
+                    title="Where this lands in Products">
+                    <option value="services">Service</option>
+                    <option value="packages">Package</option>
+                    <option value="addons">Add-on</option>
+                  </select>
+                  <select value={it.action} onChange={(e) => setItemField(it.key, "action", e.target.value)}
                     className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white flex-shrink-0">
                     <option value="new">{ACTION_LABELS.new}</option>
                     {it.duplicate && <option value="update">{ACTION_LABELS.update}</option>}

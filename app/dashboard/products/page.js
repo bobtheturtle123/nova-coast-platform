@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/components/Toast";
 import { isDemo, getDemoProducts } from "@/lib/demoData";
+import AryeoImport from "@/components/dashboard/AryeoImport";
 
 async function uploadProductMedia(file) {
   const token = await auth.currentUser.getIdToken();
@@ -1089,6 +1090,7 @@ export default function ProductsPage() {
   const [teamMembers, setTeamMembers] = useState([]);
   const [pricingConfig, setPricingConfig] = useState(null);
   const [tenant, setTenant] = useState(null);
+  const [showAryeo, setShowAryeo] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -1322,6 +1324,10 @@ export default function ProductsPage() {
               </button>
             )
           )}
+          <button onClick={() => setShowAryeo(true)}
+            className="text-sm px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 transition-colors">
+            Import from Aryeo
+          </button>
           <ImportPricingButton
             onImport={(imported) => {
               setItems((prev) => ({
@@ -1442,6 +1448,22 @@ export default function ProductsPage() {
       <p className="text-xs text-gray-400 mt-4">
         Changes take effect immediately on your booking page. Active products are visible to clients.
       </p>
+
+      {/* Aryeo import */}
+      {showAryeo && (
+        <div className="modal-backdrop">
+          <div className="absolute inset-0" onClick={() => setShowAryeo(false)} />
+          <div className="modal-card relative w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              <h2 className="font-semibold text-[#0F172A] text-base">Import from Aryeo</h2>
+              <button onClick={() => setShowAryeo(false)} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
+            </div>
+            <div className="p-6">
+              <AryeoImport onImported={() => setTimeout(() => window.location.reload(), 1200)} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit / create modal */}
       {editing && (
