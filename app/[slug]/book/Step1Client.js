@@ -10,6 +10,11 @@ import clsx from "clsx";
 // ─── Product Lightbox ──────────────────────────────────────────────────────────
 function ProductLightbox({ item, images, price, services, onClose }) {
   const [idx, setIdx] = useState(0);
+  // Prefer server-resolved names; otherwise resolve from the catalog and drop
+  // any that can't be matched (never show a raw ID).
+  const includeNames = item.includeNames?.length
+    ? item.includeNames
+    : (item.includes || []).map((s) => services?.find((sv) => sv.id === s)?.name).filter(Boolean);
   useEffect(() => {
     function onKey(e) {
       if (e.key === "Escape") onClose();
@@ -74,18 +79,15 @@ function ProductLightbox({ item, images, price, services, onClose }) {
           {item.description && (
             <p className="text-gray-600 leading-relaxed mb-4">{item.description}</p>
           )}
-          {item.includes?.length > 0 && (
+          {includeNames.length > 0 && (
             <div className="mb-4">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Includes</p>
               <ul className="space-y-1">
-                {item.includes.map((s, i) => {
-                  const svcName = services?.find((sv) => sv.id === s)?.name || s;
-                  return (
-                    <li key={i} className="flex items-center gap-2 text-sm text-[#0F172A]">
-                      <span className="text-accent-brand font-bold">✓</span>{svcName}
-                    </li>
-                  );
-                })}
+                {includeNames.map((name, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-[#0F172A]">
+                    <span className="text-accent-brand font-bold">✓</span>{name}
+                  </li>
+                ))}
               </ul>
             </div>
           )}
@@ -300,24 +302,27 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                     <p className="text-sm text-gray-500 mb-3 leading-relaxed">{pkg.tagline}</p>
                   )}
 
-                  {pkg.includes?.length > 0 && (
-                    <ul className="space-y-1.5 mb-3 flex-1">
-                      {pkg.includes.map((sid) => {
-                        const svc = services.find((s) => s.id === sid);
-                        return (
-                          <li key={sid} className="flex items-center gap-2 text-sm text-gray-700">
+                  {(() => {
+                    const names = pkg.includeNames?.length
+                      ? pkg.includeNames
+                      : (pkg.includes || []).map((sid) => services.find((s) => s.id === sid)?.name).filter(Boolean);
+                    if (names.length === 0) return null;
+                    return (
+                      <ul className="space-y-1.5 mb-3 flex-1">
+                        {names.map((name, i) => (
+                          <li key={i} className="flex items-center gap-2 text-sm text-gray-700">
                             <span className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center"
                               style={{ backgroundColor: `color-mix(in srgb, var(--color-primary) 12%, transparent)` }}>
                               <svg width="8" height="8" fill="none" viewBox="0 0 24 24" strokeWidth="3.5" style={{ color: "var(--color-primary)" }} stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                               </svg>
                             </span>
-                            {svc?.name || sid}
+                            {name}
                           </li>
-                        );
-                      })}
-                    </ul>
-                  )}
+                        ))}
+                      </ul>
+                    );
+                  })()}
 
                   {pkg.deliverables && (
                     <p className="text-xs text-gray-400 border-t border-gray-100 pt-3 mb-2">{pkg.deliverables}</p>

@@ -224,8 +224,8 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                   <button key={t} type="button" onClick={() => setType(t)}
                     className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
                       type === t
-                        ? "border-[#3486cf] bg-[#3486cf] text-white"
-                        : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                        ? "border-[#3486cf] bg-[#3486cf] text-white shadow-sm"
+                        : "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
                     }`}>
                     {meta.singular}
                   </button>
