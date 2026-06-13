@@ -7,6 +7,7 @@ const VIMEO_ENABLED = false;
 import { useEffect, useState, useCallback } from "react";
 import { auth } from "@/lib/firebase";
 import { isDemo, getDemoSettingsTenant, DEMO_TEAM } from "@/lib/demoData";
+import AryeoImport from "@/components/dashboard/AryeoImport";
 import { useToast } from "@/components/Toast";
 import { useTenantSettings } from "@/lib/TenantSettingsContext";
 import { getAppUrl } from "@/lib/appUrl";
@@ -3386,6 +3387,9 @@ export default function SettingsPage() {
           </button>
         )}
       </details>
+
+      {/* Aryeo Import */}
+      <div className="mt-6"><AryeoImport /></div>
 
       {/* Dropbox */}
       <details id="settings-dropbox" className="card mt-6 scroll-mt-24 group">
