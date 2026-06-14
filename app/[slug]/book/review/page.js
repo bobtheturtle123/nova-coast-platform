@@ -101,15 +101,15 @@ export default function TenantReviewPage() {
   return (
     <>
       <StepProgress current={5} />
-      <div className="step-container">
+      <div className="max-w-6xl mx-auto px-6 py-10 animate-fade-up">
         <div className="mb-8">
           <span style={{ display: "inline-block", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A8843F", background: "#F7F0E2", padding: "5px 12px", borderRadius: 99, marginBottom: 14 }}>Step 4 · Review</span>
           <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", color: "#181B20", lineHeight: 1.1 }} className="mb-2">Review your booking</h1>
           <p className="font-body text-gray-500">Everything look right? Hit Continue to choose a date.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-10 items-start">
+          <div className="space-y-4">
 
             {/* Property card */}
             <div className="card">
@@ -226,7 +226,7 @@ export default function TenantReviewPage() {
           </div>
 
           {/* Price summary */}
-          <div className="lg:col-span-1">
+          <div>
             {pricing && (
               <div className="card sticky top-6">
                 <p className="section-label mb-4">Price Summary</p>

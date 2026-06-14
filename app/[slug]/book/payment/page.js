@@ -343,10 +343,10 @@ export default function TenantPaymentPage() {
   return (
     <>
       <StepProgress current={6} />
-      <div className="step-container">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      <div className="max-w-6xl mx-auto px-6 py-10 animate-fade-up">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-10 items-start">
           {/* Left — client info + payment */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6">
             <div>
               <span style={{ display: "inline-block", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A8843F", background: "#F7F0E2", padding: "5px 12px", borderRadius: 99, marginBottom: 14 }}>Step 6 · Deposit</span>
               <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", color: "#181B20", lineHeight: 1.1 }} className="mb-2">Almost there</h1>
@@ -629,7 +629,7 @@ export default function TenantPaymentPage() {
           </div>
 
           {/* Right — order summary */}
-          <div className="lg:col-span-1">
+          <div>
             <OrderSummary
               pricing={pricing}
               catalog={catalog}

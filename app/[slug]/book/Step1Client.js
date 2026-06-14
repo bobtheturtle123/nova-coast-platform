@@ -96,7 +96,7 @@ const BKG_CSS = `
   --shadow-lg:0 24px 60px -22px rgba(24,27,32,0.22);
   color:var(--ink); }
 .bkg *{box-sizing:border-box;}
-.bkg .shell{max-width:1200px;margin:0 auto;padding:34px 32px 120px;display:grid;grid-template-columns:1fr 366px;gap:44px;align-items:start;}
+.bkg .shell{max-width:1320px;margin:0 auto;padding:34px 36px 120px;display:grid;grid-template-columns:1fr 336px;gap:48px;align-items:start;}
 .bkg .eyebrow{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold-dark);background:var(--gold-soft);padding:6px 13px;border-radius:99px;margin-bottom:16px;}
 .bkg .head h1{font-size:33px;font-weight:800;line-height:1.08;letter-spacing:-0.03em;max-width:580px;color:var(--ink);}
 .bkg .head p{color:var(--muted);font-size:16px;margin-top:12px;max-width:560px;line-height:1.6;}
@@ -109,8 +109,8 @@ const BKG_CSS = `
 .bkg .section-label s{text-decoration:none;font-size:12.5px;color:var(--muted);}
 .bkg .section-label .c{flex:1;height:1px;background:var(--line);}
 /* packages */
-.bkg .pkgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-items:stretch;}
-.bkg .pkg{position:relative;border:1.5px solid var(--line-2);background:#fff;border-radius:var(--r);padding:18px;display:flex;flex-direction:column;transition:all .16s;box-shadow:var(--shadow);}
+.bkg .pkgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:22px;align-items:stretch;}
+.bkg .pkg{position:relative;border:1.5px solid var(--line-2);background:#fff;border-radius:var(--r);padding:24px 22px;display:flex;flex-direction:column;transition:all .16s;box-shadow:var(--shadow);}
 .bkg .pkg:hover{border-color:var(--gold);}
 .bkg .pkg.on{border-color:var(--brand);border-width:2px;box-shadow:var(--shadow-lg);}
 .bkg .pkg.featured{background:#FFFDF8;border-color:var(--gold);}
@@ -120,8 +120,8 @@ const BKG_CSS = `
 .bkg .pthumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .bkg .pkg .pn{font-size:17px;font-weight:800;}
 .bkg .pkg .tg{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px;min-height:34px;}
-.bkg .pkg .price{display:flex;align-items:baseline;gap:8px;margin:11px 0 8px;}
-.bkg .pkg .price b{font-size:28px;font-weight:800;letter-spacing:-0.03em;color:var(--ink);}
+.bkg .pkg .price{display:flex;align-items:baseline;gap:7px;margin:8px 0 6px;}
+.bkg .pkg .price b{font-size:24px;font-weight:800;letter-spacing:-0.03em;color:var(--ink);}
 .bkg .save{display:inline-flex;font-size:11px;font-weight:700;color:var(--sage-dark);background:var(--sage-soft);padding:3px 9px;border-radius:99px;align-self:flex-start;margin:0 0 12px;}
 /* keep blurbs short + tidy (max two lines) */
 .bkg .pkg .tg,.bkg .svc .sb,.bkg .uprow .ab{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
@@ -141,8 +141,8 @@ const BKG_CSS = `
 .bkg .uphead{margin-bottom:18px;}
 .bkg .uphead h2{font-size:20px;font-weight:800;letter-spacing:-0.02em;}
 .bkg .uphead p{font-size:14px;color:var(--muted);margin-top:6px;max-width:560px;line-height:1.55;}
-.bkg .uprows{display:flex;flex-direction:column;gap:10px;}
-.bkg .uprow{display:flex;align-items:center;gap:13px;padding:11px 14px;border:1.5px solid var(--line-2);background:#fff;border-radius:13px;transition:all .14s;text-align:left;width:100%;cursor:pointer;}
+.bkg .uprows{display:flex;flex-direction:column;gap:12px;}
+.bkg .uprow{display:flex;align-items:center;gap:14px;padding:15px 18px;border:1.5px solid var(--line-2);background:#fff;border-radius:13px;transition:all .14s;text-align:left;width:100%;cursor:pointer;}
 .bkg .uprow:hover{border-color:var(--gold);}
 .bkg .uprow.on{border-color:var(--brand);background:#FCFBF8;}
 .bkg .uprow .box{width:20px;height:20px;border-radius:6px;border:1.8px solid var(--line-2);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;}
@@ -257,7 +257,6 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
   const [confirmed,    setConfirmed]    = useState(!usesGate || !!squareFootage);
   const [lightboxItem, setLightboxItem] = useState(null);
   const [alaOpen,      setAlaOpen]      = useState(false);
-  const [moreAddonsOpen, setMoreAddonsOpen] = useState(false);
 
   function getImages(item) {
     if (item.mediaUrls?.length) return item.mediaUrls.filter((u) => u && !u.match(/\.(mp4|mov|webm)$/i));
@@ -303,7 +302,6 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
   const recommendedAddons = selectedIds.size
     ? addons.filter((a) => Array.isArray(a.showWith) && a.showWith.some((id) => selectedIds.has(id)))
     : [];
-  const otherAddons = addons.filter((a) => !Array.isArray(a.showWith) || a.showWith.length === 0);
   const activeRetainers = (catalog.retainers || []).filter((r) => r.active !== false);
   // Trust badges are tenant-controlled. If they've configured a list (even empty),
   // use it verbatim; otherwise show a single safe, always-true default.
@@ -511,42 +509,6 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                                 <button className="addbtn">{on ? <>{CHECK}Added</> : "+ Add"}</button>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* MORE ADD-ONS (general add-ons not tied to a package) — collapsed */}
-          {otherAddons.length > 0 && (
-            <section className="block">
-              <div className={`alacarte${moreAddonsOpen ? " open" : ""}`}>
-                <button className="ala-toggle" onClick={() => setMoreAddonsOpen((v) => !v)}>
-                  <span className="ala-txt"><b>More add-ons</b><s>Optional extras available with any booking.</s></span>
-                  <span className="ala-btn">{moreAddonsOpen ? "Hide" : "View"} add-ons <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg></span>
-                </button>
-                {moreAddonsOpen && (
-                  <div className="ala-body">
-                    <div className="uprows">
-                      {otherAddons.map((a) => {
-                        const on = addonIds.includes(a.id);
-                        const images = getImages(a);
-                        return (
-                          <div key={a.id} className={`uprow${on ? " on" : ""}`} onClick={() => toggleAddon(a.id)}>
-                            <span className="box">{CHECK}</span>
-                            {images[0] && <div className="umini"><img src={images[0]} alt="" /></div>}
-                            <span className="mid">
-                              <span className="anm">{a.name}</span>
-                              {a.description && <span className="ab">{a.description}</span>}
-                              {(a.description || images.length > 0) && (
-                                <button className="deti" onClick={(e) => { e.stopPropagation(); setLightboxItem({ item: a, images, price: displayPrice(a) }); }}>Details</button>
-                              )}
-                            </span>
-                            <span className="ap">+{displayPrice(a)}</span>
                           </div>
                         );
                       })}
