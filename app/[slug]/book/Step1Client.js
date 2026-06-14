@@ -339,9 +339,9 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
         <StepProgress current={1} />
         <div className="step-container">
           <div className="max-w-md mx-auto text-center">
-            <p className="section-label mb-4">Step 1 of 6</p>
-            <h1 className="font-display text-4xl mb-3 leading-tight" style={{ color: "var(--color-primary)" }}>{gateQuestion}</h1>
-            <p className="font-body text-gray-400 mb-10 leading-relaxed">{gateSubtext}</p>
+            <span style={{ display: "inline-block", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A8843F", background: "#F7F0E2", padding: "5px 12px", borderRadius: 99, marginBottom: 16 }}>Step 1 · Package</span>
+            <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-0.03em", color: "#181B20", lineHeight: 1.1 }} className="mb-3">{gateQuestion}</h1>
+            <p className="font-body text-gray-500 mb-10 leading-relaxed">{gateSubtext}</p>
             <div className="bg-white border border-gray-100 rounded-xl p-8 shadow-sm">
               <input type="number" inputMode="numeric" min="0" autoFocus
                 placeholder={pricingMode === "photos" ? "30" : "2400"}
@@ -351,7 +351,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                 style={{ color: "var(--color-primary)", borderBottomColor: "var(--color-primary)" }} />
               <p className="text-xs text-gray-400 mb-7 tracking-widest uppercase">
                 {tier && pricingMode !== "photos" && pricingMode !== "custom"
-                  ? <span className="text-accent-brand font-semibold">{TIER_LABELS[tier]}</span>
+                  ? <span className="font-semibold" style={{ color: "#A8843F" }}>{tierLabel || TIER_LABELS[tier]}</span>
                   : sqftInput ? `${Number(sqftInput).toLocaleString()} ${pricingMode === "photos" ? "photos" : pricingMode === "custom" ? customLabel : "sq ft"}` : gateLabel}
               </p>
               {overCap && (

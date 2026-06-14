@@ -114,9 +114,9 @@ export default function TenantPropertyPage() {
   return (
     <>
       <StepProgress current={3} />
-      <div className="step-container">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          <div className="lg:col-span-2">
+      <div className="max-w-6xl mx-auto px-6 py-10 animate-fade-up">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10 items-start">
+          <div>
             <div className="mb-8">
               <span style={{ display: "inline-block", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A8843F", background: "#F7F0E2", padding: "5px 12px", borderRadius: 99, marginBottom: 14 }}>Step 3 · Property</span>
               <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", color: "#181B20", lineHeight: 1.1 }} className="mb-2">Property details</h1>
@@ -232,6 +232,29 @@ export default function TenantPropertyPage() {
               )}
             </div>
 
+            {/* Map preview — appears once the address is geocoded */}
+            {lat && lng && (
+              <div className="mt-5 rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-white">
+                <iframe
+                  title="Property location"
+                  width="100%"
+                  height="240"
+                  style={{ border: 0, display: "block" }}
+                  loading="lazy"
+                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.008}%2C${lat - 0.005}%2C${lng + 0.008}%2C${lat + 0.005}&layer=mapnik&marker=${lat}%2C${lng}`}
+                />
+                <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-100">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#A8843F" strokeWidth="2" className="flex-shrink-0">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z" />
+                    <circle cx="12" cy="11" r="2.5" />
+                  </svg>
+                  <p className="text-sm font-medium text-[#181B20] truncate">
+                    {address}{city ? `, ${city}` : ""}{state ? `, ${state}` : ""}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Geocode error */}
             {geocodeError && (
               <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -288,7 +311,7 @@ export default function TenantPropertyPage() {
               </button>
             </div>
           </div>
-          <div className="lg:col-span-1"><PriceSummary catalog={catalog} showDeposit /></div>
+          <div><PriceSummary catalog={catalog} showDeposit /></div>
         </div>
       </div>
     </>
