@@ -390,7 +390,7 @@
 
   .section-label {
     @apply text-[11px] font-semibold tracking-[0.08em] uppercase;
-    color: var(--color-accent, var(--color-gold));
+    color: #6B7280; /* always-readable neutral — was the tenant accent, which can be near-white */
   }
 
   .accent-bar {
