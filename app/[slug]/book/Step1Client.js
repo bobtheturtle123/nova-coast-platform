@@ -96,20 +96,20 @@ const BKG_CSS = `
   --shadow-lg:0 24px 60px -22px rgba(24,27,32,0.22);
   color:var(--ink); }
 .bkg *{box-sizing:border-box;}
-.bkg .shell{max-width:1180px;margin:0 auto;padding:18px 32px 100px;display:grid;grid-template-columns:1fr 358px;gap:36px;align-items:start;}
-.bkg .eyebrow{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold-dark);background:var(--gold-soft);padding:5px 12px;border-radius:99px;margin-bottom:14px;}
-.bkg .head h1{font-size:30px;font-weight:800;line-height:1.1;letter-spacing:-0.03em;max-width:560px;}
-.bkg .head p{color:var(--muted);font-size:15.5px;margin-top:10px;max-width:540px;}
-.bkg .sqftchip{font-size:12px;color:var(--muted);border:1px solid var(--line-2);background:#fff;border-radius:99px;padding:6px 12px;cursor:pointer;white-space:nowrap;}
+.bkg .shell{max-width:1200px;margin:0 auto;padding:34px 32px 120px;display:grid;grid-template-columns:1fr 366px;gap:44px;align-items:start;}
+.bkg .eyebrow{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold-dark);background:var(--gold-soft);padding:6px 13px;border-radius:99px;margin-bottom:16px;}
+.bkg .head h1{font-size:33px;font-weight:800;line-height:1.08;letter-spacing:-0.03em;max-width:580px;color:var(--ink);}
+.bkg .head p{color:var(--muted);font-size:16px;margin-top:12px;max-width:560px;line-height:1.6;}
+.bkg .sqftchip{font-size:12px;color:var(--muted);border:1px solid var(--line-2);background:#fff;border-radius:99px;padding:7px 13px;cursor:pointer;white-space:nowrap;}
 .bkg .sqftchip:hover{border-color:var(--ink);color:var(--ink);}
-.bkg .block{margin-top:42px;}
-.bkg .block.first{margin-top:26px;}
-.bkg .section-label{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
-.bkg .section-label h2{font-size:19px;font-weight:800;letter-spacing:-0.02em;}
+.bkg .block{margin-top:52px;}
+.bkg .block.first{margin-top:34px;}
+.bkg .section-label{display:flex;align-items:center;gap:14px;margin-bottom:22px;}
+.bkg .section-label h2{font-size:20px;font-weight:800;letter-spacing:-0.02em;}
 .bkg .section-label s{text-decoration:none;font-size:12.5px;color:var(--muted);}
 .bkg .section-label .c{flex:1;height:1px;background:var(--line);}
 /* packages */
-.bkg .pkgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:stretch;}
+.bkg .pkgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;align-items:stretch;}
 .bkg .pkg{position:relative;border:1.5px solid var(--line-2);background:#fff;border-radius:var(--r);padding:18px;display:flex;flex-direction:column;transition:all .16s;box-shadow:var(--shadow);}
 .bkg .pkg:hover{border-color:var(--gold);}
 .bkg .pkg.on{border-color:var(--brand);border-width:2px;box-shadow:var(--shadow-lg);}
@@ -138,9 +138,10 @@ const BKG_CSS = `
 .bkg .pkg.on .selbtn{background:var(--brand);border-color:var(--brand);color:#fff;}
 .bkg .selbtn svg{width:15px;height:15px;}
 /* upgrades */
-.bkg .uphead h2{font-size:19px;font-weight:800;letter-spacing:-0.02em;}
-.bkg .uphead p{font-size:13.5px;color:var(--muted);margin-top:5px;max-width:560px;}
-.bkg .uprows{display:flex;flex-direction:column;gap:9px;margin-top:16px;}
+.bkg .uphead{margin-bottom:18px;}
+.bkg .uphead h2{font-size:20px;font-weight:800;letter-spacing:-0.02em;}
+.bkg .uphead p{font-size:14px;color:var(--muted);margin-top:6px;max-width:560px;line-height:1.55;}
+.bkg .uprows{display:flex;flex-direction:column;gap:10px;}
 .bkg .uprow{display:flex;align-items:center;gap:13px;padding:11px 14px;border:1.5px solid var(--line-2);background:#fff;border-radius:13px;transition:all .14s;text-align:left;width:100%;cursor:pointer;}
 .bkg .uprow:hover{border-color:var(--gold);}
 .bkg .uprow.on{border-color:var(--brand);background:#FCFBF8;}
@@ -256,6 +257,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
   const [confirmed,    setConfirmed]    = useState(!usesGate || !!squareFootage);
   const [lightboxItem, setLightboxItem] = useState(null);
   const [alaOpen,      setAlaOpen]      = useState(false);
+  const [moreAddonsOpen, setMoreAddonsOpen] = useState(false);
 
   function getImages(item) {
     if (item.mediaUrls?.length) return item.mediaUrls.filter((u) => u && !u.match(/\.(mp4|mov|webm)$/i));
@@ -293,17 +295,15 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
     return ala - priceOf(pk);
   }
 
-  // Recommended upgrades are ONLY the add-ons that pair with what's selected
-  // (via each add-on's showWith triggers). General add-ons (no triggers) are
-  // shown separately as "Also available", and nothing shows until a selection.
+  // Recommended upgrades are STRICTLY the add-ons explicitly assigned to a
+  // selected package/service (via each add-on's showWith triggers). An add-on
+  // with no triggers is "general" — it never masquerades as a package
+  // recommendation; it lives in its own optional "More add-ons" list.
   const selectedIds = new Set([...packageIds, ...serviceIds]);
   const recommendedAddons = selectedIds.size
-    ? addons.filter((a) => a.showWith?.length && a.showWith.some((id) => selectedIds.has(id)))
+    ? addons.filter((a) => Array.isArray(a.showWith) && a.showWith.some((id) => selectedIds.has(id)))
     : [];
-  const generalAddons = selectedIds.size
-    ? addons.filter((a) => !a.showWith?.length)
-    : [];
-  const upgradeAddons = [...recommendedAddons, ...generalAddons];
+  const otherAddons = addons.filter((a) => !Array.isArray(a.showWith) || a.showWith.length === 0);
   const activeRetainers = (catalog.retainers || []).filter((r) => r.active !== false);
   // Trust badges are tenant-controlled. If they've configured a list (even empty),
   // use it verbatim; otherwise show a single safe, always-true default.
@@ -456,15 +456,15 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
             </section>
           )}
 
-          {/* RECOMMENDED UPGRADES */}
-          {upgradeAddons.length > 0 && (
+          {/* RECOMMENDED UPGRADES — strictly the add-ons assigned to the selection */}
+          {recommendedAddons.length > 0 && (
             <section className="block">
               <div className="uphead">
-                <h2>{hasAny ? "Recommended upgrades" : "Popular upgrades"}</h2>
-                <p>{hasAny ? "The add-ons agents most often choose to make a listing stand out." : "Add-ons that pair with the services you pick."}</p>
+                <h2>Recommended upgrades</h2>
+                <p>Add-ons chosen to pair with the {packageIds.length ? "package" : "services"} you selected.</p>
               </div>
               <div className="uprows">
-                {upgradeAddons.map((a) => {
+                {recommendedAddons.map((a) => {
                   const on = addonIds.includes(a.id);
                   const images = getImages(a);
                   return (
@@ -511,6 +511,42 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                                 <button className="addbtn">{on ? <>{CHECK}Added</> : "+ Add"}</button>
                               </div>
                             </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* MORE ADD-ONS (general add-ons not tied to a package) — collapsed */}
+          {otherAddons.length > 0 && (
+            <section className="block">
+              <div className={`alacarte${moreAddonsOpen ? " open" : ""}`}>
+                <button className="ala-toggle" onClick={() => setMoreAddonsOpen((v) => !v)}>
+                  <span className="ala-txt"><b>More add-ons</b><s>Optional extras available with any booking.</s></span>
+                  <span className="ala-btn">{moreAddonsOpen ? "Hide" : "View"} add-ons <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg></span>
+                </button>
+                {moreAddonsOpen && (
+                  <div className="ala-body">
+                    <div className="uprows">
+                      {otherAddons.map((a) => {
+                        const on = addonIds.includes(a.id);
+                        const images = getImages(a);
+                        return (
+                          <div key={a.id} className={`uprow${on ? " on" : ""}`} onClick={() => toggleAddon(a.id)}>
+                            <span className="box">{CHECK}</span>
+                            {images[0] && <div className="umini"><img src={images[0]} alt="" /></div>}
+                            <span className="mid">
+                              <span className="anm">{a.name}</span>
+                              {a.description && <span className="ab">{a.description}</span>}
+                              {(a.description || images.length > 0) && (
+                                <button className="deti" onClick={(e) => { e.stopPropagation(); setLightboxItem({ item: a, images, price: displayPrice(a) }); }}>Details</button>
+                              )}
+                            </span>
+                            <span className="ap">+{displayPrice(a)}</span>
                           </div>
                         );
                       })}
