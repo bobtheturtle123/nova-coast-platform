@@ -120,8 +120,13 @@ const BKG_CSS = `
 .bkg .pthumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .bkg .pkg .pn{font-size:17px;font-weight:800;}
 .bkg .pkg .tg{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px;min-height:34px;}
-.bkg .pkg .price{display:flex;align-items:baseline;gap:8px;margin:11px 0 12px;}
-.bkg .pkg .price b{font-size:28px;font-weight:800;letter-spacing:-0.03em;}
+.bkg .pkg .price{display:flex;align-items:baseline;gap:8px;margin:11px 0 8px;}
+.bkg .pkg .price b{font-size:28px;font-weight:800;letter-spacing:-0.03em;color:var(--ink);}
+.bkg .save{display:inline-flex;font-size:11px;font-weight:700;color:var(--sage-dark);background:var(--sage-soft);padding:3px 9px;border-radius:99px;align-self:flex-start;margin:0 0 12px;}
+/* keep blurbs short + tidy (max two lines) */
+.bkg .pkg .tg,.bkg .svc .sb,.bkg .uprow .ab{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+/* explicit dark text so nothing inherits a light/white color */
+.bkg h1,.bkg h2,.bkg .pn,.bkg .sn,.bkg .anm,.bkg .ap,.bkg .sp,.bkg .summary h3,.bkg .totrow .v,.bkg .mbar .ml b{color:var(--ink);}
 .bkg .pkg ul{list-style:none;padding:0;margin:2px 0 14px;display:flex;flex-direction:column;gap:7px;flex:1;}
 .bkg .pkg li{font-size:12.6px;display:flex;gap:8px;color:#3C4046;line-height:1.4;}
 .bkg .pkg li svg{width:14px;height:14px;flex-shrink:0;margin-top:1px;color:var(--gold-dark);}
