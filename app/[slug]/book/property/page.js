@@ -33,11 +33,13 @@ export default function TenantPropertyPage() {
   const [geocodeError,       setGeocodeError]       = useState(false);
   // Which built-in questions the studio shows (default all on).
   const [shownFields,        setShownFields]        = useState({ propertyType: true, squareFootage: true, notes: true });
+  const [catalog,            setCatalog]            = useState(null);
 
   useEffect(() => {
     fetch(`/api/tenant-public/${params.slug}/catalog`)
       .then((r) => r.json())
       .then((data) => {
+        setCatalog(data);
         if (data.bookingConfig?.customFields?.length) {
           setConfigFields(data.bookingConfig.customFields);
         }
@@ -286,7 +288,7 @@ export default function TenantPropertyPage() {
               </button>
             </div>
           </div>
-          <div className="lg:col-span-1"><PriceSummary /></div>
+          <div className="lg:col-span-1"><PriceSummary catalog={catalog} showDeposit /></div>
         </div>
       </div>
     </>
