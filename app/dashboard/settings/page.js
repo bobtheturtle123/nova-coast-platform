@@ -892,6 +892,10 @@ export default function SettingsPage() {
   }
   const [maxWeeklyHours,    setMaxWeeklyHours]     = useState(0);  // 0 = unlimited
 
+  // Booking page trust badges (the reassurance lines under the deposit summary).
+  // Default to a single always-true line; tenant can edit/add/remove.
+  const [trustBadges, setTrustBadges] = useState(["Secure checkout — only a deposit is due today"]);
+
   // Cancel / reschedule fee state
   const [cancelFeeEnabled,    setCancelFeeEnabled]    = useState(false);
   const [cancelFeePercent,    setCancelFeePercent]    = useState(50);
@@ -1036,6 +1040,7 @@ export default function SettingsPage() {
             if (av.maxWeeklyHours    != null) setMaxWeeklyHours(av.maxWeeklyHours);
           }
           setOwnerShoots(data.tenant.ownerShoots !== false);
+          if (Array.isArray(bc.trustBadges)) setTrustBadges(bc.trustBadges.length ? bc.trustBadges : []);
           if (bc.cancellation) {
             const c = bc.cancellation;
             if (c.feeEnabled    !== undefined) setCancelFeeEnabled(c.feeEnabled);
@@ -1252,6 +1257,7 @@ export default function SettingsPage() {
       depositPercent: depositType === "percent" ? (Number(depositValue) || 0) : undefined,
       timeSlots,
       customFields,
+      trustBadges: trustBadges.map((t) => String(t || "").trim()).filter(Boolean),
       enableApn,
       requireServiceArea,
       autoConvertToListing,
@@ -2028,6 +2034,31 @@ export default function SettingsPage() {
             <button onClick={addCustomField} disabled={!newFieldLabel.trim()}
               className="btn-primary px-4 py-2 text-sm">Add</button>
           </div>
+        </div>
+
+        {/* Booking trust badges */}
+        <div className="pt-4 border-t border-gray-100 mt-2">
+          <label className="label-field">Booking page reassurance lines</label>
+          <p className="text-xs text-gray-400 mb-3">
+            Short trust lines shown under the deposit on the booking page. Only add ones that are true for your studio
+            (e.g. your real reschedule or balance policy). Leave empty to hide them entirely.
+          </p>
+          <div className="space-y-2">
+            {trustBadges.map((t, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="text-green-600 flex-shrink-0">✓</span>
+                <input type="text" value={t}
+                  onChange={(e) => setTrustBadges((prev) => prev.map((x, n) => n === i ? e.target.value : x))}
+                  className="input-field flex-1 text-sm" placeholder="e.g. Free reschedule up to 24h before" maxLength={90} />
+                <button onClick={() => setTrustBadges((prev) => prev.filter((_, n) => n !== i))}
+                  className="text-gray-300 hover:text-red-500 text-lg leading-none px-1">×</button>
+              </div>
+            ))}
+          </div>
+          {trustBadges.length < 5 && (
+            <button onClick={() => setTrustBadges((prev) => [...prev, ""])}
+              className="text-xs font-semibold text-[#3486cf] hover:text-[#2a6dab] mt-2">+ Add a line</button>
+          )}
         </div>
 
         {/* APN toggle */}

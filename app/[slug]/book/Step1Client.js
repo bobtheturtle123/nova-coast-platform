@@ -270,12 +270,41 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
   const fmt = (n) => `$${Number(n || 0).toLocaleString()}`;
   function priceOf(item) { return usesGate ? getItemPrice(item, tier) : Number(item.price || 0); }
   function displayPrice(item) { const p = priceOf(item); return p ? fmt(p) : ""; }
+  // Resolve the tier's label from the studio's own tiers (never "undefined").
+  const tierLabel = usesGate && tier && pricingMode === "sqft"
+    ? ((pricingConfig.tiers || []).find((t) => t.name === tier)?.label || TIER_LABELS[tier] || "")
+    : "";
+  // Keep card copy tidy — short, single-line-ish blurbs.
+  function short(text, n = 96) {
+    const t = String(text || "").replace(/\s+/g, " ").trim();
+    return t.length > n ? t.slice(0, n).replace(/\s+\S*$/, "") + "…" : t;
+  }
+  // Savings vs. à la carte: sum the package's included services, minus its price.
+  function savingsFor(pk) {
+    const ala = (pk.includes || []).reduce((sum, sid) => {
+      const s = services.find((x) => x.id === sid);
+      return sum + (s ? priceOf(s) : 0);
+    }, 0);
+    return ala - priceOf(pk);
+  }
 
-  // Contextual upgrades: an add-on shows when it has no trigger, or one of its
-  // triggers (showWith) is among the selected packages/services.
+  // Recommended upgrades are ONLY the add-ons that pair with what's selected
+  // (via each add-on's showWith triggers). General add-ons (no triggers) are
+  // shown separately as "Also available", and nothing shows until a selection.
   const selectedIds = new Set([...packageIds, ...serviceIds]);
-  const upgradeAddons = addons.filter((a) => !a.showWith?.length || a.showWith.some((id) => selectedIds.has(id)));
+  const recommendedAddons = selectedIds.size
+    ? addons.filter((a) => a.showWith?.length && a.showWith.some((id) => selectedIds.has(id)))
+    : [];
+  const generalAddons = selectedIds.size
+    ? addons.filter((a) => !a.showWith?.length)
+    : [];
+  const upgradeAddons = [...recommendedAddons, ...generalAddons];
   const activeRetainers = (catalog.retainers || []).filter((r) => r.active !== false);
+  // Trust badges are tenant-controlled. If they've configured a list (even empty),
+  // use it verbatim; otherwise show a single safe, always-true default.
+  const trustLines = Array.isArray(catalog.bookingConfig?.trustBadges)
+    ? catalog.bookingConfig.trustBadges.filter((t) => t && t.trim())
+    : ["Secure checkout — only a deposit is due today"];
 
   // Live quote
   const quote = calculateTenantPrice(packageIds, serviceIds, addonIds, travelFee, catalog, usesGate ? (squareFootage || sqftInput) : 0);
@@ -359,11 +388,11 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
           <div className="d2"><span>Balance due at delivery</span><span>{fmt(quote.balance)}</span></div>
         </div>
         <button className="cta" disabled={!hasSelections()} onClick={goContinue}>Continue to scheduling {ARROW}</button>
-        <div className="trust">
-          <span className="t">{CHECK}Free reschedule up to 24h before</span>
-          <span className="t">{CHECK}Balance only when you approve the photos</span>
-          <span className="t">{CHECK}Secure checkout — only a deposit today</span>
-        </div>
+        {trustLines.length > 0 && (
+          <div className="trust">
+            {trustLines.map((t, i) => <span className="t" key={i}>{CHECK}{t}</span>)}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -377,13 +406,13 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
         <div className="main">
           <div className="head" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
             <div>
-              <span className="eyebrow">Step 1 · Choose your {packages.length > 0 ? "package" : "services"}</span>
-              <h1>{packages.length > 0 ? "Choose the right media package for your listing." : "Choose the services you need."}</h1>
-              <p>{packages.length > 0 ? "Start with a package for the best value, then add any upgrades you need for this property." : "Pick the individual services for this shoot, then add any upgrades."}</p>
+              <span className="eyebrow">Step 1 · {packages.length > 0 ? "Choose your package" : "Choose your services"}</span>
+              <h1>{packages.length > 0 ? "Choose your listing media package" : "Choose the services you need"}</h1>
+              <p>{packages.length > 0 ? "Start with a package, then add any upgrades needed for this property." : "Pick the services for this shoot, then add any upgrades."}</p>
             </div>
             {usesGate && (
               <button className="sqftchip" onClick={() => setConfirmed(false)}>
-                {Number(squareFootage || sqftInput).toLocaleString()} {pricingMode === "photos" ? "photos" : pricingMode === "custom" ? customLabel : "sq ft"}{tier && pricingMode !== "photos" && pricingMode !== "custom" ? ` · ${TIER_LABELS[tier]}` : ""} ✎
+                {Number(squareFootage || sqftInput).toLocaleString()} {pricingMode === "photos" ? "photos" : pricingMode === "custom" ? customLabel : "sq ft"}{tierLabel ? ` · ${tierLabel}` : ""} ✎
               </button>
             )}
           </div>
@@ -391,7 +420,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
           {/* PACKAGES */}
           {packages.length > 0 && (
             <section className="block first">
-              <div className="section-label"><h2>Packages</h2><s>Bundled value for the full listing</s><span className="c" /></div>
+              <div className="section-label"><h2>Packages</h2><s>Recommended starting points for most listings</s><span className="c" /></div>
               <div className="pkgs">
                 {packages.map((pk) => {
                   const on = packageIds.includes(pk.id);
@@ -402,8 +431,9 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                       {pk.featured && <span className="ribbon">Recommended for most listings</span>}
                       {images[0] && <div className="pthumb"><img src={images[0]} alt={pk.name} /></div>}
                       <div className="pn">{pk.name}</div>
-                      {pk.tagline && <div className="tg">{pk.tagline}</div>}
+                      {(pk.tagline || pk.description) && <div className="tg">{pk.tagline || short(pk.description, 80)}</div>}
                       <div className="price"><b>{displayPrice(pk)}</b></div>
+                      {(() => { const sv = savingsFor(pk); return sv > 0 ? <span className="save">Save {fmt(sv)} vs. à la carte</span> : null; })()}
                       {names.length > 0 && (
                         <ul>{names.slice(0, 5).map((n, i) => <li key={i}>{CHECK}<span>{n}</span></li>)}</ul>
                       )}

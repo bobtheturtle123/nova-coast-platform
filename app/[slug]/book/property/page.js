@@ -262,7 +262,7 @@ export default function TenantPropertyPage() {
             )}
 
             <div className="flex justify-between mt-8">
-              <button onClick={() => router.push(`/${params.slug}/book/addons`)} className="btn-outline">← Back</button>
+              <button onClick={() => router.push(`/${params.slug}/book`)} className="btn-outline">← Back</button>
               <button
                 onClick={handleContinue}
                 disabled={!isValid || checking || !!zoneError}
