@@ -204,8 +204,8 @@ export default function TenantSchedulePage() {
       <div className="max-w-5xl mx-auto px-4 pb-16">
         {/* Page header */}
         <div className="pt-4 pb-8">
-          <p className="section-label mb-2">Step 5 of 6</p>
-          <h1 className="font-display text-3xl font-semibold" style={{ color: P }}>
+          <span style={{ display: "inline-block", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A8843F", background: "#F7F0E2", padding: "5px 12px", borderRadius: 99, marginBottom: 14 }}>Step 5 · Schedule</span>
+          <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", color: "#181B20", lineHeight: 1.1 }}>
             When works for you?
           </h1>
           <p className="text-sm text-gray-500 mt-1 font-body">

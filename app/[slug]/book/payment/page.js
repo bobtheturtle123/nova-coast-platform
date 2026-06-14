@@ -348,8 +348,8 @@ export default function TenantPaymentPage() {
           {/* Left — client info + payment */}
           <div className="lg:col-span-2 space-y-6">
             <div>
-              <p className="section-label mb-2">Step 6 of 6</p>
-              <h1 className="font-display text-4xl text-[#3486cf] mb-3">Almost there.</h1>
+              <span style={{ display: "inline-block", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A8843F", background: "#F7F0E2", padding: "5px 12px", borderRadius: 99, marginBottom: 14 }}>Step 6 · Deposit</span>
+              <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", color: "#181B20", lineHeight: 1.1 }} className="mb-2">Almost there</h1>
               <p className="font-body text-gray-500">Enter your contact info to confirm your booking.</p>
             </div>
 
