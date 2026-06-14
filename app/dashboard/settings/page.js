@@ -896,6 +896,12 @@ export default function SettingsPage() {
   // Default to a single always-true line; tenant can edit/add/remove.
   const [trustBadges, setTrustBadges] = useState(["Secure checkout — only a deposit is due today"]);
 
+  // Which built-in property questions appear on the booking form. Address is
+  // always required; these three are optional and default on.
+  const [showPropertyType, setShowPropertyType] = useState(true);
+  const [showSqftField,    setShowSqftField]    = useState(true);
+  const [showNotesField,   setShowNotesField]   = useState(true);
+
   // Cancel / reschedule fee state
   const [cancelFeeEnabled,    setCancelFeeEnabled]    = useState(false);
   const [cancelFeePercent,    setCancelFeePercent]    = useState(50);
@@ -1041,6 +1047,11 @@ export default function SettingsPage() {
           }
           setOwnerShoots(data.tenant.ownerShoots !== false);
           if (Array.isArray(bc.trustBadges)) setTrustBadges(bc.trustBadges.length ? bc.trustBadges : []);
+          if (bc.fields) {
+            if (bc.fields.propertyType  !== undefined) setShowPropertyType(bc.fields.propertyType);
+            if (bc.fields.squareFootage !== undefined) setShowSqftField(bc.fields.squareFootage);
+            if (bc.fields.notes         !== undefined) setShowNotesField(bc.fields.notes);
+          }
           if (bc.cancellation) {
             const c = bc.cancellation;
             if (c.feeEnabled    !== undefined) setCancelFeeEnabled(c.feeEnabled);
@@ -1258,6 +1269,7 @@ export default function SettingsPage() {
       timeSlots,
       customFields,
       trustBadges: trustBadges.map((t) => String(t || "").trim()).filter(Boolean),
+      fields: { propertyType: showPropertyType, squareFootage: showSqftField, notes: showNotesField },
       enableApn,
       requireServiceArea,
       autoConvertToListing,
@@ -2059,6 +2071,30 @@ export default function SettingsPage() {
             <button onClick={() => setTrustBadges((prev) => [...prev, ""])}
               className="text-xs font-semibold text-[#3486cf] hover:text-[#2a6dab] mt-2">+ Add a line</button>
           )}
+        </div>
+
+        {/* Built-in property questions */}
+        <div className="pt-4 border-t border-gray-100 mt-2">
+          <label className="label-field">Property questions on the booking form</label>
+          <p className="text-xs text-gray-400 mb-3">
+            Turn off any built-in questions you don&apos;t need — clients won&apos;t be asked them. The address is always required.
+            Add your own questions in “Custom fields” above.
+          </p>
+          <div className="space-y-2.5">
+            {[
+              ["Property type", showPropertyType, setShowPropertyType],
+              ["Square footage", showSqftField, setShowSqftField],
+              ["Notes for the photographer", showNotesField, setShowNotesField],
+            ].map(([label, val, set]) => (
+              <div key={label} className="flex items-center justify-between">
+                <span className="text-sm text-[#0F172A]">{label}</span>
+                <button type="button" onClick={() => set((v) => !v)}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${val ? "bg-[#3486cf]" : "bg-gray-200"}`}>
+                  <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${val ? "translate-x-4" : "translate-x-0"}`} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* APN toggle */}

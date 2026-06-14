@@ -31,6 +31,8 @@ export default function TenantPropertyPage() {
   const [tenantCountry,      setTenantCountry]      = useState("US");
   const [zoneError,          setZoneError]          = useState(null); // { contact }
   const [geocodeError,       setGeocodeError]       = useState(false);
+  // Which built-in questions the studio shows (default all on).
+  const [shownFields,        setShownFields]        = useState({ propertyType: true, squareFootage: true, notes: true });
 
   useEffect(() => {
     fetch(`/api/tenant-public/${params.slug}/catalog`)
@@ -38,6 +40,9 @@ export default function TenantPropertyPage() {
       .then((data) => {
         if (data.bookingConfig?.customFields?.length) {
           setConfigFields(data.bookingConfig.customFields);
+        }
+        if (data.bookingConfig?.fields) {
+          setShownFields((f) => ({ ...f, ...data.bookingConfig.fields }));
         }
         setRequireServiceArea(!!data.bookingConfig?.requireServiceArea);
         if (data.country) setTenantCountry(data.country);
@@ -172,21 +177,25 @@ export default function TenantPropertyPage() {
                     maxLength={tenantCountry === "US" ? 5 : 10} className="input-field" />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-[#0F172A] mb-1.5">Property Type</label>
-                <select name="propertyType" value={propertyType} onChange={handleChange} className="input-field">
-                  {PROPERTY_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
-                  Square Footage <span className="text-gray-400 font-normal ml-1">(approximate)</span>
-                </label>
-                <input name="squareFootage" value={squareFootage} onChange={handleChange}
-                  placeholder="2,400" type="number" className="input-field" />
-              </div>
+              {shownFields.propertyType && (
+                <div>
+                  <label className="block text-sm font-medium text-[#0F172A] mb-1.5">Property Type</label>
+                  <select name="propertyType" value={propertyType} onChange={handleChange} className="input-field">
+                    {PROPERTY_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {shownFields.squareFootage && (
+                <div>
+                  <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
+                    Square Footage <span className="text-gray-400 font-normal ml-1">(approximate)</span>
+                  </label>
+                  <input name="squareFootage" value={squareFootage} onChange={handleChange}
+                    placeholder="2,400" type="number" className="input-field" />
+                </div>
+              )}
 
               {/* Admin-configured custom fields */}
               {configFields.map((field) => (
@@ -209,14 +218,16 @@ export default function TenantPropertyPage() {
                 </div>
               ))}
 
-              <div>
-                <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
-                  Notes for the Photographer <span className="text-gray-400 font-normal ml-1">(optional)</span>
-                </label>
-                <textarea name="notes" value={notes} onChange={handleChange} rows={3}
-                  placeholder="Gate code, parking instructions, anything we should know..."
-                  className="input-field resize-none" />
-              </div>
+              {shownFields.notes && (
+                <div>
+                  <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
+                    Notes for the Photographer <span className="text-gray-400 font-normal ml-1">(optional)</span>
+                  </label>
+                  <textarea name="notes" value={notes} onChange={handleChange} rows={3}
+                    placeholder="Gate code, parking instructions, anything we should know..."
+                    className="input-field resize-none" />
+                </div>
+              )}
             </div>
 
             {/* Geocode error */}
