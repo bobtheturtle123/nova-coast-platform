@@ -901,6 +901,7 @@ export default function SettingsPage() {
   const [showPropertyType, setShowPropertyType] = useState(true);
   const [showSqftField,    setShowSqftField]    = useState(true);
   const [showNotesField,   setShowNotesField]   = useState(true);
+  const [servicesExpanded, setServicesExpanded] = useState(false);
 
   // Cancel / reschedule fee state
   const [cancelFeeEnabled,    setCancelFeeEnabled]    = useState(false);
@@ -1052,6 +1053,7 @@ export default function SettingsPage() {
             if (bc.fields.squareFootage !== undefined) setShowSqftField(bc.fields.squareFootage);
             if (bc.fields.notes         !== undefined) setShowNotesField(bc.fields.notes);
           }
+          if (bc.servicesExpanded !== undefined) setServicesExpanded(bc.servicesExpanded);
           if (bc.cancellation) {
             const c = bc.cancellation;
             if (c.feeEnabled    !== undefined) setCancelFeeEnabled(c.feeEnabled);
@@ -1270,6 +1272,7 @@ export default function SettingsPage() {
       customFields,
       trustBadges: trustBadges.map((t) => String(t || "").trim()).filter(Boolean),
       fields: { propertyType: showPropertyType, squareFootage: showSqftField, notes: showNotesField },
+      servicesExpanded,
       enableApn,
       requireServiceArea,
       autoConvertToListing,
@@ -2094,6 +2097,19 @@ export default function SettingsPage() {
                 </button>
               </div>
             ))}
+          </div>
+
+          <div className="flex items-center justify-between mt-5 pt-4 border-t border-gray-100">
+            <div className="pr-4">
+              <span className="text-sm text-[#0F172A]">Show individual services expanded by default</span>
+              <p className="text-xs text-gray-400 mt-0.5">
+                When on, the “individual services” list on the package step starts open instead of collapsed.
+              </p>
+            </div>
+            <button type="button" onClick={() => setServicesExpanded((v) => !v)}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${servicesExpanded ? "bg-[#3486cf]" : "bg-gray-200"}`}>
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${servicesExpanded ? "translate-x-4" : "translate-x-0"}`} />
+            </button>
           </div>
         </div>
 

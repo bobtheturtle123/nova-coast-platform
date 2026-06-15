@@ -110,7 +110,7 @@ const BKG_CSS = `
 .bkg .section-label .c{flex:1;height:1px;background:var(--line);}
 /* packages */
 .bkg .pkgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:22px;align-items:stretch;}
-.bkg .pkg{position:relative;border:1.5px solid var(--line-2);background:#fff;border-radius:var(--r);padding:24px 22px;display:flex;flex-direction:column;transition:all .16s;box-shadow:var(--shadow);}
+.bkg .pkg{position:relative;border:1.5px solid var(--line-2);background:#fff;border-radius:var(--r);padding:24px 22px;display:flex;flex-direction:column;transition:all .16s;box-shadow:var(--shadow);cursor:pointer;}
 .bkg .pkg:hover{border-color:var(--gold);}
 .bkg .pkg.on{border-color:var(--brand);border-width:2px;box-shadow:var(--shadow-lg);}
 .bkg .pkg.featured{background:#FFFDF8;border-color:var(--gold);}
@@ -145,7 +145,8 @@ const BKG_CSS = `
 .bkg .uprow{display:flex;align-items:center;gap:14px;padding:15px 18px;border:1.5px solid var(--line-2);background:#fff;border-radius:13px;transition:all .14s;text-align:left;width:100%;cursor:pointer;}
 .bkg .uprow:hover{border-color:var(--gold);}
 .bkg .uprow.on{border-color:var(--brand);background:#FCFBF8;}
-.bkg .uprow .box{width:20px;height:20px;border-radius:6px;border:1.8px solid var(--line-2);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;}
+.bkg .uprow .box{width:24px;height:24px;padding:0;border-radius:6px;border:1.8px solid var(--line-2);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;cursor:pointer;transition:all .14s;}
+.bkg .uprow .box:hover{border-color:var(--brand);}
 .bkg .uprow .box svg{width:12px;height:12px;color:#fff;opacity:0;}
 .bkg .uprow.on .box{background:var(--brand);border-color:var(--brand);}
 .bkg .uprow.on .box svg{opacity:1;}
@@ -256,12 +257,16 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
   const [sqftInput,    setSqftInput]    = useState(squareFootage || "");
   const [confirmed,    setConfirmed]    = useState(!usesGate || !!squareFootage);
   const [lightboxItem, setLightboxItem] = useState(null);
-  const [alaOpen,      setAlaOpen]      = useState(false);
+  const [alaOpen,      setAlaOpen]      = useState(!!catalog.bookingConfig?.servicesExpanded);
 
   function getImages(item) {
     if (item.mediaUrls?.length) return item.mediaUrls.filter((u) => u && !u.match(/\.(mp4|mov|webm)$/i));
     const fallback = ITEM_IMAGES[item.id];
     return fallback ? [fallback] : [];
+  }
+  // Whole-card click opens the details lightbox for any package / service / add-on.
+  function openDetails(item) {
+    setLightboxItem({ item, images: getImages(item), price: displayPrice(item) });
   }
 
   useEffect(() => {
@@ -430,7 +435,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                   const images = getImages(pk);
                   const names = pk.includeNames?.length ? pk.includeNames : (pk.includes || []).map((sid) => services.find((s) => s.id === sid)?.name).filter(Boolean);
                   return (
-                    <div key={pk.id} className={`pkg${on ? " on" : ""}${pk.featured ? " featured" : ""}`}>
+                    <div key={pk.id} className={`pkg${on ? " on" : ""}${pk.featured ? " featured" : ""}`} onClick={() => openDetails(pk)}>
                       {pk.featured && <span className="ribbon">Recommended for most listings</span>}
                       {images[0] && <div className="pthumb"><img src={images[0]} alt={pk.name} /></div>}
                       <div className="pn">{pk.name}</div>
@@ -440,13 +445,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                       {names.length > 0 && (
                         <ul>{names.slice(0, 5).map((n, i) => <li key={i}>{CHECK}<span>{n}</span></li>)}</ul>
                       )}
-                      {(pk.description || images.length > 0) && (
-                        <button className="detlink" onClick={() => setLightboxItem({ item: pk, images, price: displayPrice(pk) })}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg>
-                          View full details
-                        </button>
-                      )}
-                      <button className="selbtn" onClick={() => togglePackage(pk.id)}>{on ? <>{CHECK}Selected</> : "Select package"}</button>
+                      <button className="selbtn" onClick={(e) => { e.stopPropagation(); togglePackage(pk.id); }}>{on ? <>{CHECK}Selected</> : "Select package"}</button>
                     </div>
                   );
                 })}
@@ -466,15 +465,12 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                   const on = addonIds.includes(a.id);
                   const images = getImages(a);
                   return (
-                    <div key={a.id} className={`uprow${on ? " on" : ""}`} onClick={() => toggleAddon(a.id)}>
-                      <span className="box">{CHECK}</span>
+                    <div key={a.id} className={`uprow${on ? " on" : ""}`} onClick={() => openDetails(a)}>
+                      <button type="button" className="box" onClick={(e) => { e.stopPropagation(); toggleAddon(a.id); }} aria-label={on ? "Remove add-on" : "Add add-on"}>{CHECK}</button>
                       {images[0] && <div className="umini"><img src={images[0]} alt="" /></div>}
                       <span className="mid">
                         <span className="anm">{a.name}</span>
-                        {a.description && <span className="ab">{a.description}</span>}
-                        {(a.description || images.length > 0) && (
-                          <button className="deti" onClick={(e) => { e.stopPropagation(); setLightboxItem({ item: a, images, price: displayPrice(a) }); }}>Details</button>
-                        )}
+                        {a.description && <span className="ab">{short(a.description, 90)}</span>}
                       </span>
                       <span className="ap">+{displayPrice(a)}</span>
                     </div>
@@ -499,14 +495,13 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                         const on = serviceIds.includes(s.id);
                         const images = getImages(s);
                         return (
-                          <div key={s.id} className={`svc${on ? " on" : ""}`} onClick={() => toggleService(s.id)}>
+                          <div key={s.id} className={`svc${on ? " on" : ""}`} onClick={() => openDetails(s)}>
                             {images[0] && <div className="sthumb"><img src={images[0]} alt={s.name} /></div>}
                             <div className="meta">
                               <div className="top"><span className="sn">{s.name}</span><span className="sp">{displayPrice(s)}</span></div>
                               {s.description && <div className="sb">{s.description}</div>}
                               <div className="foot">
-                                <button className="detlink" onClick={(e) => { e.stopPropagation(); setLightboxItem({ item: s, images, price: displayPrice(s) }); }}>Details</button>
-                                <button className="addbtn">{on ? <>{CHECK}Added</> : "+ Add"}</button>
+                                <button className="addbtn" onClick={(e) => { e.stopPropagation(); toggleService(s.id); }}>{on ? <>{CHECK}Added</> : "+ Add"}</button>
                               </div>
                             </div>
                           </div>

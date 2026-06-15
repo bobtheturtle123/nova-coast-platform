@@ -186,12 +186,7 @@ export default function TenantReviewPage() {
               <div className="space-y-2">
                 {pkgItems.map((pkg) => (
                   <div key={pkg.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-[#0F172A]">{pkg.name}</p>
-                      {pkg.description && (
-                        <p className="text-xs text-gray-400 mt-0.5">{pkg.description}</p>
-                      )}
-                    </div>
+                    <p className="text-sm font-semibold text-[#0F172A]">{pkg.name}</p>
                     <p className="text-sm font-semibold text-[#3486cf] flex-shrink-0 ml-4">
                       ${getItemPrice(pkg, tier)?.toLocaleString()}
                     </p>
@@ -199,10 +194,7 @@ export default function TenantReviewPage() {
                 ))}
                 {svcItems.map((s) => (
                   <div key={s.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-[#0F172A]">{s.name}</p>
-                      {s.description && <p className="text-xs text-gray-400 mt-0.5">{s.description}</p>}
-                    </div>
+                    <p className="text-sm font-medium text-[#0F172A]">{s.name}</p>
                     <p className="text-sm font-semibold text-[#3486cf] flex-shrink-0 ml-4">
                       ${getItemPrice(s, tier)?.toLocaleString()}
                     </p>
