@@ -110,7 +110,7 @@ const BKG_CSS = `
 .bkg .section-label .c{flex:1;height:1px;background:var(--line);}
 /* packages */
 .bkg .pkgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));gap:22px;align-items:stretch;}
-.bkg .pkg{position:relative;border:1.5px solid var(--line-2);background:#fff;border-radius:var(--r);padding:24px 22px;display:flex;flex-direction:column;transition:all .16s;box-shadow:var(--shadow);cursor:pointer;}
+.bkg .pkg{position:relative;border:1.5px solid var(--line-2);background:#fff;border-radius:var(--r);padding:24px 22px;display:flex;flex-direction:column;transition:all .16s;box-shadow:var(--shadow);}
 .bkg .pkg:hover{border-color:var(--gold);}
 .bkg .pkg.on{border-color:var(--brand);border-width:2px;box-shadow:var(--shadow-lg);}
 .bkg .pkg.featured{background:#FFFDF8;border-color:var(--gold);}
@@ -130,8 +130,9 @@ const BKG_CSS = `
 .bkg .pkg ul{list-style:none;padding:0;margin:2px 0 14px;display:flex;flex-direction:column;gap:7px;flex:1;}
 .bkg .pkg li{font-size:12.6px;display:flex;gap:8px;color:#3C4046;line-height:1.4;}
 .bkg .pkg li svg{width:14px;height:14px;flex-shrink:0;margin-top:1px;color:var(--gold-dark);}
-.bkg .detlink{background:none;border:none;font-size:12px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:5px;padding:0;margin-bottom:12px;align-self:flex-start;cursor:pointer;}
-.bkg .detlink:hover{color:var(--ink);}
+.bkg .detlink{background:#fff;border:1.3px solid var(--line-2);border-radius:9px;font-size:12px;font-weight:600;color:var(--gold-dark);display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;margin-bottom:10px;align-self:flex-start;cursor:pointer;transition:all .14s;}
+.bkg .detlink:hover{border-color:var(--gold);background:var(--gold-soft);}
+.bkg .detlink svg{width:14px;height:14px;}
 .bkg .selbtn{height:43px;border-radius:11px;border:1.5px solid var(--line-2);background:#fff;font-size:13.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;transition:all .14s;}
 .bkg .pkg:hover .selbtn{border-color:var(--brand);}
 .bkg .pkg.featured .selbtn{border-color:var(--brand);background:var(--brand);color:#fff;}
@@ -145,8 +146,7 @@ const BKG_CSS = `
 .bkg .uprow{display:flex;align-items:center;gap:14px;padding:15px 18px;border:1.5px solid var(--line-2);background:#fff;border-radius:13px;transition:all .14s;text-align:left;width:100%;cursor:pointer;}
 .bkg .uprow:hover{border-color:var(--gold);}
 .bkg .uprow.on{border-color:var(--brand);background:#FCFBF8;}
-.bkg .uprow .box{width:24px;height:24px;padding:0;border-radius:6px;border:1.8px solid var(--line-2);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;cursor:pointer;transition:all .14s;}
-.bkg .uprow .box:hover{border-color:var(--brand);}
+.bkg .uprow .box{width:20px;height:20px;border-radius:6px;border:1.8px solid var(--line-2);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;}
 .bkg .uprow .box svg{width:12px;height:12px;color:#fff;opacity:0;}
 .bkg .uprow.on .box{background:var(--brand);border-color:var(--brand);}
 .bkg .uprow.on .box svg{opacity:1;}
@@ -155,8 +155,10 @@ const BKG_CSS = `
 .bkg .uprow .mid{flex:1;min-width:0;}
 .bkg .uprow .anm{font-size:13.6px;font-weight:700;}
 .bkg .uprow .ab{font-size:11.8px;color:var(--muted);line-height:1.4;margin-top:2px;}
-.bkg .uprow .deti{background:none;border:none;padding:0;margin-top:4px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;}
-.bkg .uprow .deti:hover{color:var(--ink);}
+.bkg .detbtn{background:#fff;border:1.3px solid var(--line-2);border-radius:8px;padding:5px 10px;margin-top:7px;font-size:11.5px;font-weight:600;color:var(--gold-dark);display:inline-flex;align-items:center;gap:5px;cursor:pointer;transition:all .14s;align-self:flex-start;}
+.bkg .detbtn:hover{border-color:var(--gold);background:var(--gold-soft);}
+.bkg .detbtn svg{width:13px;height:13px;}
+.bkg .svc .foot .detbtn{margin-top:0;}
 .bkg .uprow .ap{font-size:13.5px;font-weight:800;white-space:nowrap;flex-shrink:0;}
 .bkg .uprow .ap s{text-decoration:none;font-size:10.5px;font-weight:500;color:var(--muted-2);}
 /* à la carte */
@@ -234,6 +236,7 @@ const BKG_CSS = `
 
 const CHECK = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>;
 const ARROW = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>;
+const INFO = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 16v-4M12 8h.01" /></svg>;
 
 export default function TenantBookStep1Client({ slug, tenantId, tenantName, catalog }) {
   const router = useRouter();
@@ -435,7 +438,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                   const images = getImages(pk);
                   const names = pk.includeNames?.length ? pk.includeNames : (pk.includes || []).map((sid) => services.find((s) => s.id === sid)?.name).filter(Boolean);
                   return (
-                    <div key={pk.id} className={`pkg${on ? " on" : ""}${pk.featured ? " featured" : ""}`} onClick={() => openDetails(pk)}>
+                    <div key={pk.id} className={`pkg${on ? " on" : ""}${pk.featured ? " featured" : ""}`}>
                       {pk.featured && <span className="ribbon">Recommended for most listings</span>}
                       {images[0] && <div className="pthumb"><img src={images[0]} alt={pk.name} /></div>}
                       <div className="pn">{pk.name}</div>
@@ -445,7 +448,8 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                       {names.length > 0 && (
                         <ul>{names.slice(0, 5).map((n, i) => <li key={i}>{CHECK}<span>{n}</span></li>)}</ul>
                       )}
-                      <button className="selbtn" onClick={(e) => { e.stopPropagation(); togglePackage(pk.id); }}>{on ? <>{CHECK}Selected</> : "Select package"}</button>
+                      <button className="detlink" onClick={() => openDetails(pk)}>{INFO}See what&apos;s included</button>
+                      <button className="selbtn" onClick={() => togglePackage(pk.id)}>{on ? <>{CHECK}Selected</> : "Select package"}</button>
                     </div>
                   );
                 })}
@@ -465,12 +469,15 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                   const on = addonIds.includes(a.id);
                   const images = getImages(a);
                   return (
-                    <div key={a.id} className={`uprow${on ? " on" : ""}`} onClick={() => openDetails(a)}>
-                      <button type="button" className="box" onClick={(e) => { e.stopPropagation(); toggleAddon(a.id); }} aria-label={on ? "Remove add-on" : "Add add-on"}>{CHECK}</button>
+                    <div key={a.id} className={`uprow${on ? " on" : ""}`} onClick={() => toggleAddon(a.id)}>
+                      <span className="box">{CHECK}</span>
                       {images[0] && <div className="umini"><img src={images[0]} alt="" /></div>}
                       <span className="mid">
                         <span className="anm">{a.name}</span>
                         {a.description && <span className="ab">{short(a.description, 90)}</span>}
+                        {(a.description || images.length > 0) && (
+                          <button className="detbtn" onClick={(e) => { e.stopPropagation(); openDetails(a); }}>{INFO}Details</button>
+                        )}
                       </span>
                       <span className="ap">+{displayPrice(a)}</span>
                     </div>
@@ -495,13 +502,14 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                         const on = serviceIds.includes(s.id);
                         const images = getImages(s);
                         return (
-                          <div key={s.id} className={`svc${on ? " on" : ""}`} onClick={() => openDetails(s)}>
+                          <div key={s.id} className={`svc${on ? " on" : ""}`} onClick={() => toggleService(s.id)}>
                             {images[0] && <div className="sthumb"><img src={images[0]} alt={s.name} /></div>}
                             <div className="meta">
                               <div className="top"><span className="sn">{s.name}</span><span className="sp">{displayPrice(s)}</span></div>
                               {s.description && <div className="sb">{s.description}</div>}
                               <div className="foot">
-                                <button className="addbtn" onClick={(e) => { e.stopPropagation(); toggleService(s.id); }}>{on ? <>{CHECK}Added</> : "+ Add"}</button>
+                                <button className="detbtn" onClick={(e) => { e.stopPropagation(); openDetails(s); }}>{INFO}Details</button>
+                                <button className="addbtn">{on ? <>{CHECK}Added</> : "+ Add"}</button>
                               </div>
                             </div>
                           </div>
