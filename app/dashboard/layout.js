@@ -197,11 +197,15 @@ export default function DashboardLayout({ children }) {
       const role = tokenResult.claims.role || "owner";
       const tok = await u.getIdToken();
 
-      // Fetch tenant and enforce subscription gate before rendering any dashboard page
+      // Fetch tenant and enforce subscription gate before rendering any dashboard
+      // page. SECURITY: this gate is FAIL-CLOSED — if we can't positively confirm
+      // an active subscription (network error, bad response, no sub), we do NOT
+      // render the dashboard. A previous fail-open path let unpaid accounts in.
       try {
         const res = await fetch("/api/dashboard/tenant", {
           headers: { Authorization: `Bearer ${tok}` },
         });
+        if (!res.ok) { router.push("/auth/plan"); return; }
         const d = await res.json();
         if (d.tenant?.businessName) setTenantName(d.tenant.businessName);
         if (d.tenant?.branding?.logoUrl) setTenantLogo(d.tenant.branding.logoUrl);
@@ -218,7 +222,9 @@ export default function DashboardLayout({ children }) {
         }
         setSubscriptionLapsed(d.tenant?.subscriptionStatus === "canceled");
       } catch {
-        // Network error — don't hard-block on a failed fetch
+        // Could not verify subscription — fail closed: send to plan selection.
+        router.push("/auth/plan");
+        return;
       }
 
       setUser(u);

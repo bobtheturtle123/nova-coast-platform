@@ -1,4 +1,4 @@
-import { adminAuth } from "@/lib/firebase-admin";
+import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { createTenant, toSlug, isSlugTaken } from "@/lib/tenants";
 import { sendWelcomeEmail } from "@/lib/email";
 import { rateLimit } from "@/lib/rateLimit";
@@ -7,7 +7,22 @@ import { isSuperAdminEmail } from "@/lib/plans";
 
 export async function POST(req) {
   try {
-    const { uid, email, ownerName = "", businessName, phone = "", accessCode = "" } = await req.json();
+    // Identify the account from the verified ID token — never trust uid/email
+    // supplied in the request body (that let a caller provision for any account).
+    const authHeader = req.headers.get("authorization") || "";
+    const rawToken   = authHeader.replace("Bearer ", "").trim();
+    if (!rawToken) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+    let decoded;
+    try {
+      decoded = await adminAuth.verifyIdToken(rawToken);
+    } catch {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const uid   = decoded.uid;
+    const email = decoded.email;
+
+    const { ownerName = "", businessName, phone = "", accessCode = "" } = await req.json();
 
     if (!uid || !email || !businessName) {
       return Response.json({ error: "Missing required fields" }, { status: 400 });
@@ -22,10 +37,14 @@ export async function POST(req) {
       }
     }
 
-    // Verify the uid is a valid Firebase user
-    const user = await adminAuth.getUser(uid);
-    if (user.email !== email) {
-      return Response.json({ error: "Unauthorized" }, { status: 403 });
+    // Idempotency: if this account already owns a tenant, return it instead of
+    // creating a duplicate (handles retries / double-submits / replays).
+    if (decoded.tenantId) {
+      return Response.json({ tenantId: decoded.tenantId, existing: true });
+    }
+    const existingSnap = await adminDb.collection("tenants").where("ownerUid", "==", uid).limit(1).get();
+    if (!existingSnap.empty) {
+      return Response.json({ tenantId: existingSnap.docs[0].id, slug: existingSnap.docs[0].data().slug || null, existing: true });
     }
 
     // Resolve trial length — check access code against env var

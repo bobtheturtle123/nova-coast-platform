@@ -81,16 +81,17 @@ export default function RegisterPage() {
 
       // 1. Create Firebase Auth user
       const cred = await createUserWithEmailAndPassword(auth, form.email, form.password);
+      const idToken = await cred.user.getIdToken();
 
-      // 2. Call server to create tenant + set custom claims
+      // 2. Call server to create tenant + set custom claims. The server identifies
+      //    the account from this verified ID token (not from values in the body),
+      //    so the caller can't provision a tenant for some other uid/email.
       // credentials:"include" is required so the referral cookie set by /ref/[code] is sent
       const res = await fetch("/api/tenants/register", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({
-          uid:          cred.user.uid,
-          email:        form.email,
           ownerName:    form.ownerName.trim() || undefined,
           businessName: form.businessName,
           phone:        form.phone || undefined,
