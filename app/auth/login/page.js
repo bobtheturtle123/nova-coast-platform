@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { exitDemo } from "@/lib/demoData";
 
@@ -18,7 +18,13 @@ export default function LoginPage() {
   const [loading,  setLoading]  = useState(false);
 
   // Reaching the login page always ends any lingering demo session in this tab.
-  useEffect(() => { exitDemo(); }, []);
+  // SECURITY: also sign out any existing Firebase session so that, on a shared
+  // device, the next person who lands here can't inherit the previous account
+  // (e.g. after a failed sign-in attempt leaves the prior session intact).
+  useEffect(() => {
+    exitDemo();
+    signOut(auth).catch(() => {});
+  }, []);
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -35,6 +41,8 @@ export default function LoginPage() {
         router.push("/onboarding");
       }
     } catch (err) {
+      // A failed sign-in must not leave any prior session active on this device.
+      await signOut(auth).catch(() => {});
       if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
         setError("Incorrect email or password. Try again or reset your password below.");
       } else if (err.code === "auth/too-many-requests") {

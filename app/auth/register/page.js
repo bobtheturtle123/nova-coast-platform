@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 export default function RegisterPage() {
@@ -22,6 +22,13 @@ export default function RegisterPage() {
   const [error,       setError]       = useState("");
   const [loading,     setLoading]     = useState(false);
   const [showCode,    setShowCode]    = useState(false);
+
+  // SECURITY: arriving at the signup page must end any existing session. On a
+  // shared device this prevents a new person from inheriting whoever was last
+  // signed in (e.g. if their signup later errors out and never replaces the session).
+  useEffect(() => {
+    signOut(auth).catch(() => {});
+  }, []);
 
   // Persist a promo code (e.g. DEMO50 from the demo CTA) so it can be applied at
   // checkout on the plan page.
@@ -67,6 +74,11 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
+      // 0. Ensure no prior session lingers (shared-device safety) before we create
+      //    the new account. If anything below throws, the user is NOT left signed
+      //    in as whoever was here before.
+      if (auth.currentUser) await signOut(auth).catch(() => {});
+
       // 1. Create Firebase Auth user
       const cred = await createUserWithEmailAndPassword(auth, form.email, form.password);
 
@@ -97,6 +109,9 @@ export default function RegisterPage() {
       // 4. Go to plan selection before onboarding
       router.push("/auth/plan");
     } catch (err) {
+      // If the server step failed AFTER the Firebase user was created, don't leave
+      // a half-provisioned account signed in — and never leave a stale prior session.
+      await signOut(auth).catch(() => {});
       if (err.code === "auth/email-already-in-use") {
         setError("An account with this email already exists. Try signing in instead.");
       } else if (err.code === "auth/too-many-requests") {
