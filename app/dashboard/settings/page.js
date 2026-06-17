@@ -13,6 +13,55 @@ import { useTenantSettings } from "@/lib/TenantSettingsContext";
 import { getAppUrl } from "@/lib/appUrl";
 import { getEffectivePlan, getSeatLimit } from "@/lib/plans";
 
+// ─── Settings hi-fi chrome (TOC + section cards) ─────────────────────────────
+// Visual layer from the "Settings Hi-Fi" design. All field logic/saves are
+// unchanged; this just restyles the page shell, accordion headers and TOC.
+const SETTINGS_TOC = [
+  ["identity", "Business & Branding"],
+  ["pricing", "Pricing"],
+  ["booking", "Booking"],
+  ["team", "Team rates"],
+  ["comms", "Notifications"],
+  ["integrations", "Integrations"],
+];
+
+const _ico = (d) => (
+  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <path strokeLinecap="round" strokeLinejoin="round" d={d} />
+  </svg>
+);
+const SETTINGS_ICONS = {
+  identity:     _ico("M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2M5 21H3m4-4h.01M7 13h.01M7 9h.01M11 17h.01M11 13h.01M11 9h.01"),
+  pricing:      _ico("M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 9V4a1 1 0 011-1z"),
+  booking:      _ico("M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"),
+  team:         _ico("M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"),
+  comms:        _ico("M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"),
+  integrations: _ico("M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"),
+};
+
+const SETTINGS_CSS = `
+.set .set-grid{display:grid;grid-template-columns:220px 1fr;gap:30px;align-items:start;max-width:1140px;margin:0 auto;padding:4px 24px 130px;}
+.set .set-toc{position:sticky;top:20px;display:flex;flex-direction:column;gap:2px;}
+.set .set-toc .t{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9CA3AF;padding:6px 10px;}
+.set .set-toc button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 10px;border:none;background:none;border-radius:8px;cursor:pointer;font:inherit;font-size:13px;font-weight:500;color:#4B5261;transition:background .12s,color .12s;}
+.set .set-toc button:hover{background:#fff;color:#0F172A;}
+.set .set-toc button.on{background:#EEF4FA;color:#1E5A8A;font-weight:600;}
+.set .set-toc .num{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#EDF0F4;color:#6B7280;flex-shrink:0;transition:background .12s,color .12s;}
+.set .set-toc button.on .num{background:#3486cf;color:#fff;}
+.set .set-section{background:#fff;border:1px solid #E9ECF0;border-radius:16px;overflow:hidden;transition:box-shadow .15s;scroll-margin-top:16px;}
+.set .set-section.open{box-shadow:0 6px 22px rgba(15,23,42,.06);}
+.set .set-head{display:flex;align-items:center;gap:16px;padding:18px 20px;cursor:pointer;width:100%;text-align:left;background:none;border:none;font:inherit;transition:background .12s;}
+.set .set-head:hover{background:#FAFAFA;}
+.set .set-head .ic{width:44px;height:44px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,#EEF4FA,#fff);color:#3486cf;display:flex;align-items:center;justify-content:center;border:1px solid #DAE6F4;}
+.set .set-head .ic svg{width:22px;height:22px;}
+.set .set-head .bd{flex:1;min-width:0;}
+.set .set-head .ti{display:block;font-size:16px;font-weight:800;color:#0F172A;letter-spacing:-.3px;}
+.set .set-head .de{display:block;font-size:12.5px;color:#6B7280;margin-top:2px;}
+.set .set-head .chev{color:#9CA3AF;flex-shrink:0;transition:transform .18s;display:flex;}
+.set .set-section.open .set-head .chev{transform:rotate(90deg);}
+@media(max-width:900px){.set .set-grid{grid-template-columns:1fr;gap:14px;padding-left:16px;padding-right:16px;}.set .set-toc{display:none;}}
+`;
+
 // ─── Notification definitions (shared with notifications page) ───────────────
 
 const CUSTOMER_NOTIFICATIONS = [
@@ -974,6 +1023,16 @@ export default function SettingsPage() {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
+  // TOC: open the section (if collapsed) and scroll it into view.
+  function openAndScroll(key) {
+    setOpenSections((prev) => ({ ...prev, [key]: true }));
+    if (typeof document !== "undefined") {
+      requestAnimationFrame(() => {
+        document.getElementById(`set-${key}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }
+
   useEffect(() => {
     const loadTenant = async (token) => {
       const res = isDemo()
@@ -1574,23 +1633,37 @@ export default function SettingsPage() {
 
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
-    <div className="max-w-[1140px] mx-auto px-6 py-8">
-      <div className="mb-8">
+    <div className="set min-h-screen" style={{ background: "var(--bg-base)" }}>
+    <style dangerouslySetInnerHTML={{ __html: SETTINGS_CSS }} />
+    <div className="max-w-[1140px] mx-auto px-6 pt-8">
+      <div className="mb-2">
         <h1 className="page-title mb-1">Settings</h1>
-        <p className="page-subtitle">Configure your business, booking flow, and communications.</p>
+        <p className="page-subtitle">This is where you set up your studio — go one section at a time; each one explains in plain words what it does.</p>
       </div>
+    </div>
 
-      <div className="space-y-3">
+    <div className="set-grid">
+      {/* Sticky table of contents */}
+      <aside className="set-toc">
+        <div className="t">Sections</div>
+        {SETTINGS_TOC.map(([key, label], i) => (
+          <button key={key} type="button" className={openSections[key] ? "on" : ""} onClick={() => openAndScroll(key)}>
+            <span className="num">{i + 1}</span>{label}
+          </button>
+        ))}
+      </aside>
+
+      <div className="set-main space-y-3.5">
 
       {/* ─── BUSINESS INFO & BRANDING ─────────────────────────────────────── */}
-      <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
-        <button type="button" className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors" onClick={() => toggleSection("identity")}>
-          <div>
-            <h2 className="font-semibold text-[#0F172A] text-sm">Business Info & Branding</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Business name, colors, tagline, booking URL</p>
-          </div>
-          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${openSections.identity ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+      <div id="set-identity" className={`set-section ${openSections.identity ? "open" : ""}`}>
+        <button type="button" className="set-head" onClick={() => toggleSection("identity")}>
+          <span className="ic">{SETTINGS_ICONS.identity}</span>
+          <span className="bd">
+            <span className="ti">Business Info &amp; Branding</span>
+            <span className="de">Business name, colors, tagline, booking URL</span>
+          </span>
+          <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.identity && (
         <div className="pt-2 pb-4">
@@ -1783,13 +1856,14 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── PRICING ─────────────────────────────────────────────────────────── */}
-      <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
-        <button type="button" className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors" onClick={() => toggleSection("pricing")}>
-          <div>
-            <h2 className="font-semibold text-[#0F172A] text-sm">Pricing</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Pricing mode and tier configuration</p>
-          </div>
-          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${openSections.pricing ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+      <div id="set-pricing" className={`set-section ${openSections.pricing ? "open" : ""}`}>
+        <button type="button" className="set-head" onClick={() => toggleSection("pricing")}>
+          <span className="ic">{SETTINGS_ICONS.pricing}</span>
+          <span className="bd">
+            <span className="ti">Pricing</span>
+            <span className="de">Pricing mode and tier configuration</span>
+          </span>
+          <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.pricing && (
         <div className="pt-2 pb-4">
@@ -1941,13 +2015,14 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── BOOKING SETTINGS ────────────────────────────────────────────────── */}
-      <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
-        <button type="button" className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors" onClick={() => toggleSection("booking")}>
-          <div>
-            <h2 className="font-semibold text-[#0F172A] text-sm">Booking Settings</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Booking logic, deposits, availability, service areas, travel fees, legal</p>
-          </div>
-          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${openSections.booking ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+      <div id="set-booking" className={`set-section ${openSections.booking ? "open" : ""}`}>
+        <button type="button" className="set-head" onClick={() => toggleSection("booking")}>
+          <span className="ic">{SETTINGS_ICONS.booking}</span>
+          <span className="bd">
+            <span className="ti">Booking Settings</span>
+            <span className="de">Booking logic, deposits, availability, service areas, travel fees, legal</span>
+          </span>
+          <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.booking && (
         <div className="pt-2 pb-4">
@@ -2989,13 +3064,14 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── TEAM ────────────────────────────────────────────────────────────── */}
-      <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
-        <button type="button" className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors" onClick={() => toggleSection("team")}>
-          <div>
-            <h2 className="font-semibold text-[#0F172A] text-sm">Team</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Job cost rates and staff access</p>
-          </div>
-          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${openSections.team ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+      <div id="set-team" className={`set-section ${openSections.team ? "open" : ""}`}>
+        <button type="button" className="set-head" onClick={() => toggleSection("team")}>
+          <span className="ic">{SETTINGS_ICONS.team}</span>
+          <span className="bd">
+            <span className="ti">Team</span>
+            <span className="de">Job cost rates and staff access</span>
+          </span>
+          <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.team && (
         <div className="pt-2 pb-4">
@@ -3049,13 +3125,14 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── NOTIFICATIONS ───────────────────────────────────────────────────── */}
-      <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
-        <button type="button" className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors" onClick={() => toggleSection("comms")}>
-          <div>
-            <h2 className="font-semibold text-[#0F172A] text-sm">Notifications</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Email templates, notification channels, gallery settings</p>
-          </div>
-          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${openSections.comms ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+      <div id="set-comms" className={`set-section ${openSections.comms ? "open" : ""}`}>
+        <button type="button" className="set-head" onClick={() => toggleSection("comms")}>
+          <span className="ic">{SETTINGS_ICONS.comms}</span>
+          <span className="bd">
+            <span className="ti">Notifications</span>
+            <span className="de">Email templates, notification channels, gallery settings</span>
+          </span>
+          <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.comms && (
         <div className="pt-2 pb-4">
@@ -3421,13 +3498,14 @@ export default function SettingsPage() {
       </div>
 
       {/* ─── INTEGRATIONS ────────────────────────────────────────────────────── */}
-      <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
-        <button type="button" className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors" onClick={() => toggleSection("integrations")}>
-          <div>
-            <h2 className="font-semibold text-[#0F172A] text-sm">Integrations</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Custom domain and third-party connections</p>
-          </div>
-          <svg className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${openSections.integrations ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+      <div id="set-integrations" className={`set-section ${openSections.integrations ? "open" : ""}`}>
+        <button type="button" className="set-head" onClick={() => toggleSection("integrations")}>
+          <span className="ic">{SETTINGS_ICONS.integrations}</span>
+          <span className="bd">
+            <span className="ti">Integrations</span>
+            <span className="de">Custom domain and third-party connections</span>
+          </span>
+          <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.integrations && (
         <div className="pt-2 pb-4">
