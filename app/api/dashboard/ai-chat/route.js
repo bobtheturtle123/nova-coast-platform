@@ -1,6 +1,7 @@
 import { adminAuth } from "@/lib/firebase-admin";
 import { rateLimitTenant } from "@/lib/rateLimit";
 import { callAI, aiAvailable } from "@/lib/ai";
+import { tenantHasActivePlan, paymentRequired } from "@/lib/requireSubscription";
 
 const SYSTEM_PROMPT = `You are a helpful assistant built into KyoriaOS, a SaaS platform for real estate photography businesses.
 
@@ -98,6 +99,7 @@ async function getCtx(req) {
 export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await tenantHasActivePlan(ctx.tenantId))) return paymentRequired();
 
   // 30 AI chat messages per tenant per hour — generous for normal use, blocks abuse
   const rl = await rateLimitTenant(ctx.tenantId, "ai-chat", 30, 3600);

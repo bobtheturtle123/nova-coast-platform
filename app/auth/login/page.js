@@ -6,6 +6,7 @@ import Link from "next/link";
 import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { exitDemo } from "@/lib/demoData";
+import { isUnlimitedTenant } from "@/lib/plans";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,11 +36,26 @@ export default function LoginPage() {
       const token = await cred.user.getIdTokenResult();
       if (token.claims.role === "superadmin") {
         router.push("/superadmin");
-      } else if (token.claims.tenantId) {
-        router.push("/dashboard");
-      } else {
-        router.push("/onboarding");
+        return;
       }
+      if (!token.claims.tenantId) {
+        router.push("/onboarding");
+        return;
+      }
+      // Resume the user at the correct stage: pick a plan if unsubscribed, finish
+      // onboarding if not yet completed, otherwise the dashboard. Without this the
+      // login always jumped straight to /dashboard and skipped onboarding.
+      try {
+        const res = await fetch("/api/dashboard/tenant", { headers: { Authorization: `Bearer ${token.token}` } });
+        if (res.ok) {
+          const { tenant } = await res.json();
+          const hasSub = !!(tenant?.stripeSubscriptionId || tenant?.permanentPlan)
+            || isUnlimitedTenant(tenant);
+          if (!hasSub)                    { router.push("/auth/plan"); return; }
+          if (!tenant?.onboardingCompleted) { router.push("/onboarding"); return; }
+        }
+      } catch { /* fall through to dashboard; its own gate will re-check */ }
+      router.push("/dashboard");
     } catch (err) {
       // A failed sign-in must not leave any prior session active on this device.
       await signOut(auth).catch(() => {});

@@ -3,6 +3,7 @@ import { getTenantById } from "@/lib/tenants";
 import { sendBookingCreatedNotifications, generateCalendarICS, sendServiceAgreementEmail } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendBookingConfirmedSms } from "@/lib/sms";
+import { tenantHasActivePlan, paymentRequired } from "@/lib/requireSubscription";
 
 async function getAuthContext(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -18,6 +19,7 @@ export async function POST(req) {
   try {
     const ctx = await getAuthContext(req);
     if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (!(await tenantHasActivePlan(ctx.tenantId))) return paymentRequired();
 
     const {
       clientName, clientEmail, clientPhone = "",
