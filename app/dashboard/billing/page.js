@@ -53,6 +53,7 @@ export default function BillingPage() {
   const [upgradeTarget,   setUpgradeTarget]   = useState(null); // { planId }
   const [agentProWorking, setAgentProWorking] = useState(false);
   const [isOwner,       setIsOwner]      = useState(true); // staff admins cannot manage billing
+  const [seatTarget,    setSeatTarget]   = useState(null); // desired total add-on seats (selector)
 
   const searchParams = useSearchParams();
 
@@ -135,6 +136,32 @@ export default function BillingPage() {
       const data = await res.json();
       if (data.url) window.location.href = data.url;
       else setError(data.error || "Could not open billing portal.");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function updateSeats(quantity) {
+    setWorking(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/billing/seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ quantity }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Could not update seats."); return; }
+      setTenant((t) => ({ ...t, addonSeats: data.addonSeats }));
+      setSeatTarget(data.addonSeats);
+      setMsg({
+        text: data.charged
+          ? "Seats added — your card on file was charged the prorated amount."
+          : "Seats updated. The lower amount applies from your next billing cycle (no refund for the current month).",
+        type: "success",
+      });
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -580,9 +607,42 @@ export default function BillingPage() {
               {seatCap !== null && ` Up to ${seatCap} additional seats on your current plan.`}
               {seatCap === null && " Unlimited seats on Scale."}
             </p>
-            <button onClick={openPortal} disabled={working} className="btn-outline">
-              {working ? "Loading…" : "Manage seats via portal →"}
-            </button>
+            {(() => {
+              const max     = seatCap === null ? 50 : seatCap;
+              const target  = seatTarget ?? addonSeats;
+              const changed = target !== addonSeats;
+              return (
+                <>
+                  <div className="flex items-center gap-4 mb-3 flex-wrap">
+                    <div className="inline-flex items-center rounded-lg border border-gray-200 overflow-hidden">
+                      <button onClick={() => setSeatTarget(Math.max(0, target - 1))} disabled={working || target <= 0}
+                        className="px-3.5 py-2 text-lg leading-none text-gray-600 hover:bg-gray-50 disabled:opacity-30">−</button>
+                      <span className="px-4 py-2 text-sm font-semibold text-[#0F172A] min-w-[3rem] text-center border-x border-gray-200">{target}</span>
+                      <button onClick={() => setSeatTarget(Math.min(max, target + 1))} disabled={working || target >= max}
+                        className="px-3.5 py-2 text-lg leading-none text-gray-600 hover:bg-gray-50 disabled:opacity-30">+</button>
+                    </div>
+                    <div className="text-sm">
+                      <p className="font-semibold text-[#0F172A]">{target} add-on seat{target !== 1 ? "s" : ""}</p>
+                      <p className="text-xs text-gray-400">${target * 19}/mo{addonSeats !== target ? ` · currently ${addonSeats}` : ""}</p>
+                    </div>
+                  </div>
+                  {changed && (
+                    <button onClick={() => updateSeats(target)} disabled={working} className="btn-primary text-xs">
+                      {working
+                        ? "Updating…"
+                        : target > addonSeats
+                          ? `Add ${target - addonSeats} seat${target - addonSeats !== 1 ? "s" : ""} — charge card now`
+                          : `Reduce to ${target} seat${target !== 1 ? "s" : ""}`}
+                    </button>
+                  )}
+                  {changed && target < addonSeats && (
+                    <p className="text-xs text-gray-400 mt-2">
+                      Removing seats won&apos;t refund the current month — the lower price starts next billing cycle.
+                    </p>
+                  )}
+                </>
+              );
+            })()}
             {seatCap !== null && seatCap - addonSeats <= 1 && nextPlanName && (
               <p className="text-xs text-amber-600 mt-3">
                 Approaching your seat limit. Upgrading to {nextPlanName} gives significantly more capacity.
@@ -599,20 +659,28 @@ export default function BillingPage() {
         </h2>
         <div className="space-y-2.5">
           {PLANS.map((p) => {
-            const isCurrent = plan === p.id;
-            const isOther   = subscribed && !isCurrent;
+            const isCurrent  = plan === p.id;
+            const isOther    = subscribed && !isCurrent;
+            const isUpgrade  = subscribed && PLAN_ORDER[p.id] > PLAN_ORDER[plan];
+            const isNextTier = subscribed && PLAN_ORDER[p.id] === (PLAN_ORDER[plan] ?? 0) + 1;
             return (
               <div key={p.id}
                 className="flex items-center justify-between p-4 rounded-xl border transition-all"
                 style={{
-                  border: isCurrent ? "2px solid #0F172A" : "1px solid var(--border-subtle)",
-                  background: isCurrent ? "rgb(15 23 42 / 0.03)" : isOther ? "var(--bg-subtle)" : "white",
-                  opacity: isOther ? 0.65 : 1,
+                  border: isCurrent ? "2px solid #0F172A" : isNextTier ? "2px solid #3486cf" : "1px solid var(--border-subtle)",
+                  background: isCurrent ? "rgb(15 23 42 / 0.03)" : isNextTier ? "rgba(52,134,207,0.05)" : isOther && !isUpgrade ? "var(--bg-subtle)" : "white",
+                  // Only dim downgrade options — keep upgrades fully legible/enticing.
+                  opacity: isOther && !isUpgrade ? 0.6 : 1,
                 }}>
                 <div className="flex items-center gap-3">
                   {isCurrent && (
                     <span className="text-[10px] font-bold bg-[#0F172A] text-white px-2.5 py-1 rounded-full uppercase tracking-wide whitespace-nowrap">
                       Current
+                    </span>
+                  )}
+                  {isNextTier && (
+                    <span className="text-[10px] font-bold text-white px-2.5 py-1 rounded-full uppercase tracking-wide whitespace-nowrap" style={{ background: "#3486cf" }}>
+                      Recommended
                     </span>
                   )}
                   <div>
@@ -625,9 +693,17 @@ export default function BillingPage() {
                   <span className={`text-sm font-bold ${isCurrent ? "text-[#0F172A]" : "text-gray-400"}`}>${p.price}<span className="text-xs font-normal">/mo</span></span>
                   {isCurrent && subscribed && <span className="tag-green">Active</span>}
                   {isOther && subscribed && isOwner && (
-                    <button onClick={() => handlePlanChange(p.id)} disabled={working} className="btn-outline text-xs py-1.5">
-                      {working ? "…" : PLAN_ORDER[p.id] > PLAN_ORDER[plan] ? `Upgrade →` : "Downgrade"}
-                    </button>
+                    PLAN_ORDER[p.id] > PLAN_ORDER[plan] ? (
+                      <button onClick={() => handlePlanChange(p.id)} disabled={working}
+                        className="text-xs font-semibold py-2 px-4 rounded-lg text-white shadow-sm hover:shadow-md hover:-translate-y-px transition-all disabled:opacity-50"
+                        style={{ background: "linear-gradient(135deg, #3486cf 0%, #5ba8e5 100%)" }}>
+                        {working ? "…" : "Upgrade →"}
+                      </button>
+                    ) : (
+                      <button onClick={() => handlePlanChange(p.id)} disabled={working} className="btn-outline text-xs py-1.5">
+                        {working ? "…" : "Downgrade"}
+                      </button>
+                    )
                   )}
                   {!subscribed && (
                     <button onClick={() => subscribe(p.id)} disabled={working} className="btn-primary text-xs py-1.5">
