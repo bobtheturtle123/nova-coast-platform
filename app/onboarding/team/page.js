@@ -48,24 +48,11 @@ export default function TeamStep() {
   const [fallbackLinks, setFallbackLinks] = useState([]); // [{email, url}] when email delivery failed
   const [upgrading, setUpgrading] = useState(false);
 
-  async function handleUpgrade() {
+  function handleUpgrade() {
+    // Send them to Billing to choose which plan to upgrade to, rather than
+    // pushing a single hard-coded plan straight into Stripe checkout.
     setUpgrading(true);
-    try {
-      const token = await auth.currentUser.getIdToken();
-      if (tenant?.stripeSubscriptionId) {
-        const res  = await fetch("/api/billing/portal", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
-        const data = await res.json();
-        if (data.url) { window.location.href = data.url; return; }
-      }
-      const res  = await fetch("/api/billing/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ plan: "studio" }),
-      });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-    } catch {}
-    setUpgrading(false);
+    router.push("/dashboard/billing");
   }
 
   const filledRows = rows.filter(r => r.name.trim() && r.email.trim());
