@@ -120,6 +120,15 @@ const SETTINGS_CSS = `
 .set .choice .pick{width:18px;height:18px;border-radius:50%;border:2px solid #CBD5E1;position:absolute;top:14px;right:14px;display:flex;align-items:center;justify-content:center;}
 .set .choice.on .pick{border-color:#3486cf;}
 .set .choice.on .pick::after{content:'';width:8px;height:8px;border-radius:50%;background:#3486cf;}
+/* ── De-clutter the Scheduling section: more air between sub-blocks ── */
+.set #set-scheduling .card{padding:24px 26px;}
+.set #set-scheduling .card > div + div,
+.set #set-scheduling .pt-4{padding-top:24px;margin-top:8px;}
+.set #set-scheduling h3{font-size:14px;color:#0F172A;margin-bottom:5px;}
+.set #set-scheduling .grid{gap:18px;}
+.set #set-scheduling label.label-field{margin-bottom:5px;}
+.set #set-scheduling .input-field{margin-top:2px;}
+.set #set-scheduling p.text-xs{line-height:1.5;}
 .set .field-help{font-size:12px;color:#6B7280;line-height:1.45;margin:-2px 0 6px;}
 .set .field-eg{font-size:11.5px;color:#9CA3AF;font-style:italic;margin-top:5px;}
 .set .adv-tag{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#94A3B8;border:1px solid #E9ECF0;border-radius:5px;padding:1px 5px;margin-left:7px;vertical-align:middle;}
@@ -2356,8 +2365,8 @@ export default function SettingsPage() {
         </div>
 
         {/* Booking trust badges */}
-        <div className="pt-4 border-t border-gray-100 mt-2">
-          <label className="label-field">Booking page reassurance lines</label>
+        <div className="pt-4 border-t border-gray-100 mt-2 adv">
+          <label className="label-field">Booking page reassurance lines<span className="adv-tag">Extra</span></label>
           <p className="text-xs text-gray-400 mb-3">
             Short trust lines shown under the deposit on the booking page. Only add ones that are true for your studio
             (e.g. your real reschedule or balance policy). Leave empty to hide them entirely.
