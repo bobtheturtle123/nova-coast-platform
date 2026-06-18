@@ -1089,6 +1089,19 @@ export default function SettingsPage() {
     }
   }
 
+  // Persist which sections the user has reviewed so the progress survives refresh.
+  useEffect(() => {
+    if (!tenant?.id) return;
+    try {
+      const raw = localStorage.getItem(`ky_settings_viewed_${tenant.id}`);
+      if (raw) setViewedSections((v) => ({ ...JSON.parse(raw), ...v }));
+    } catch {}
+  }, [tenant?.id]);
+  useEffect(() => {
+    if (!tenant?.id) return;
+    try { localStorage.setItem(`ky_settings_viewed_${tenant.id}`, JSON.stringify(viewedSections)); } catch {}
+  }, [viewedSections, tenant?.id]);
+
   useEffect(() => {
     const loadTenant = async (token) => {
       const res = isDemo()
@@ -1734,7 +1747,7 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className={`set ${viewMode} min-h-screen`} style={{ background: "var(--bg-base)" }}>
+    <div className={`set ${viewMode} min-h-screen`} style={{ background: "#f7f8fa" }}>
     <style dangerouslySetInnerHTML={{ __html: SETTINGS_CSS }} />
     <div className="max-w-[1140px] mx-auto px-6 pt-8">
       <div className="mb-4">
@@ -1743,7 +1756,8 @@ export default function SettingsPage() {
       </div>
     </div>
 
-    {/* Guided setup progress */}
+    {/* Guided setup progress — disappears once everything's reviewed */}
+    {setupPct < 100 && (
     <div className="setup">
       <div className="top">
         <div className="ring">
@@ -1777,6 +1791,7 @@ export default function SettingsPage() {
         })}
       </div>
     </div>
+    )}
 
     {/* Simple / Detailed view switch */}
     <div className="viewbar">
