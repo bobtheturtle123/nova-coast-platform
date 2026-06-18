@@ -42,7 +42,7 @@ const SETTINGS_ICONS = {
 };
 
 const SETTINGS_CSS = `
-.set .set-grid{display:grid;grid-template-columns:220px 1fr;gap:30px;align-items:start;max-width:1140px;margin:0 auto;padding:4px 24px 130px;}
+.set .set-grid{display:grid;grid-template-columns:220px 1fr;gap:30px;align-items:start;max-width:1280px;margin:0 auto;padding:4px 24px 130px;}
 .set .set-toc{position:sticky;top:20px;display:flex;flex-direction:column;gap:2px;}
 .set .set-toc .t{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9CA3AF;padding:6px 10px;}
 .set .set-toc button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 10px;border:none;background:none;border-radius:8px;cursor:pointer;font:inherit;font-size:13px;font-weight:500;color:#4B5261;transition:background .12s,color .12s;}
@@ -70,7 +70,7 @@ const SETTINGS_CSS = `
 .set .plain svg{width:18px;height:18px;color:#3486cf;flex-shrink:0;margin-top:1px;}
 .set .plain p{margin:0;font-size:13px;color:#1E5A8A;line-height:1.5;}
 .set .plain b{font-weight:700;}
-.set .setup{background:#fff;border:1px solid #E9ECF0;border-radius:16px;padding:18px 20px;margin:0 auto 16px;max-width:1140px;box-shadow:0 1px 2px rgba(15,23,42,.03);}
+.set .setup{background:#fff;border:1px solid #E9ECF0;border-radius:16px;padding:18px 20px;margin:0 auto 16px;max-width:1280px;box-shadow:0 1px 2px rgba(15,23,42,.03);}
 .set .setup .top{display:flex;align-items:center;gap:14px;}
 .set .setup .ring{position:relative;width:52px;height:52px;flex-shrink:0;}
 .set .setup .ring svg{transform:rotate(-90deg);}
@@ -97,11 +97,34 @@ const SETTINGS_CSS = `
 .set .set-section h3{font-size:14px;color:#0F172A;}
 .set .input-field{height:40px;font-size:14px;}
 .set .input-field:focus{border-color:#3486cf;box-shadow:0 0 0 3px rgba(52,134,207,.12);}
+/* ── Notification pill buttons (Email / Text On-Off) ── */
+.set .notif{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #F1F3F6;}
+.set .notif:last-child{border-bottom:none;}
+.set .notif .info{flex:1;min-width:0;}
+.set .notif .info .t{font-size:13.5px;font-weight:700;color:#0F172A;}
+.set .notif .info .s{font-size:12px;color:#6B7280;margin-top:2px;}
+.set .notif .pills{display:flex;gap:8px;flex-shrink:0;}
+.set .pill{display:inline-flex;align-items:center;gap:7px;cursor:pointer;height:34px;padding:0 12px;border-radius:9px;font-size:12.5px;font-weight:700;border:1.5px solid #E9ECF0;background:#fff;color:#94A3B8;font-family:inherit;transition:all .12s;}
+.set .pill .led{width:8px;height:8px;border-radius:50%;background:#CBD5E1;}
+.set .pill .state{font-size:11px;font-weight:700;}
+.set .pill.on{background:#ECFDF5;border-color:#A7F3D0;color:#059669;}
+.set .pill.on .led{background:#059669;}
+.set .pill.locked{cursor:not-allowed;opacity:.55;}
+/* ── Choice cards (pricing mode, etc.) ── */
+.set .choices2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.set .choice{position:relative;text-align:left;cursor:pointer;padding:16px;border-radius:12px;border:1.5px solid #E9ECF0;background:#fff;font-family:inherit;transition:all .12s;}
+.set .choice:hover{border-color:#C7D2E8;}
+.set .choice.on{border-color:#3486cf;background:#EEF4FA;}
+.set .choice .ct{font-size:14px;font-weight:800;color:#0F172A;padding-right:26px;}
+.set .choice .cs{font-size:12.5px;color:#5B6472;margin-top:4px;line-height:1.45;}
+.set .choice .pick{width:18px;height:18px;border-radius:50%;border:2px solid #CBD5E1;position:absolute;top:14px;right:14px;display:flex;align-items:center;justify-content:center;}
+.set .choice.on .pick{border-color:#3486cf;}
+.set .choice.on .pick::after{content:'';width:8px;height:8px;border-radius:50%;background:#3486cf;}
 .set .field-help{font-size:12px;color:#6B7280;line-height:1.45;margin:-2px 0 6px;}
 .set .field-eg{font-size:11.5px;color:#9CA3AF;font-style:italic;margin-top:5px;}
 .set .adv-tag{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#94A3B8;border:1px solid #E9ECF0;border-radius:5px;padding:1px 5px;margin-left:7px;vertical-align:middle;}
 .set.simple .adv{display:none !important;}
-.set .viewbar{display:flex;align-items:center;justify-content:space-between;gap:14px;max-width:1140px;margin:0 auto 16px;padding:0 24px;}
+.set .viewbar{display:flex;align-items:center;justify-content:space-between;gap:14px;max-width:1280px;margin:0 auto 16px;padding:0 24px;}
 .set .viewbar .hint{font-size:12.5px;color:#6B7280;}
 .set .seg{display:inline-flex;background:#EDF0F4;border-radius:10px;padding:3px;gap:2px;flex-shrink:0;}
 .set .seg button{border:none;background:transparent;cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;color:#6B7280;padding:7px 14px;border-radius:8px;}
@@ -135,27 +158,22 @@ function NotifToggleRow({ notif, pref, plan, onToggle }) {
   const smsOn    = pref?.channels?.sms   !== false;
   const smsOk    = SMS_PLANS_LIST.includes(plan);
   return (
-    <div className="flex items-center gap-3 py-3 border-b last:border-0 border-gray-100">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[#0F172A]">{notif.label}</p>
-        <p className="text-xs text-gray-400 mt-0.5">{notif.description}</p>
+    <div className="notif">
+      <div className="info">
+        <div className="t">{notif.label}</div>
+        <div className="s">{notif.description}</div>
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="pills">
         {notif.channels.includes("email") && (
-          <button onClick={() => onToggle("email")}
-            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${emailOn ? "bg-[#3486cf] text-white border-[#3486cf]" : "text-gray-400 border-gray-200 hover:border-gray-300"}`}>
-            Email
+          <button type="button" onClick={() => onToggle("email")} className={`pill ${emailOn ? "on" : ""}`}>
+            <span className="led" />Email<span className="state">{emailOn ? "On" : "Off"}</span>
           </button>
         )}
         {notif.channels.includes("sms") && (
-          <button onClick={() => smsOk && onToggle("sms")}
-            title={!smsOk ? "SMS is available on Studio plan and above" : undefined}
-            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
-              !smsOk ? "opacity-40 cursor-not-allowed text-gray-400 border-gray-200"
-              : smsOn ? "bg-emerald-600 text-white border-emerald-600"
-              : "text-gray-400 border-gray-200 hover:border-gray-300"
-            }`}>
-            SMS{!smsOk && <span className="ml-0.5 text-[9px] opacity-70"> Studio+</span>}
+          <button type="button" onClick={() => smsOk && onToggle("sms")}
+            title={!smsOk ? "Texting is available on Studio plan and above" : undefined}
+            className={`pill ${!smsOk ? "locked" : smsOn ? "on" : ""}`}>
+            <span className="led" />Text<span className="state">{!smsOk ? "Studio+" : smsOn ? "On" : "Off"}</span>
           </button>
         )}
       </div>
@@ -1749,7 +1767,7 @@ export default function SettingsPage() {
   return (
     <div className={`set ${viewMode} min-h-screen`} style={{ background: "#f7f8fa" }}>
     <style dangerouslySetInnerHTML={{ __html: SETTINGS_CSS }} />
-    <div className="max-w-[1140px] mx-auto px-6 pt-8">
+    <div className="max-w-[1280px] mx-auto px-6 pt-8">
       <div className="mb-4">
         <h1 className="page-title mb-1">Settings</h1>
         <p className="page-subtitle">This is where you set up your studio. Don&apos;t worry - go one box at a time, and we&apos;ll tell you in plain words what each thing does.</p>
@@ -2060,23 +2078,22 @@ export default function SettingsPage() {
           <label className="label-field">How do you want to charge?</label>
           <p className="field-help">Pick one. Most photographers charge by house size, so if that&apos;s you, leave the first one picked. You can switch later.</p>
           {!tenantLoaded ? (
-            <div className="grid grid-cols-3 gap-2">
-              {[0,1,2,3].map((i) => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}
+            <div className="choices2">
+              {[0,1].map((i) => <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />)}
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="choices2">
               {[
-                { value: "sqft",   label: "By house size", desc: "Bigger house costs more - clients enter the square footage" },
-                { value: "photos", label: "By photo count", desc: "Price goes up with the number of photos they want" },
-                { value: "flat",   label: "One flat price", desc: "Everyone pays the same - no size question asked" },
-                { value: "custom", label: "Your own way", desc: "Make up your own question and price ranges" },
+                { value: "sqft",   label: "By house size", desc: "Bigger house = higher price. Most common." },
+                { value: "flat",   label: "One flat price", desc: "Same price every time. The simplest." },
+                { value: "photos", label: "By photo count", desc: "Price goes up with the number of photos.", adv: true },
+                { value: "custom", label: "Your own way", desc: "Make up your own question and ranges.", adv: true },
               ].map((m) => (
                 <button key={m.value} type="button" onClick={() => switchPricingMode(m.value)}
-                  className={`p-3 border rounded-xl text-left transition-colors ${
-                    pricingMode === m.value ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-[#3486cf]/30"
-                  }`}>
-                  <p className={`text-sm font-semibold ${pricingMode === m.value ? "text-[#3486cf]" : "text-[#0F172A]"}`}>{m.label}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{m.desc}</p>
+                  className={`choice ${pricingMode === m.value ? "on" : ""}${m.adv ? " adv" : ""}`}>
+                  <span className="pick" />
+                  <span className="ct">{m.label}{m.adv && <span className="adv-tag">Extra</span>}</span>
+                  <span className="cs">{m.desc}</span>
                 </button>
               ))}
             </div>
