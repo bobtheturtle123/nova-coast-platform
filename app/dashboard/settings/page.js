@@ -2058,7 +2058,7 @@ export default function SettingsPage() {
         {/* Pricing mode */}
         <div className="mb-5">
           <label className="label-field">How do you want to charge?</label>
-          <p className="field-help">Most photographers charge by house size - a bigger house costs more. If that&apos;s you, leave the first option picked.</p>
+          <p className="field-help">Pick one. Most photographers charge by house size, so if that&apos;s you, leave the first one picked. You can switch later.</p>
           {!tenantLoaded ? (
             <div className="grid grid-cols-3 gap-2">
               {[0,1,2,3].map((i) => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}
@@ -2089,12 +2089,18 @@ export default function SettingsPage() {
             Flat pricing is active. Clients will not be asked for square footage - every product uses its base price.
           </p>
         )}
+        {pricingMode !== "flat" && (
+          <div className="mb-2">
+            <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Set your size groups</h3>
+            <p className="field-help">A property that falls in each range gets that group&apos;s price. The middle name is what clients see.</p>
+          </div>
+        )}
         <div className={`space-y-2 mb-4 ${pricingMode === "flat" ? "opacity-40 pointer-events-none" : ""}`}>
           <div className="grid grid-cols-12 text-xs text-gray-400 uppercase tracking-wide font-medium px-1 mb-1">
-            <div className="col-span-3">Tier name</div>
-            <div className="col-span-4">Label (shown to client)</div>
-            <div className="col-span-2 text-right pr-2">From</div>
-            <div className="col-span-2">To</div>
+            <div className="col-span-3">Group</div>
+            <div className="col-span-4">What the client sees</div>
+            <div className="col-span-2 text-right pr-2">Smallest</div>
+            <div className="col-span-2">Biggest</div>
             <div className="col-span-1" />
           </div>
           {tiers.map((tier, i) => {
@@ -3287,28 +3293,32 @@ export default function SettingsPage() {
         </p>
         <div className="grid grid-cols-2 gap-4 max-w-lg">
           <div>
-            <label className="label-field">Photographer pay ($ / hour)</label>
+            <label className="label-field">Photographer pay</label>
+            <p className="field-help">Per hour of shooting.</p>
             <input type="number" min="0" step="1" value={costRates.shooterHourly}
               onChange={(e) => setCostRates((r) => ({ ...r, shooterHourly: Number(e.target.value) || 0 }))}
-              className="input-field w-full" placeholder="75" />
+              className="input-field w-full" placeholder="e.g. 75 / hour" />
           </div>
           <div>
-            <label className="label-field">Editing ($ / photo)</label>
+            <label className="label-field">Editor pay</label>
+            <p className="field-help">Per finished photo.</p>
             <input type="number" min="0" step="0.25" value={costRates.editorPerPhoto}
               onChange={(e) => setCostRates((r) => ({ ...r, editorPerPhoto: Number(e.target.value) || 0 }))}
-              className="input-field w-full" placeholder="2.00" />
+              className="input-field w-full" placeholder="e.g. 2.00 / photo" />
           </div>
           <div>
-            <label className="label-field">Travel Rate ($/mile)</label>
+            <label className="label-field">Travel cost</label>
+            <p className="field-help">Per mile driven to a shoot.</p>
             <input type="number" min="0" step="0.01" value={costRates.travelPerMile}
               onChange={(e) => setCostRates((r) => ({ ...r, travelPerMile: Number(e.target.value) || 0 }))}
-              className="input-field w-full" placeholder="0.67" />
+              className="input-field w-full" placeholder="e.g. 0.65 / mile" />
           </div>
           <div>
-            <label className="label-field">Other Flat Cost ($)</label>
+            <label className="label-field">Anything else</label>
+            <p className="field-help">A flat cost added to every job.</p>
             <input type="number" min="0" step="1" value={costRates.otherFlat}
               onChange={(e) => setCostRates((r) => ({ ...r, otherFlat: Number(e.target.value) || 0 }))}
-              className="input-field w-full" placeholder="0" />
+              className="input-field w-full" placeholder="e.g. 0" />
           </div>
         </div>
         <p className="text-xs text-gray-400 mt-3">
