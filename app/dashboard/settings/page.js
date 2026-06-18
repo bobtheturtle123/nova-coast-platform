@@ -64,7 +64,7 @@ const SETTINGS_CSS = `
 .set .set-pill.done{background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;}
 .set .set-pill.todo{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;}
 .set .set-pill.info{background:#EEF4FA;color:#1E5A8A;border:1px solid #DAE6F4;}
-.set .plain{display:flex;gap:11px;align-items:flex-start;background:#EEF4FA;border:1px solid #DAE6F4;border-radius:11px;padding:13px 15px;margin:14px 0 4px;}
+.set .plain{display:flex;gap:11px;align-items:flex-start;background:#EEF4FA;border:1px solid #DAE6F4;border-radius:11px;padding:14px 16px;margin:24px 0 22px;}
 .set .plain svg{width:18px;height:18px;color:#3486cf;flex-shrink:0;margin-top:1px;}
 .set .plain p{margin:0;font-size:13px;color:#1E5A8A;line-height:1.5;}
 .set .plain b{font-weight:700;}
@@ -75,6 +75,14 @@ const SETTINGS_CSS = `
 .set .setup .ring .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#3486cf;}
 .set .setup .copy .t{font-size:16px;font-weight:800;letter-spacing:-.2px;color:#0F172A;}
 .set .setup .copy .s{font-size:13px;color:#5B6472;margin-top:2px;}
+.set .checklist{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px;}
+.set .check{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid #E9ECF0;border-radius:10px;background:#FAFAFA;font-size:12.5px;font-weight:600;color:#475569;cursor:pointer;text-align:left;font-family:inherit;transition:border-color .12s,background .12s;}
+.set .check:hover{border-color:#C7D2E8;background:#fff;}
+.set .check .mark{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.set .check.done .mark{background:#059669;color:#fff;}
+.set .check.todo .mark{background:#fff;border:2px dashed #CBD5E1;}
+.set .check .mark svg{width:12px;height:12px;}
+@media(max-width:680px){.set .checklist{grid-template-columns:1fr;}}
 .set .field-help{font-size:12px;color:#6B7280;line-height:1.45;margin:-2px 0 6px;}
 .set .field-eg{font-size:11.5px;color:#9CA3AF;font-style:italic;margin-top:5px;}
 .set .adv-tag{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#94A3B8;border:1px solid #E9ECF0;border-radius:5px;padding:1px 5px;margin-left:7px;vertical-align:middle;}
@@ -1716,9 +1724,22 @@ export default function SettingsPage() {
           <div className="s">
             {setupPct === 100
               ? "Every section is filled in — you're ready to take bookings."
-              : `${doneCount} of ${totalCount} done. Finish the sections marked “Needs you” and your studio is ready to take bookings.`}
+              : `${doneCount} of ${totalCount} done. Tap a box below to jump in and finish the ones marked “Needs you.”`}
           </div>
         </div>
+      </div>
+      <div className="checklist">
+        {SETTINGS_TOC.map(([key, label]) => {
+          const done = key === "integrations" ? integConnected > 0 : sectionDone[key];
+          return (
+            <button key={key} type="button" className={`check ${done ? "done" : "todo"}`} onClick={() => openAndScroll(key)}>
+              <span className="mark">
+                {done && <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+              </span>
+              {label}
+            </button>
+          );
+        })}
       </div>
     </div>
 
