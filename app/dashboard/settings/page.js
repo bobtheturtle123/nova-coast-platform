@@ -59,7 +59,23 @@ const SETTINGS_CSS = `
 .set .set-head .de{display:block;font-size:12.5px;color:#6B7280;margin-top:2px;}
 .set .set-head .chev{color:#9CA3AF;flex-shrink:0;transition:transform .18s;display:flex;}
 .set .set-section.open .set-head .chev{transform:rotate(90deg);}
-@media(max-width:900px){.set .set-grid{grid-template-columns:1fr;gap:14px;padding-left:16px;padding-right:16px;}.set .set-toc{display:none;}}
+.set .set-pill{font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:99px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;}
+.set .set-pill svg{width:12px;height:12px;}
+.set .set-pill.done{background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;}
+.set .set-pill.todo{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;}
+.set .set-pill.info{background:#EEF4FA;color:#1E5A8A;border:1px solid #DAE6F4;}
+.set .plain{display:flex;gap:11px;align-items:flex-start;background:#EEF4FA;border:1px solid #DAE6F4;border-radius:11px;padding:13px 15px;margin:14px 0 4px;}
+.set .plain svg{width:18px;height:18px;color:#3486cf;flex-shrink:0;margin-top:1px;}
+.set .plain p{margin:0;font-size:13px;color:#1E5A8A;line-height:1.5;}
+.set .plain b{font-weight:700;}
+.set .setup{background:#fff;border:1px solid #E9ECF0;border-radius:16px;padding:18px 20px;margin:0 auto 16px;max-width:1140px;box-shadow:0 1px 2px rgba(15,23,42,.03);}
+.set .setup .top{display:flex;align-items:center;gap:14px;}
+.set .setup .ring{position:relative;width:52px;height:52px;flex-shrink:0;}
+.set .setup .ring svg{transform:rotate(-90deg);}
+.set .setup .ring .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#3486cf;}
+.set .setup .copy .t{font-size:16px;font-weight:800;letter-spacing:-.2px;color:#0F172A;}
+.set .setup .copy .s{font-size:13px;color:#5B6472;margin-top:2px;}
+@media(max-width:900px){.set .set-grid{grid-template-columns:1fr;gap:14px;padding-left:16px;padding-right:16px;}.set .set-toc{display:none;}.set .setup{margin-left:16px;margin-right:16px;}}
 `;
 
 // ─── Notification definitions (shared with notifications page) ───────────────
@@ -1632,13 +1648,66 @@ export default function SettingsPage() {
   };
 
 
+  // ── Plain-language completion signals (drives the setup ring + status pills) ──
+  const sectionDone = {
+    identity:     !!(form.businessName && form.phone && form.fromZip),
+    pricing:      pricingMode === "flat" || (Array.isArray(tiers) && tiers.length > 0),
+    booking:      depositType === "none" || Number(depositValue) > 0,
+    team:         true, // default rates are optional — never blocks setup
+    comms:        true, // notifications ship with safe defaults
+    integrations: !!tenant?.stripeConnectOnboarded,
+  };
+  const doneCount   = Object.values(sectionDone).filter(Boolean).length;
+  const totalCount  = Object.keys(sectionDone).length;
+  const setupPct    = Math.round((doneCount / totalCount) * 100);
+  const ringCirc    = 2 * Math.PI * 22; // r=22
+  const integConnected = [tenant?.stripeConnectOnboarded, tenant?.customDomain?.verified].filter(Boolean).length;
+
+  function StatusPill({ section }) {
+    if (section === "integrations") {
+      return <span className="set-pill info">{integConnected} of 4 connected</span>;
+    }
+    return sectionDone[section]
+      ? <span className="set-pill done"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>All done</span>
+      : <span className="set-pill todo">Needs you</span>;
+  }
+
+  const PlainIntro = ({ children }) => (
+    <div className="plain">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <p>{children}</p>
+    </div>
+  );
+
   return (
     <div className="set min-h-screen" style={{ background: "var(--bg-base)" }}>
     <style dangerouslySetInnerHTML={{ __html: SETTINGS_CSS }} />
     <div className="max-w-[1140px] mx-auto px-6 pt-8">
-      <div className="mb-2">
+      <div className="mb-4">
         <h1 className="page-title mb-1">Settings</h1>
-        <p className="page-subtitle">This is where you set up your studio — go one section at a time; each one explains in plain words what it does.</p>
+        <p className="page-subtitle">This is where you set up your studio. Don&apos;t worry — go one box at a time, and we&apos;ll tell you in plain words what each thing does.</p>
+      </div>
+    </div>
+
+    {/* Guided setup progress */}
+    <div className="setup">
+      <div className="top">
+        <div className="ring">
+          <svg width="52" height="52" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="22" fill="none" stroke="#EDF0F4" strokeWidth="6" />
+            <circle cx="26" cy="26" r="22" fill="none" stroke="#3486cf" strokeWidth="6" strokeLinecap="round"
+              strokeDasharray={ringCirc} strokeDashoffset={ringCirc * (1 - setupPct / 100)} />
+          </svg>
+          <div className="pct">{setupPct}%</div>
+        </div>
+        <div className="copy">
+          <div className="t">{setupPct === 100 ? "Your studio is ready!" : "You're almost set up!"}</div>
+          <div className="s">
+            {setupPct === 100
+              ? "Every section is filled in — you're ready to take bookings."
+              : `${doneCount} of ${totalCount} done. Finish the sections marked “Needs you” and your studio is ready to take bookings.`}
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1661,12 +1730,14 @@ export default function SettingsPage() {
           <span className="ic">{SETTINGS_ICONS.identity}</span>
           <span className="bd">
             <span className="ti">Business Info &amp; Branding</span>
-            <span className="de">Business name, colors, tagline, booking URL</span>
+            <span className="de">Your name, logo, and how clients reach you.</span>
           </span>
+          <StatusPill section="identity" />
           <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.identity && (
         <div className="pt-2 pb-4">
+      <PlainIntro><b>What is this?</b> These details show up on your booking page, your invoices, and the emails clients get. Fill them in like you&apos;re introducing your business to someone new.</PlainIntro>
       {/* Booking URL */}
       <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-4">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Your Booking Page</p>
@@ -1860,13 +1931,15 @@ export default function SettingsPage() {
         <button type="button" className="set-head" onClick={() => toggleSection("pricing")}>
           <span className="ic">{SETTINGS_ICONS.pricing}</span>
           <span className="bd">
-            <span className="ti">Pricing</span>
-            <span className="de">Pricing mode and tier configuration</span>
+            <span className="ti">Your prices</span>
+            <span className="de">How much you charge. We&apos;ll use this everywhere automatically.</span>
           </span>
+          <StatusPill section="pricing" />
           <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.pricing && (
         <div className="pt-2 pb-4">
+      <PlainIntro><b>What is this?</b> First, pick how you want to charge. Most photographers charge by house size — a bigger house costs more. If that&apos;s you, leave the first option picked.</PlainIntro>
       {/* ─── Pricing Tiers ─────────────────────────────────────────────────────── */}
       <div id="settings-pricing" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between mb-1">
@@ -2020,12 +2093,14 @@ export default function SettingsPage() {
           <span className="ic">{SETTINGS_ICONS.booking}</span>
           <span className="bd">
             <span className="ti">Booking Settings</span>
-            <span className="de">Booking logic, deposits, availability, service areas, travel fees, legal</span>
+            <span className="de">How clients book you — deposits, availability, travel, and the fine print.</span>
           </span>
+          <StatusPill section="booking" />
           <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.booking && (
         <div className="pt-2 pb-4">
+      <PlainIntro><b>What is this?</b> These settings control how clients book you — how much they pay up front, when you&apos;re available, how far you&apos;ll travel, and the terms they agree to.</PlainIntro>
       {/* ─── Booking Config ──────────────────────────────────────────────────── */}
       <div id="settings-booking" className="card mt-8 space-y-8 scroll-mt-24">
         <div>
@@ -3069,12 +3144,14 @@ export default function SettingsPage() {
           <span className="ic">{SETTINGS_ICONS.team}</span>
           <span className="bd">
             <span className="ti">Team</span>
-            <span className="de">Job cost rates and staff access</span>
+            <span className="de">Default rates used to estimate what each job costs you.</span>
           </span>
+          <StatusPill section="team" />
           <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.team && (
         <div className="pt-2 pb-4">
+      <PlainIntro><b>What is this?</b> Optional default rates we use to estimate what each shoot costs you (pay, editing, travel). They don&apos;t change what clients pay — they just help your profit numbers in Reports.</PlainIntro>
       {/* ─── Job Cost Rates ──────────────────────────────────────────────────── */}
       <div id="settings-cost-rates" className="card mt-6 scroll-mt-24">
         <h2 className="font-semibold text-[#0F172A] text-base mb-1">Default Job Cost Rates</h2>
@@ -3130,12 +3207,14 @@ export default function SettingsPage() {
           <span className="ic">{SETTINGS_ICONS.comms}</span>
           <span className="bd">
             <span className="ti">Notifications</span>
-            <span className="de">Email templates, notification channels, gallery settings</span>
+            <span className="de">The emails and texts clients and your team get, and what they say.</span>
           </span>
+          <StatusPill section="comms" />
           <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.comms && (
         <div className="pt-2 pb-4">
+      <PlainIntro><b>What is this?</b> Decide which updates clients and your team get by email or text, and customize what those messages say. Everything works out of the box — only change what you want.</PlainIntro>
 
       {/* ─── Email Templates ─────────────────────────────────────────────────── */}
       <div id="settings-email" className="card mt-6 scroll-mt-24">
@@ -3503,12 +3582,14 @@ export default function SettingsPage() {
           <span className="ic">{SETTINGS_ICONS.integrations}</span>
           <span className="bd">
             <span className="ti">Integrations</span>
-            <span className="de">Custom domain and third-party connections</span>
+            <span className="de">Connect your own domain and the other tools you use.</span>
           </span>
+          <StatusPill section="integrations" />
           <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.integrations && (
         <div className="pt-2 pb-4">
+      <PlainIntro><b>What is this?</b> Connect KyoriaOS to your own web address and the other tools you already use, like your calendar, Stripe, and thousands of apps via Zapier.</PlainIntro>
       {/* Google Calendar */}
       <details id="settings-google-calendar" className="card mt-6 scroll-mt-24 group">
         <summary className="flex items-center justify-between gap-3 cursor-pointer list-none">
