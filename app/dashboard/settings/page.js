@@ -19,7 +19,8 @@ import { getEffectivePlan, getSeatLimit } from "@/lib/plans";
 const SETTINGS_TOC = [
   ["identity", "Business & Branding"],
   ["pricing", "Pricing"],
-  ["booking", "Booking"],
+  ["booking", "Booking & deposit"],
+  ["scheduling", "Scheduling & policies"],
   ["team", "Team rates"],
   ["comms", "Notifications"],
   ["integrations", "Integrations"],
@@ -34,6 +35,7 @@ const SETTINGS_ICONS = {
   identity:     _ico("M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2M5 21H3m4-4h.01M7 13h.01M7 9h.01M11 17h.01M11 13h.01M11 9h.01"),
   pricing:      _ico("M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 9V4a1 1 0 011-1z"),
   booking:      _ico("M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"),
+  scheduling:   _ico("M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"),
   team:         _ico("M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"),
   comms:        _ico("M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"),
   integrations: _ico("M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"),
@@ -664,6 +666,7 @@ export default function SettingsPage() {
     identity: false,
     pricing:  false,
     booking:  false,
+    scheduling: false,
     legal:    false,
     team:     false,
     comms:    false,
@@ -1680,6 +1683,7 @@ export default function SettingsPage() {
     identity:     !!(form.businessName && form.phone && form.fromZip),
     pricing:      pricingMode === "flat" || (Array.isArray(tiers) && tiers.length > 0),
     booking:      depositType === "none" || Number(depositValue) > 0,
+    scheduling:   false,
     team:         false,
     comms:        false,
     integrations: !!tenant?.stripeConnectOnboarded,
@@ -1687,6 +1691,14 @@ export default function SettingsPage() {
   const sectionDone = Object.fromEntries(
     Object.keys(fieldDone).map((k) => [k, !!(fieldDone[k] || viewedSections[k])])
   );
+
+  // Built-in booking-form questions, presented like pre-filled custom questions:
+  // each has a type, can be removed, and re-added. Backed by the existing toggles.
+  const STD_QS = [
+    { label: "Property type", type: "Select box", val: showPropertyType, set: setShowPropertyType },
+    { label: "Square footage", type: "Number", val: showSqftField, set: setShowSqftField },
+    { label: "Notes for the photographer", type: "Long text", val: showNotesField, set: setShowNotesField },
+  ];
   const doneCount   = Object.values(sectionDone).filter(Boolean).length;
   const totalCount  = Object.keys(sectionDone).length;
   const setupPct    = Math.round((doneCount / totalCount) * 100);
@@ -2159,20 +2171,20 @@ export default function SettingsPage() {
         <button type="button" className="set-head" onClick={() => toggleSection("booking")}>
           <span className="ic">{SETTINGS_ICONS.booking}</span>
           <span className="bd">
-            <span className="ti">Booking Settings</span>
-            <span className="de">How clients book you - deposits, availability, travel, and the fine print.</span>
+            <span className="ti">Booking &amp; deposit</span>
+            <span className="de">What clients pay up front and the questions on your booking form.</span>
           </span>
           <StatusPill section="booking" />
           <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.booking && (
         <div className="pt-2 pb-4">
-      <PlainIntro><b>What is this?</b> These settings control how clients book you - how much they pay up front, when you&apos;re available, how far you&apos;ll travel, and the terms they agree to.</PlainIntro>
+      <PlainIntro><b>What is this?</b> Set how much clients pay to lock in a shoot, and the questions they answer when booking. Scheduling, travel, and policies are in the next section.</PlainIntro>
       {/* ─── Booking Config ──────────────────────────────────────────────────── */}
       <div id="settings-booking" className="card mt-8 space-y-8 scroll-mt-24">
         <div>
-          <h2 className="font-semibold text-[#0F172A] text-base mb-1">How booking works</h2>
-          <p className="text-sm text-gray-500">Set what clients pay up front, when you&apos;re free, and what you ask them on the form.</p>
+          <h2 className="font-semibold text-[#0F172A] text-base mb-1">Deposit &amp; booking form</h2>
+          <p className="text-sm text-gray-500">Set what clients pay up front and what you ask them on the form.</p>
         </div>
 
         {/* Deposit config */}
@@ -2232,28 +2244,19 @@ export default function SettingsPage() {
           <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Questions on your booking form</h3>
           <p className="field-help mb-3">The address is always asked. Turn off any standard questions you don&apos;t need, or add your own below.</p>
 
-          <div className="space-y-2.5 mb-4">
-            {[
-              ["Property type", showPropertyType, setShowPropertyType],
-              ["Square footage", showSqftField, setShowSqftField],
-              ["Notes for the photographer", showNotesField, setShowNotesField],
-            ].map(([label, val, set]) => (
-              <div key={label} className="flex items-center justify-between border border-gray-200 rounded-xl px-3 py-2.5 bg-gray-50">
-                <div>
-                  <span className="text-sm font-medium text-[#0F172A]">{label}</span>
-                  <span className="text-xs text-gray-400 ml-2">standard question</span>
-                </div>
-                <button type="button" onClick={() => set((v) => !v)}
-                  className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${val ? "bg-[#3486cf]" : "bg-gray-200"}`}>
-                  <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${val ? "translate-x-4" : "translate-x-0"}`} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <p className="field-help mb-2">Need something specific? Add your own question, like a gate code or the date they want it live.</p>
-          {customFields.length > 0 && (
+          {/* Unified question list: standard (deletable) + your own */}
+          {(STD_QS.some((q) => q.val) || customFields.length > 0) && (
             <div className="space-y-2 mb-3">
+              {STD_QS.filter((q) => q.val).map((q) => (
+                <div key={q.label} className="flex items-center gap-3 border border-gray-200 rounded-xl px-3 py-2.5 bg-gray-50">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#0F172A] truncate">{q.label}</p>
+                    <p className="text-xs text-gray-400">{q.type} · standard</p>
+                  </div>
+                  <button type="button" onClick={() => q.set(false)} title="Remove this question"
+                    className="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+                </div>
+              ))}
               {customFields.map((f) => (
                 <div key={f.id} className="flex items-center gap-3 border border-gray-200 rounded-xl px-3 py-2.5 bg-gray-50">
                   <div className="flex-1 min-w-0">
@@ -2287,6 +2290,18 @@ export default function SettingsPage() {
             <button onClick={addCustomField} disabled={!newFieldLabel.trim()}
               className="btn-primary px-4 py-2 text-sm">Add</button>
           </div>
+
+          {STD_QS.some((q) => !q.val) && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-400">Add back a standard question:</span>
+              {STD_QS.filter((q) => !q.val).map((q) => (
+                <button key={q.label} type="button" onClick={() => q.set(true)}
+                  className="text-xs border border-gray-200 rounded-full px-3 py-1 text-[#3486cf] hover:bg-[#3486cf]/5 transition-colors">
+                  + {q.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Booking trust badges */}
@@ -2454,6 +2469,24 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+        </div>
+        )}
+      </div>
+
+      {/* ─── SCHEDULING & POLICIES (split out of Booking) ───────────────────── */}
+      <div id="set-scheduling" className={`set-section ${openSections.scheduling ? "open" : ""}`}>
+        <button type="button" className="set-head" onClick={() => toggleSection("scheduling")}>
+          <span className="ic">{SETTINGS_ICONS.scheduling}</span>
+          <span className="bd">
+            <span className="ti">Scheduling &amp; policies</span>
+            <span className="de">Availability, travel fees, cancellations, promos, and your legal terms.</span>
+          </span>
+          <StatusPill section="scheduling" />
+          <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
+        </button>
+        {openSections.scheduling && (
+        <div className="pt-2 pb-4">
+      <PlainIntro><b>What is this?</b> When you&apos;re available, how far you travel, what happens on a late cancel, any promo codes, and the terms clients agree to.</PlainIntro>
 
       {/* ─── Availability ────────────────────────────────────────────────────── */}
       <div id="settings-availability" className="card mt-6 scroll-mt-24">
