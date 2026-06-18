@@ -75,6 +75,16 @@ const SETTINGS_CSS = `
 .set .setup .ring .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#3486cf;}
 .set .setup .copy .t{font-size:16px;font-weight:800;letter-spacing:-.2px;color:#0F172A;}
 .set .setup .copy .s{font-size:13px;color:#5B6472;margin-top:2px;}
+.set .field-help{font-size:12px;color:#6B7280;line-height:1.45;margin:-2px 0 6px;}
+.set .field-eg{font-size:11.5px;color:#9CA3AF;font-style:italic;margin-top:5px;}
+.set .adv-tag{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#94A3B8;border:1px solid #E9ECF0;border-radius:5px;padding:1px 5px;margin-left:7px;vertical-align:middle;}
+.set.simple .adv{display:none !important;}
+.set .viewbar{display:flex;align-items:center;justify-content:space-between;gap:14px;max-width:1140px;margin:0 auto 16px;padding:0 24px;}
+.set .viewbar .hint{font-size:12.5px;color:#6B7280;}
+.set .seg{display:inline-flex;background:#EDF0F4;border-radius:10px;padding:3px;gap:2px;flex-shrink:0;}
+.set .seg button{border:none;background:transparent;cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;color:#6B7280;padding:7px 14px;border-radius:8px;}
+.set .seg button.on{background:#fff;color:#0F172A;box-shadow:0 1px 3px rgba(15,23,42,.10);}
+@media(max-width:900px){.set .viewbar{padding-left:16px;padding-right:16px;flex-wrap:wrap;}}
 @media(max-width:900px){.set .set-grid{grid-template-columns:1fr;gap:14px;padding-left:16px;padding-right:16px;}.set .set-toc{display:none;}.set .setup{margin-left:16px;margin-right:16px;}}
 `;
 
@@ -639,6 +649,7 @@ export default function SettingsPage() {
   const [tenant,  setTenant]  = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
+  const [viewMode, setViewMode] = useState("simple"); // "simple" | "detailed" — hides Extra fields
 
   const [openSections, setOpenSections] = useState({
     identity: false,
@@ -1680,7 +1691,7 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="set min-h-screen" style={{ background: "var(--bg-base)" }}>
+    <div className={`set ${viewMode} min-h-screen`} style={{ background: "var(--bg-base)" }}>
     <style dangerouslySetInnerHTML={{ __html: SETTINGS_CSS }} />
     <div className="max-w-[1140px] mx-auto px-6 pt-8">
       <div className="mb-4">
@@ -1708,6 +1719,17 @@ export default function SettingsPage() {
               : `${doneCount} of ${totalCount} done. Finish the sections marked “Needs you” and your studio is ready to take bookings.`}
           </div>
         </div>
+      </div>
+    </div>
+
+    {/* Simple / Detailed view switch */}
+    <div className="viewbar">
+      <span className="hint">
+        New here? Stay on <b>Simple</b>. Switch to Detailed only when you want extra options.
+      </span>
+      <div className="seg">
+        <button type="button" className={viewMode === "simple" ? "on" : ""} onClick={() => setViewMode("simple")}>Simple</button>
+        <button type="button" className={viewMode === "detailed" ? "on" : ""} onClick={() => setViewMode("detailed")}>Detailed</button>
       </div>
     </div>
 
@@ -1783,27 +1805,32 @@ export default function SettingsPage() {
       <form id="settings-branding" onSubmit={saveBranding} className="space-y-6 scroll-mt-24">
         {/* Business info */}
         <div className="card">
-          <h2 className="font-semibold text-[#0F172A] text-base mb-4">Business Info</h2>
-          <div className="space-y-4">
+          <h2 className="font-semibold text-[#0F172A] text-base mb-1">The basics</h2>
+          <p className="field-help">Just the essentials — you can change any of this later.</p>
+          <div className="space-y-4 mt-4">
             <div>
-              <label className="label-field">Business Name</label>
-              <input type="text" value={form.businessName} onChange={set("businessName")} className="input-field w-full" />
+              <label className="label-field">What&apos;s your business called?</label>
+              <p className="field-help">The name clients will see everywhere.</p>
+              <input type="text" value={form.businessName} onChange={set("businessName")} className="input-field w-full" placeholder="e.g. Nova Coast Media" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label-field">Phone</label>
-                <input type="tel" value={form.phone} onChange={set("phone")} className="input-field w-full" />
+                <label className="label-field">Phone number</label>
+                <p className="field-help">So clients can call or text you.</p>
+                <input type="tel" value={form.phone} onChange={set("phone")} className="input-field w-full" placeholder="e.g. (310) 555-0142" />
               </div>
               <div>
-                <label className="label-field">{form.country === "US" ? "Home ZIP Code" : "Postal Code"}</label>
-                <input type="text" value={form.fromZip} onChange={set("fromZip")} maxLength={10} className="input-field w-full" />
+                <label className="label-field">{form.country === "US" ? "Your ZIP code" : "Your postal code"}</label>
+                <p className="field-help">We use this to work out how far you travel to a shoot.</p>
+                <input type="text" value={form.fromZip} onChange={set("fromZip")} maxLength={10} className="input-field w-full" placeholder="e.g. 90049" />
               </div>
             </div>
 
-            {/* Regional settings */}
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+            {/* Regional settings — Extra (Detailed view) */}
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 adv">
               <div>
-                <label className="label-field">Country / Region</label>
+                <label className="label-field">Country / Region<span className="adv-tag">Extra</span></label>
+                <p className="field-help">Sets your address format.</p>
                 <select value={form.country} onChange={set("country")} className="input-field w-full">
                   <option value="US">🇺🇸 United States</option>
                   <option value="CA">🇨🇦 Canada</option>
@@ -1816,7 +1843,8 @@ export default function SettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="label-field">Temperature Units</label>
+                <label className="label-field">Temperature<span className="adv-tag">Extra</span></label>
+                <p className="field-help">Fahrenheit or Celsius on weather info.</p>
                 <div className="flex gap-2">
                   {[{ v: "F", label: "°F  Fahrenheit" }, { v: "C", label: "°C  Celsius" }].map(({ v, label }) => (
                     <button key={v} type="button" onClick={() => setForm((f) => ({ ...f, tempUnit: v }))}
@@ -1829,7 +1857,8 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div>
-                <label className="label-field">Currency</label>
+                <label className="label-field">Money type<span className="adv-tag">Extra</span></label>
+                <p className="field-help">The currency your prices are shown in.</p>
                 <select value={form.currency} onChange={set("currency")} className="input-field w-full">
                   <option value="USD">USD — US Dollar</option>
                   <option value="CAD">CAD — Canadian Dollar</option>
@@ -1852,11 +1881,13 @@ export default function SettingsPage() {
 
         {/* Branding */}
         <div className="card">
-          <h2 className="font-semibold text-[#0F172A] text-base mb-4">Branding</h2>
-          <div className="space-y-4">
+          <h2 className="font-semibold text-[#0F172A] text-base mb-1">Your logo &amp; colors</h2>
+          <p className="field-help">This makes your booking page and emails look like you.</p>
+          <div className="space-y-4 mt-4">
             {/* Logo */}
             <div>
-              <label className="label-field">Business Logo</label>
+              <label className="label-field">Upload your logo</label>
+              <p className="field-help">Drag a picture of your logo into the box below, or click it to pick a file.</p>
               <div className="flex items-center gap-4 mt-1">
                 {logoUrl ? (
                   <div className="relative w-24 h-16 border border-gray-200 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
@@ -1882,13 +1913,15 @@ export default function SettingsPage() {
               </div>
             </div>
             <div>
-              <label className="label-field">Tagline</label>
+              <label className="label-field">One-line slogan</label>
+              <p className="field-help">A short phrase about what you do.</p>
               <input type="text" value={form.tagline} onChange={set("tagline")} className="input-field w-full"
-                placeholder="Professional real estate photography" />
+                placeholder="e.g. Beautiful real estate photos" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label-field">Primary Color</label>
+                <label className="label-field">Main color</label>
+                <p className="field-help">Tap the square to change it.</p>
                 <div className="flex gap-2 items-center">
                   <input type="color" value={form.primaryColor} onChange={set("primaryColor")}
                     className="w-10 h-10 rounded cursor-pointer border border-gray-200" />
@@ -1896,8 +1929,9 @@ export default function SettingsPage() {
                     className="input-field flex-1 font-mono text-sm" />
                 </div>
               </div>
-              <div>
-                <label className="label-field">Accent Color</label>
+              <div className="adv">
+                <label className="label-field">Second color<span className="adv-tag">Extra</span></label>
+                <p className="field-help">Used for buttons and highlights.</p>
                 <div className="flex gap-2 items-center">
                   <input type="color" value={form.accentColor} onChange={set("accentColor")}
                     className="w-10 h-10 rounded cursor-pointer border border-gray-200" />
@@ -1947,12 +1981,13 @@ export default function SettingsPage() {
           <button onClick={resetTiers} className="text-xs text-gray-400 hover:text-[#3486cf]">Reset to defaults</button>
         </div>
         <p className="text-sm text-gray-500 mb-5">
-          Customize how pricing tiers work. Each product can have a price per tier.
+          Pick how you want to charge, then set your price ranges. We&apos;ll apply this everywhere automatically.
         </p>
 
         {/* Pricing mode */}
         <div className="mb-5">
-          <label className="label-field">Pricing mode</label>
+          <label className="label-field">How do you want to charge?</label>
+          <p className="field-help">Most photographers charge by house size — a bigger house costs more. If that&apos;s you, leave the first option picked.</p>
           {!tenantLoaded ? (
             <div className="grid grid-cols-3 gap-2">
               {[0,1,2,3].map((i) => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}
@@ -1960,10 +1995,10 @@ export default function SettingsPage() {
           ) : (
             <div className="grid grid-cols-3 gap-2">
               {[
-                { value: "sqft",   label: "By Square Footage", desc: "Client enters sq ft — pricing adjusts by tier" },
-                { value: "photos", label: "By Photo Count",    desc: "Client enters # of photos — pricing adjusts by tier" },
-                { value: "flat",   label: "Flat Pricing",      desc: "No gate question — every item uses its base price" },
-                { value: "custom", label: "Custom Value",      desc: "Define your own tier labels and gate question" },
+                { value: "sqft",   label: "By house size", desc: "Bigger house costs more — clients enter the square footage" },
+                { value: "photos", label: "By photo count", desc: "Price goes up with the number of photos they want" },
+                { value: "flat",   label: "One flat price", desc: "Everyone pays the same — no size question asked" },
+                { value: "custom", label: "Your own way", desc: "Make up your own question and price ranges" },
               ].map((m) => (
                 <button key={m.value} type="button" onClick={() => switchPricingMode(m.value)}
                   className={`p-3 border rounded-xl text-left transition-colors ${
