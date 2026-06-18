@@ -3253,9 +3253,9 @@ export default function SettingsPage() {
 
       {/* ─── Email Templates ─────────────────────────────────────────────────── */}
       <div id="settings-email" className="card mt-6 scroll-mt-24">
-        <h2 className="font-semibold text-[#0F172A] text-base mb-1">Email Templates</h2>
+        <h2 className="font-semibold text-[#0F172A] text-base mb-1">What your emails say</h2>
         <p className="text-sm text-gray-500 mb-4">
-          Customize what each email says. Click any <span className="font-medium text-[#3486cf]">insert field</span> button to add dynamic content like the client name or property address.
+          These already read well out of the box — only change them if you want your own wording. Tap an <span className="font-medium text-[#3486cf]">insert field</span> button to drop in things like the client&apos;s name or the address automatically.
         </p>
 
         {/* Email type tabs */}
@@ -3417,9 +3417,9 @@ export default function SettingsPage() {
 
       {/* ─── SMS Templates ───────────────────────────────────────────────────── */}
       <div id="settings-sms" className="card mt-6 scroll-mt-24">
-        <h2 className="font-semibold text-[#0F172A] text-base mb-1">SMS Templates</h2>
+        <h2 className="font-semibold text-[#0F172A] text-base mb-1">What your texts say</h2>
         <p className="text-sm text-gray-500 mb-4">
-          Customize the text messages sent to clients and photographers. Leave blank to use the default message. Use <span className="font-medium text-[#3486cf]">insert field</span> buttons to add dynamic content.
+          The text messages clients and photographers get. Leave a box blank to use our default. Tap <span className="font-medium text-[#3486cf]">insert field</span> to drop in details like the name or time automatically.
         </p>
 
         {/* SMS type tabs */}
@@ -3549,7 +3549,7 @@ export default function SettingsPage() {
       {/* Notification channel toggles */}
       <div id="settings-notifications" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="font-semibold text-[#0F172A] text-base">Notification Channels</h2>
+          <h2 className="font-semibold text-[#0F172A] text-base">Who gets what, and how</h2>
           <button onClick={saveNotifPrefs} disabled={savingNotifs} className="btn-primary px-5 py-2 text-sm">
             {savingNotifs ? "Saving…" : "Save"}
           </button>
@@ -3582,7 +3582,7 @@ export default function SettingsPage() {
       {/* ─── Gallery Settings ────────────────────────────────────────────────── */}
       <div className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="font-semibold text-[#0F172A] text-base">Gallery Settings</h2>
+          <h2 className="font-semibold text-[#0F172A] text-base">How clients get their photos</h2>
           <button onClick={saveGalleryPrefs} disabled={savingGalleryPrefs} className="btn-primary px-5 py-2 text-sm">
             {savingGalleryPrefs ? "Saving…" : "Save"}
           </button>
