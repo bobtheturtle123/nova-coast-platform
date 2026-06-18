@@ -85,6 +85,18 @@ const SETTINGS_CSS = `
 .set .check.todo .mark{background:#fff;border:2px dashed #CBD5E1;}
 .set .check .mark svg{width:12px;height:12px;}
 @media(max-width:680px){.set .checklist{grid-template-columns:1fr;}}
+/* ── Readability: separate inner groups, darken faint text, add air ── */
+.set .set-section .card{background:#FBFBFD;border:1px solid #EAEDF1;box-shadow:none;border-radius:14px;padding:20px;}
+.set .set-section .card + .card{margin-top:18px;}
+.set .set-section .pt-2.pb-4{padding:18px 22px 22px;}
+.set .text-gray-400{color:#6B7280;}      /* faint helper text -> readable gray */
+.set .text-gray-500{color:#52555C;}
+.set .label-field{color:#0F172A;font-weight:600;font-size:13px;}
+.set .field-help{font-size:12.5px;color:#5B6472;line-height:1.5;}
+.set .set-section h2{font-size:15px;}
+.set .set-section h3{font-size:14px;color:#0F172A;}
+.set .input-field{height:40px;font-size:14px;}
+.set .input-field:focus{border-color:#3486cf;box-shadow:0 0 0 3px rgba(52,134,207,.12);}
 .set .field-help{font-size:12px;color:#6B7280;line-height:1.45;margin:-2px 0 6px;}
 .set .field-eg{font-size:11.5px;color:#9CA3AF;font-style:italic;margin-top:5px;}
 .set .adv-tag{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#94A3B8;border:1px solid #E9ECF0;border-radius:5px;padding:1px 5px;margin-left:7px;vertical-align:middle;}
@@ -2282,10 +2294,11 @@ export default function SettingsPage() {
               onChange={(e) => setNewFieldLabel(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addCustomField()}
               placeholder="Field label (e.g. Gate Code)" className="input-field flex-1 text-sm" />
-            <select value={newFieldType} onChange={(e) => setNewFieldType(e.target.value)} className="input-field text-sm w-32">
-              <option value="text">Text</option>
-              <option value="date">Date</option>
+            <select value={newFieldType} onChange={(e) => setNewFieldType(e.target.value)} className="input-field text-sm w-36">
+              <option value="text">Text box</option>
               <option value="textarea">Long text</option>
+              <option value="number">Number</option>
+              <option value="date">Date</option>
             </select>
             <button onClick={addCustomField} disabled={!newFieldLabel.trim()}
               className="btn-primary px-4 py-2 text-sm">Add</button>
