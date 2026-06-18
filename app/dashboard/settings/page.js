@@ -182,7 +182,7 @@ function StaffAccessSection({ tenant }) {
     });
     const data = await res.json();
     if (res.ok) {
-      setMsg(data.emailFailed ? `Email failed — share: ${data.inviteUrl}` : `Invite sent to ${inviteEmail.trim()}`);
+      setMsg(data.emailFailed ? `Email failed - share: ${data.inviteUrl}` : `Invite sent to ${inviteEmail.trim()}`);
       setInviteEmail("");
       loadMembers();
     } else {
@@ -207,7 +207,7 @@ function StaffAccessSection({ tenant }) {
         Full profiles (pay rates, skills, hours) can be set on the <a href="/dashboard/team" className="text-[#3486cf] hover:underline">Team page</a>.
       </p>
 
-      {/* Invite form — hidden on solo plan */}
+      {/* Invite form - hidden on solo plan */}
       {isSolo || (seatLimit !== null && (members.length + 1) >= seatLimit) ? (
         <div className="flex items-center gap-3 p-4 mb-4 border border-amber-200 bg-amber-50 rounded-xl">
           <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
@@ -582,11 +582,11 @@ function CustomDomainSection() {
   );
 }
 
-const DEFAULT_TERMS = `⚠️ IMPORTANT NOTICE — PLACEHOLDER ONLY
+const DEFAULT_TERMS = `⚠️ IMPORTANT NOTICE - PLACEHOLDER ONLY
 These default terms are provided for reference and convenience only. They are NOT a legal document, do NOT constitute legal advice, and should NOT be used without review by a qualified attorney. Replace this text with terms drafted or approved by your legal counsel before accepting client bookings.
 ────────────────────────────────────────────
 
-TERMS OF SERVICE — REAL ESTATE MEDIA SERVICES
+TERMS OF SERVICE - REAL ESTATE MEDIA SERVICES
 
 Last updated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
 
@@ -657,7 +657,8 @@ export default function SettingsPage() {
   const [tenant,  setTenant]  = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
-  const [viewMode, setViewMode] = useState("simple"); // "simple" | "detailed" — hides Extra fields
+  const [viewMode, setViewMode] = useState("simple"); // "simple" | "detailed" hides Extra fields
+  const [viewedSections, setViewedSections] = useState({}); // sections the user has opened to review
 
   const [openSections, setOpenSections] = useState({
     identity: false,
@@ -683,7 +684,7 @@ export default function SettingsPage() {
   const [tiers,           setTiers]           = useState([]);
   const [customGateLabel, setCustomGateLabel] = useState("Custom value");
   const [savingTiers,     setSavingTiers]     = useState(false);
-  // Optional hard cap — properties above this value can't be booked online.
+  // Optional hard cap - properties above this value can't be booked online.
   const [capEnabled,      setCapEnabled]      = useState(false);
   const [capMax,          setCapMax]          = useState("");
 
@@ -978,7 +979,7 @@ export default function SettingsPage() {
 
   // Booking page trust badges (the reassurance lines under the deposit summary).
   // Default to a single always-true line; tenant can edit/add/remove.
-  const [trustBadges, setTrustBadges] = useState(["Secure checkout — only a deposit is due today"]);
+  const [trustBadges, setTrustBadges] = useState(["Secure checkout - only a deposit is due today"]);
 
   // Which built-in property questions appear on the booking form. Address is
   // always required; these three are optional and default on.
@@ -1008,10 +1009,10 @@ export default function SettingsPage() {
   const [privacyText,   setPrivacyText]   = useState("");
   const [savingPrivacy, setSavingPrivacy] = useState(false);
 
-  // Email template state — gallery delivery (existing)
-  const [emailTplSubject, setEmailTplSubject] = useState("Your listing media is ready — {{address}}");
+  // Email template state - gallery delivery (existing)
+  const [emailTplSubject, setEmailTplSubject] = useState("Your listing media is ready - {{address}}");
   const [emailTplBody,    setEmailTplBody]    = useState("");
-  // Email templates — other transactional emails
+  // Email templates - other transactional emails
   const [bookingReceivedSubject, setBookingReceivedSubject] = useState("");
   const [bookingReceivedBody,    setBookingReceivedBody]    = useState("");
   const [bookingApprovedSubject, setBookingApprovedSubject] = useState("");
@@ -1055,12 +1056,17 @@ export default function SettingsPage() {
   }, []);
 
   function toggleSection(key) {
-    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+    setOpenSections((prev) => {
+      const next = !prev[key];
+      if (next) setViewedSections((v) => ({ ...v, [key]: true }));
+      return { ...prev, [key]: next };
+    });
   }
 
   // TOC: open the section (if collapsed) and scroll it into view.
   function openAndScroll(key) {
     setOpenSections((prev) => ({ ...prev, [key]: true }));
+    setViewedSections((v) => ({ ...v, [key]: true }));
     if (typeof document !== "undefined") {
       requestAnimationFrame(() => {
         document.getElementById(`set-${key}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1089,7 +1095,7 @@ export default function SettingsPage() {
           locale:        data.tenant.locale   || "en-US",
         });
         if (data.tenant.branding?.logoUrl) setLogoUrl(data.tenant.branding.logoUrl);
-        // Load pricing config — always pre-populate tiers so Pricing Tiers section is ready
+        // Load pricing config - always pre-populate tiers so Pricing Tiers section is ready
         {
           const pc = data.tenant.pricingConfig;
           setPricingMode(pc?.mode || "sqft");
@@ -1667,15 +1673,20 @@ export default function SettingsPage() {
   };
 
 
-  // ── Plain-language completion signals (drives the setup ring + status pills) ──
-  const sectionDone = {
+  // ── Completion signals (drive the setup ring + status pills) ──
+  // A section counts as done once the user has opened it to review (or it was
+  // already configured). We never require every field to be filled.
+  const fieldDone = {
     identity:     !!(form.businessName && form.phone && form.fromZip),
     pricing:      pricingMode === "flat" || (Array.isArray(tiers) && tiers.length > 0),
     booking:      depositType === "none" || Number(depositValue) > 0,
-    team:         true, // default rates are optional — never blocks setup
-    comms:        true, // notifications ship with safe defaults
+    team:         false,
+    comms:        false,
     integrations: !!tenant?.stripeConnectOnboarded,
   };
+  const sectionDone = Object.fromEntries(
+    Object.keys(fieldDone).map((k) => [k, !!(fieldDone[k] || viewedSections[k])])
+  );
   const doneCount   = Object.values(sectionDone).filter(Boolean).length;
   const totalCount  = Object.keys(sectionDone).length;
   const setupPct    = Math.round((doneCount / totalCount) * 100);
@@ -1704,7 +1715,7 @@ export default function SettingsPage() {
     <div className="max-w-[1140px] mx-auto px-6 pt-8">
       <div className="mb-4">
         <h1 className="page-title mb-1">Settings</h1>
-        <p className="page-subtitle">This is where you set up your studio. Don&apos;t worry — go one box at a time, and we&apos;ll tell you in plain words what each thing does.</p>
+        <p className="page-subtitle">This is where you set up your studio. Don&apos;t worry - go one box at a time, and we&apos;ll tell you in plain words what each thing does.</p>
       </div>
     </div>
 
@@ -1723,14 +1734,14 @@ export default function SettingsPage() {
           <div className="t">{setupPct === 100 ? "Your studio is ready!" : "You're almost set up!"}</div>
           <div className="s">
             {setupPct === 100
-              ? "Every section is filled in — you're ready to take bookings."
+              ? "Every section is filled in - you're ready to take bookings."
               : `${doneCount} of ${totalCount} done. Tap a box below to jump in and finish the ones marked “Needs you.”`}
           </div>
         </div>
       </div>
       <div className="checklist">
         {SETTINGS_TOC.map(([key, label]) => {
-          const done = key === "integrations" ? integConnected > 0 : sectionDone[key];
+          const done = sectionDone[key];
           return (
             <button key={key} type="button" className={`check ${done ? "done" : "todo"}`} onClick={() => openAndScroll(key)}>
               <span className="mark">
@@ -1827,7 +1838,7 @@ export default function SettingsPage() {
         {/* Business info */}
         <div className="card">
           <h2 className="font-semibold text-[#0F172A] text-base mb-1">The basics</h2>
-          <p className="field-help">Just the essentials — you can change any of this later.</p>
+          <p className="field-help">Just the essentials - you can change any of this later.</p>
           <div className="space-y-4 mt-4">
             <div>
               <label className="label-field">What&apos;s your business called?</label>
@@ -1847,7 +1858,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Regional settings — Extra (Detailed view) */}
+            {/* Regional settings - Extra (Detailed view) */}
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 adv">
               <div>
                 <label className="label-field">Country / Region<span className="adv-tag">Extra</span></label>
@@ -1881,19 +1892,19 @@ export default function SettingsPage() {
                 <label className="label-field">Money type<span className="adv-tag">Extra</span></label>
                 <p className="field-help">The currency your prices are shown in.</p>
                 <select value={form.currency} onChange={set("currency")} className="input-field w-full">
-                  <option value="USD">USD — US Dollar</option>
-                  <option value="CAD">CAD — Canadian Dollar</option>
-                  <option value="AUD">AUD — Australian Dollar</option>
-                  <option value="NZD">NZD — New Zealand Dollar</option>
-                  <option value="GBP">GBP — British Pound</option>
-                  <option value="EUR">EUR — Euro</option>
-                  <option value="ZAR">ZAR — South African Rand</option>
-                  <option value="MXN">MXN — Mexican Peso</option>
-                  <option value="BRL">BRL — Brazilian Real</option>
-                  <option value="JPY">JPY — Japanese Yen</option>
-                  <option value="SGD">SGD — Singapore Dollar</option>
-                  <option value="HKD">HKD — Hong Kong Dollar</option>
-                  <option value="INR">INR — Indian Rupee</option>
+                  <option value="USD">USD - US Dollar</option>
+                  <option value="CAD">CAD - Canadian Dollar</option>
+                  <option value="AUD">AUD - Australian Dollar</option>
+                  <option value="NZD">NZD - New Zealand Dollar</option>
+                  <option value="GBP">GBP - British Pound</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="ZAR">ZAR - South African Rand</option>
+                  <option value="MXN">MXN - Mexican Peso</option>
+                  <option value="BRL">BRL - Brazilian Real</option>
+                  <option value="JPY">JPY - Japanese Yen</option>
+                  <option value="SGD">SGD - Singapore Dollar</option>
+                  <option value="HKD">HKD - Hong Kong Dollar</option>
+                  <option value="INR">INR - Indian Rupee</option>
                 </select>
               </div>
             </div>
@@ -1994,7 +2005,7 @@ export default function SettingsPage() {
         </button>
         {openSections.pricing && (
         <div className="pt-2 pb-4">
-      <PlainIntro><b>What is this?</b> First, pick how you want to charge. Most photographers charge by house size — a bigger house costs more. If that&apos;s you, leave the first option picked.</PlainIntro>
+      <PlainIntro><b>What is this?</b> First, pick how you want to charge. Most photographers charge by house size - a bigger house costs more. If that&apos;s you, leave the first option picked.</PlainIntro>
       {/* ─── Pricing Tiers ─────────────────────────────────────────────────────── */}
       <div id="settings-pricing" className="card mt-6 scroll-mt-24">
         <div className="flex items-center justify-between mb-1">
@@ -2008,7 +2019,7 @@ export default function SettingsPage() {
         {/* Pricing mode */}
         <div className="mb-5">
           <label className="label-field">How do you want to charge?</label>
-          <p className="field-help">Most photographers charge by house size — a bigger house costs more. If that&apos;s you, leave the first option picked.</p>
+          <p className="field-help">Most photographers charge by house size - a bigger house costs more. If that&apos;s you, leave the first option picked.</p>
           {!tenantLoaded ? (
             <div className="grid grid-cols-3 gap-2">
               {[0,1,2,3].map((i) => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)}
@@ -2016,9 +2027,9 @@ export default function SettingsPage() {
           ) : (
             <div className="grid grid-cols-3 gap-2">
               {[
-                { value: "sqft",   label: "By house size", desc: "Bigger house costs more — clients enter the square footage" },
+                { value: "sqft",   label: "By house size", desc: "Bigger house costs more - clients enter the square footage" },
                 { value: "photos", label: "By photo count", desc: "Price goes up with the number of photos they want" },
-                { value: "flat",   label: "One flat price", desc: "Everyone pays the same — no size question asked" },
+                { value: "flat",   label: "One flat price", desc: "Everyone pays the same - no size question asked" },
                 { value: "custom", label: "Your own way", desc: "Make up your own question and price ranges" },
               ].map((m) => (
                 <button key={m.value} type="button" onClick={() => switchPricingMode(m.value)}
@@ -2033,10 +2044,10 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* Tier table — hidden for flat pricing */}
+        {/* Tier table - hidden for flat pricing */}
         {pricingMode === "flat" && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-4">
-            Flat pricing is active. Clients will not be asked for square footage — every product uses its base price.
+            Flat pricing is active. Clients will not be asked for square footage - every product uses its base price.
           </p>
         )}
         <div className={`space-y-2 mb-4 ${pricingMode === "flat" ? "opacity-40 pointer-events-none" : ""}`}>
@@ -2060,13 +2071,13 @@ export default function SettingsPage() {
                   <input type="text" value={tier.label} onChange={(e) => updateTier(i, "label", e.target.value)}
                     className="input-field py-2 text-sm" placeholder="Shown to client" />
                 </div>
-                {/* "From" — read-only, derived from previous tier */}
+                {/* "From" - read-only, derived from previous tier */}
                 <div className="col-span-2 text-right pr-2">
                   <span className="text-sm text-gray-400 font-mono">
                     {i === 0 ? "0" : prevMax?.toLocaleString()}
                   </span>
                 </div>
-                {/* "To" — editable max */}
+                {/* "To" - editable max */}
                 <div className="col-span-2">
                   {!isLast ? (
                     <input type="number" value={tier.max === 999999 ? "" : tier.max}
@@ -2097,7 +2108,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Maximum cap — turn off "unlimited" and refuse jobs above a size */}
+        {/* Maximum cap - turn off "unlimited" and refuse jobs above a size */}
         {pricingMode !== "flat" && (
           <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
             <label className="flex items-center justify-between gap-3 cursor-pointer">
@@ -2149,14 +2160,14 @@ export default function SettingsPage() {
           <span className="ic">{SETTINGS_ICONS.booking}</span>
           <span className="bd">
             <span className="ti">Booking Settings</span>
-            <span className="de">How clients book you — deposits, availability, travel, and the fine print.</span>
+            <span className="de">How clients book you - deposits, availability, travel, and the fine print.</span>
           </span>
           <StatusPill section="booking" />
           <span className="chev"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
         </button>
         {openSections.booking && (
         <div className="pt-2 pb-4">
-      <PlainIntro><b>What is this?</b> These settings control how clients book you — how much they pay up front, when you&apos;re available, how far you&apos;ll travel, and the terms they agree to.</PlainIntro>
+      <PlainIntro><b>What is this?</b> These settings control how clients book you - how much they pay up front, when you&apos;re available, how far you&apos;ll travel, and the terms they agree to.</PlainIntro>
       {/* ─── Booking Config ──────────────────────────────────────────────────── */}
       <div id="settings-booking" className="card mt-8 space-y-8 scroll-mt-24">
         <div>
@@ -2216,11 +2227,31 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* Custom form fields */}
+        {/* Booking form questions (standard + your own) */}
         <div>
-          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Extra questions on your form</h3>
-          <p className="field-help mb-3">Want to ask clients something specific? Add your own questions to the booking form — like a gate code or the date they want it live.</p>
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Questions on your booking form</h3>
+          <p className="field-help mb-3">The address is always asked. Turn off any standard questions you don&apos;t need, or add your own below.</p>
 
+          <div className="space-y-2.5 mb-4">
+            {[
+              ["Property type", showPropertyType, setShowPropertyType],
+              ["Square footage", showSqftField, setShowSqftField],
+              ["Notes for the photographer", showNotesField, setShowNotesField],
+            ].map(([label, val, set]) => (
+              <div key={label} className="flex items-center justify-between border border-gray-200 rounded-xl px-3 py-2.5 bg-gray-50">
+                <div>
+                  <span className="text-sm font-medium text-[#0F172A]">{label}</span>
+                  <span className="text-xs text-gray-400 ml-2">standard question</span>
+                </div>
+                <button type="button" onClick={() => set((v) => !v)}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${val ? "bg-[#3486cf]" : "bg-gray-200"}`}>
+                  <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${val ? "translate-x-4" : "translate-x-0"}`} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <p className="field-help mb-2">Need something specific? Add your own question, like a gate code or the date they want it live.</p>
           {customFields.length > 0 && (
             <div className="space-y-2 mb-3">
               {customFields.map((f) => (
@@ -2283,30 +2314,9 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* Built-in property questions */}
+        {/* Package step: services expanded by default */}
         <div className="pt-4 border-t border-gray-100 mt-2">
-          <label className="label-field">Property questions on the booking form</label>
-          <p className="text-xs text-gray-400 mb-3">
-            Turn off any built-in questions you don&apos;t need — clients won&apos;t be asked them. The address is always required.
-            Add your own questions in “Custom fields” above.
-          </p>
-          <div className="space-y-2.5">
-            {[
-              ["Property type", showPropertyType, setShowPropertyType],
-              ["Square footage", showSqftField, setShowSqftField],
-              ["Notes for the photographer", showNotesField, setShowNotesField],
-            ].map(([label, val, set]) => (
-              <div key={label} className="flex items-center justify-between">
-                <span className="text-sm text-[#0F172A]">{label}</span>
-                <button type="button" onClick={() => set((v) => !v)}
-                  className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${val ? "bg-[#3486cf]" : "bg-gray-200"}`}>
-                  <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${val ? "translate-x-4" : "translate-x-0"}`} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex items-center justify-between mt-5 pt-4 border-t border-gray-100">
+          <div className="flex items-center justify-between">
             <div className="pr-4">
               <span className="text-sm text-[#0F172A]">Show individual services expanded by default</span>
               <p className="text-xs text-gray-400 mt-0.5">
@@ -2375,7 +2385,7 @@ export default function SettingsPage() {
               <p className="text-sm font-medium text-[#0F172A]">Auto-convert bookings to listing workspaces</p>
               <p className="text-xs text-gray-400 mt-0.5">
                 When ON, every new booking automatically becomes a listing workspace (gallery, property site, deliverables).
-                When OFF, bookings are plain orders — you manually promote them via "Create Listing Workspace" on the booking page.
+                When OFF, bookings are plain orders - you manually promote them via "Create Listing Workspace" on the booking page.
               </p>
             </div>
           </div>
@@ -2452,7 +2462,7 @@ export default function SettingsPage() {
           Control how time slots are offered to clients on the booking schedule step.
         </p>
 
-        {/* Owner shoots? — moved here from the calendar for clarity */}
+        {/* Owner shoots? - moved here from the calendar for clarity */}
         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl mb-6">
           <div>
             <p className="text-sm font-medium text-[#0F172A]">I personally shoot</p>
@@ -2482,13 +2492,13 @@ export default function SettingsPage() {
             ))}
           </div>
           <p className="text-xs text-gray-400 mt-1.5">
-            {availMode === "slots"  && "Fixed intervals within business hours — client picks an exact time."}
+            {availMode === "slots"  && "Fixed intervals within business hours - client picks an exact time."}
             {availMode === "real"   && "Only shows times not already booked, respecting shoot duration and buffer."}
             {availMode === "named"  && "Client picks a named window: Morning, Afternoon, or Flexible."}
           </p>
         </div>
 
-        {/* Business hours — shown for time grid + real availability */}
+        {/* Business hours - shown for time grid + real availability */}
         <div className={`mb-5 ${availMode === "named" ? "hidden" : ""}`}>
           <div className="mb-3">
             <label className="label-field mb-2">Working Days</label>
@@ -2522,7 +2532,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Slot interval — shown for time grid + real availability */}
+        {/* Slot interval - shown for time grid + real availability */}
         <div className={`mb-5 ${availMode === "named" ? "hidden" : ""}`}>
           <label className="label-field mb-2">Timing</label>
           <div className="grid grid-cols-3 gap-3">
@@ -2557,7 +2567,7 @@ export default function SettingsPage() {
               <div>
                 <p className="text-sm font-medium text-[#0F172A]">Duration-aware slot blocking</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Hide grid slots where the full service duration can&apos;t fit — e.g. a 1-hour service blocks 9:30 AM if 10:00 AM is busy.
+                  Hide grid slots where the full service duration can&apos;t fit - e.g. a 1-hour service blocks 9:30 AM if 10:00 AM is busy.
                 </p>
               </div>
               <button
@@ -2570,12 +2580,12 @@ export default function SettingsPage() {
           )}
           {availMode === "real" && (
             <p className="mt-4 text-xs text-gray-400 border border-gray-100 rounded-xl px-4 py-3">
-              Live Availability always respects shoot duration and buffer — no extra setting needed.
+              Live Availability always respects shoot duration and buffer - no extra setting needed.
             </p>
           )}
         </div>
 
-        {/* Named time slots — only shown when "named" mode is selected */}
+        {/* Named time slots - only shown when "named" mode is selected */}
         <div className={`mb-5 ${availMode !== "named" ? "hidden" : ""}`}>
           <label className="label-field mb-2">Named Time Slot Options</label>
           <div className="space-y-2">
@@ -2666,7 +2676,7 @@ export default function SettingsPage() {
         <div className="pt-4 border-t border-gray-100">
           <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Late cancel &amp; reschedule fees</h3>
           <p className="field-help mb-3">
-            Set a fee for clients who cancel or move a shoot at the last minute. This is just a note for you — you decide whether to actually charge it from the booking.
+            Set a fee for clients who cancel or move a shoot at the last minute. This is just a note for you - you decide whether to actually charge it from the booking.
           </p>
 
           {/* Cancel fee */}
@@ -2784,7 +2794,7 @@ export default function SettingsPage() {
         </div>
         <p className="text-sm text-gray-500 mb-3">
           Automatically add a travel fee to bookings based on drive distance from the photographer's home base.
-          {!travelEnabled && <span className="text-gray-400"> (Currently disabled — clients won't be charged travel fees.)</span>}
+          {!travelEnabled && <span className="text-gray-400"> (Currently disabled - clients won't be charged travel fees.)</span>}
         </p>
         <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-5 text-xs text-blue-700 leading-relaxed">
           <strong>Home base ZIP:</strong> Currently using <code className="bg-blue-100 px-1 rounded">{form.fromZip || "not set"}</code> (from Business settings).{" "}
@@ -2896,7 +2906,7 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Per-photographer ZIP toggle — only relevant when calculating by distance (not flat fee or zones) */}
+            {/* Per-photographer ZIP toggle - only relevant when calculating by distance (not flat fee or zones) */}
             {travelMode === "perMile" && <div className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -2912,7 +2922,7 @@ export default function SettingsPage() {
               </div>
               {usePhotographerZip && (
                 <p className="text-xs text-[#3486cf]/70 mt-2 bg-[#3486cf]/5 rounded px-3 py-2">
-                  A photographer in LA shooting in LA, and one in San Diego shooting in San Diego, will each be charged travel from their own home ZIP — not yours. Set home ZIPs under Team → edit member.
+                  A photographer in LA shooting in LA, and one in San Diego shooting in San Diego, will each be charged travel from their own home ZIP - not yours. Set home ZIPs under Team → edit member.
                 </p>
               )}
             </div>}
@@ -3079,7 +3089,7 @@ export default function SettingsPage() {
               <span>
                 When enabled, clients must read the agreement, type their full legal name, and click "I agree and electronically sign" to complete booking.
                 The signed agreement text, client name, timestamp, and IP address are recorded on the booking. Your counter-signature is applied automatically.
-                Electronic consent collected this way is generally enforceable — have your attorney review the agreement text to ensure it covers your jurisdiction's requirements.
+                Electronic consent collected this way is generally enforceable - have your attorney review the agreement text to ensure it covers your jurisdiction's requirements.
               </span>
             </div>
             <label className="label-field">Agreement Text</label>
@@ -3116,7 +3126,7 @@ export default function SettingsPage() {
           <div className="mb-3 space-y-2">
             <div className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2 rounded">
               <span className="text-base leading-none mt-0.5">⚠️</span>
-              <span>The default template is a <strong>placeholder only</strong> — not a legal document. Have an attorney review before use. You are responsible for your own terms.</span>
+              <span>The default template is a <strong>placeholder only</strong> - not a legal document. Have an attorney review before use. You are responsible for your own terms.</span>
             </div>
             <button type="button" onClick={() => setTermsText(DEFAULT_TERMS)}
               className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-3 py-1.5 rounded hover:bg-[#3486cf]/5 transition-colors">
@@ -3207,12 +3217,12 @@ export default function SettingsPage() {
         </button>
         {openSections.team && (
         <div className="pt-2 pb-4">
-      <PlainIntro><b>What is this?</b> Optional default rates we use to estimate what each shoot costs you (pay, editing, travel). They don&apos;t change what clients pay — they just help your profit numbers in Reports.</PlainIntro>
+      <PlainIntro><b>What is this?</b> Optional default rates we use to estimate what each shoot costs you (pay, editing, travel). They don&apos;t change what clients pay - they just help your profit numbers in Reports.</PlainIntro>
       {/* ─── Job Cost Rates ──────────────────────────────────────────────────── */}
       <div id="settings-cost-rates" className="card mt-6 scroll-mt-24">
         <h2 className="font-semibold text-[#0F172A] text-base mb-1">What a shoot costs you</h2>
         <p className="text-sm text-gray-500 mb-6">
-          Rough numbers so we can show your profit on each job. These fill in automatically on every booking — you can always change them there.
+          Rough numbers so we can show your profit on each job. These fill in automatically on every booking - you can always change them there.
         </p>
         <div className="grid grid-cols-2 gap-4 max-w-lg">
           <div>
@@ -3270,13 +3280,13 @@ export default function SettingsPage() {
         </button>
         {openSections.comms && (
         <div className="pt-2 pb-4">
-      <PlainIntro><b>What is this?</b> Decide which updates clients and your team get by email or text, and customize what those messages say. Everything works out of the box — only change what you want.</PlainIntro>
+      <PlainIntro><b>What is this?</b> Decide which updates clients and your team get by email or text, and customize what those messages say. Everything works out of the box - only change what you want.</PlainIntro>
 
       {/* ─── Email Templates ─────────────────────────────────────────────────── */}
       <div id="settings-email" className="card mt-6 scroll-mt-24">
         <h2 className="font-semibold text-[#0F172A] text-base mb-1">What your emails say</h2>
         <p className="text-sm text-gray-500 mb-4">
-          These already read well out of the box — only change them if you want your own wording. Tap an <span className="font-medium text-[#3486cf]">insert field</span> button to drop in things like the client&apos;s name or the address automatically.
+          These already read well out of the box - only change them if you want your own wording. Tap an <span className="font-medium text-[#3486cf]">insert field</span> button to drop in things like the client&apos;s name or the address automatically.
         </p>
 
         {/* Email type tabs */}
@@ -3298,7 +3308,7 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        {/* Insert field chips — shared for all tabs */}
+        {/* Insert field chips - shared for all tabs */}
         {(() => {
           const TAB_VARS = {
             gallery:  [["Client Name","{{clientName}}"],["Property Address","{{address}}"],["Gallery Link","{{websiteUrl}}"],["3D Tour (conditional)","[[and your 3D tour is ready: {{tourUrl}}]]"]],
@@ -3335,7 +3345,7 @@ export default function SettingsPage() {
 
           return (
             <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-              <p className="text-xs text-gray-500 font-medium mb-2">Insert field — click while cursor is in the field:</p>
+              <p className="text-xs text-gray-500 font-medium mb-2">Insert field - click while cursor is in the field:</p>
               <div className="flex flex-wrap gap-1.5">
                 {vars.map(([label, token]) => (
                   <button key={token} type="button"
@@ -3364,7 +3374,7 @@ export default function SettingsPage() {
             <div>
               <label className="label-field">Subject Line</label>
               <input type="text" value={emailTplSubject} onChange={(e) => setEmailTplSubject(e.target.value)} onFocus={(e) => { if (!emailTplSubject) setEmailTplSubject(e.target.placeholder); }}
-                className="input-field w-full" placeholder="Your listing media is ready — {{address}}" />
+                className="input-field w-full" placeholder="Your listing media is ready - {{address}}" />
             </div>
             <div>
               <label className="label-field">Message Body</label>
@@ -3382,7 +3392,7 @@ export default function SettingsPage() {
             <div>
               <label className="label-field">Subject Line</label>
               <input type="text" value={bookingReceivedSubject} onChange={(e) => setBookingReceivedSubject(e.target.value)} onFocus={(e) => { if (!bookingReceivedSubject) setBookingReceivedSubject(e.target.placeholder); }}
-                className="input-field w-full" placeholder="Booking received — {{address}}" />
+                className="input-field w-full" placeholder="Booking received - {{address}}" />
             </div>
             <div>
               <label className="label-field">Message Body</label>
@@ -3400,12 +3410,12 @@ export default function SettingsPage() {
             <div>
               <label className="label-field">Subject Line</label>
               <input type="text" value={bookingApprovedSubject} onChange={(e) => setBookingApprovedSubject(e.target.value)} onFocus={(e) => { if (!bookingApprovedSubject) setBookingApprovedSubject(e.target.placeholder); }}
-                className="input-field w-full" placeholder="Shoot confirmed — {{address}}" />
+                className="input-field w-full" placeholder="Shoot confirmed - {{address}}" />
             </div>
             <div>
               <label className="label-field">Message Body</label>
               <textarea data-emailbody="1" value={bookingApprovedBody} onChange={(e) => setBookingApprovedBody(e.target.value)} onFocus={(e) => { if (!bookingApprovedBody) setBookingApprovedBody(e.target.placeholder); }} rows={8}
-                placeholder={"Hi {{clientName}},\n\nGreat news — your shoot at {{address}} is confirmed for {{date}}. We'll be in touch with any details beforehand.\n\nSee you then,\n" + (tenant?.businessName || "Your Photographer")}
+                placeholder={"Hi {{clientName}},\n\nGreat news - your shoot at {{address}} is confirmed for {{date}}. We'll be in touch with any details beforehand.\n\nSee you then,\n" + (tenant?.businessName || "Your Photographer")}
                 className="input-field w-full text-sm leading-relaxed resize-y" />
             </div>
           </div>
@@ -3417,12 +3427,12 @@ export default function SettingsPage() {
             <div>
               <label className="label-field">Subject Line</label>
               <input type="text" value={paymentReminderSubject} onChange={(e) => setPaymentReminderSubject(e.target.value)} onFocus={(e) => { if (!paymentReminderSubject) setPaymentReminderSubject(e.target.placeholder); }}
-                className="input-field w-full" placeholder="Friendly reminder — balance due for {{address}}" />
+                className="input-field w-full" placeholder="Friendly reminder - balance due for {{address}}" />
             </div>
             <div>
               <label className="label-field">Message Body</label>
               <textarea data-emailbody="1" value={paymentReminderBody} onChange={(e) => setPaymentReminderBody(e.target.value)} onFocus={(e) => { if (!paymentReminderBody) setPaymentReminderBody(e.target.placeholder); }} rows={8}
-                placeholder={"Hi {{clientName}},\n\nJust a quick reminder that your remaining balance of ${{balance}} is due for {{address}}. You can pay directly from your gallery — it only takes a minute.\n\nThanks!\n" + (tenant?.businessName || "Your Photographer")}
+                placeholder={"Hi {{clientName}},\n\nJust a quick reminder that your remaining balance of ${{balance}} is due for {{address}}. You can pay directly from your gallery - it only takes a minute.\n\nThanks!\n" + (tenant?.businessName || "Your Photographer")}
                 className="input-field w-full text-sm leading-relaxed resize-y" />
               <p className="text-xs text-gray-400 mt-1">Appears above the Pay &amp; Download button in the email.</p>
             </div>
@@ -3503,7 +3513,7 @@ export default function SettingsPage() {
 
           return (
             <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-              <p className="text-xs text-gray-500 font-medium mb-2">Insert field — click while cursor is in the message box:</p>
+              <p className="text-xs text-gray-500 font-medium mb-2">Insert field - click while cursor is in the message box:</p>
               <div className="flex flex-wrap gap-1.5">
                 {vars.map(([label, token]) => (
                   <button key={token} type="button"
@@ -3527,7 +3537,7 @@ export default function SettingsPage() {
             placeholder: "{{bizName}}: Your booking for {{address}} is confirmed!{{shootInfo}} Reply STOP to unsubscribe." },
           { id: "bookingConfirmedPhotog", val: smsBookingConfirmedPhotog, set: setSmsBookingConfirmedPhotog,
             desc: "Sent to the photographer when a new shoot is assigned.",
-            placeholder: "{{bizName}}: New shoot assigned — {{address}}. Client: {{clientName}}.{{shootInfo}} Log in to view details." },
+            placeholder: "{{bizName}}: New shoot assigned - {{address}}. Client: {{clientName}}.{{shootInfo}} Log in to view details." },
           { id: "mediaDeliveredClient",   val: smsMediaDeliveredClient,   set: setSmsMediaDeliveredClient,
             desc: "Sent to the client when their gallery is delivered.",
             placeholder: "{{bizName}}: Your photos for {{address}} are ready!{{galleryLink}} Reply STOP to unsubscribe." },
@@ -3539,7 +3549,7 @@ export default function SettingsPage() {
             placeholder: "{{bizName}} reminder: Your photo shoot for {{address}} is tomorrow{{timeStr}}. Reply STOP to unsubscribe." },
           { id: "shootReminderPhotog",    val: smsShootReminderPhotog,    set: setSmsShootReminderPhotog,
             desc: "Sent the day before the shoot to the photographer.",
-            placeholder: "{{bizName}} reminder: Shoot tomorrow{{timeStr}} — {{address}}. Client: {{clientName}} ({{clientPhone}})." },
+            placeholder: "{{bizName}} reminder: Shoot tomorrow{{timeStr}} - {{address}}. Client: {{clientName}} ({{clientPhone}})." },
         ].map((tab) => smsTab === tab.id && (
           <div key={tab.id} className="space-y-3">
             <p className="text-xs text-gray-400">{tab.desc}</p>
@@ -3659,7 +3669,7 @@ export default function SettingsPage() {
           <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
         </summary>
         <p className="text-sm text-gray-500 mb-4 mt-3">
-          Connect your Google Calendar so your existing busy times block out availability and shoots can sync to your calendar. We only read free/busy times — never event details.
+          Connect your Google Calendar so your existing busy times block out availability and shoots can sync to your calendar. We only read free/busy times - never event details.
         </p>
 
         {gcal?.configured === false ? (
@@ -3864,7 +3874,7 @@ export default function SettingsPage() {
         </button>
       </details>
 
-      {/* Zapier — connect to other apps */}
+      {/* Zapier - connect to other apps */}
       <details id="settings-zapier" className="card mt-6 scroll-mt-24 group">
         <summary className="flex items-center justify-between gap-3 cursor-pointer list-none">
           <div className="flex items-center gap-2">
@@ -3875,7 +3885,7 @@ export default function SettingsPage() {
           <svg className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
         </summary>
         <p className="text-sm text-gray-500 mb-4 mt-3">
-          Automatically send your bookings to the tools you already use — <strong>no coding</strong>. For example:
+          Automatically send your bookings to the tools you already use - <strong>no coding</strong>. For example:
         </p>
         <div className="grid sm:grid-cols-3 gap-2 mb-5">
           {[
@@ -3899,7 +3909,7 @@ export default function SettingsPage() {
             <li>Start a new “Zap”, search for <strong>Webhooks by Zapier</strong>, and pick the <strong>“Catch Hook”</strong> trigger.</li>
             <li>Zapier shows you a web address (starts with <span className="font-mono">hooks.zapier.com</span>). Copy it.</li>
             <li>Paste it in the box below and click <strong>Save</strong>.</li>
-            <li>Back in Zapier, choose what happens next — e.g. add a row to Google Sheets.</li>
+            <li>Back in Zapier, choose what happens next - e.g. add a row to Google Sheets.</li>
           </ol>
           <a href="/guides/zapier" target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#3486cf] mt-3 hover:underline">
