@@ -2139,13 +2139,14 @@ export default function SettingsPage() {
       {/* ─── Booking Config ──────────────────────────────────────────────────── */}
       <div id="settings-booking" className="card mt-8 space-y-8 scroll-mt-24">
         <div>
-          <h2 className="font-semibold text-[#0F172A] text-base mb-1">Booking Logic</h2>
-          <p className="text-sm text-gray-500">Configure time slots, property options, and custom form fields.</p>
+          <h2 className="font-semibold text-[#0F172A] text-base mb-1">How booking works</h2>
+          <p className="text-sm text-gray-500">Set what clients pay up front, when you&apos;re free, and what you ask them on the form.</p>
         </div>
 
         {/* Deposit config */}
         <div id="settings-deposits" className="scroll-mt-24">
-          <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Deposits & Payments</h3>
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Money up front</h3>
+          <p className="field-help">Choose how much a client pays to lock in a shoot. The rest is due later. Most studios take a 50% deposit.</p>
           <div className="grid grid-cols-3 gap-2 mb-3">
             {[
               { value: "percent", label: "% of total",  desc: "e.g. 50% deposit" },
@@ -2196,8 +2197,8 @@ export default function SettingsPage() {
 
         {/* Custom form fields */}
         <div>
-          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Custom Booking Form Fields</h3>
-          <p className="text-xs text-gray-400 mb-3">Add extra fields to the property step of your booking form (e.g. Gate Code, Planned Live Date).</p>
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Extra questions on your form</h3>
+          <p className="field-help mb-3">Want to ask clients something specific? Add your own questions to the booking form — like a gate code or the date they want it live.</p>
 
           {customFields.length > 0 && (
             <div className="space-y-2 mb-3">
@@ -2642,10 +2643,9 @@ export default function SettingsPage() {
 
         {/* Cancellation & Reschedule Fees */}
         <div className="pt-4 border-t border-gray-100">
-          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Cancellation &amp; Reschedule Fees</h3>
-          <p className="text-xs text-gray-400 mb-3">
-            Charge a fee when a client cancels or reschedules within a short window before the shoot.
-            These settings are for your records — you apply the charge manually from the booking.
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Late cancel &amp; reschedule fees</h3>
+          <p className="field-help mb-3">
+            Set a fee for clients who cancel or move a shoot at the last minute. This is just a note for you — you decide whether to actually charge it from the booking.
           </p>
 
           {/* Cancel fee */}
@@ -2715,9 +2715,9 @@ export default function SettingsPage() {
 
         {/* Agent Photographer Selection */}
         <div className="pt-4 border-t border-gray-100">
-          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Agent Photographer Selection</h3>
-          <p className="text-xs text-gray-400 mb-3">
-            Allow agents to choose their preferred photographer or videographer when booking. Off by default — your team assigns photographers.
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Let clients pick their photographer?</h3>
+          <p className="field-help mb-3">
+            When on, clients can request a specific photographer or videographer while booking. Leave it off and your team decides who goes.
           </p>
           <label className="flex items-center gap-3 cursor-pointer">
             <button type="button" onClick={() => setAllowAgentPhotographerSel((v) => !v)}
@@ -3189,19 +3189,19 @@ export default function SettingsPage() {
       <PlainIntro><b>What is this?</b> Optional default rates we use to estimate what each shoot costs you (pay, editing, travel). They don&apos;t change what clients pay — they just help your profit numbers in Reports.</PlainIntro>
       {/* ─── Job Cost Rates ──────────────────────────────────────────────────── */}
       <div id="settings-cost-rates" className="card mt-6 scroll-mt-24">
-        <h2 className="font-semibold text-[#0F172A] text-base mb-1">Default Job Cost Rates</h2>
+        <h2 className="font-semibold text-[#0F172A] text-base mb-1">What a shoot costs you</h2>
         <p className="text-sm text-gray-500 mb-6">
-          These default rates auto-fill the Job Costs card on each booking. You can still override them per booking.
+          Rough numbers so we can show your profit on each job. These fill in automatically on every booking — you can always change them there.
         </p>
         <div className="grid grid-cols-2 gap-4 max-w-lg">
           <div>
-            <label className="label-field">Shooter Rate ($/hr)</label>
+            <label className="label-field">Photographer pay ($ / hour)</label>
             <input type="number" min="0" step="1" value={costRates.shooterHourly}
               onChange={(e) => setCostRates((r) => ({ ...r, shooterHourly: Number(e.target.value) || 0 }))}
               className="input-field w-full" placeholder="75" />
           </div>
           <div>
-            <label className="label-field">Editor Rate ($/photo)</label>
+            <label className="label-field">Editing ($ / photo)</label>
             <input type="number" min="0" step="0.25" value={costRates.editorPerPhoto}
               onChange={(e) => setCostRates((r) => ({ ...r, editorPerPhoto: Number(e.target.value) || 0 }))}
               className="input-field w-full" placeholder="2.00" />
