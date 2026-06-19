@@ -327,7 +327,7 @@ export default function GalleryDetailPage() {
   const [showDeliver,  setShowDeliver]  = useState(false);
   const [delivering,   setDelivering]   = useState(false);
   const [activeTab,    setActiveTab]    = useState("all");
-  const [dragIdx,      setDragIdx]      = useState(null);
+  const [dragKey,      setDragKey]      = useState(null);
   const [savingOrder,  setSavingOrder]  = useState(false);
   const [showDropbox,  setShowDropbox]  = useState(false);
   const [showCubicasa, setShowCubicasa] = useState(false);
@@ -529,20 +529,26 @@ export default function GalleryDetailPage() {
   }
 
   // ─── Drag reorder ─────────────────────────────────────────────────────────
-  const handleDragStart = useCallback((e, idx) => { setDragIdx(idx); e.dataTransfer.effectAllowed = "move"; }, []);
+  // Reorder by media KEY (not display index): thumbnails are indexed against
+  // the filtered/category view, so we map back to the real gallery.media array
+  // by key. This keeps drag-reorder correct even with videos or category tabs.
+  const handleDragStart = useCallback((e, key) => { setDragKey(key); e.dataTransfer.effectAllowed = "move"; }, []);
   const handleDragOver  = useCallback((e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }, []);
-  const handleDrop      = useCallback(async (e, toIdx) => {
+  const handleDrop      = useCallback(async (e, toKey) => {
     e.preventDefault();
-    if (dragIdx === null || dragIdx === toIdx) { setDragIdx(null); return; }
+    if (!dragKey || dragKey === toKey) { setDragKey(null); return; }
     setGallery((g) => {
       const list = [...(g.media || [])];
-      const [moved] = list.splice(dragIdx, 1);
-      list.splice(toIdx, 0, moved);
+      const fi = list.findIndex((m) => m.key === dragKey);
+      const ti = list.findIndex((m) => m.key === toKey);
+      if (fi === -1 || ti === -1) return g;
+      const [moved] = list.splice(fi, 1);
+      list.splice(ti, 0, moved);
       return { ...g, media: list };
     });
-    setDragIdx(null);
-  }, [dragIdx]);
-  const handleDragEnd = useCallback(() => setDragIdx(null), []);
+    setDragKey(null);
+  }, [dragKey]);
+  const handleDragEnd = useCallback(() => setDragKey(null), []);
 
   async function saveOrder() {
     setSavingOrder(true);
@@ -1599,12 +1605,12 @@ export default function GalleryDetailPage() {
                                   src={m.url} alt={m.fileName || `Photo ${i+1}`}
                                   isFirst={globalIdx === 0}
                                   index={globalIdx}
-                                  isDragging={dragIdx === globalIdx}
+                                  isDragging={dragKey === m.key}
                                   category={getMediaCategory(m.key)}
                                   categories={catNames}
-                                  onDragStart={(e) => handleDragStart(e, globalIdx)}
+                                  onDragStart={(e) => handleDragStart(e, m.key)}
                                   onDragOver={handleDragOver}
-                                  onDrop={(e) => handleDrop(e, globalIdx)}
+                                  onDrop={(e) => handleDrop(e, m.key)}
                                   onDragEnd={handleDragEnd}
                                   onAssignCategory={(cat) => assignCategory(m.key, cat)}
                                   selected={selectedKeys.has(m.key)}
@@ -1629,12 +1635,12 @@ export default function GalleryDetailPage() {
                         src={m.url} alt={m.fileName || `Photo ${i+1}`}
                         isFirst={i === 0 && activeTab === "all"}
                         index={i}
-                        isDragging={dragIdx === i}
+                        isDragging={dragKey === m.key}
                         category={getMediaCategory(m.key)}
                         categories={catNames}
-                        onDragStart={(e) => handleDragStart(e, i)}
+                        onDragStart={(e) => handleDragStart(e, m.key)}
                         onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, i)}
+                        onDrop={(e) => handleDrop(e, m.key)}
                         onDragEnd={handleDragEnd}
                         onAssignCategory={(cat) => assignCategory(m.key, cat)}
                         selected={selectedKeys.has(m.key)}

@@ -350,10 +350,18 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         triggerDownload(job.downloadUrl, "");
         await downloadVideosDirect();
       } else {
-        setDlStatus("failed");
+        // The prepared buffer didn't finish — fall back to a direct streamed
+        // download (both Print + Web/MLS) plus direct video downloads, instead
+        // of dead-ending. No links to copy; the files just download.
+        setDlStatus("fallback");
+        triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
+        await downloadVideosDirect();
       }
     } catch {
-      setDlStatus("failed");
+      // Even on error, get the videos downloading directly and stream the photos.
+      setDlStatus("fallback");
+      try { triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, ""); } catch {}
+      try { await downloadVideosDirect(); } catch {}
     } finally {
       setDownloadingAll(false);
     }
@@ -648,9 +656,9 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 {dlStatus === "ready" && (
                   <span className="text-xs text-green-600">Your download is ready.</span>
                 )}
-                {dlStatus === "failed" && (
-                  <span className="text-xs text-red-500 max-w-[16rem] text-right">
-                    We couldn&apos;t prepare this download. Please try again or download videos individually.
+                {dlStatus === "fallback" && (
+                  <span className="text-xs text-gray-500 max-w-[16rem] text-right">
+                    Starting your downloads now. Your browser may ask permission to download multiple files.
                   </span>
                 )}
               </div>
