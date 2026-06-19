@@ -447,7 +447,8 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
               )}
             </summary>
             <div className="px-4 pb-4 pt-3 border-t border-gray-100 space-y-4">
-              {!form.tiered ? (
+              {/* Retainers are always flat (billed per interval) — never tiered. */}
+              {(!form.tiered || type === "retainers") ? (
                 <div className="flex items-center gap-2">
                   <span className="text-gray-400">$</span>
                   <input type="number" value={form.price} onChange={field("price")} min="0" step="0.01"
