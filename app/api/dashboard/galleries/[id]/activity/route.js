@@ -36,6 +36,7 @@ export async function GET(req, { params }) {
       fileName:    data.fileName    || null,
       format:      data.format      || null,
       fileCount:   data.fileCount   || null,
+      amount:      data.amount      ?? null,
       ip:          data.ip          || null,
       userAgent:   data.userAgent   || null,
       timestamp:   ts ? ts.toISOString() : null,

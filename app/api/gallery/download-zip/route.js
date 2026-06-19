@@ -182,18 +182,27 @@ export async function GET(req) {
   if (tenantDoc.data()?.gallerySettings?.viewerTracking !== false) {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
              || req.headers.get("x-real-ip") || null;
-    adminDb
-      .collection("tenants").doc(tenantId)
-      .collection("galleries").doc(galleryId)
-      .collection("activityLog")
-      .add({
-        event:     "download_zip",
-        format:    extras ? "package" : format,
-        fileCount: (gallery.media || []).length,
-        timestamp: new Date(),
-        ip,
-      })
-      .catch(() => {});
+    (async () => {
+      let viewerEmail = null, viewerName = null;
+      try {
+        if (gallery.bookingId) {
+          const b = await adminDb.collection("tenants").doc(tenantId).collection("bookings").doc(gallery.bookingId).get();
+          if (b.exists) { viewerEmail = b.data().clientEmail || null; viewerName = b.data().clientName || null; }
+        }
+      } catch {}
+      adminDb
+        .collection("tenants").doc(tenantId)
+        .collection("galleries").doc(galleryId)
+        .collection("activityLog")
+        .add({
+          event:     "download_zip",
+          format:    extras ? "package" : format,
+          fileCount: (gallery.media || []).length,
+          timestamp: new Date(),
+          viewerEmail, viewerName, ip,
+        })
+        .catch(() => {});
+    })();
   }
 
   return new Response(readable, {

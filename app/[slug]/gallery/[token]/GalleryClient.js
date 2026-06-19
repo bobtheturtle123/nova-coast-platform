@@ -331,7 +331,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
       const start = await fetch(`/api/gallery/prepare-download`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, format: "web" }),
+        body: JSON.stringify({ token, format: "package" }), // both Print + Web-MLS
       });
       let job = await start.json().catch(() => ({}));
 

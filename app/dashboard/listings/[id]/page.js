@@ -2602,12 +2602,16 @@ if (loading) return (
                 <div className="space-y-0 divide-y divide-gray-50">
                   {activityLog.map((ev) => {
                     const icons = {
-                      view:     { icon: "👁", label: "Gallery viewed", color: "text-blue-600 bg-blue-50" },
-                      download: { icon: "⬇", label: "File downloaded", color: "text-green-600 bg-green-50" },
-                      link_copy:{ icon: "🔗", label: "Gallery link copied", color: "text-purple-600 bg-purple-50" },
-                      note:     { icon: "📝", label: "Admin note", color: "text-gray-600 bg-gray-50" },
+                      view:           { icon: "👁", label: "Gallery viewed", color: "text-blue-600 bg-blue-50" },
+                      download:       { icon: "⬇", label: "File downloaded", color: "text-green-600 bg-green-50" },
+                      download_zip:   { icon: "⬇", label: `Downloaded all media${ev.format === "package" ? " (Print + Web/MLS)" : ""}`, color: "text-green-600 bg-green-50" },
+                      download_video: { icon: "🎬", label: "Video downloaded", color: "text-green-600 bg-green-50" },
+                      payment:        { icon: "💳", label: ev.amount ? `Paid balance ($${Number(ev.amount).toLocaleString()})` : "Balance paid", color: "text-emerald-700 bg-emerald-50" },
+                      link_copy:      { icon: "🔗", label: "Gallery link copied", color: "text-purple-600 bg-purple-50" },
+                      note:           { icon: "📝", label: "Admin note", color: "text-gray-600 bg-gray-50" },
                     };
                     const meta = icons[ev.event] || { icon: "·", label: ev.event, color: "text-gray-500 bg-gray-50" };
+                    const who = ev.viewerEmail || ev.email;
                     return (
                       <div key={ev.id} className="flex items-start gap-3 py-3">
                         <span className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${meta.color}`}>
@@ -2615,7 +2619,7 @@ if (loading) return (
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-[#0F172A]">{meta.label}</p>
-                          {ev.email && <p className="text-xs text-gray-500">{ev.email}</p>}
+                          {who && <p className="text-xs text-gray-500 truncate">{ev.viewerName ? `${ev.viewerName} · ` : ""}{who}</p>}
                           {ev.fileName && <p className="text-xs text-gray-500 truncate">{ev.fileName}</p>}
                           {ev.note && <p className="text-xs text-gray-500 italic">{ev.note}</p>}
                         </div>

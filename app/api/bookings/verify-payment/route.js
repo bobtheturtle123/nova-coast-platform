@@ -100,6 +100,20 @@ export async function POST(req) {
           .collection("tenants").doc(tenantId)
           .collection("galleries").doc(galleryId)
           .update({ unlocked: true }).catch(() => {});
+        // Record the payment in the gallery's activity log, with who paid.
+        if (shouldNotify) {
+          adminDb
+            .collection("tenants").doc(tenantId)
+            .collection("galleries").doc(galleryId)
+            .collection("activityLog")
+            .add({
+              event: "payment",
+              amount: (pi.amount_received ?? pi.amount ?? 0) / 100,
+              viewerEmail: booking.clientEmail || pi.receipt_email || null,
+              viewerName:  booking.clientName || null,
+              timestamp: new Date(),
+            }).catch(() => {});
+        }
       }
       if (shouldNotify) {
         console.log(`[verify-payment] balance confirmed bookingId=${bookingId}`);

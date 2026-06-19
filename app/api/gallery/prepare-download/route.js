@@ -5,6 +5,23 @@ import { fileSetHash, buildGalleryZipBuffer } from "@/lib/galleryZip";
 export const dynamic     = "force-dynamic";
 export const maxDuration = 300;
 
+// Log a "downloaded everything" activity event, stamped with the viewer's email
+// (from the booking) so the dashboard activity log shows WHO downloaded.
+async function logGalleryDownload({ tenantId, galleryId, bookingId, format, fileCount }) {
+  try {
+    let viewerEmail = null, viewerName = null;
+    if (bookingId) {
+      const b = await adminDb.collection("tenants").doc(tenantId).collection("bookings").doc(bookingId).get();
+      if (b.exists) { viewerEmail = b.data().clientEmail || null; viewerName = b.data().clientName || null; }
+    }
+    await adminDb
+      .collection("tenants").doc(tenantId)
+      .collection("galleries").doc(galleryId)
+      .collection("activityLog")
+      .add({ event: "download_zip", format, fileCount: fileCount || 0, viewerEmail, viewerName, timestamp: new Date() });
+  } catch { /* non-fatal */ }
+}
+
 // Prepared-download buffer for large / video-heavy galleries.
 //
 // LIFECYCLE (preparedZips collection):
@@ -95,7 +112,10 @@ export async function POST(req) {
     const expired = data.expiresAt && new Date(data.expiresAt).getTime() < Date.now();
     if (!expired) {
       let downloadUrl = null;
-      if (data.status === "ready" && data.key) downloadUrl = await signedUrlFor(data.key, data.fileName);
+      if (data.status === "ready" && data.key) {
+        downloadUrl = await signedUrlFor(data.key, data.fileName);
+        await logGalleryDownload({ tenantId, galleryId, bookingId, format, fileCount: (gallery.media || []).length });
+      }
       return Response.json({ jobId: doc.id, status: data.status, downloadUrl });
     }
   }
@@ -125,6 +145,7 @@ export async function POST(req) {
 
     await jobRef.update({ status: "ready", key, sizeBytes: buf.length, readyAt: new Date().toISOString() });
     const downloadUrl = await signedUrlFor(key, fileName);
+    await logGalleryDownload({ tenantId, galleryId, bookingId, format, fileCount: (gallery.media || []).length });
     return Response.json({ jobId: jobRef.id, status: "ready", downloadUrl });
   } catch (e) {
     console.error("[prepare-download] build failed:", e?.message);
