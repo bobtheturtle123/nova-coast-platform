@@ -1692,37 +1692,21 @@ function BlockTimeModal({ members, onSave, onClose, timeBlocks, onDeleteBlock })
                   className="input-field w-full" />
               </div>
             </div>
-            <div>
-              <label className="label-field">How much of the day?</label>
-              <div className="grid grid-cols-2 gap-2 mt-1">
-                {[{ v: true, t: "Whole day", s: "Block the full day(s)" }, { v: false, t: "Specific times", s: "Pick a start & end" }].map((opt) => (
-                  <button key={String(opt.v)} type="button"
-                    onClick={() => setForm((f) => ({ ...f, allDay: opt.v, ...(opt.v ? { startTime: "", endTime: "" } : {}) }))}
-                    className={`p-3 rounded-xl border text-left transition-colors ${
-                      form.allDay === opt.v ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-[#3486cf]/30"
-                    }`}>
-                    <p className={`text-sm font-semibold ${form.allDay === opt.v ? "text-[#3486cf]" : "text-[#0F172A]"}`}>{opt.t}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{opt.s}</p>
-                  </button>
-                ))}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label-field">From</label>
+                <input type="time" value={form.startTime}
+                  onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value, allDay: !e.target.value && !f.endTime }))}
+                  className="input-field w-full" />
               </div>
-              {!form.allDay && (
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">From</label>
-                    <input type="time" value={form.startTime}
-                      onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value }))}
-                      className="input-field w-full" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">To</label>
-                    <input type="time" value={form.endTime}
-                      onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))}
-                      className="input-field w-full" />
-                  </div>
-                </div>
-              )}
+              <div>
+                <label className="label-field">To</label>
+                <input type="time" value={form.endTime}
+                  onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value, allDay: !f.startTime && !e.target.value }))}
+                  className="input-field w-full" />
+              </div>
             </div>
+            <p className="text-xs text-gray-400 -mt-2">Leave both blank to block the whole day.</p>
             <div>
               <label className="label-field">Reason</label>
               <select value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}

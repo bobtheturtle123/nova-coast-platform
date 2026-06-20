@@ -103,8 +103,8 @@ export async function GET(req) {
                   .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
                   .jpeg({ quality: WEB_QUALITY, progressive: true })
                   .toBuffer();
-                archive.append(buffer,  { name: `${ROOT}/Photos/Print/${folder}/${img.fileName || "photo.jpg"}` });
-                archive.append(webBuf,  { name: `${ROOT}/Photos/Web-MLS/${folder}/${baseName}-MLS.jpg` });
+                archive.append(buffer,  { name: `${ROOT}/Print Ready/Photos/${folder}/${img.fileName || "photo.jpg"}` });
+                archive.append(webBuf,  { name: `${ROOT}/Web Ready/Photos/${folder}/${baseName}-MLS.jpg` });
               } else if (format === "web") {
                 const webBuf = await sharp(buffer)
                   .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
@@ -121,13 +121,28 @@ export async function GET(req) {
         }
 
         // ── Floor Plans ──────────────────────────────────────────────────────
+        // In the full package, deliver them inside Print Ready / Web Ready too.
         for (const fp of floorPlans) {
           try {
             const res = await fetch(`${r2Url}/${fp.key}`);
-            if (!res.ok || !res.body) continue;
-            archive.append(toNodeStream(res.body), {
-              name: `${ROOT}/Floor Plans/${fp.fileName || fp.key.split("/").pop()}`,
-            });
+            if (!res.ok) continue;
+            const fpName = fp.fileName || fp.key.split("/").pop() || "floor-plan";
+            if (extras) {
+              const fpBuf = Buffer.from(await res.arrayBuffer());
+              archive.append(fpBuf, { name: `${ROOT}/Print Ready/Floor Plans/${fpName}` });
+              if (/\.(jpe?g|png|webp|tiff?)$/i.test(fpName)) {
+                const baseName = fpName.replace(/\.[^.]+$/, "");
+                const webBuf = await sharp(fpBuf)
+                  .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
+                  .jpeg({ quality: WEB_QUALITY, progressive: true })
+                  .toBuffer();
+                archive.append(webBuf, { name: `${ROOT}/Web Ready/Floor Plans/${baseName}-web.jpg` });
+              } else {
+                archive.append(fpBuf, { name: `${ROOT}/Web Ready/Floor Plans/${fpName}` });
+              }
+            } else if (res.body) {
+              archive.append(toNodeStream(res.body), { name: `${ROOT}/Floor Plans/${fpName}` });
+            }
           } catch (e) {
             console.warn("[download-zip] floor plan failed:", fp.key, e?.message);
           }

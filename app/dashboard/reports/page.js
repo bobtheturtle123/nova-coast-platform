@@ -87,7 +87,12 @@ function exportCSV(bookings, period) {
     ["Booking ID","Client","Address","Status","Total Price","Deposit Paid","Balance Paid","Revenue Collected","Total Cost","Net Profit","Margin %","Created At","Shoot Date"],
     ...bookings.map((b) => {
       // Profit/margin are computed on collected revenue only — never money still owed.
-      const revenue   = (b.depositPaid ? (b.depositAmount || 0) : 0) + (b.balancePaid ? (b.remainingBalance || 0) : 0);
+      // remainingBalance is zeroed once the balance is paid, so a fully-paid
+      // booking must count its full price (minus any discount), not the balance.
+      const disc      = b.promoDiscount || 0;
+      const revenue   = (b.paidInFull || (b.depositPaid && b.balancePaid))
+        ? Math.max(0, (b.totalPrice || 0) - disc)
+        : (b.depositPaid ? (b.depositAmount || 0) : 0);
       const totalCost = b.costs?.totalCost || 0;
       const profit    = revenue - totalCost;
       const margin    = revenue > 0 ? Math.round((profit / revenue) * 100) : "";
@@ -175,11 +180,16 @@ export default function ReportsPage() {
   // collected() = money actually paid by the client. We never count unpaid amounts
   // so reports never inflate revenue with money that may never come.
   function collected(b) {
-    let sum = 0;
-    if (b.depositPaid) sum += b.depositAmount    || 0;
-    if (b.balancePaid) sum += b.remainingBalance || 0;
-    if (b.paidInFull && !b.depositPaid && !b.balancePaid) sum += Math.max(0, (b.totalPrice || 0) - (b.promoDiscount || 0));
-    return sum;
+    const disc = b.promoDiscount || 0;
+    // Fully paid (paid in full, or both deposit + balance settled): the client
+    // paid the whole price. We must NOT read remainingBalance here — it is set
+    // to 0 the moment the balance is paid, which previously zeroed the revenue.
+    if (b.paidInFull || (b.depositPaid && b.balancePaid)) {
+      return Math.max(0, (b.totalPrice || 0) - disc);
+    }
+    // Deposit-only so far: count just the deposit collected.
+    if (b.depositPaid) return b.depositAmount || 0;
+    return 0;
   }
   const totalRevenue  = filtered.reduce((s, b) => s + collected(b), 0);
   const totalBookings = filtered.length;
@@ -207,8 +217,7 @@ export default function ReportsPage() {
       const d   = new Date(b.createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,"0")}`;
       if (!map[key]) map[key] = { label: `${MONTHS[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`, revenue: 0, cost: 0, orders: 0 };
-      if (b.depositPaid)  map[key].revenue += b.depositAmount    || 0;
-      if (b.balancePaid)  map[key].revenue += b.remainingBalance || 0;
+      map[key].revenue += collected(b);
       map[key].cost += b.costs?.totalCost || 0;
       map[key].orders++;
     });
