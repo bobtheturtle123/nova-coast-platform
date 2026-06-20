@@ -16,8 +16,30 @@ export default function CubiCasaImportModal({ galleryId, accountEmail, onClose, 
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [needsConnect, setNeedsConnect] = useState(false);
+  const [ccEmail, setCcEmail] = useState(accountEmail || "");
+  const [ccKey, setCcKey] = useState("");
+  const [connecting, setConnecting] = useState(false);
 
   const token = useCallback(() => auth.currentUser?.getIdToken(), []);
+
+  // Connect CubiCasa right here (API key) instead of sending them to Settings.
+  async function connectCubi() {
+    if (!ccEmail.trim() || !ccKey.trim()) { setError("Enter your CubiCasa email and API key."); return; }
+    setConnecting(true); setError(null);
+    try {
+      const t = await token();
+      const res = await fetch("/api/integrations/cubicasa/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+        body: JSON.stringify({ email: ccEmail.trim(), apiKey: ccKey.trim() }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setError(d.error || "Could not connect CubiCasa."); return; }
+      setNeedsConnect(false); setCcKey(""); load();
+    } catch { setError("Could not connect CubiCasa."); }
+    finally { setConnecting(false); }
+  }
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -25,7 +47,7 @@ export default function CubiCasaImportModal({ galleryId, accountEmail, onClose, 
       const t = await token();
       const res = await fetch("/api/integrations/cubicasa/floorplans", { headers: { Authorization: `Bearer ${t}` } });
       const d = await res.json();
-      if (res.status === 409) { setError("CubiCasa needs to be reconnected in Settings → Integrations."); return; }
+      if (res.status === 409) { setNeedsConnect(true); return; }
       if (!res.ok) { setError(d.error || "Could not load CubiCasa floor plans."); return; }
       setSupported(d.supported !== false);
       setMessage(d.message || "");
@@ -68,6 +90,23 @@ export default function CubiCasaImportModal({ galleryId, accountEmail, onClose, 
         <div className="flex-1 overflow-y-auto p-3 min-h-[220px]">
           {loading ? (
             <div className="flex justify-center py-16"><div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" /></div>
+          ) : needsConnect ? (
+            <div className="py-10 px-6 max-w-sm mx-auto">
+              <p className="text-3xl text-center mb-2">🗂️</p>
+              <p className="text-sm font-semibold text-gray-900 text-center mb-1">Connect your CubiCasa</p>
+              <p className="text-xs text-gray-500 text-center mb-5">Enter your CubiCasa account details once to import floor plans without leaving this page.</p>
+              <label className="block text-xs font-medium text-gray-600 mb-1">CubiCasa account email</label>
+              <input type="email" value={ccEmail} onChange={(e) => setCcEmail(e.target.value)}
+                className="input-field w-full mb-3" placeholder="you@studio.com" />
+              <label className="block text-xs font-medium text-gray-600 mb-1">API key</label>
+              <input type="password" value={ccKey} onChange={(e) => setCcKey(e.target.value)}
+                className="input-field w-full mb-4" placeholder="Your CubiCasa API key" autoComplete="off" />
+              {error && <p className="text-xs text-red-600 mb-3">{error}</p>}
+              <button onClick={connectCubi} disabled={connecting}
+                className="btn-primary w-full py-2.5 text-sm disabled:opacity-60">
+                {connecting ? "Connecting…" : "Connect CubiCasa"}
+              </button>
+            </div>
           ) : error ? (
             <div className="text-center py-12 text-sm text-red-600 px-6">{error}</div>
           ) : !supported ? (

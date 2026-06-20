@@ -13,8 +13,34 @@ export default function DropboxImportModal({ galleryId, onClose, onImported }) {
   const [error, setError]     = useState(null);
   const [importing, setImporting] = useState(false);
   const [result, setResult]   = useState(null);
+  const [needsConnect, setNeedsConnect] = useState(false);
+  const [connecting, setConnecting]     = useState(false);
 
   const token = useCallback(() => auth.currentUser?.getIdToken(), []);
+
+  // Connect Dropbox right here via an OAuth popup, then auto-retry the browse —
+  // no need to leave the page for Settings.
+  const connectDropbox = useCallback(async () => {
+    setConnecting(true); setError(null);
+    try {
+      const t = await token();
+      const res = await fetch("/api/integrations/dropbox/connect", { headers: { Authorization: `Bearer ${t}` } });
+      const d = await res.json();
+      if (!d.url) { setError(d.error || "Could not start the Dropbox connection."); setConnecting(false); return; }
+      const popup = window.open(d.url, "dropbox_connect", "width=620,height=740");
+      const timer = setInterval(() => {
+        if (!popup || popup.closed) {
+          clearInterval(timer);
+          setConnecting(false);
+          setNeedsConnect(false);
+          browse("");
+        }
+      }, 800);
+    } catch {
+      setError("Could not start the Dropbox connection.");
+      setConnecting(false);
+    }
+  }, [token]);
 
   const browse = useCallback(async (p) => {
     setLoading(true); setError(null);
@@ -24,7 +50,7 @@ export default function DropboxImportModal({ galleryId, onClose, onImported }) {
         headers: { Authorization: `Bearer ${t}` },
       });
       const d = await res.json();
-      if (res.status === 409 || d.reconnect) { setError("Dropbox needs to be reconnected in Settings → Integrations."); return; }
+      if (res.status === 409 || d.reconnect) { setNeedsConnect(true); return; }
       if (!res.ok) { setError(d.error || "Could not load Dropbox."); return; }
       setEntries(d.entries || []);
       setPath(d.path || p);
@@ -97,6 +123,16 @@ export default function DropboxImportModal({ galleryId, onClose, onImported }) {
         <div className="flex-1 overflow-y-auto p-2 min-h-[240px]">
           {loading ? (
             <div className="flex justify-center py-16"><div className="w-5 h-5 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" /></div>
+          ) : needsConnect ? (
+            <div className="text-center py-14 px-6">
+              <p className="text-3xl mb-3">🔗</p>
+              <p className="text-sm font-semibold text-gray-900 mb-1">Connect your Dropbox</p>
+              <p className="text-xs text-gray-500 mb-5 max-w-xs mx-auto">Sign in to Dropbox once so KyoriaOS can import your files. A window will pop up — finish there and this list loads automatically.</p>
+              <button onClick={connectDropbox} disabled={connecting}
+                className="btn-primary px-5 py-2.5 text-sm disabled:opacity-60">
+                {connecting ? "Waiting for Dropbox…" : "Connect Dropbox"}
+              </button>
+            </div>
           ) : error ? (
             <div className="text-center py-14 text-sm text-red-600 px-6">{error}</div>
           ) : entries.length === 0 ? (
