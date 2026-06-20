@@ -731,6 +731,22 @@ export default function GalleryDetailPage() {
     });
   }
 
+  // Reorder category folders. Object key order drives both the on-screen tabs
+  // and the delivered ZIP folder order, so we rebuild the object with the keys
+  // swapped. dir: -1 = up, +1 = down.
+  function moveCategory(cat, dir) {
+    setCategories((prev) => {
+      const keys = Object.keys(prev);
+      const i = keys.indexOf(cat);
+      const j = i + dir;
+      if (i === -1 || j < 0 || j >= keys.length) return prev;
+      [keys[i], keys[j]] = [keys[j], keys[i]];
+      const next = {};
+      for (const k of keys) next[k] = prev[k];
+      return next;
+    });
+  }
+
   async function saveCategories() {
     setSavingCats(true);
     const token = await auth.currentUser.getIdToken();
@@ -2112,13 +2128,20 @@ export default function GalleryDetailPage() {
                 <p className="text-sm text-gray-400 text-center py-4">No categories yet.</p>
               ) : (
                 <div className="space-y-1">
-                  {catNames.map((cat) => (
-                    <div key={cat} className="flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-xl">
-                      <div>
-                        <p className="text-sm font-medium text-[#0F172A]">{cat}</p>
+                  <p className="text-xs text-gray-400">Order sets how folders appear to clients and in the download. Use the arrows to reorder.</p>
+                  {catNames.map((cat, idx) => (
+                    <div key={cat} className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-xl">
+                      <div className="flex flex-col">
+                        <button onClick={() => moveCategory(cat, -1)} disabled={idx === 0}
+                          className="text-gray-400 hover:text-[#3486cf] disabled:opacity-25 leading-none" title="Move up">▲</button>
+                        <button onClick={() => moveCategory(cat, 1)} disabled={idx === catNames.length - 1}
+                          className="text-gray-400 hover:text-[#3486cf] disabled:opacity-25 leading-none" title="Move down">▼</button>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[#0F172A] truncate">{cat}</p>
                         <p className="text-xs text-gray-400">{(categories[cat] || []).length} photos</p>
                       </div>
-                      <button onClick={() => deleteCategory(cat)} className="text-xs text-red-500 hover:text-red-700">Remove</button>
+                      <button onClick={() => deleteCategory(cat)} className="text-xs text-red-500 hover:text-red-700 flex-shrink-0">Remove</button>
                     </div>
                   ))}
                 </div>
