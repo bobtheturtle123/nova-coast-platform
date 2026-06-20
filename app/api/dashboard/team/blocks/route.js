@@ -93,7 +93,7 @@ export async function POST(req) {
   }
 
   const body = await req.json();
-  const { memberId, memberName, startDate, endDate, startTime, endTime, reason, note } = body;
+  const { memberId, memberName, startDate, endDate, startTime, endTime, allDay, reason, note } = body;
 
   if (!startDate || !endDate) {
     return Response.json({ error: "startDate and endDate are required" }, { status: 400 });
@@ -108,6 +108,7 @@ export async function POST(req) {
     endDate:     new Date(endDate),
     startTime:   startTime   || null,
     endTime:     endTime     || null,
+    allDay:      allDay ?? !startTime,
     reason:      reason || "Time Off",
     note:        note   || "",
     createdAt:   new Date(),
