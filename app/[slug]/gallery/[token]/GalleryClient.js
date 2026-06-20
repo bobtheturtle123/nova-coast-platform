@@ -332,17 +332,16 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
     const res = await fetch(`/api/gallery/download-urls?token=${token}&type=videos`);
     if (!res.ok) return;
     const { files } = await res.json();
-    // Each signed R2 URL is served with attachment disposition. Open each in a
-    // new tab so that, even if a browser ignores the download attribute, it
-    // never navigates away from (and destroys) the gallery page. Stagger so the
-    // browser doesn't drop concurrent downloads.
+    // Each pre-signed R2 URL is served with an attachment Content-Disposition,
+    // so a plain anchor click downloads the file directly from R2 (free egress)
+    // WITHOUT navigating away from the gallery — no new tab needed (target=_blank
+    // gets popup-blocked when fired in a burst). Trigger sequentially with a
+    // delay so the browser doesn't drop concurrent downloads.
     for (let i = 0; i < (files || []).length; i++) {
-      if (i > 0) await new Promise((r) => setTimeout(r, 1200));
+      if (i > 0) await new Promise((r) => setTimeout(r, 1500));
       const a = document.createElement("a");
       a.href = files[i].url;
       a.download = files[i].name || "";
-      a.target = "_blank";
-      a.rel = "noopener";
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -352,12 +351,11 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   async function downloadEverything() {
     setDownloadingAll(true);
     try {
-      // When the gallery has videos, always use the streaming ZIP route: it now
-      // bundles the videos directly into the package (piped, any size), so the
-      // client gets everything in one file instead of relying on separate,
-      // browser-blocked direct downloads.
-      if (videos.length > 0 || !isHeavy) {
+      if (!isHeavy) {
+        // Small gallery — stream the photo/docs ZIP, then pull videos directly
+        // from R2 (free egress, never through this server).
         triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
+        await downloadVideosDirect();
         return;
       }
 

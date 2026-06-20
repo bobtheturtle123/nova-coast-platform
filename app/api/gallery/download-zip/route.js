@@ -164,24 +164,13 @@ export async function GET(req) {
         }
 
         // ── Videos ───────────────────────────────────────────────────────────
-        // Streamed directly into Videos/ (piped, never buffered) so even large
-        // videos are included in the package without memory pressure.
-        for (const v of videos) {
-          try {
-            const vKey = (v.originalRemoved && v.webVideoKey) ? v.webVideoKey : v.key;
-            const res  = await fetch(`${r2Url}/${vKey}`);
-            if (!res.ok || !res.body) continue;
-            archive.append(toNodeStream(res.body), {
-              name: `${ROOT}/Videos/${v.fileName || vKey.split("/").pop() || "video.mp4"}`,
-            });
-          } catch (e) {
-            console.warn("[download-zip] video failed:", v.key, e?.message);
-          }
-        }
+        // Videos are intentionally NOT streamed through this function. Routing
+        // heavy video bytes through Vercel would add bandwidth cost and risk the
+        // 300s timeout under load. They download DIRECTLY from R2 on the client
+        // (free egress, unlimited concurrency). The Links file references them.
 
-        // ── Links/ (Matterport, 3D tour, property website, gallery) ──
-        // All videos are bundled above, so no separate-video link file is needed.
-        for (const lf of buildLinkFiles(gallery, { slug, token, bookingId: gallery.bookingId, separateVideos: [] })) {
+        // ── Links/ (Matterport, 3D tour, property website, gallery, videos) ──
+        for (const lf of buildLinkFiles(gallery, { slug, token, bookingId: gallery.bookingId, separateVideos: videos })) {
           archive.append(Buffer.from(lf.content, "utf8"), { name: lf.name });
         }
 
