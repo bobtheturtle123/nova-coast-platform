@@ -547,9 +547,6 @@ function CustomDomainSection() {
           <h2 className="font-semibold text-[#0F172A] text-base">Custom Domain</h2>
           <p className="text-sm text-gray-500 mt-0.5">Connect your own domain to your property websites.</p>
         </div>
-        <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-semibold border border-amber-200 flex-shrink-0 mt-0.5">
-          Add-on Feature
-        </span>
       </div>
       <p className="text-xs text-gray-400 mb-6">
         Agents can share branded listing URLs like <span className="font-mono bg-gray-100 px-1 rounded">listings.youragency.com</span> instead of your platform subdomain.
@@ -1079,6 +1076,11 @@ export default function SettingsPage() {
   const [autoRenameDownloads, setAutoRenameDownloads] = useState(false);
   const [savingGalleryPrefs, setSavingGalleryPrefs] = useState(false);
 
+  // Charge clients for connecting their own custom property-website domain.
+  const [domainChargeEnabled, setDomainChargeEnabled] = useState(false);
+  const [domainChargeAmount,  setDomainChargeAmount]  = useState("");
+  const [savingDomainCharge,  setSavingDomainCharge]  = useState(false);
+
   // Notification prefs (merged from Notifications page)
   const [notifPrefs,    setNotifPrefs]    = useState({});
   const [savingNotifs,  setSavingNotifs]  = useState(false);
@@ -1232,6 +1234,12 @@ export default function SettingsPage() {
         }
         if (data.tenant.gallerySettings?.autoRenameDownloads !== undefined) {
           setAutoRenameDownloads(data.tenant.gallerySettings.autoRenameDownloads);
+        }
+        if (data.tenant.customDomainCharge) {
+          setDomainChargeEnabled(data.tenant.customDomainCharge.enabled === true);
+          if (data.tenant.customDomainCharge.amount != null) {
+            setDomainChargeAmount(String(data.tenant.customDomainCharge.amount));
+          }
         }
 
         if (data.tenant.emailTemplate) {
@@ -1595,6 +1603,22 @@ export default function SettingsPage() {
       else showMsg("Failed to save.", "error");
     } catch { showMsg("Something went wrong.", "error"); }
     setSavingGalleryPrefs(false);
+  }
+
+  async function saveDomainCharge() {
+    setSavingDomainCharge(true);
+    try {
+      const amount = Math.max(0, Math.round(Number(domainChargeAmount) || 0));
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/tenants/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ customDomainCharge: { enabled: domainChargeEnabled, amount } }),
+      });
+      if (res.ok) { setDomainChargeAmount(String(amount)); showMsg("Custom domain pricing saved."); }
+      else showMsg("Failed to save.", "error");
+    } catch { showMsg("Something went wrong.", "error"); }
+    setSavingDomainCharge(false);
   }
 
   async function saveNotifPrefs() {
@@ -4062,6 +4086,49 @@ export default function SettingsPage() {
 
       {/* Custom Domain */}
       <CustomDomainSection />
+
+      {/* Charge clients for connecting their own custom domain */}
+      <div className="card mt-6 scroll-mt-24">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="font-semibold text-[#0F172A] text-base">Charge for custom client domains</h2>
+          <button onClick={saveDomainCharge} disabled={savingDomainCharge} className="btn-primary px-5 py-2 text-sm">
+            {savingDomainCharge ? "Saving…" : "Save"}
+          </button>
+        </div>
+        <p className="text-sm text-gray-500 mb-5">
+          When an agent connects their own domain (e.g. <span className="font-mono bg-gray-100 px-1 rounded">listings.theirbrokerage.com</span>) to a property website, charge them a set fee for it.
+        </p>
+
+        <div className="flex items-start justify-between gap-4 py-3 border-b border-gray-100">
+          <div>
+            <p className="text-sm font-medium text-[#0F172A]">Charge clients for a custom domain</p>
+            <p className="text-xs text-gray-400 mt-0.5">When off, agents can connect a custom domain for free.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDomainChargeEnabled((v) => !v)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 mt-0.5 ${domainChargeEnabled ? "bg-[#3486cf]" : "bg-gray-300"}`}
+          >
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${domainChargeEnabled ? "translate-x-4" : "translate-x-0.5"}`} />
+          </button>
+        </div>
+
+        {domainChargeEnabled && (
+          <div className="flex items-center gap-3 py-3">
+            <label className="text-sm font-medium text-[#0F172A]">Fee</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+              <input
+                type="number" min="0" step="1"
+                value={domainChargeAmount}
+                onChange={(e) => setDomainChargeAmount(e.target.value)}
+                placeholder="0"
+                className="w-32 pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm"
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
         </div>
         )}
