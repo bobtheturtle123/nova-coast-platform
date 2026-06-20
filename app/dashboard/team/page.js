@@ -88,13 +88,24 @@ function nextAvailableSlot(member, bookings, timeBlocks, slotMin = 60) {
     const taken = bookings
       .filter((b) => b.photographerId === member.id && b.shootDate === dateStr && b.shootTime)
       .map((b) => hmToMin(b.shootTime));
-    const blocks = (timeBlocks || []).filter((tb) => (tb.memberId === member.id || tb.photographerId === member.id) && (tb.date === dateStr || !tb.date));
+    const blocks = (timeBlocks || []).filter((tb) => {
+      // Whose block: this member's, or a team-wide block (no member set).
+      if (!(!tb.memberId || tb.memberId === member.id || tb.photographerId === member.id)) return false;
+      // Which day(s): handle both synced (startDate/endDate or ISO startTime)
+      // and manual (date / startDate) blocks. A dateless block applies daily.
+      const sStr = blockDateStr(tb, "start") || tb.date || "";
+      const eStr = blockDateStr(tb, "end")   || tb.date || sStr;
+      if (!sStr) return true;
+      return dateStr >= sStr && dateStr <= eStr;
+    });
     for (let s = startMin; s + slotMin <= endMin; s += slotMin) {
       if (d === 0 && s <= nowMin) continue;
       if (taken.some((t) => t >= s && t < s + slotMin)) continue;
       const blocked = blocks.some((tb) => {
-        const bs = tb.start ? hmToMin(tb.start) : startMin;
-        const be = tb.end   ? hmToMin(tb.end)   : endMin;
+        // All-day (or whole-day) blocks cover the entire working window.
+        if (tb.allDay !== false && !tb.startTime && !tb.start) return true;
+        const bs = blockMin(tb, "start", startMin);
+        const be = blockMin(tb, "end",   endMin);
         return s < be && s + slotMin > bs;
       });
       if (blocked) continue;
@@ -159,6 +170,18 @@ function blockDateStr(bl, which) {
   }
   const fallback = which === "end" ? (bl.endDate || bl.startDate || "") : (bl.startDate || "");
   return fallback.slice(0, 10);
+}
+
+// Minutes-since-midnight for a block's start/end, handling synced ISO datetimes
+// (startTime/endTime), manual "HH:MM" (start/end), or a fallback when absent.
+function blockMin(tb, which, fallback) {
+  const t = which === "end" ? (tb.endTime || tb.end) : (tb.startTime || tb.start);
+  if (!t) return fallback;
+  if (typeof t === "string" && (t.includes("T") || t.length > 5)) {
+    const d = new Date(t);
+    if (!isNaN(d.getTime())) return d.getHours() * 60 + d.getMinutes();
+  }
+  return hmToMin(t);
 }
 
 // Label for a block in the grid. Synced calendar blocks get the member's first
