@@ -54,7 +54,8 @@ async function resolveGallery(token) {
   const gallery = galleryDoc.data();
   if (gallery.accessToken !== token || !gallery.unlocked) return null;
   const slug = tenantDoc.data()?.slug || null;
-  return { tenantId, galleryId, gallery, slug };
+  const autoRename = tenantDoc.data()?.gallerySettings?.autoRenameDownloads === true;
+  return { tenantId, galleryId, gallery, slug, autoRename };
 }
 
 function s3client() {
@@ -94,10 +95,10 @@ export async function POST(req) {
 
   const resolved = await resolveGallery(token);
   if (!resolved) return Response.json({ error: "Gallery not found" }, { status: 404 });
-  const { tenantId, galleryId, gallery, slug } = resolved;
+  const { tenantId, galleryId, gallery, slug, autoRename } = resolved;
   const bookingId = gallery.bookingId || null;
 
-  const hash = fileSetHash(gallery, format);
+  const hash = fileSetHash(gallery, format, autoRename);
   const jobs = adminDb.collection("preparedZips");
 
   // Dedupe: reuse a non-expired ready/preparing job for the same file set.
@@ -132,7 +133,7 @@ export async function POST(req) {
   });
 
   try {
-    const buf = await buildGalleryZipBuffer(gallery, { format, slug, token, bookingId });
+    const buf = await buildGalleryZipBuffer(gallery, { format, slug, token, bookingId, autoRename });
     const key = `${ZIP_PREFIX}/${tenantId}/${galleryId}/${jobRef.id}.zip`;
 
     const { PutObjectCommand } = await import("@aws-sdk/client-s3");

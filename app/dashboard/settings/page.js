@@ -1076,6 +1076,7 @@ export default function SettingsPage() {
 
   // Gallery settings
   const [viewerTracking,     setViewerTracking]     = useState(true);
+  const [autoRenameDownloads, setAutoRenameDownloads] = useState(false);
   const [savingGalleryPrefs, setSavingGalleryPrefs] = useState(false);
 
   // Notification prefs (merged from Notifications page)
@@ -1228,6 +1229,9 @@ export default function SettingsPage() {
         if (data.tenant.notificationPrefs) setNotifPrefs(data.tenant.notificationPrefs);
         if (data.tenant.gallerySettings?.viewerTracking !== undefined) {
           setViewerTracking(data.tenant.gallerySettings.viewerTracking);
+        }
+        if (data.tenant.gallerySettings?.autoRenameDownloads !== undefined) {
+          setAutoRenameDownloads(data.tenant.gallerySettings.autoRenameDownloads);
         }
 
         if (data.tenant.emailTemplate) {
@@ -1585,7 +1589,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/tenants/update", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ gallerySettings: { viewerTracking } }),
+        body: JSON.stringify({ gallerySettings: { viewerTracking, autoRenameDownloads } }),
       });
       if (res.ok) showMsg("Gallery settings saved.");
       else showMsg("Failed to save.", "error");
@@ -3731,6 +3735,24 @@ export default function SettingsPage() {
             className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 mt-0.5 ${viewerTracking ? "bg-[#3486cf]" : "bg-gray-300"}`}
           >
             <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${viewerTracking ? "translate-x-4" : "translate-x-0.5"}`} />
+          </button>
+        </div>
+
+        <div className="flex items-start justify-between gap-4 py-3 border-b border-gray-100 last:border-0">
+          <div>
+            <p className="text-sm font-medium text-[#0F172A]">Auto-rename photos on download</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              When on, files in the downloaded package are renamed sequentially by folder
+              (e.g. <span className="font-medium">Print Ready Photo 1</span>, <span className="font-medium">Print Ready Photo 2</span>…)
+              instead of keeping their original upload filenames. Floor plans are renamed the same way.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAutoRenameDownloads((v) => !v)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 mt-0.5 ${autoRenameDownloads ? "bg-[#3486cf]" : "bg-gray-300"}`}
+          >
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${autoRenameDownloads ? "translate-x-4" : "translate-x-0.5"}`} />
           </button>
         </div>
       </div>

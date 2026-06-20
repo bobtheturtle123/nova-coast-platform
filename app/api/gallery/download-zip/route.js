@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { Readable } from "stream";
 import { adminDb } from "@/lib/firebase-admin";
 import { rateLimit } from "@/lib/rateLimit";
-import { buildLinkFiles } from "@/lib/galleryZip";
+import { buildLinkFiles, seqName } from "@/lib/galleryZip";
 
 // Top-level folder so the client gets one tidy package.
 const ROOT = "Listing Media Package";
@@ -47,6 +47,8 @@ export async function GET(req) {
   if (!gallery.unlocked) return new Response("Gallery is locked", { status: 403 });
 
   const slug  = tenantDoc.data()?.slug || null;
+  const autoRename = tenantDoc.data()?.gallerySettings?.autoRenameDownloads === true;
+  const counters = new Map(); // per-folder sequential counters for auto-rename
   const r2Url = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
   if (!r2Url) return new Response("Storage not configured", { status: 500 });
 
@@ -99,22 +101,40 @@ export async function GET(req) {
               if (!res.ok) continue;
               const buffer   = Buffer.from(await res.arrayBuffer());
               const baseName = (img.fileName || "photo").replace(/\.[^.]+$/, "");
+              const ext      = (img.fileName?.match(/\.[^.]+$/)?.[0]) || ".jpg";
+              const catLabel = sub ? safe : null;
 
               if (extras) {
                 const webBuf = await sharp(buffer)
                   .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
                   .jpeg({ quality: WEB_QUALITY, progressive: true })
                   .toBuffer();
-                archive.append(buffer,  { name: `${ROOT}/Photos/Print Ready/${sub}${img.fileName || "photo.jpg"}` });
-                archive.append(webBuf,  { name: `${ROOT}/Photos/Web Ready/${sub}${baseName}-MLS.jpg` });
+                const prDir = `Photos/Print Ready/${sub}`;
+                const wrDir = `Photos/Web Ready/${sub}`;
+                const prName = autoRename
+                  ? seqName(counters, prDir, `${catLabel || "Print Ready"} Photo `, ext)
+                  : (img.fileName || "photo.jpg");
+                const wrName = autoRename
+                  ? seqName(counters, wrDir, `${catLabel || "Web Ready"} Photo `, ".jpg")
+                  : `${baseName}-MLS.jpg`;
+                archive.append(buffer,  { name: `${ROOT}/${prDir}${prName}` });
+                archive.append(webBuf,  { name: `${ROOT}/${wrDir}${wrName}` });
               } else if (format === "web") {
                 const webBuf = await sharp(buffer)
                   .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
                   .jpeg({ quality: WEB_QUALITY, progressive: true })
                   .toBuffer();
-                archive.append(webBuf, { name: `${ROOT}/Photos/${sub}${baseName}-MLS.jpg` });
+                const dir  = `Photos/${sub}`;
+                const name = autoRename
+                  ? seqName(counters, dir, catLabel ? `${catLabel} Photo ` : "Photo ", ".jpg")
+                  : `${baseName}-MLS.jpg`;
+                archive.append(webBuf, { name: `${ROOT}/${dir}${name}` });
               } else {
-                archive.append(buffer, { name: `${ROOT}/Photos/${sub}${img.fileName || "photo.jpg"}` });
+                const dir  = `Photos/${sub}`;
+                const name = autoRename
+                  ? seqName(counters, dir, catLabel ? `${catLabel} Photo ` : "Photo ", ext)
+                  : (img.fileName || "photo.jpg");
+                archive.append(buffer, { name: `${ROOT}/${dir}${name}` });
               }
             } catch (e) {
               console.warn("[download-zip] photo failed:", img.key, e?.message);
@@ -129,21 +149,26 @@ export async function GET(req) {
             const res = await fetch(`${r2Url}/${fp.key}`);
             if (!res.ok) continue;
             const fpName = fp.fileName || fp.key.split("/").pop() || "floor-plan";
+            const fpExt  = (fpName.match(/\.[^.]+$/)?.[0]) || "";
             if (extras) {
               const fpBuf = Buffer.from(await res.arrayBuffer());
-              archive.append(fpBuf, { name: `${ROOT}/Floor Plans/Print Ready/${fpName}` });
+              const prName = autoRename ? seqName(counters, "fp/print", "Print Ready Floor Plan ", fpExt) : fpName;
+              archive.append(fpBuf, { name: `${ROOT}/Floor Plans/Print Ready/${prName}` });
               if (/\.(jpe?g|png|webp|tiff?)$/i.test(fpName)) {
                 const baseName = fpName.replace(/\.[^.]+$/, "");
                 const webBuf = await sharp(fpBuf)
                   .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
                   .jpeg({ quality: WEB_QUALITY, progressive: true })
                   .toBuffer();
-                archive.append(webBuf, { name: `${ROOT}/Floor Plans/Web Ready/${baseName}-web.jpg` });
+                const wrName = autoRename ? seqName(counters, "fp/web", "Web Ready Floor Plan ", ".jpg") : `${baseName}-web.jpg`;
+                archive.append(webBuf, { name: `${ROOT}/Floor Plans/Web Ready/${wrName}` });
               } else {
-                archive.append(fpBuf, { name: `${ROOT}/Floor Plans/Web Ready/${fpName}` });
+                const wrName = autoRename ? seqName(counters, "fp/web", "Web Ready Floor Plan ", fpExt) : fpName;
+                archive.append(fpBuf, { name: `${ROOT}/Floor Plans/Web Ready/${wrName}` });
               }
             } else if (res.body) {
-              archive.append(toNodeStream(res.body), { name: `${ROOT}/Floor Plans/${fpName}` });
+              const name = autoRename ? seqName(counters, "fp/flat", "Floor Plan ", fpExt) : fpName;
+              archive.append(toNodeStream(res.body), { name: `${ROOT}/Floor Plans/${name}` });
             }
           } catch (e) {
             console.warn("[download-zip] floor plan failed:", fp.key, e?.message);
