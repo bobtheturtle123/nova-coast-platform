@@ -14,7 +14,7 @@ export async function PATCH(req, { params }) {
     if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const allowed = ["name", "type", "color", "assignedTo", "notes", "paths"];
+    const allowed = ["name", "type", "color", "assignedTo", "feeByPhotographer", "notes", "paths"];
     const update = {};
     for (const key of allowed) {
       if (body[key] !== undefined) update[key] = body[key];

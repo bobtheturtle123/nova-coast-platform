@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTravelFee } from "@/lib/travelFee";
+import { getZoneTravelFee } from "@/lib/zoneFee";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -22,6 +23,13 @@ export async function POST(req) {
     const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
     const tenant    = tenantDoc.data() || {};
     const tfConfig  = tenant.travelFeeConfig || {};
+
+    // Zone-based pricing: use the matched zone's fee for the chosen photographer
+    // (falls back to the lowest assigned fee when no photographer is selected).
+    if (tfConfig.enabled !== false && tfConfig.mode === "zones") {
+      const zone = await getZoneTravelFee({ tenantId: ctx.tenantId, lat, lng, address, photographerId });
+      return Response.json({ travelFee: zone.fee, miles: 0, withinRange: true, zoneName: zone.zoneName });
+    }
 
     // If usePhotographerZip is on and a photographerId was passed, use their homeZip
     let fromZip = tenant.fromZip || process.env.NEXT_PUBLIC_FROM_ZIP || "90210";

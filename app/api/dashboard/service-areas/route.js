@@ -31,7 +31,7 @@ export async function POST(req) {
     if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { name, type, color, assignedTo, notes, paths } = body;
+    const { name, type, color, assignedTo, feeByPhotographer, notes, paths } = body;
 
     const ref = adminDb.collection("tenants").doc(ctx.tenantId).collection("serviceAreas").doc();
     const zone = {
@@ -40,6 +40,7 @@ export async function POST(req) {
       type:       type       || "include",
       color:      color      || "#3B82F6",
       assignedTo: assignedTo || [],
+      feeByPhotographer: feeByPhotographer || {},
       notes:      notes      || "",
       paths:      paths      || [],
       createdAt:  new Date(),

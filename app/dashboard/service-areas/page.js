@@ -14,6 +14,8 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose, onAdjustShape
     type:       zone?.type       || "include",
     color:      zone?.color      || ZONE_COLORS[0],
     assignedTo: zone?.assignedTo || [],
+    // Travel fee charged for this zone, per photographer: { [memberId]: amount }.
+    feeByPhotographer: zone?.feeByPhotographer || {},
     notes:      zone?.notes      || "",
   });
   const [saving, setSaving] = useState(false);
@@ -25,6 +27,10 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose, onAdjustShape
         ? f.assignedTo.filter(x => x !== id)
         : [...f.assignedTo, id],
     }));
+  }
+
+  function setFee(id, value) {
+    setForm(f => ({ ...f, feeByPhotographer: { ...f.feeByPhotographer, [id]: value } }));
   }
 
   async function handleSave() {
@@ -110,32 +116,45 @@ function ZoneModal({ zone, teamMembers, onSave, onDelete, onClose, onAdjustShape
 
           {teamMembers.length > 0 && (
             <div>
-              <label style={labelStyle}>Assign Photographers</label>
-              <p style={{ fontSize: 11.5, color: "#9CA3AF", marginBottom: 8 }}>Only these photographers will be scheduled in this zone</p>
-              <div style={{ border: "1px solid #E9ECF0", borderRadius: 9, padding: "4px 0", maxHeight: 160, overflowY: "auto" }}>
-                {teamMembers.map(m => (
-                  <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 12px", cursor: "pointer" }}
+              <label style={labelStyle}>Assign Photographers & Travel Fee</label>
+              <p style={{ fontSize: 11.5, color: "#9CA3AF", marginBottom: 8 }}>Only assigned photographers are scheduled here. Set each one&apos;s travel fee for this zone — the fee charged depends on who covers it.</p>
+              <div style={{ border: "1px solid #E9ECF0", borderRadius: 9, padding: "4px 0", maxHeight: 220, overflowY: "auto" }}>
+                {teamMembers.map(m => {
+                  const assigned = form.assignedTo.includes(m.id);
+                  return (
+                  <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 12px" }}
                     onMouseEnter={e => e.currentTarget.style.background = "#F9FAFB"}
                     onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <div style={{
-                      width: 14, height: 14, borderRadius: 3, border: form.assignedTo.includes(m.id) ? "none" : "1.5px solid #D1D5DB",
-                      background: form.assignedTo.includes(m.id) ? "#3486cf" : "#fff",
+                    <div onClick={() => toggleMember(m.id)} style={{
+                      width: 14, height: 14, borderRadius: 3, cursor: "pointer", border: assigned ? "none" : "1.5px solid #D1D5DB",
+                      background: assigned ? "#3486cf" : "#fff",
                       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                     }}>
-                      {form.assignedTo.includes(m.id) && (
+                      {assigned && (
                         <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
                           <path d="M2.5 6L5 8.5 9.5 3.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       )}
                     </div>
-                    <input type="checkbox" checked={form.assignedTo.includes(m.id)} onChange={() => toggleMember(m.id)} style={{ display: "none" }} />
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", background: m.color || "#6B7280", color: "#fff", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <div onClick={() => toggleMember(m.id)} style={{ width: 22, height: 22, borderRadius: "50%", background: m.color || "#6B7280", color: "#fff", fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer" }}>
                       {m.name?.[0]?.toUpperCase()}
                     </div>
-                    <span style={{ fontSize: 13, color: "#0F172A", flex: 1 }}>{m.name}</span>
-                    <span style={{ fontSize: 11, color: "#9CA3AF" }}>{m.role}</span>
-                  </label>
-                ))}
+                    <span onClick={() => toggleMember(m.id)} style={{ fontSize: 13, color: "#0F172A", flex: 1, cursor: "pointer" }}>{m.name}</span>
+                    {assigned ? (
+                      <div style={{ position: "relative", flexShrink: 0 }}>
+                        <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#9CA3AF" }}>$</span>
+                        <input type="number" min="0" step="1"
+                          value={form.feeByPhotographer[m.id] ?? ""}
+                          onChange={e => setFee(m.id, e.target.value)}
+                          placeholder="0"
+                          style={{ width: 80, height: 30, padding: "0 8px 0 18px", fontSize: 12, border: "1px solid #E9ECF0", borderRadius: 7, outline: "none", color: "#0F172A" }} />
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 11, color: "#9CA3AF" }}>{m.role}</span>
+                    )}
+                  </div>
+                  );
+                })}
               </div>
             </div>
           )}
