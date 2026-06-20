@@ -305,14 +305,13 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
     const res = await fetch(`/api/gallery/download-urls?token=${token}&type=videos`);
     if (!res.ok) return;
     const { files } = await res.json();
+    // Each signed R2 URL is served with attachment disposition, so a plain
+    // anchor click downloads the file (no page navigation). Anchors are far more
+    // reliable than hidden iframes, which many browsers silently block. Stagger
+    // so the browser doesn't drop concurrent downloads.
     for (let i = 0; i < (files || []).length; i++) {
-      if (i > 0) await new Promise((r) => setTimeout(r, 1500));
-      const iframe = document.createElement("iframe");
-      iframe.style.display = "none";
-      iframe.src = files[i].url;
-      document.body.appendChild(iframe);
-      // Leave it long enough for the download to start, then clean up.
-      setTimeout(() => iframe.remove(), 60000);
+      if (i > 0) await new Promise((r) => setTimeout(r, 1200));
+      triggerDownload(files[i].url, files[i].name || "");
     }
   }
 
