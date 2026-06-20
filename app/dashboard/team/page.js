@@ -1634,6 +1634,19 @@ function BlockTimeModal({ members, onSave, onClose, timeBlocks, onDeleteBlock })
   });
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState("new"); // "new" | "existing"
+  const [cal, setCal] = useState(() => { const d = new Date(); return { m: d.getMonth(), y: d.getFullYear() }; });
+
+  // Click a day to set the range: first click (or clicking before the current
+  // start) sets a single-day block; a later day extends the end. Same calendar
+  // styling as the booking schedule.
+  function pickDay(ds) {
+    setForm((f) => {
+      if (!f.startDate || (f.startDate && f.endDate && f.startDate !== f.endDate) || ds < f.startDate) {
+        return { ...f, startDate: ds, endDate: ds };
+      }
+      return { ...f, endDate: ds };
+    });
+  }
 
   async function handleSave() {
     if (!form.startDate || !form.endDate) return;
@@ -1678,18 +1691,52 @@ function BlockTimeModal({ members, onSave, onClose, timeBlocks, onDeleteBlock })
                 ))}
               </select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label-field">Start Date</label>
-                <input type="date" value={form.startDate}
-                  onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
-                  className="input-field w-full" />
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="label-field mb-0">Dates</label>
+                <span className="text-xs text-gray-400">
+                  {form.startDate === form.endDate
+                    ? new Date(form.startDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                    : `${new Date(form.startDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(form.endDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                </span>
               </div>
-              <div>
-                <label className="label-field">End Date</label>
-                <input type="date" value={form.endDate} min={form.startDate}
-                  onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-                  className="input-field w-full" />
+              <div className="border border-gray-200 rounded-xl p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <button type="button"
+                    onClick={() => setCal((c) => c.m === 0 ? { m: 11, y: c.y - 1 } : { m: c.m - 1, y: c.y })}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors text-lg">‹</button>
+                  <span className="text-xs font-semibold text-gray-700">{new Date(cal.y, cal.m, 1).toLocaleString("en-US", { month: "long", year: "numeric" })}</span>
+                  <button type="button"
+                    onClick={() => setCal((c) => c.m === 11 ? { m: 0, y: c.y + 1 } : { m: c.m + 1, y: c.y })}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors text-lg">›</button>
+                </div>
+                <div className="grid grid-cols-7 mb-1">
+                  {["S","M","T","W","T","F","S"].map((d, i) => (
+                    <div key={i} className="text-center text-[9px] font-bold text-gray-400 pb-1">{d}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-px">
+                  {(() => {
+                    const firstDay = new Date(cal.y, cal.m, 1).getDay();
+                    const daysInMonth = new Date(cal.y, cal.m + 1, 0).getDate();
+                    const cells = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+                    return cells.map((d, i) => {
+                      if (!d) return <div key={i} className="aspect-square" />;
+                      const ds = `${cal.y}-${String(cal.m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                      const inRange = ds >= form.startDate && ds <= form.endDate;
+                      const isEdge  = ds === form.startDate || ds === form.endDate;
+                      return (
+                        <button key={i} type="button" onClick={() => pickDay(ds)}
+                          className={`aspect-square rounded-lg text-[12px] font-medium flex items-center justify-center transition-all leading-none ${
+                            isEdge ? "text-white" : inRange ? "text-[#3486cf]" : "text-gray-700 hover:bg-gray-100"
+                          }`}
+                          style={isEdge ? { backgroundColor: "#3486cf" } : inRange ? { backgroundColor: "rgba(52,134,207,0.12)" } : {}}>
+                          {d}
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
