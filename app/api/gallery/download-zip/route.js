@@ -89,8 +89,10 @@ export async function GET(req) {
         }
 
         for (const [cat, items] of catMap) {
-          // Sanitise the folder name for ZIP path safety
-          const folder = cat.replace(/[/\\?%*:|"<>]/g, "-").trim();
+          // Sanitise the folder name; only nest real categories (uncategorized
+          // photos default to "Photos" and go straight into the parent).
+          const safe = cat.replace(/[/\\?%*:|"<>]/g, "-").trim();
+          const sub  = (safe && safe !== "Photos") ? `${safe}/` : "";
           for (const img of items) {
             try {
               const res = await fetch(`${r2Url}/${img.key}`);
@@ -103,16 +105,16 @@ export async function GET(req) {
                   .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
                   .jpeg({ quality: WEB_QUALITY, progressive: true })
                   .toBuffer();
-                archive.append(buffer,  { name: `${ROOT}/Photos/Print Ready/${folder}/${img.fileName || "photo.jpg"}` });
-                archive.append(webBuf,  { name: `${ROOT}/Photos/Web Ready/${folder}/${baseName}-MLS.jpg` });
+                archive.append(buffer,  { name: `${ROOT}/Photos/Print Ready/${sub}${img.fileName || "photo.jpg"}` });
+                archive.append(webBuf,  { name: `${ROOT}/Photos/Web Ready/${sub}${baseName}-MLS.jpg` });
               } else if (format === "web") {
                 const webBuf = await sharp(buffer)
                   .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
                   .jpeg({ quality: WEB_QUALITY, progressive: true })
                   .toBuffer();
-                archive.append(webBuf, { name: `${ROOT}/Photos/${folder}/${baseName}-MLS.jpg` });
+                archive.append(webBuf, { name: `${ROOT}/Photos/${sub}${baseName}-MLS.jpg` });
               } else {
-                archive.append(buffer, { name: `${ROOT}/Photos/${folder}/${img.fileName || "photo.jpg"}` });
+                archive.append(buffer, { name: `${ROOT}/Photos/${sub}${img.fileName || "photo.jpg"}` });
               }
             } catch (e) {
               console.warn("[download-zip] photo failed:", img.key, e?.message);

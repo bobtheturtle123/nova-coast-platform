@@ -47,7 +47,12 @@ export async function GET(req) {
   if (!bucket) return Response.json({ error: "Storage not configured" }, { status: 500 });
 
   const media  = (gallery.media || []).filter((m) => m.key && !m.hidden);
-  const videos = media.filter((m) => m.fileType?.startsWith("video/"));
+  // Detect videos by MIME OR file extension — some uploads arrive with a missing
+  // or generic content-type, which previously excluded them from the download.
+  const isVideo = (m) =>
+    m.fileType?.startsWith("video/") ||
+    /\.(mp4|mov|webm|m4v|avi|mkv|mpg|mpeg)$/i.test(m.fileName || m.key || "");
+  const videos = media.filter(isVideo);
 
   // Videos are ALWAYS delivered as direct downloads (never bundled in the ZIP),
   // so return every video for type=videos. "all" returns all media.

@@ -275,8 +275,12 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const showSignupCallout  = agentCheckDone && !isAgentSignedIn;
 
   const allMedia  = (gallery.media || []).filter((m) => !m.hidden);
-  const images    = allMedia.filter((m) => !m.fileType?.startsWith("video/"));
-  const videos    = allMedia.filter((m) =>  m.fileType?.startsWith("video/"));
+  // Detect videos by MIME OR extension (uploads may have a missing/generic type).
+  const isVideoMedia = (m) =>
+    m.fileType?.startsWith("video/") ||
+    /\.(mp4|mov|webm|m4v|avi|mkv|mpg|mpeg)$/i.test(m.fileName || m.key || "");
+  const images    = allMedia.filter((m) => !isVideoMedia(m));
+  const videos    = allMedia.filter((m) =>  isVideoMedia(m));
 
   // Group photos into their category folders (shown to clients even before
   // payment) while preserving each photo's global index for the lightbox.
