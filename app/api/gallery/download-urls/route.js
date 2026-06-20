@@ -49,11 +49,9 @@ export async function GET(req) {
   const media  = (gallery.media || []).filter((m) => m.key && !m.hidden);
   const videos = media.filter((m) => m.fileType?.startsWith("video/"));
 
-  // For "videos": return only the videos delivered SEPARATELY (the large ones).
-  // Small videos are bundled inside the ZIP, so the client must not also fetch
-  // them directly — that would download them twice. "all" still returns
-  // everything (used by other callers).
-  const pick = type === "all" ? media : partitionVideos(videos).separate;
+  // Videos are ALWAYS delivered as direct downloads (never bundled in the ZIP),
+  // so return every video for type=videos. "all" returns all media.
+  const pick = type === "all" ? media : videos;
 
   const files = await Promise.all(
     pick.map(async (m, i) => {

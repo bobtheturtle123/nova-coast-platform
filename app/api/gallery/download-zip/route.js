@@ -103,8 +103,8 @@ export async function GET(req) {
                   .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
                   .jpeg({ quality: WEB_QUALITY, progressive: true })
                   .toBuffer();
-                archive.append(buffer,  { name: `${ROOT}/Print Ready/Photos/${folder}/${img.fileName || "photo.jpg"}` });
-                archive.append(webBuf,  { name: `${ROOT}/Web Ready/Photos/${folder}/${baseName}-MLS.jpg` });
+                archive.append(buffer,  { name: `${ROOT}/Photos/Print Ready/${folder}/${img.fileName || "photo.jpg"}` });
+                archive.append(webBuf,  { name: `${ROOT}/Photos/Web Ready/${folder}/${baseName}-MLS.jpg` });
               } else if (format === "web") {
                 const webBuf = await sharp(buffer)
                   .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
@@ -129,16 +129,16 @@ export async function GET(req) {
             const fpName = fp.fileName || fp.key.split("/").pop() || "floor-plan";
             if (extras) {
               const fpBuf = Buffer.from(await res.arrayBuffer());
-              archive.append(fpBuf, { name: `${ROOT}/Print Ready/Floor Plans/${fpName}` });
+              archive.append(fpBuf, { name: `${ROOT}/Floor Plans/Print Ready/${fpName}` });
               if (/\.(jpe?g|png|webp|tiff?)$/i.test(fpName)) {
                 const baseName = fpName.replace(/\.[^.]+$/, "");
                 const webBuf = await sharp(fpBuf)
                   .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
                   .jpeg({ quality: WEB_QUALITY, progressive: true })
                   .toBuffer();
-                archive.append(webBuf, { name: `${ROOT}/Web Ready/Floor Plans/${baseName}-web.jpg` });
+                archive.append(webBuf, { name: `${ROOT}/Floor Plans/Web Ready/${baseName}-web.jpg` });
               } else {
-                archive.append(fpBuf, { name: `${ROOT}/Web Ready/Floor Plans/${fpName}` });
+                archive.append(fpBuf, { name: `${ROOT}/Floor Plans/Web Ready/${fpName}` });
               }
             } else if (res.body) {
               archive.append(toNodeStream(res.body), { name: `${ROOT}/Floor Plans/${fpName}` });
@@ -163,25 +163,11 @@ export async function GET(req) {
 
         // ── Videos: bundle the small ones; large ones download separately ────
         // Heavy video bytes (up to 5 GB each) are NOT forced into the ZIP — that
-        // causes timeouts/egress. Small clips ride along; the rest are listed in
-        // Links/Video-Download-Links.txt and download DIRECTLY from R2.
-        const { inZip: smallVideos, separate: separateVideos } = partitionVideos(videos);
-        for (const v of smallVideos) {
-          try {
-            const { key: vKey } = effectiveVideo(v);
-            const res = await fetch(`${r2Url}/${vKey}`);
-            if (!res.ok || !res.body) { separateVideos.push(v); continue; }
-            archive.append(toNodeStream(res.body), {
-              name: `${ROOT}/Videos/${v.fileName || vKey.split("/").pop()}`,
-            });
-          } catch (e) {
-            console.warn("[download-zip] video failed:", v.key, e?.message);
-            separateVideos.push(v);
-          }
-        }
+        // Videos are NEVER bundled here — they download directly from R2 on the
+        // client (reliable, free egress, no link file).
 
-        // ── Links/ (Matterport, 3D tour, property website, gallery, videos) ──
-        for (const lf of buildLinkFiles(gallery, { slug, token, bookingId: gallery.bookingId, separateVideos })) {
+        // ── Links/ (Matterport, 3D tour, property website, gallery) ──
+        for (const lf of buildLinkFiles(gallery, { slug, token, bookingId: gallery.bookingId, separateVideos: [] })) {
           archive.append(Buffer.from(lf.content, "utf8"), { name: lf.name });
         }
 
