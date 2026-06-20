@@ -51,6 +51,11 @@ export async function POST(req, { params }) {
     if (snap.data().galleryId) { alreadyExists = snap.data().galleryId; return; }
 
     const booking = snap.data();
+    // If the client already paid in full (e.g. paid the whole amount at booking),
+    // there's no balance to collect — the gallery should be unlocked on creation
+    // so downloads work immediately once delivered. Otherwise it stays locked
+    // until the balance is paid.
+    const paidInFull = booking.paidInFull === true || booking.balancePaid === true;
     const galleryRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("galleries").doc(galleryId);
     const tokenRef   = adminDb.collection("galleryTokens").doc(accessToken);
 
@@ -63,13 +68,13 @@ export async function POST(req, { params }) {
       tenantId:       ctx.tenantId,
       tenantSlug,
       accessToken,
-      unlocked:       false,
+      unlocked:       paidInFull,
       media:          [],
       categories:     {},
       createdAt:      new Date(),
     });
     tx.set(tokenRef, { tenantId: ctx.tenantId, galleryId });
-    tx.update(bookingRef, { galleryId, galleryUnlocked: false });
+    tx.update(bookingRef, { galleryId, galleryUnlocked: paidInFull });
   });
 
   if (alreadyExists) {

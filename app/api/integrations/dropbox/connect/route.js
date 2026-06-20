@@ -21,6 +21,9 @@ export async function GET(req) {
     return Response.json({ error: "Dropbox is not configured on the server." }, { status: 500 });
   }
 
-  const state = signState({ tenantId: decoded.tenantId, uid: decoded.uid });
+  // `mode=popup` (used by the in-gallery import modal) tells the callback to
+  // show a "you can close this tab" page instead of redirecting to Settings.
+  const source = new URL(req.url).searchParams.get("mode") === "popup" ? "popup" : "settings";
+  const state = signState({ tenantId: decoded.tenantId, uid: decoded.uid, source });
   return Response.json({ url: buildAuthUrl(state) });
 }

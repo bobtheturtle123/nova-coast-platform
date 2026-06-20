@@ -121,6 +121,14 @@ export async function GET(req) {
             doc.ref.update({ status: "sent", sentAt: now }),
           ]);
 
+          // Log the scheduled delivery in the gallery activity log.
+          galleryRef.collection("activityLog").add({
+            event:      "delivered",
+            timestamp:  now,
+            recipients: allRecipients,
+            note:       allRecipients.length ? `Scheduled delivery sent to ${allRecipients.join(", ")}` : "Scheduled delivery sent",
+          }).catch(() => {});
+
           // Advance booking workflow status to "delivered"
           if (booking.id || gallery.bookingId) {
             adminDb.collection("tenants").doc(tenantId)

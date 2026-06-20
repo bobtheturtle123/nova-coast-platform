@@ -24,7 +24,7 @@ export default function DropboxImportModal({ galleryId, onClose, onImported }) {
     setConnecting(true); setError(null);
     try {
       const t = await token();
-      const res = await fetch("/api/integrations/dropbox/connect", { headers: { Authorization: `Bearer ${t}` } });
+      const res = await fetch("/api/integrations/dropbox/connect?mode=popup", { headers: { Authorization: `Bearer ${t}` } });
       const d = await res.json();
       if (!d.url) { setError(d.error || "Could not start the Dropbox connection."); setConnecting(false); return; }
       const popup = window.open(d.url, "dropbox_connect", "width=620,height=740");

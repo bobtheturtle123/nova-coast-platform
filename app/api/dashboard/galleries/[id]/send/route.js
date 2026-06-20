@@ -121,6 +121,15 @@ export async function POST(req, { params }) {
     ...(agentCanShare !== undefined ? { agentCanShare } : {}),
   });
 
+  // Record the delivery in the gallery activity log so the tenant can see when
+  // (and to whom) it was sent.
+  galleryRef.collection("activityLog").add({
+    event:     "delivered",
+    timestamp: new Date(),
+    recipients: allRecipients,
+    note:      allRecipients.length ? `Sent to ${allRecipients.join(", ")}` : null,
+  }).catch(() => {});
+
   // Advance booking workflow status to "delivered"
   if (gallery.bookingId) {
     adminDb.collection("tenants").doc(ctx.tenantId)

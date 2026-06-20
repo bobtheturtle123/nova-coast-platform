@@ -39,6 +39,20 @@ export default async function TenantGalleryPage({ params }) {
     }
   }
 
+  // Self-heal: if the client already paid in full but this gallery was created
+  // (or left) locked, unlock it now so downloads work. Covers galleries created
+  // after an upfront full payment, where the pay-to-unlock path never ran.
+  const paidInFull = booking?.paidInFull === true || booking?.balancePaid === true
+    || (booking && booking.depositPaid === true && Number(booking.remainingBalance) === 0);
+  if (paidInFull && !gallery.unlocked) {
+    gallery.unlocked = true;
+    adminDb
+      .collection("tenants").doc(tenant.id)
+      .collection("galleries").doc(galleryDoc.id)
+      .update({ unlocked: true })
+      .catch(() => {});
+  }
+
   // Log gallery view — respects tenant's viewer tracking preference (default: on)
   if (tenant.gallerySettings?.viewerTracking !== false) {
     const ip =

@@ -2602,6 +2602,7 @@ if (loading) return (
                 <div className="space-y-0 divide-y divide-gray-50">
                   {activityLog.map((ev) => {
                     const icons = {
+                      delivered:      { icon: "📨", label: "Gallery delivered", color: "text-indigo-600 bg-indigo-50" },
                       view:           { icon: "👁", label: "Gallery viewed", color: "text-blue-600 bg-blue-50" },
                       download:       { icon: "⬇", label: "File downloaded", color: "text-green-600 bg-green-50" },
                       download_zip:   { icon: "⬇", label: `Downloaded all media${ev.format === "package" ? " (Print + Web/MLS)" : ""}`, color: "text-green-600 bg-green-50" },
