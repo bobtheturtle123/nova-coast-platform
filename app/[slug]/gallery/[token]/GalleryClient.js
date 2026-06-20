@@ -352,10 +352,12 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   async function downloadEverything() {
     setDownloadingAll(true);
     try {
-      if (!isHeavy) {
-        // Small gallery — stream the photo/docs ZIP straight away.
+      // When the gallery has videos, always use the streaming ZIP route: it now
+      // bundles the videos directly into the package (piped, any size), so the
+      // client gets everything in one file instead of relying on separate,
+      // browser-blocked direct downloads.
+      if (videos.length > 0 || !isHeavy) {
         triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
-        await downloadVideosDirect();
         return;
       }
 

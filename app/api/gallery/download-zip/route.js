@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { Readable } from "stream";
 import { adminDb } from "@/lib/firebase-admin";
 import { rateLimit } from "@/lib/rateLimit";
-import { buildLinkFiles, partitionVideos, effectiveVideo } from "@/lib/galleryZip";
+import { buildLinkFiles } from "@/lib/galleryZip";
 
 // Top-level folder so the client gets one tidy package.
 const ROOT = "Listing Media Package";
@@ -163,12 +163,24 @@ export async function GET(req) {
           }
         }
 
-        // ── Videos: bundle the small ones; large ones download separately ────
-        // Heavy video bytes (up to 5 GB each) are NOT forced into the ZIP — that
-        // Videos are NEVER bundled here — they download directly from R2 on the
-        // client (reliable, free egress, no link file).
+        // ── Videos ───────────────────────────────────────────────────────────
+        // Streamed directly into Videos/ (piped, never buffered) so even large
+        // videos are included in the package without memory pressure.
+        for (const v of videos) {
+          try {
+            const vKey = (v.originalRemoved && v.webVideoKey) ? v.webVideoKey : v.key;
+            const res  = await fetch(`${r2Url}/${vKey}`);
+            if (!res.ok || !res.body) continue;
+            archive.append(toNodeStream(res.body), {
+              name: `${ROOT}/Videos/${v.fileName || vKey.split("/").pop() || "video.mp4"}`,
+            });
+          } catch (e) {
+            console.warn("[download-zip] video failed:", v.key, e?.message);
+          }
+        }
 
         // ── Links/ (Matterport, 3D tour, property website, gallery) ──
+        // All videos are bundled above, so no separate-video link file is needed.
         for (const lf of buildLinkFiles(gallery, { slug, token, bookingId: gallery.bookingId, separateVideos: [] })) {
           archive.append(Buffer.from(lf.content, "utf8"), { name: lf.name });
         }
