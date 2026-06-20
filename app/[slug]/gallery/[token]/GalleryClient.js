@@ -780,10 +780,17 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             <div className="p-4 space-y-3">
               {videoUrl && (
                 <div>
-                  <div className="rounded-xl overflow-hidden bg-gray-900" style={{ aspectRatio: "16/9" }}>
+                  <div className="relative rounded-xl overflow-hidden bg-gray-900" style={{ aspectRatio: "16/9" }}>
                     <iframe src={toEmbedUrl(videoUrl)} title="Video Tour"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen className="w-full h-full" style={{ minHeight: 280 }} />
+                    {!unlocked && name && (
+                      <div className="absolute inset-0 pointer-events-none select-none flex items-center justify-center overflow-hidden">
+                        <span style={{ transform: "rotate(-24deg)", color: "rgba(255,255,255,0.10)", fontSize: "clamp(16px,4.5vw,40px)", fontWeight: 800, letterSpacing: "0.08em", whiteSpace: "nowrap", textShadow: "0 1px 3px rgba(0,0,0,0.25)" }}>
+                          {name} · PREVIEW
+                        </span>
+                      </div>
+                    )}
                   </div>
                   {unlocked && <InlineCopyRow url={videoUrl} primary={primary} />}
                 </div>
@@ -796,12 +803,20 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                           also keeps old galleries playable after the full-res
                           original is removed for storage management. */}
                       <video src={v.webVideoUrl || v.url} className="w-full h-full" controls />
-                      {/* Very subtle watermark over gallery playback (doesn't block controls;
-                          not baked into the downloadable file). */}
+                      {/* Subtle watermark over gallery playback (doesn't block controls;
+                          never baked into the downloadable file). The diagonal
+                          "preview" mark shows only until the balance is paid. */}
                       {name && (
                         <div className="absolute top-2 left-3 pointer-events-none select-none text-white/25 text-[11px] font-semibold tracking-wide"
                           style={{ textShadow: "0 1px 2px rgba(0,0,0,0.45)" }}>
                           {name}
+                        </div>
+                      )}
+                      {!unlocked && name && (
+                        <div className="absolute inset-0 pointer-events-none select-none flex items-center justify-center overflow-hidden">
+                          <span style={{ transform: "rotate(-24deg)", color: "rgba(255,255,255,0.10)", fontSize: "clamp(15px,4vw,34px)", fontWeight: 800, letterSpacing: "0.08em", whiteSpace: "nowrap", textShadow: "0 1px 3px rgba(0,0,0,0.25)" }}>
+                            {name} · PREVIEW
+                          </span>
                         </div>
                       )}
                       {unlocked && v.key && (
