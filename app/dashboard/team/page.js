@@ -1619,6 +1619,16 @@ function EventDetailPopover({ event, members, onClose }) {
 
 // ─── Block Time Modal ─────────────────────────────────────────────────────────
 const BLOCK_REASONS = ["Vacation", "Day Off", "Personal", "Holiday", "Sick Day", "Other"];
+const TIME_OPTIONS = (() => {
+  const out = [];
+  for (let h = 0; h < 24; h++) for (const m of [0, 30]) out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  return out;
+})();
+function fmtTimeOpt(t) {
+  if (!t) return "";
+  const [h, m] = t.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
 
 function BlockTimeModal({ members, onSave, onClose, timeBlocks, onDeleteBlock }) {
   const today = new Date().toISOString().split("T")[0];
@@ -1635,6 +1645,7 @@ function BlockTimeModal({ members, onSave, onClose, timeBlocks, onDeleteBlock })
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState("new"); // "new" | "existing"
   const [cal, setCal] = useState(() => { const d = new Date(); return { m: d.getMonth(), y: d.getFullYear() }; });
+  const [timeOpen, setTimeOpen] = useState(null); // "start" | "end" | null
 
   // Click a day to set the range: first click (or clicking before the current
   // start) sets a single-day block; a later day extends the end. Same calendar
@@ -1740,20 +1751,32 @@ function BlockTimeModal({ members, onSave, onClose, timeBlocks, onDeleteBlock })
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label-field">From</label>
-                <input type="time" value={form.startTime}
-                  onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value, allDay: !e.target.value && !f.endTime }))}
-                  className="input-field w-full" />
-              </div>
-              <div>
-                <label className="label-field">To</label>
-                <input type="time" value={form.endTime}
-                  onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value, allDay: !f.startTime && !e.target.value }))}
-                  className="input-field w-full" />
-              </div>
+              {[["start", "From", "startTime"], ["end", "To", "endTime"]].map(([key, label, field]) => (
+                <div key={key} className="relative">
+                  <label className="label-field">{label}</label>
+                  <button type="button" onClick={() => setTimeOpen(timeOpen === key ? null : key)}
+                    className="input-field w-full text-left flex items-center justify-between">
+                    <span className={form[field] ? "" : "text-gray-400"}>{form[field] ? fmtTimeOpt(form[field]) : "Any time"}</span>
+                    <span className="text-gray-400 text-xs">▾</span>
+                  </button>
+                  {timeOpen === key && (
+                    <div className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg">
+                      <button type="button"
+                        onClick={() => { setForm((f) => ({ ...f, [field]: "", allDay: key === "start" ? !f.endTime : !f.startTime })); setTimeOpen(null); }}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50">Any time</button>
+                      {TIME_OPTIONS.map((t) => (
+                        <button key={t} type="button"
+                          onClick={() => { setForm((f) => ({ ...f, [field]: t, allDay: false })); setTimeOpen(null); }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${form[field] === t ? "bg-[#3486cf]/10 text-[#3486cf] font-medium" : "text-gray-700"}`}>
+                          {fmtTimeOpt(t)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-            <p className="text-xs text-gray-400 -mt-2">Leave both blank to block the whole day.</p>
+            <p className="text-xs text-gray-400 -mt-2">Leave both as “Any time” to block the whole day.</p>
             <div>
               <label className="label-field">Reason</label>
               <select value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
