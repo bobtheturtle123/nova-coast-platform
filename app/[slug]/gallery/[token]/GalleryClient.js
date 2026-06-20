@@ -277,6 +277,29 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const allMedia  = (gallery.media || []).filter((m) => !m.hidden);
   const images    = allMedia.filter((m) => !m.fileType?.startsWith("video/"));
   const videos    = allMedia.filter((m) =>  m.fileType?.startsWith("video/"));
+
+  // Group photos into their category folders (shown to clients even before
+  // payment) while preserving each photo's global index for the lightbox.
+  const photoGroups = (() => {
+    const catMap   = gallery.categories || {};
+    const catOrder = Object.keys(catMap);
+    const keyToCat = {};
+    catOrder.forEach((c) => (catMap[c] || []).forEach((k) => { keyToCat[k] = c; }));
+    const byName = new Map();
+    images.forEach((m, gi) => {
+      const name = (m.key && keyToCat[m.key]) || "";
+      if (!byName.has(name)) byName.set(name, []);
+      byName.get(name).push({ m, gi });
+    });
+    return Array.from(byName.entries())
+      .map(([name, items]) => ({ name, items }))
+      .sort((a, b) => {
+        const ai = a.name ? catOrder.indexOf(a.name) : 9999;
+        const bi = b.name ? catOrder.indexOf(b.name) : 9999;
+        return ai - bi;
+      });
+  })();
+  const hasNamedCategories = photoGroups.some((g) => g.name);
   const balance   = booking?.remainingBalance ?? 0;
   const address   = booking?.fullAddress || booking?.address || "Property";
   const coverImg  = images[0]?.url || null;
@@ -715,8 +738,17 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 ) : null
               )}
             </div>
-            <div className="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-              {images.map((m, i) => (
+            <div className="p-3">
+              {photoGroups.map((group) => (
+                <div key={group.name || "_"} className={hasNamedCategories ? "mb-5" : ""}>
+                  {hasNamedCategories && (
+                    <p className="text-sm font-semibold text-gray-700 mb-2 px-1">
+                      {group.name || "Other"}
+                      <span className="text-xs font-normal text-gray-400 ml-2">{group.items.length}</span>
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {group.items.map(({ m, gi: i }) => (
                 <div key={i} className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer"
                   onClick={() => setLightboxIdx(i)}>
                   <img src={m.url} alt={m.fileName || `Photo ${i + 1}`} draggable={false}
@@ -765,6 +797,9 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                       ) : null}
                     </div>
                   )}
+                </div>
+              ))}
+                  </div>
                 </div>
               ))}
             </div>
