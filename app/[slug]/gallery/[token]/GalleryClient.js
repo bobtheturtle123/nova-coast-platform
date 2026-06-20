@@ -323,39 +323,38 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
     document.body.appendChild(a); a.click(); a.remove();
   }
 
-  // Download EVERY video directly from R2 (free egress). Browsers throttle/block
-  // repeated programmatic <a> clicks, so we use a hidden iframe per file — each
-  // R2 URL is sent with an attachment disposition, so the iframe downloads
-  // instead of navigating. A stagger keeps the browser from dropping any.
-  async function downloadVideosDirect() {
-    if (videos.length === 0) return;
-    const res = await fetch(`/api/gallery/download-urls?token=${token}&type=videos`);
-    if (!res.ok) return;
-    const { files } = await res.json();
-    // Each pre-signed R2 URL is served with an attachment Content-Disposition,
-    // so a plain anchor click downloads the file directly from R2 (free egress)
-    // WITHOUT navigating away from the gallery — no new tab needed (target=_blank
-    // gets popup-blocked when fired in a burst). Trigger sequentially with a
-    // delay so the browser doesn't drop concurrent downloads.
-    for (let i = 0; i < (files || []).length; i++) {
-      if (i > 0) await new Promise((r) => setTimeout(r, 1500));
-      const a = document.createElement("a");
-      a.href = files[i].url;
-      a.download = files[i].name || "";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+  // Download EVERY video directly from R2 (free egress). This MUST be fully
+  // synchronous — no awaits — so it runs inside the click's user-gesture window;
+  // browsers silently block downloads triggered after async work (fetch/polling).
+  // We use the same-origin /video-download endpoint, which 302-redirects to a
+  // presigned R2 URL with attachment disposition, and a hidden iframe per file
+  // (immune to popup-blocking; downloads instead of navigating).
+  function triggerVideoDownloads() {
+    for (const v of videos) {
+      if (!v.key) continue;
+      const url =
+        `/api/gallery/video-download?token=${gallery.accessToken}` +
+        `&key=${encodeURIComponent(v.key)}` +
+        `&name=${encodeURIComponent(v.fileName || "video.mp4")}`;
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = url;
+      document.body.appendChild(iframe);
+      // Remove once the download has had time to start.
+      setTimeout(() => iframe.remove(), 60000);
     }
   }
 
   async function downloadEverything() {
     setDownloadingAll(true);
+    // Fire the video downloads FIRST, synchronously, while we still have the
+    // click gesture — straight from R2, never through this server. The photo
+    // ZIP (which may involve async prepare/polling) follows.
+    triggerVideoDownloads();
     try {
       if (!isHeavy) {
-        // Small gallery — stream the photo/docs ZIP, then pull videos directly
-        // from R2 (free egress, never through this server).
+        // Small gallery — stream the photo/docs ZIP straight away.
         triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
-        await downloadVideosDirect();
         return;
       }
 
@@ -381,20 +380,16 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
       if (job.status === "ready" && job.downloadUrl) {
         setDlStatus("ready");
         triggerDownload(job.downloadUrl, "");
-        await downloadVideosDirect();
       } else {
         // The prepared buffer didn't finish — fall back to a direct streamed
-        // download (both Print + Web/MLS) plus direct video downloads, instead
-        // of dead-ending. No links to copy; the files just download.
+        // photo/docs download instead of dead-ending. (Videos already firing.)
         setDlStatus("fallback");
         triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
-        await downloadVideosDirect();
       }
     } catch {
-      // Even on error, get the videos downloading directly and stream the photos.
+      // Even on error, stream the photos. (Videos already firing from the top.)
       setDlStatus("fallback");
       try { triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, ""); } catch {}
-      try { await downloadVideosDirect(); } catch {}
     } finally {
       setDownloadingAll(false);
     }
