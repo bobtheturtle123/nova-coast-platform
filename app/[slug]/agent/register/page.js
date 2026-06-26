@@ -52,7 +52,7 @@ function RegisterInner() {
       const res  = await fetch(`/api/${slug}/agent/session`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body:    JSON.stringify({}),
+        body:    JSON.stringify({ signup: true }),
       });
       const data = await res.json();
       if (!res.ok) {

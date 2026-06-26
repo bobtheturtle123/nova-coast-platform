@@ -39,8 +39,15 @@ export async function POST(req, { params }) {
         .limit(1)
         .get();
 
+      if (snap.empty && body.signup !== true) {
+        // Resume/login path: never auto-enroll. A pre-existing Firebase session
+        // (e.g. the tenant owner signed into the dashboard) must NOT be silently
+        // granted an agent session. New agents go through explicit registration.
+        return NextResponse.json({ error: "No agent account found for this email." }, { status: 404 });
+      }
+
       if (snap.empty) {
-        // New user — auto-create an agent doc so anyone can sign up
+        // Explicit registration — create the agent doc.
         const { randomUUID } = await import("crypto");
         const newToken = randomUUID().replace(/-/g, "");
         const agentKey = Buffer.from(email).toString("base64").replace(/[+/=]/g, "");

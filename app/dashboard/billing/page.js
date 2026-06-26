@@ -251,7 +251,11 @@ export default function BillingPage() {
 
   const plan       = tenant?.permanentPlan || tenant?.subscriptionPlan || "starter";
   const status     = tenant?.subscriptionStatus || "inactive";
-  const subscribed = !!tenant?.stripeSubscriptionId;
+  const cancelAtPeriodEnd = !!tenant?.cancelAtPeriodEnd;
+  // A canceled/inactive subscription is no longer a live membership, even if a
+  // Stripe subscription id lingers on the tenant record.
+  const isCanceled = status === "canceled" || status === "inactive";
+  const subscribed = !!tenant?.stripeSubscriptionId && !isCanceled;
 
   function formatRenewalDate(raw) {
     if (!raw) return null;
@@ -433,6 +437,11 @@ export default function BillingPage() {
             Billing is managed by the account owner. Contact them to make changes.
           </p>
         )}
+        {cancelAtPeriodEnd && subscribed && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3">
+            Your membership is set to cancel{renewalDateStr ? ` on ${renewalDateStr}` : " at the end of this billing period"}. You&apos;ll keep access until then. Use “Manage subscription” to resume it.
+          </p>
+        )}
         {subscribed ? (
           <div className="flex flex-wrap gap-2 mt-4 pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
             {isOwner && !isDemo() && (
@@ -440,16 +449,22 @@ export default function BillingPage() {
                 <button onClick={openPortal} disabled={working} className="btn-outline">
                   {working ? "Loading…" : "Manage subscription →"}
                 </button>
-                <button onClick={() => setCancelStep("feedback")} disabled={working}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 text-red-600 text-[13px] font-medium hover:bg-red-50 transition-colors disabled:opacity-50">
-                  Cancel subscription
-                </button>
+                {/* Only offer the cancel/retention flow on a live membership that
+                    isn't already scheduled to cancel. */}
+                {!cancelAtPeriodEnd && (
+                  <button onClick={() => setCancelStep("feedback")} disabled={working}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 text-red-600 text-[13px] font-medium hover:bg-red-50 transition-colors disabled:opacity-50">
+                    Cancel subscription
+                  </button>
+                )}
               </>
             )}
           </div>
         ) : (
           <p className="text-xs text-gray-400 mt-3">
-            No active subscription. Select a plan below to get started.
+            {isCanceled && tenant?.stripeSubscriptionId
+              ? "Your membership is canceled. Select a plan below to reactivate."
+              : "No active subscription. Select a plan below to get started."}
           </p>
         )}
       </div>
@@ -764,6 +779,16 @@ export default function BillingPage() {
                     <h3 className="font-semibold text-[#0F172A] text-[15px]">Before you go...</h3>
                     <p className="text-xs text-gray-400 mt-0.5">Help us understand why you&apos;re leaving</p>
                   </div>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-5">
+                  <p className="text-xs font-semibold text-amber-800 mb-1.5">What happens when you cancel</p>
+                  <ul className="text-xs text-amber-700 space-y-1 list-disc pl-4">
+                    <li>You won&apos;t be able to take new orders or create new bookings.</li>
+                    <li>Your public booking page and agent portal stop accepting new work.</li>
+                    <li>You keep access until the end of your current billing period.</li>
+                    <li>Existing galleries and delivered listings stay available to your clients.</li>
+                    <li>You can resubscribe anytime to pick back up where you left off.</li>
+                  </ul>
                 </div>
                 <div className="space-y-4 mb-5">
                   <div>

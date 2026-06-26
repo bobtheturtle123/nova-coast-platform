@@ -380,6 +380,8 @@ export async function POST(req) {
           stripeSubscriptionId:  sub.id,
           subscriptionStatus:    sub.status,
           subscriptionPlan:      meta.plan || "solo",
+          // Whether the sub is set to cancel at period end (still active until then).
+          cancelAtPeriodEnd:     !!sub.cancel_at_period_end,
           subscriptionRenewalAt: sub.current_period_end
             ? new Date(sub.current_period_end * 1000)
             : null,
@@ -414,6 +416,7 @@ export async function POST(req) {
         if (!tenantId) break;
         await adminDb.collection("tenants").doc(tenantId).update({
           subscriptionStatus: "canceled",
+          cancelAtPeriodEnd:  false,
           addonSeats:         0,
         });
         break;
