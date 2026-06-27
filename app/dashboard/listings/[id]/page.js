@@ -414,7 +414,8 @@ const [listingUrl,       setListingUrl]        = useState("");
         setBooking((b) => ({ ...b, ...fields }));
         toast("Saved.");
       } else {
-        toast("Failed to save.", "error");
+        const d = await res.json().catch(() => ({}));
+        toast(d.error || "Failed to save.", "error");
       }
     } catch { toast("Something went wrong.", "error"); }
     finally { setSaving(false); }
@@ -595,7 +596,8 @@ const [listingUrl,       setListingUrl]        = useState("");
         setBooking((b) => ({ ...b, propertyWebsite: propSite }));
         setPropSiteMsg({ text: "Property website saved.", type: "success" });
       } else {
-        setPropSiteMsg({ text: "Failed to save.", type: "error" });
+        const d = await res.json().catch(() => ({}));
+        setPropSiteMsg({ text: d.error || "Failed to save.", type: "error" });
       }
     } catch { setPropSiteMsg({ text: "Something went wrong.", type: "error" }); }
     finally { setSavingPropSite(false); }
@@ -952,7 +954,7 @@ if (loading) return (
                 </div>
                 <div className="flex gap-2 mt-3.5">
                   {booking.clientEmail && (
-                    <a href={`mailto:${booking.clientEmail}`}
+                    <a href={`mailto:${booking.clientEmail}`} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
                       <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                       Email
@@ -1516,20 +1518,23 @@ if (loading) return (
                         })()}
                       </button>
                     )}
-                    <button
-                      disabled={sendingInvoice || !booking.clientEmail}
-                      onClick={async () => {
-                        setSendingInvoice(true); setInvoiceMsg("");
-                        try {
-                          const token = await auth.currentUser?.getIdToken(true);
-                          const res = await fetch(`/api/dashboard/bookings/${id}/send-invoice`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
-                          if (res.ok) setInvoiceMsg(`Invoice sent to ${booking.clientEmail}`);
-                          else { const d = await res.json(); setInvoiceMsg(d.error || "Failed."); }
-                        } catch { setInvoiceMsg("Failed."); } finally { setSendingInvoice(false); }
-                      }}
-                      className="w-full text-sm py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
-                      {sendingInvoice ? "Sending…" : `Send full payment link${booking.totalPrice ? ` · ${formatCurrency(booking.totalPrice, currency, locale)}` : ""}`}
-                    </button>
+                    {balanceDue && (
+                      <button
+                        disabled={sendingInvoice || !booking.clientEmail}
+                        onClick={async () => {
+                          setSendingInvoice(true); setInvoiceMsg("");
+                          try {
+                            const token = await auth.currentUser?.getIdToken(true);
+                            const res = await fetch(`/api/dashboard/bookings/${id}/send-invoice`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+                            if (res.ok) setInvoiceMsg(`Invoice sent to ${booking.clientEmail}`);
+                            else { const d = await res.json(); setInvoiceMsg(d.error || "Failed."); }
+                          } catch { setInvoiceMsg("Failed."); } finally { setSendingInvoice(false); }
+                        }}
+                        className="w-full text-sm py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                        {sendingInvoice ? "Sending…" : `Send full payment link${booking.totalPrice ? ` · ${formatCurrency(booking.totalPrice, currency, locale)}` : ""}`}
+                      </button>
+                    )}
+                    {balanceDue && (
                     <div className="flex gap-2">
                       <button
                         disabled={sendingReminder || !booking.clientEmail}
@@ -1560,6 +1565,11 @@ if (loading) return (
                         {sendingInvoice ? "Sending…" : "Email Invoice"}
                       </button>
                     </div>
+                    )}
+                    {!balanceDue && (
+                      <p className="text-sm text-emerald-600 font-medium py-1">✓ Paid in full</p>
+                    )}
+                    {balanceDue && (
                     <div className="pt-2 border-t border-gray-100">
                       {!manualMode ? (
                         <div className="flex items-center gap-2 flex-wrap">
@@ -1608,6 +1618,7 @@ if (loading) return (
                         </div>
                       )}
                     </div>
+                    )}
                     {(depositLinkMsg || invoiceMsg || reminderMsg) && (
                       <p className="text-xs text-green-600 mt-1 break-words">{depositLinkMsg || invoiceMsg || reminderMsg}</p>
                     )}
@@ -1615,9 +1626,6 @@ if (loading) return (
                       <div className="p-2 bg-gray-50 rounded-lg break-all">
                         <a href={depositUrl} target="_blank" rel="noreferrer" className="text-xs text-[#3486cf] underline">{depositUrl}</a>
                       </div>
-                    )}
-                    {booking.stripeDepositIntentId && (
-                      <p className="text-[10px] text-gray-300 mt-1 font-mono truncate">{booking.stripeDepositIntentId}</p>
                     )}
                   </div>
                 </div>
@@ -1912,7 +1920,8 @@ if (loading) return (
                       setBooking((b) => ({ ...b, propertyWebsite: next }));
                       setPropSiteMsg({ text: next.published ? "Website is now live." : "Website unpublished.", type: "success" });
                     } else {
-                      setPropSiteMsg({ text: "Failed to update.", type: "error" });
+                      const d = await res.json().catch(() => ({}));
+                      setPropSiteMsg({ text: d.error || "Failed to update.", type: "error" });
                     }
                   } catch { setPropSiteMsg({ text: "Something went wrong.", type: "error" }); }
                   finally { setSavingPropSite(false); }

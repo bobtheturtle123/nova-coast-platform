@@ -60,6 +60,8 @@ export async function PATCH(req, { params }) {
     "additionalPhotographers",
     // Listing flag
     "isListing",
+    // Dashboard visibility
+    "hidden",
     // Notes & website
     "notes", "propertyWebsite",
     // Client info
@@ -84,8 +86,14 @@ export async function PATCH(req, { params }) {
   const tenantRef  = adminDb.collection("tenants").doc(ctx.tenantId);
   const bookingRef = tenantRef.collection("bookings").doc(params.id);
   const [tenantSnap, prevSnap] = await Promise.all([tenantRef.get(), bookingRef.get()]);
-  if (tenantSnap.exists && tenantSnap.data().subscriptionStatus === "canceled") {
-    return Response.json({ error: "Your subscription has ended. Reactivate to modify bookings." }, { status: 403 });
+  // A canceled subscription stops new work, but existing listings stay
+  // manageable: publishing/unpublishing the website, hiding, notes and status
+  // are always allowed. Only broader edits are blocked.
+  const MANAGE_WHEN_CANCELED = new Set(["propertyWebsite", "hidden", "notes", "status", "workflowStatus", "updatedAt"]);
+  const touchedKeys = Object.keys(update);
+  const onlyManageFields = touchedKeys.length > 0 && touchedKeys.every((k) => MANAGE_WHEN_CANCELED.has(k));
+  if (tenantSnap.exists && tenantSnap.data().subscriptionStatus === "canceled" && !onlyManageFields) {
+    return Response.json({ error: "Your subscription has ended. Reactivate your membership to modify bookings." }, { status: 403 });
   }
   const prev = prevSnap.data() || {};
 
