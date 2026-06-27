@@ -720,6 +720,7 @@ export default function SettingsPage() {
   // Pricing config state
   const [tenantLoaded,    setTenantLoaded]    = useState(false);
   const [pricingMode,     setPricingMode]     = useState("sqft");
+  const [measurementUnit, setMeasurementUnit] = useState("sqft"); // "sqft" (imperial) | "sqm" (metric)
   const [tiers,           setTiers]           = useState([]);
   const [customGateLabel, setCustomGateLabel] = useState("Custom value");
   const [savingTiers,     setSavingTiers]     = useState(false);
@@ -1160,6 +1161,7 @@ export default function SettingsPage() {
         {
           const pc = data.tenant.pricingConfig;
           setPricingMode(pc?.mode || "sqft");
+          setMeasurementUnit(pc?.unit === "sqm" ? "sqm" : "sqft");
           setTiers(pc?.tiers?.length ? pc.tiers : DEFAULT_TIERS);
           if (pc?.customGateLabel) setCustomGateLabel(pc.customGateLabel);
           if (pc?.cap?.enabled) { setCapEnabled(true); setCapMax(pc.cap.max != null ? String(pc.cap.max) : ""); }
@@ -1359,7 +1361,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           pricingConfig: {
-            mode: pricingMode, tiers,
+            mode: pricingMode, tiers, unit: measurementUnit,
             ...(pricingMode === "custom" ? { customGateLabel } : {}),
             cap: { enabled: capEnabled && Number(capMax) > 0, max: Number(capMax) || 0 },
           },
@@ -2145,6 +2147,26 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+
+        {/* Measurement units — only relevant when charging by house size */}
+        {pricingMode === "sqft" && (
+          <div className="mb-5">
+            <label className="label-field">Measurement units</label>
+            <p className="field-help">Choose the unit clients enter and see for property size.</p>
+            <div className="flex gap-2">
+              {[
+                { value: "sqft", label: "Imperial", desc: "Square feet (sq ft)" },
+                { value: "sqm",  label: "Metric",   desc: "Square meters (m²)" },
+              ].map((u) => (
+                <button key={u.value} type="button" onClick={() => setMeasurementUnit(u.value)}
+                  className={`flex-1 px-3 py-2.5 rounded-xl border-2 text-left transition-all ${measurementUnit === u.value ? "border-[#3486cf] bg-[#3486cf]/5" : "border-gray-200 hover:border-gray-300"}`}>
+                  <p className="text-sm font-semibold text-[#0F172A]">{u.label}</p>
+                  <p className="text-[11px] text-gray-400">{u.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Tier table - hidden for flat pricing */}
         {pricingMode === "flat" && (
