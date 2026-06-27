@@ -101,12 +101,16 @@ export async function POST(req, { params }) {
     const effectiveTotal = Math.max(0, pricing.subtotal - promoDiscount);
     const effDeposit     = Math.min(pricing.deposit || 0, effectiveTotal);
 
-    // Determine payment type and amount
-    const isFullPayment = payFull || effDeposit === 0;
-    const chargeAmount  = isFullPayment
-      ? effectiveTotal + tip
-      : effDeposit + tip;
-    const paymentType   = isFullPayment ? "full" : "deposit";
+    // Determine payment type and amount.
+    // "No deposit" means collect NOTHING up front — the full balance is due
+    // later (at delivery), unless the client explicitly chose to pay in full.
+    const noDepositConfig = tenant.bookingConfig?.deposit?.type === "none";
+    const collectNothing  = noDepositConfig && !payFull;
+    const isFullPayment   = payFull;
+    const chargeAmount    = collectNothing
+      ? 0
+      : (isFullPayment ? effectiveTotal + tip : effDeposit + tip);
+    const paymentType     = isFullPayment ? "full" : (collectNothing ? "none" : "deposit");
 
     // Stripe's minimum charge is $0.50. When the amount due now is below that —
     // e.g. a promo makes the booking free, or the total is a few cents — we

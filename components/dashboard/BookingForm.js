@@ -6,7 +6,7 @@ import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import { calculateTenantPrice, getSqftTier, getItemPrice, getFromPrice, formatPrice } from "@/lib/catalogUtils";
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
-import { getPlan } from "@/lib/plans";
+import { getPlan, getEffectivePlan } from "@/lib/plans";
 import WeatherWidget from "@/components/dashboard/WeatherWidget";
 import { useTenantSettings } from "@/lib/TenantSettingsContext";
 
@@ -206,7 +206,9 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
           safeFetch("/api/dashboard/agents"),
         ]);
         const tenantDoc = tenantData?.tenant || {};
-        setTenantPlan(tenantDoc.subscriptionPlan || "solo");
+        // Use the EFFECTIVE plan (respects permanentPlan + lifetime/unlimited
+        // superadmin accounts) so team scheduling isn't wrongly treated as Solo.
+        setTenantPlan(getEffectivePlan(tenantDoc));
         setCatalog({
           packages:      pkg.items  || [],
           services:      svc.items  || [],

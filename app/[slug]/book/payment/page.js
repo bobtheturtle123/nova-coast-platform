@@ -221,15 +221,17 @@ export default function TenantPaymentPage() {
 
   const depositConfig = catalog?.bookingConfig?.deposit;
   const noDeposit     = depositConfig?.type === "none";
-  // If no deposit configured, force pay-in-full
-  const effectivePayFull = payFull || noDeposit;
+  // "No deposit" = collect NOTHING up front; the full balance is due later (at
+  // delivery). Only charge now when the client explicitly chooses pay-in-full.
+  const effectivePayFull = payFull;
+  const collectNothing   = noDeposit && !payFull;
   // Use the discounted total when a promo is applied (finalTotal); fall back to
   // subtotal. Previously this charged subtotal, so promo codes were recorded but
   // never reduced the amount actually charged.
   const effectiveTotal = pricing?.finalTotal ?? pricing?.subtotal ?? 0;
   // Deposit can't exceed the discounted total.
   const deposit      = Math.min(pricing?.deposit ?? 0, effectiveTotal);
-  const chargeAmount = (effectivePayFull ? effectiveTotal : deposit) + tip;
+  const chargeAmount = collectNothing ? 0 : (effectivePayFull ? effectiveTotal : deposit) + tip;
 
   // Load catalog for order summary
   useEffect(() => {
