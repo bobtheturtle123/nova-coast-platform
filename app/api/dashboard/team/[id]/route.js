@@ -63,6 +63,14 @@ export async function PATCH(req, { params }) {
   const memberRef = adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(params.id);
   const memberDoc = await memberRef.get();
 
+  // Safety net: promoting a non-shooting role (manager/admin) to photographer
+  // must make them schedulable, even if a stale showInScheduling:false carried
+  // over from their old role (otherwise they never appear in manual booking).
+  const prevRole = memberDoc.exists ? normalizeRole(memberDoc.data().role) : null;
+  if (normalizeRole(body.role) === "photographer" && (prevRole === "manager" || prevRole === "admin")) {
+    update.showInScheduling = true;
+  }
+
   let newCalToken = null;
 
   // Generate token if member doesn't have one yet

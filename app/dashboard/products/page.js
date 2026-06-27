@@ -5,6 +5,7 @@ import { auth } from "@/lib/firebase";
 import { useToast } from "@/components/Toast";
 import { isDemo, getDemoProducts } from "@/lib/demoData";
 import AryeoImport from "@/components/dashboard/AryeoImport";
+import { getActiveTiers } from "@/lib/catalogUtils";
 
 async function uploadProductMedia(file) {
   const token = await auth.currentUser.getIdToken();
@@ -456,7 +457,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                 </div>
               ) : (
                 (() => {
-                  const tiers = pricingConfig?.tiers?.length ? pricingConfig.tiers : [];
+                  const tiers = getActiveTiers(pricingConfig);
                   if (tiers.length === 0) {
                     return <p className="text-xs text-amber-600">Configure pricing tiers in Settings → Pricing Tiers first.</p>;
                   }
@@ -512,7 +513,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                 </div>
               ) : (
                 (() => {
-                  const tiers = pricingConfig?.tiers?.length ? pricingConfig.tiers : [];
+                  const tiers = getActiveTiers(pricingConfig);
                   if (tiers.length === 0) return null;
                   return (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -592,7 +593,7 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                   </div>
                 ) : (
                   (() => {
-                    const tiers = pricingConfig?.tiers?.length ? pricingConfig.tiers : [];
+                    const tiers = getActiveTiers(pricingConfig);
                     if (tiers.length === 0) return <p className="text-xs text-gray-400">No tiers configured — set up tiers in Settings first.</p>;
                     return (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

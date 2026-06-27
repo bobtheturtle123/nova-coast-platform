@@ -774,6 +774,8 @@ export default function SettingsPage() {
   const [showWeather,               setShowWeather]               = useState(true);
   const [twilightOffsetMinutes,     setTwilightOffsetMinutes]     = useState(60);
   const [sunriseOffsetMinutes,      setSunriseOffsetMinutes]      = useState(30);
+  const [offersTwilightShoots,      setOffersTwilightShoots]      = useState(true);
+  const [offersSunriseShoots,       setOffersSunriseShoots]       = useState(false);
   const [allowAgentPhotographerSel, setAllowAgentPhotographerSel] = useState(false);
 
   // Booking limits state
@@ -1199,6 +1201,8 @@ export default function SettingsPage() {
             if (av.showWeather !== undefined) setShowWeather(av.showWeather);
             if (av.twilightOffsetMinutes !== undefined) setTwilightOffsetMinutes(av.twilightOffsetMinutes);
             if (av.sunriseOffsetMinutes !== undefined) setSunriseOffsetMinutes(av.sunriseOffsetMinutes);
+            if (av.offersTwilightShoots !== undefined) setOffersTwilightShoots(av.offersTwilightShoots);
+            if (av.offersSunriseShoots !== undefined) setOffersSunriseShoots(av.offersSunriseShoots);
             if (av.allowAgentPhotographerSelection !== undefined) setAllowAgentPhotographerSel(av.allowAgentPhotographerSelection);
             if (av.durationAwareSlots !== undefined) setDurationAwareSlots(av.durationAwareSlots);
             if (av.minNoticeHours    != null) setMinNoticeHours(av.minNoticeHours);
@@ -1460,6 +1464,8 @@ export default function SettingsPage() {
         showWeather,
         twilightOffsetMinutes: Number(twilightOffsetMinutes) || 60,
         sunriseOffsetMinutes: Number(sunriseOffsetMinutes) || 30,
+        offersTwilightShoots: !!offersTwilightShoots,
+        offersSunriseShoots: !!offersSunriseShoots,
         allowAgentPhotographerSelection: allowAgentPhotographerSel,
         minNoticeHours:    Number(minNoticeHours)    || 0,
         maxAdvanceDays:    Number(maxAdvanceDays)    || 0,
@@ -2748,30 +2754,56 @@ export default function SettingsPage() {
 
         {/* Twilight Offset */}
         <div className="pt-4 border-t border-gray-100">
-          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Twilight Shoot Offset</h3>
-          <p className="text-xs text-gray-400 mb-3">
-            When a twilight service is booked, the suggested twilight start time is this many minutes before the real sunset for the property's location.
-          </p>
-          <div className="flex items-center gap-3">
-            <input type="number" value={twilightOffsetMinutes} min={0} max={180} step={5}
-              onChange={(e) => setTwilightOffsetMinutes(e.target.value)}
-              className="input-field w-24 text-sm" />
-            <span className="text-sm text-gray-500">minutes before sunset</span>
-          </div>
+          <label className="flex items-start gap-2.5 cursor-pointer mb-2">
+            <input type="checkbox" checked={offersTwilightShoots}
+              onChange={(e) => setOffersTwilightShoots(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#3486cf]" />
+            <span>
+              <span className="text-sm font-semibold text-[#0F172A]">We offer twilight shoots</span>
+              <span className="block text-xs text-gray-400">Allow clients to book twilight (around sunset) sessions.</span>
+            </span>
+          </label>
+          {offersTwilightShoots && (
+            <div className="pl-7">
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Twilight Shoot Offset</h3>
+              <p className="text-xs text-gray-400 mb-3">
+                The suggested twilight start time is this many minutes before the real sunset for the property&apos;s location.
+              </p>
+              <div className="flex items-center gap-3">
+                <input type="number" value={twilightOffsetMinutes} min={0} max={180} step={5}
+                  onChange={(e) => setTwilightOffsetMinutes(e.target.value)}
+                  className="input-field w-24 text-sm" />
+                <span className="text-sm text-gray-500">minutes before sunset</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sunrise Offset */}
         <div className="pt-4 border-t border-gray-100">
-          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Sunrise Shoot Offset</h3>
-          <p className="text-xs text-gray-400 mb-3">
-            When a sunrise service is booked, the suggested start time is this many minutes after the real sunrise for the property&apos;s location.
-          </p>
-          <div className="flex items-center gap-3">
-            <input type="number" value={sunriseOffsetMinutes} min={0} max={180} step={5}
-              onChange={(e) => setSunriseOffsetMinutes(e.target.value)}
-              className="input-field w-24 text-sm" />
-            <span className="text-sm text-gray-500">minutes after sunrise</span>
-          </div>
+          <label className="flex items-start gap-2.5 cursor-pointer mb-2">
+            <input type="checkbox" checked={offersSunriseShoots}
+              onChange={(e) => setOffersSunriseShoots(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#3486cf]" />
+            <span>
+              <span className="text-sm font-semibold text-[#0F172A]">We offer sunrise shoots</span>
+              <span className="block text-xs text-gray-400">Allow clients to book early-morning (around sunrise) sessions. Leave off if you don&apos;t do morning shoots.</span>
+            </span>
+          </label>
+          {offersSunriseShoots && (
+            <div className="pl-7">
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Sunrise Shoot Offset</h3>
+              <p className="text-xs text-gray-400 mb-3">
+                The suggested start time is this many minutes after the real sunrise for the property&apos;s location.
+              </p>
+              <div className="flex items-center gap-3">
+                <input type="number" value={sunriseOffsetMinutes} min={0} max={180} step={5}
+                  onChange={(e) => setSunriseOffsetMinutes(e.target.value)}
+                  className="input-field w-24 text-sm" />
+                <span className="text-sm text-gray-500">minutes after sunrise</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Booking Limits */}
