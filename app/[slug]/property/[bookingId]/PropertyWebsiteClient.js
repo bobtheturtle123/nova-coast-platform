@@ -579,7 +579,7 @@ export default function PropertyWebsiteClient({ pw, booking, galleryMedia, galle
             )}
 
             {/* Agent cards — primary + up to 3 co-agents */}
-            {(pw.agentName || pw.agentPhone || pw.agentEmail || pw.coAgents?.length > 0) && (() => {
+            {pw.showAgentBranding !== false && (pw.agentName || pw.agentPhone || pw.agentEmail || pw.coAgents?.length > 0) && (() => {
               const hasCoAgents = pw.coAgents?.length > 0;
               const AgentCard = ({ name, brokerage, phone, email, photo, logoUrl, label }) => (
                 <div className="rounded-2xl border border-gray-200 p-5 shadow-sm">

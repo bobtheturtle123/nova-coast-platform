@@ -249,6 +249,8 @@ const [listingUrl,       setListingUrl]        = useState("");
   // Manual payment recording
   const [manualMode,   setManualMode]   = useState(null); // "deposit" | "full" | null
   const [manualAmount, setManualAmount] = useState("");
+  const [manualMethod, setManualMethod] = useState("card"); // card | check | cash | other
+  const [manualMethodOther, setManualMethodOther] = useState("");
 
   // Cancel / hide state
   const [cancelling,  setCancelling]  = useState(false);
@@ -1055,9 +1057,11 @@ if (loading) return (
                       disabled={userRole === "manager"}
                       onChange={(e) => {
                         const v = e.target.value;
-                        if (v === "paid_full")         patchBooking({ depositPaid: true,  balancePaid: true  });
-                        else if (v === "deposit_paid") patchBooking({ depositPaid: true,  balancePaid: false });
-                        else                           patchBooking({ depositPaid: false, balancePaid: false });
+                        // Include paidInFull so the derived status text updates
+                        // immediately (not just after a page refresh).
+                        if (v === "paid_full")         patchBooking({ depositPaid: true,  balancePaid: true,  paidInFull: true,  remainingBalance: 0 });
+                        else if (v === "deposit_paid") patchBooking({ depositPaid: true,  balancePaid: false, paidInFull: false });
+                        else                           patchBooking({ depositPaid: false, balancePaid: false, paidInFull: false, remainingBalance: booking.totalPrice || 0 });
                       }}
                       className="input-field text-xs disabled:opacity-50 disabled:cursor-not-allowed" style={{ width: "auto", minWidth: 150, height: 30 }}>
                       <option value="unpaid">○ Unpaid</option>
@@ -1592,27 +1596,39 @@ if (loading) return (
                           <p className="text-[10.5px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
                             {manualMode === "deposit" ? "Deposit amount received" : "Total amount received"}
                           </p>
-                          <div className="flex items-center gap-2">
-                            <div className="relative flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="relative flex-1 min-w-[110px]">
                               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">{currency === "USD" ? "$" : ""}</span>
                               <input type="number" min="0" step="0.01" value={manualAmount}
                                 onChange={(e) => setManualAmount(e.target.value)} autoFocus
                                 className="input-field text-sm w-full pl-6" placeholder="0.00" />
                             </div>
+                            <select value={manualMethod} onChange={(e) => setManualMethod(e.target.value)}
+                              className="input-field text-sm" style={{ width: "auto", minWidth: 100 }}>
+                              <option value="card">Card</option>
+                              <option value="check">Check</option>
+                              <option value="cash">Cash</option>
+                              <option value="other">Other</option>
+                            </select>
+                            {manualMethod === "other" && (
+                              <input type="text" value={manualMethodOther} onChange={(e) => setManualMethodOther(e.target.value)}
+                                placeholder="Method (e.g. Venmo)" className="input-field text-sm flex-1 min-w-[110px]" />
+                            )}
                             <button disabled={saving} onClick={async () => {
                               const amt = Math.max(0, Number(manualAmount) || 0);
+                              const method = manualMethod === "other" ? (manualMethodOther.trim() || "other") : manualMethod;
                               if (manualMode === "deposit") {
-                                await patchBooking({ depositPaid: true, depositAmount: amt, remainingBalance: Math.max(0, (booking.totalPrice || 0) - amt), offlinePaymentAmount: amt, offlinePaymentMethod: "manual" });
+                                await patchBooking({ depositPaid: true, depositAmount: amt, remainingBalance: Math.max(0, (booking.totalPrice || 0) - amt), offlinePaymentAmount: amt, offlinePaymentMethod: method });
                               } else {
                                 // Mark paid in full. Record the amount received without
                                 // touching totalPrice (which would trigger a deposit recalc).
-                                await patchBooking({ depositPaid: true, balancePaid: true, paidInFull: true, remainingBalance: 0, offlinePaymentAmount: amt, offlinePaymentMethod: "manual" });
+                                await patchBooking({ depositPaid: true, balancePaid: true, paidInFull: true, remainingBalance: 0, offlinePaymentAmount: amt, offlinePaymentMethod: method });
                               }
-                              setManualMode(null); setManualAmount("");
+                              setManualMode(null); setManualAmount(""); setManualMethodOther("");
                             }} className="text-xs py-2 px-3 rounded-lg bg-[#3486cf] text-white font-semibold hover:bg-[#2a6dab] transition-colors disabled:opacity-50 whitespace-nowrap">
                               {saving ? "Saving…" : "Save"}
                             </button>
-                            <button onClick={() => { setManualMode(null); setManualAmount(""); }}
+                            <button onClick={() => { setManualMode(null); setManualAmount(""); setManualMethodOther(""); }}
                               className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
                           </div>
                         </div>
@@ -2267,9 +2283,9 @@ if (loading) return (
 
             {/* Agent info — up to 4 listing agents */}
             <div className="card">
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between mb-3">
                 <h3 className="font-display text-[#3486cf] text-base">Listing Agents</h3>
-                {(propSite.coAgents?.length || 0) < 3 && (
+                {propSite.showAgentBranding !== false && (propSite.coAgents?.length || 0) < 3 && (
                   <button type="button"
                     onClick={() => setPropField("coAgents", [...(propSite.coAgents || []), { name: "", email: "", phone: "", brokerage: "", photo: "" }])}
                     className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2.5 py-1 rounded hover:bg-[#3486cf]/5 transition-colors">
@@ -2277,6 +2293,23 @@ if (loading) return (
                   </button>
                 )}
               </div>
+
+              {/* Toggle: show agent branding on the public website at all */}
+              <div className="flex items-start justify-between gap-4 mb-5 pb-4 border-b border-gray-100">
+                <div>
+                  <p className="text-sm font-medium text-[#0F172A]">Show agent branding on website</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Turn off if the agent doesn&apos;t want their name/photo/contact on the property website.</p>
+                </div>
+                <button type="button"
+                  onClick={() => setPropField("showAgentBranding", propSite.showAgentBranding === false)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 mt-0.5 ${propSite.showAgentBranding !== false ? "bg-[#3486cf]" : "bg-gray-300"}`}>
+                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${propSite.showAgentBranding !== false ? "translate-x-4" : "translate-x-0.5"}`} />
+                </button>
+              </div>
+
+              {propSite.showAgentBranding === false ? (
+                <p className="text-xs text-gray-400 italic">Agent branding is hidden on the public website.</p>
+              ) : (<>
 
               {/* Primary agent (agent 1 — uses existing flat fields) */}
               <div className="p-4 border border-gray-200 rounded-xl mb-3">
@@ -2395,6 +2428,7 @@ if (loading) return (
                   </div>
                 </div>
               ))}
+              </>)}
             </div>
 
             {/* Agent Custom Domain (per-listing) */}
