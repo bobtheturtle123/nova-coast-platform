@@ -695,7 +695,9 @@ export default function SettingsPage() {
   const [tenant,  setTenant]  = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
-  const [viewMode, setViewMode] = useState("simple"); // "simple" | "detailed" hides Extra fields
+  // Always show all settings (the Simple/Detailed switch was removed). "detailed"
+  // un-hides every "Extra" field via the `.set.detailed` wrapper class.
+  const viewMode = "detailed";
   const [viewedSections, setViewedSections] = useState({}); // sections the user has opened to review
 
   const [openSections, setOpenSections] = useState({
@@ -1858,17 +1860,6 @@ export default function SettingsPage() {
       </div>
     </div>
     )}
-
-    {/* Simple / Detailed view switch */}
-    <div className="viewbar">
-      <span className="hint">
-        New here? Stay on <b>Simple</b>. Switch to Detailed only when you want extra options.
-      </span>
-      <div className="seg">
-        <button type="button" className={viewMode === "simple" ? "on" : ""} onClick={() => setViewMode("simple")}>Simple</button>
-        <button type="button" className={viewMode === "detailed" ? "on" : ""} onClick={() => setViewMode("detailed")}>Detailed</button>
-      </div>
-    </div>
 
     <div className="set-grid">
       {/* Sticky table of contents */}
