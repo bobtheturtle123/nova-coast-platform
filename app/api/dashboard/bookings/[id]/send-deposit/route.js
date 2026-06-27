@@ -45,9 +45,11 @@ export async function POST(req, { params }) {
   const tenant = await getTenantById(ctx.tenantId);
   if (!tenant) return Response.json({ error: "Tenant not found" }, { status: 404 });
 
-  const depositAmount = booking.depositAmount || Math.round((booking.totalPrice || 0) * 0.5);
+  // Use the booking's stored deposit amount. A stored 0 means "no deposit" — do
+  // NOT fabricate a 50% deposit (?? not ||), so no-deposit bookings stay at $0.
+  const depositAmount = booking.depositAmount ?? Math.round((booking.totalPrice || 0) * 0.5);
   if (!depositAmount || depositAmount <= 0) {
-    return Response.json({ error: "No deposit amount set on this booking" }, { status: 400 });
+    return Response.json({ error: "This booking has no deposit configured (pay-in-full). Use the full payment link instead." }, { status: 400 });
   }
   if (Math.round(depositAmount * 100) < 50) {
     return Response.json({ error: `Deposit of $${depositAmount} is below the $0.50 minimum for online payment.` }, { status: 400 });

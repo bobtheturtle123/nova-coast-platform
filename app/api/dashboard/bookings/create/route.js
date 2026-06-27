@@ -4,6 +4,7 @@ import { sendBookingCreatedNotifications, generateCalendarICS, sendServiceAgreem
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendBookingConfirmedSms } from "@/lib/sms";
 import { tenantHasActivePlan, paymentRequired } from "@/lib/requireSubscription";
+import { calculateDeposit } from "@/lib/catalogUtils";
 
 async function getAuthContext(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -56,9 +57,14 @@ export async function POST(req) {
     const fullAddress = [address, unit, city, state, zip].filter(Boolean).join(", ");
     const finalPrice  = Number(totalPrice) || 0;
 
-    // Calculate deposit amount from tenant config (default 50%)
-    const depositPct = Math.max(0, Math.min(100, Number(tenantData.bookingConfig?.depositPercent) || 50));
-    const calculatedDeposit = finalPrice > 0 ? Math.round(finalPrice * depositPct) / 100 : 0;
+    // Calculate deposit from the tenant's deposit config (percent / fixed / none).
+    // Honors "no deposit" — previously this fell back to 50% whenever
+    // depositPercent was unset (which is exactly the case for "none").
+    const depositConfig = tenantData.bookingConfig?.deposit
+      || (tenantData.bookingConfig?.depositPercent != null
+        ? { type: "percent", value: tenantData.bookingConfig.depositPercent }
+        : undefined);
+    const calculatedDeposit = finalPrice > 0 ? calculateDeposit(finalPrice, depositConfig) : 0;
     const isDepositPaid = Boolean(depositPaid);
     const remainingBalance = isDepositPaid
       ? Math.max(0, finalPrice - calculatedDeposit)

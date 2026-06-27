@@ -1496,7 +1496,7 @@ if (loading) return (
                     {booking.source === "phone" && <span className="text-[10.5px] font-semibold px-2.5 py-0.5 rounded-full" style={{ background: "#FEF3C7", color: "#92400E", border: "1px solid #FCD34D" }}>Manual / phone</span>}
                   </div>
                   <div className="px-[17px] py-4 space-y-2">
-                    {!booking.depositPaid && (
+                    {!booking.depositPaid && catalog?.bookingConfig?.deposit?.type !== "none" && (
                       <button
                         disabled={sendingDeposit || !booking.clientEmail}
                         onClick={async () => {
