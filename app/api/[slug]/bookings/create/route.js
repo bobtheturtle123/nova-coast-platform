@@ -102,9 +102,12 @@ export async function POST(req, { params }) {
     const effDeposit     = Math.min(pricing.deposit || 0, effectiveTotal);
 
     // Determine payment type and amount.
-    // "No deposit" means there is no partial deposit option — the client pays in
-    // full at booking.
-    const isFullPayment = payFull || effDeposit === 0;
+    //  - Deposit type "none" = pay in full at booking.
+    //  - A deposit that works out to $0 (e.g. 0% deposit) is NOT pay-in-full:
+    //    it collects nothing now and the full balance is due later. Using
+    //    effDeposit === 0 here was the bug that marked $0 bookings "paid in full".
+    const depositType   = tenant.bookingConfig?.deposit?.type;
+    const isFullPayment = payFull || depositType === "none";
     const chargeAmount  = isFullPayment
       ? effectiveTotal + tip
       : effDeposit + tip;
