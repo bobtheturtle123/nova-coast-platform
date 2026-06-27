@@ -160,7 +160,7 @@ const TEAM_NOTIFICATIONS = [
   { id: "team_revision_request",      label: "Revision Request",      description: "Sent to you when an agent submits a revision request on a delivered gallery.", channels: ["email", "sms"] },
 ];
 
-const SMS_PLANS_LIST = ["studio", "pro", "scale"];
+const SMS_PLANS_LIST = ["studio", "pro", "scale", "unlimited"];
 
 function NotifToggleRow({ notif, pref, plan, onToggle }) {
   const emailOn  = pref?.channels?.email !== false;
@@ -773,6 +773,7 @@ export default function SettingsPage() {
   const [savingAvail,               setSavingAvail]               = useState(false);
   const [showWeather,               setShowWeather]               = useState(true);
   const [twilightOffsetMinutes,     setTwilightOffsetMinutes]     = useState(60);
+  const [sunriseOffsetMinutes,      setSunriseOffsetMinutes]      = useState(30);
   const [allowAgentPhotographerSel, setAllowAgentPhotographerSel] = useState(false);
 
   // Booking limits state
@@ -1197,6 +1198,7 @@ export default function SettingsPage() {
             if (av.bufferAfterMinutes) setAvailBufferAfter(av.bufferAfterMinutes);
             if (av.showWeather !== undefined) setShowWeather(av.showWeather);
             if (av.twilightOffsetMinutes !== undefined) setTwilightOffsetMinutes(av.twilightOffsetMinutes);
+            if (av.sunriseOffsetMinutes !== undefined) setSunriseOffsetMinutes(av.sunriseOffsetMinutes);
             if (av.allowAgentPhotographerSelection !== undefined) setAllowAgentPhotographerSel(av.allowAgentPhotographerSelection);
             if (av.durationAwareSlots !== undefined) setDurationAwareSlots(av.durationAwareSlots);
             if (av.minNoticeHours    != null) setMinNoticeHours(av.minNoticeHours);
@@ -1457,6 +1459,7 @@ export default function SettingsPage() {
         bufferAfterMinutes: Number(availBufferAfter) || 0,
         showWeather,
         twilightOffsetMinutes: Number(twilightOffsetMinutes) || 60,
+        sunriseOffsetMinutes: Number(sunriseOffsetMinutes) || 30,
         allowAgentPhotographerSelection: allowAgentPhotographerSel,
         minNoticeHours:    Number(minNoticeHours)    || 0,
         maxAdvanceDays:    Number(maxAdvanceDays)    || 0,
@@ -2757,6 +2760,20 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Sunrise Offset */}
+        <div className="pt-4 border-t border-gray-100">
+          <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Sunrise Shoot Offset</h3>
+          <p className="text-xs text-gray-400 mb-3">
+            When a sunrise service is booked, the suggested start time is this many minutes after the real sunrise for the property&apos;s location.
+          </p>
+          <div className="flex items-center gap-3">
+            <input type="number" value={sunriseOffsetMinutes} min={0} max={180} step={5}
+              onChange={(e) => setSunriseOffsetMinutes(e.target.value)}
+              className="input-field w-24 text-sm" />
+            <span className="text-sm text-gray-500">minutes after sunrise</span>
+          </div>
+        </div>
+
         {/* Booking Limits */}
         <div className="pt-4 border-t border-gray-100">
           <h3 className="text-sm font-semibold text-[#0F172A] mb-1">Booking Limits</h3>
@@ -3712,7 +3729,7 @@ export default function SettingsPage() {
         </div>
         <p className="text-sm text-gray-500 mb-5">Toggle email and SMS delivery for each notification type. SMS requires Studio plan or above.</p>
 
-        {!SMS_PLANS_LIST.includes(tenant?.subscriptionPlan) && (
+        {!SMS_PLANS_LIST.includes(getEffectivePlan(tenant)) && (
           <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-xs text-amber-700">
             SMS notifications require the <strong>Studio plan or above</strong>. Upgrade to enable SMS delivery.
           </div>
@@ -3722,7 +3739,7 @@ export default function SettingsPage() {
         {CUSTOMER_NOTIFICATIONS.map((notif) => (
           <NotifToggleRow key={notif.id} notif={notif}
             pref={notifPrefs[notif.id] || { channels: { email: true, sms: true } }}
-            plan={tenant?.subscriptionPlan || "solo"}
+            plan={getEffectivePlan(tenant)}
             onToggle={(ch) => toggleNotifChannel(notif.id, ch)} />
         ))}
 
@@ -3730,7 +3747,7 @@ export default function SettingsPage() {
         {TEAM_NOTIFICATIONS.map((notif) => (
           <NotifToggleRow key={notif.id} notif={notif}
             pref={notifPrefs[notif.id] || { channels: { email: true, sms: true } }}
-            plan={tenant?.subscriptionPlan || "solo"}
+            plan={getEffectivePlan(tenant)}
             onToggle={(ch) => toggleNotifChannel(notif.id, ch)} />
         ))}
       </div>

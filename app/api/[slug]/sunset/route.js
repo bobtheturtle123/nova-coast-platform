@@ -32,7 +32,8 @@ export async function GET(req, { params }) {
 
   try {
     const tenant = await getTenantBySlug(params.slug);
-    const offset = tenant?.bookingConfig?.availability?.twilightOffsetMinutes ?? 60;
+    const offset        = tenant?.bookingConfig?.availability?.twilightOffsetMinutes ?? 60;
+    const sunriseOffset = tenant?.bookingConfig?.availability?.sunriseOffsetMinutes ?? 30;
 
     const [sunRes, tzRes] = await Promise.all([
       fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&date=${date}&formatted=0`)
@@ -45,30 +46,33 @@ export async function GET(req, { params }) {
       return Response.json({ error: "Sunset lookup failed" }, { status: 502 });
     }
 
-    const sunsetUtc = new Date(sunRes.results.sunset);
-    let sunsetMin;
+    // Convert a UTC instant to minutes-of-day in the property's local timezone.
+    const toLocalMin = (utc) => {
+      if (tzRes?.timeZone) {
+        const parts = new Intl.DateTimeFormat("en-US", {
+          timeZone: tzRes.timeZone, hour: "numeric", minute: "numeric", hour12: false,
+        }).formatToParts(utc);
+        const h = Number(parts.find((p) => p.type === "hour")?.value   ?? 0);
+        const m = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+        return h * 60 + m;
+      }
+      return utc.getUTCHours() * 60 + utc.getUTCMinutes();
+    };
 
-    if (tzRes?.timeZone) {
-      const parts = new Intl.DateTimeFormat("en-US", {
-        timeZone: tzRes.timeZone,
-        hour:     "numeric",
-        minute:   "numeric",
-        hour12:   false,
-      }).formatToParts(sunsetUtc);
-      const h = Number(parts.find((p) => p.type === "hour")?.value   ?? 0);
-      const m = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
-      sunsetMin = h * 60 + m;
-    } else {
-      sunsetMin = sunsetUtc.getUTCHours() * 60 + sunsetUtc.getUTCMinutes();
-    }
-
+    const sunsetMin    = toLocalMin(new Date(sunRes.results.sunset));
     const suggestedMin = Math.max(0, sunsetMin - offset);
+
+    const sunriseMin          = sunRes.results.sunrise ? toLocalMin(new Date(sunRes.results.sunrise)) : null;
+    const suggestedSunriseMin = sunriseMin != null ? Math.min(24 * 60 - 1, sunriseMin + sunriseOffset) : null;
 
     return Response.json({
       sunsetTime:    minToTime(sunsetMin),
       suggestedTime: minToTime(suggestedMin),
+      sunriseTime:          sunriseMin != null ? minToTime(sunriseMin) : null,
+      suggestedSunriseTime: suggestedSunriseMin != null ? minToTime(suggestedSunriseMin) : null,
       timezone:      tzRes?.timeZone || null,
       offset,
+      sunriseOffset,
     });
   } catch {
     return Response.json({ error: "Internal error" }, { status: 500 });

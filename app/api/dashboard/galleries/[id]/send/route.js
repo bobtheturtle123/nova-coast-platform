@@ -153,7 +153,7 @@ export async function POST(req, { params }) {
   // if they want — sending both was redundant ("2 notifications").
 
   // SMS notifications — Studio and Pro plans only
-  const SMS_PLANS = ["studio", "pro", "scale"];
+  const SMS_PLANS = ["studio", "pro", "scale", "unlimited"];
   if (SMS_PLANS.includes(getEffectivePlan(tenant))) {
     const appUrl     = getAppUrl();
     const galleryUrl = gallery.accessToken ? `${appUrl}/${tenant?.slug}/gallery/${gallery.accessToken}` : null;
