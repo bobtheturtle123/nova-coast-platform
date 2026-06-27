@@ -69,6 +69,7 @@ export async function PATCH(req, { params }) {
   const prevRole = memberDoc.exists ? normalizeRole(memberDoc.data().role) : null;
   if (normalizeRole(body.role) === "photographer" && (prevRole === "manager" || prevRole === "admin")) {
     update.showInScheduling = true;
+    update.active = true; // ensure they appear (and aren't "unavailable") in scheduling
   }
 
   let newCalToken = null;
