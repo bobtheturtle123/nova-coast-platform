@@ -1102,6 +1102,10 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
 export default function ProductsPage() {
   const toast = useToast();
   const [activeType,  setActiveType]  = useState("packages");
+  const [bulkOpen,    setBulkOpen]    = useState(false);
+  const [bulkPhotogs, setBulkPhotogs] = useState([]);
+  const [bulkMode,    setBulkMode]    = useState("add"); // "add" | "remove" | "set"
+  const [bulkSaving,  setBulkSaving]  = useState(false);
   const [items,       setItems]       = useState({ packages: [], services: [], addons: [], retainers: [] });
   const [loading,     setLoading]     = useState(true);
   const [editing,     setEditing]     = useState(null);
@@ -1298,6 +1302,38 @@ export default function ProductsPage() {
     return map;
   }, [items]);
 
+  async function applyBulkPhotographers() {
+    setBulkSaving(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/products/bulk-assign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ type: activeType, photographerIds: bulkPhotogs, mode: bulkMode }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        // Reflect locally without a full reload.
+        setItems((prev) => ({
+          ...prev,
+          [activeType]: (prev[activeType] || []).map((it) => {
+            const cur = Array.isArray(it.assignedPhotographers) ? it.assignedPhotographers : [];
+            let next;
+            if (bulkMode === "add")    next = [...new Set([...cur, ...bulkPhotogs])];
+            else if (bulkMode === "remove") next = cur.filter((id) => !bulkPhotogs.includes(id));
+            else next = [...bulkPhotogs];
+            return { ...it, assignedPhotographers: next };
+          }),
+        }));
+        toast(`Updated ${d.updated} ${TYPE_META[activeType].label.toLowerCase()}.`);
+        setBulkOpen(false); setBulkPhotogs([]);
+      } else {
+        toast(d.error || "Bulk update failed.", "error");
+      }
+    } catch { toast("Something went wrong.", "error"); }
+    finally { setBulkSaving(false); }
+  }
+
   const current = useMemo(() => {
     const list = [...(items[activeType] || [])].sort((a, b) => (a.sortOrder ?? 1e9) - (b.sortOrder ?? 1e9));
     if (!search.trim()) return list;
@@ -1372,6 +1408,12 @@ export default function ProductsPage() {
             activeType={activeType}
             pricingConfig={pricingConfig}
           />
+          {activeType !== "retainers" && assignablePhotographers.length > 0 && (
+            <button onClick={() => setBulkOpen((v) => !v)}
+              className="text-sm px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 transition-colors">
+              Bulk photographers
+            </button>
+          )}
           <button
             onClick={() => setEditing({ item: null, type: activeType })}
             className="btn-primary text-sm px-5 py-2 flex items-center gap-2"
@@ -1381,6 +1423,38 @@ export default function ProductsPage() {
           </button>
         </div>
       </div>
+
+      {/* Bulk-assign photographers across all items of the current type */}
+      {bulkOpen && activeType !== "retainers" && (
+        <div className="card p-4 mb-4 border-[#3486cf]/30">
+          <p className="text-sm font-semibold text-[#0F172A] mb-1">Bulk-assign photographers</p>
+          <p className="text-xs text-gray-400 mb-3">Quickly set which photographers can do <strong>all {TYPE_META[activeType].label.toLowerCase()}</strong> below. Useful with many photographers and lots of services.</p>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {assignablePhotographers.map((m) => {
+              const on = bulkPhotogs.includes(m.id);
+              return (
+                <button key={m.id} type="button"
+                  onClick={() => setBulkPhotogs((p) => on ? p.filter((x) => x !== m.id) : [...p, m.id])}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${on ? "bg-[#3486cf] text-white border-[#3486cf]" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"}`}>
+                  {m.name}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={bulkMode} onChange={(e) => setBulkMode(e.target.value)} className="input-field text-sm w-auto">
+              <option value="add">Add to existing</option>
+              <option value="set">Replace with selected</option>
+              <option value="remove">Remove selected</option>
+            </select>
+            <button onClick={applyBulkPhotographers} disabled={bulkSaving || (bulkMode !== "set" && bulkPhotogs.length === 0)}
+              className="btn-primary text-sm px-5 py-2 disabled:opacity-50">
+              {bulkSaving ? "Applying…" : `Apply to all ${TYPE_META[activeType].label.toLowerCase()}`}
+            </button>
+            <button onClick={() => { setBulkOpen(false); setBulkPhotogs([]); }} className="text-sm text-gray-400 hover:text-gray-600 px-2">Cancel</button>
+          </div>
+        </div>
+      )}
 
 
 
