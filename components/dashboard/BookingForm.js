@@ -226,11 +226,25 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
         //  - Non-shooting roles (admin/manager) appear only when explicitly
         //    enabled for scheduling.
         const NON_SHOOTING_ROLES = ["admin", "manager"];
-        setTeam((teamData.members || []).filter((m) => {
+        const shooters = (teamData.members || []).filter((m) => {
           const role = String(m.role || "").toLowerCase();
           const shootingRole = !NON_SHOOTING_ROLES.includes(role);
           return shootingRole || m.showInScheduling === true;
-        }));
+        });
+        // The owner is a selectable photographer too when "I personally shoot"
+        // is on (ownerShoots !== false), using the same "__owner__" identity the
+        // rest of scheduling uses.
+        if (tenantDoc.ownerShoots !== false) {
+          shooters.unshift({
+            id:    "__owner__",
+            name:  tenantDoc.ownerName || tenantDoc.businessName || "You (Owner)",
+            email: tenantDoc.email || tenantDoc.ownerEmail || "",
+            role:  "photographer",
+            color: tenantDoc.branding?.primaryColor || "#3486cf",
+            showInScheduling: true,
+          });
+        }
+        setTeam(shooters);
         setTimeBlocks(blocks.blocks || []);
         setBookings((list.listings || []).filter((b) => b.id !== bookingId));
         setAgents(agentsData.agents || []);

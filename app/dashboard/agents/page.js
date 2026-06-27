@@ -123,7 +123,7 @@ function TeamGroupModal({ group, allAgents, onClose, onSaved }) {
 }
 
 // ─── Customer modal ────────────────────────────────────────────────────────────
-function CustomerModal({ agent, teams, onClose, onSaved }) {
+function CustomerModal({ agent, teams, onClose, onSaved, onDelete }) {
   const isEdit = !!agent;
   const [form, setForm] = useState({
     name:    agent?.name    || "",
@@ -232,6 +232,13 @@ function CustomerModal({ agent, teams, onClose, onSaved }) {
             </button>
             <button type="button" onClick={onClose} className="btn-outline px-5 text-sm">Cancel</button>
           </div>
+          {isEdit && onDelete && (
+            <button type="button"
+              onClick={() => { onDelete(agent); onClose(); }}
+              className="w-full text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg py-2 transition-colors">
+              Delete customer
+            </button>
+          )}
         </form>
       </div>
     </div>
@@ -975,6 +982,7 @@ export default function AgentsPage() {
           teams={teams}
           onClose={() => { setShowModal(false); setEditing(null); }}
           onSaved={handleSaved}
+          onDelete={deleteAgent}
         />
       )}
       {showTeamModal && (
