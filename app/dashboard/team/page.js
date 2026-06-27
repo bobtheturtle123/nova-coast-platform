@@ -1836,6 +1836,7 @@ export default function TeamPage() {
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "team");
   const [tenant,        setTenant]        = useState(null);
   const [members,       setMembers]       = useState([]);
+  const [pendingInvites, setPendingInvites] = useState([]);
   const [bookings,      setBookings]      = useState([]);
   const [products,      setProducts]      = useState({ services: [], packages: [], addons: [] });
   const [loading,       setLoading]       = useState(true);
@@ -1902,6 +1903,11 @@ export default function TeamPage() {
       setTenant(tenantData.tenant || null);
       setMembers(teamData.members   || []);
       setBookings(listData.listings || []);
+      // Pending invites (sent but not yet accepted) — non-blocking.
+      fetch("/api/dashboard/team/invite", { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.ok ? r.json() : { invites: [] })
+        .then((d) => setPendingInvites(d.invites || []))
+        .catch(() => {});
       setProducts({
         services: svcData.items || [],
         packages: pkgData.items || [],
@@ -2375,6 +2381,27 @@ export default function TeamPage() {
             {tenant?.ownerGoogleCalendar?.refreshToken ? "Cal Synced" : "Sync Cal"}
           </button>
         </div>
+        {/* Pending invites — sent but not yet accepted */}
+        {pendingInvites.length > 0 && (
+          <div className="card px-4 py-3 border-amber-200 bg-amber-50/60">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 mb-2">Invitations awaiting acceptance</p>
+            <div className="space-y-1.5">
+              {pendingInvites.map((inv) => (
+                <div key={inv.token} className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[#0F172A] truncate">{inv.email}</p>
+                    <p className="text-[11px] text-amber-600">
+                      Invited as {inv.customRoleTitle || inv.role} · awaiting acceptance
+                      {inv.expiresAt ? ` · expires ${new Date(inv.expiresAt).toLocaleDateString()}` : ""}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 flex-shrink-0">Pending</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-amber-600 mt-2">Invited photographers appear in scheduling and manual booking once they accept and set up their account.</p>
+          </div>
+        )}
         {/* Team member cards */}
         {members.map((m) => (
           <div key={m.id} className="flex items-center gap-3 card px-4 py-3 card-hover">

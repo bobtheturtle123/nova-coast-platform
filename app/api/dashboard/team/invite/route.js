@@ -14,6 +14,37 @@ async function getCtx(req) {
   } catch { return null; }
 }
 
+// GET — list pending (unaccepted, unexpired) invites for this tenant
+export async function GET(req) {
+  const ctx = await getCtx(req);
+  if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const snap = await adminDb
+    .collection("photographerInvites")
+    .where("tenantId", "==", ctx.tenantId)
+    .where("accepted", "==", false)
+    .limit(100)
+    .get();
+
+  const now = Date.now();
+  const invites = snap.docs
+    .map((d) => {
+      const data = d.data();
+      const expMs = data.expiresAt?.toMillis?.() ?? (data.expiresAt ? new Date(data.expiresAt).getTime() : 0);
+      return {
+        token:     d.id,
+        email:     data.email,
+        role:      data.role,
+        customRoleTitle: data.customRoleTitle || "",
+        expiresAt: expMs ? new Date(expMs).toISOString() : null,
+        expired:   expMs ? expMs < now : false,
+      };
+    })
+    .filter((i) => !i.expired);
+
+  return Response.json({ invites });
+}
+
 export async function POST(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
