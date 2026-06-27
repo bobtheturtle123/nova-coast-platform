@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
 import StepProgress from "@/components/booking/StepProgress";
 import {
-  getSqftTier, getItemPrice, SQFT_TIERS, getPricingLabel,
+  getSqftTier, getItemPrice, SQFT_TIERS, getPricingLabel, getMeasurementUnitLabel,
   calculateTenantPrice, depositLabel,
 } from "@/lib/catalogUtils";
 
@@ -250,12 +250,15 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
   const pricingMode   = pricingConfig.mode || "sqft";
   const usesGate      = pricingMode !== "flat";
   const gateLabel     = getPricingLabel(pricingConfig) || "Value";
+  const unitLabel     = getMeasurementUnitLabel(pricingConfig); // "sq ft" | "m²"
+  const isMetric      = pricingConfig.unit === "sqm";
   const customLabel   = (pricingConfig.customGateLabel || "value").toLowerCase();
   const gateQuestion  = pricingMode === "photos" ? "How many photos do you need?"
-    : pricingMode === "custom" ? `What's your ${customLabel}?` : "What's the square footage?";
+    : pricingMode === "custom" ? `What's your ${customLabel}?`
+    : isMetric ? "What's the size in m²?" : "What's the square footage?";
   const gateSubtext   = pricingMode === "photos" ? "Tell us how many photos you need so we can show you exact pricing."
     : pricingMode === "custom" ? `Enter your ${customLabel} so we can show you exact pricing.`
-    : "Enter the interior square footage of the home so we can show you exact pricing.";
+    : `Enter the interior size of the home (${unitLabel}) so we can show you exact pricing.`;
 
   const [sqftInput,    setSqftInput]    = useState(squareFootage || "");
   const [confirmed,    setConfirmed]    = useState(!usesGate || !!squareFootage);
@@ -285,8 +288,12 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
   function priceOf(item) { return usesGate ? getItemPrice(item, tier) : Number(item.price || 0); }
   function displayPrice(item) { const p = priceOf(item); return p ? fmt(p) : ""; }
   // Resolve the tier's label from the studio's own tiers (never "undefined").
+  // For metric studios, build the label from the tier max + unit so it doesn't
+  // show the imperial default ("Under 800 sqft").
+  const tierObj   = (pricingConfig.tiers?.length ? pricingConfig.tiers : SQFT_TIERS).find((t) => t.name === tier);
   const tierLabel = usesGate && tier && pricingMode === "sqft"
-    ? ((pricingConfig.tiers || []).find((t) => t.name === tier)?.label || TIER_LABELS[tier] || "")
+    ? (tierObj?.label
+        || (isMetric && tierObj ? `to ${(tierObj.max || 0).toLocaleString()} ${unitLabel}` : (TIER_LABELS[tier] || "")))
     : "";
   // Keep card copy tidy — short, single-line-ish blurbs.
   function short(text, n = 96) {
@@ -423,7 +430,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
             </div>
             {usesGate && (
               <button className="sqftchip" onClick={() => setConfirmed(false)}>
-                {Number(squareFootage || sqftInput).toLocaleString()} {pricingMode === "photos" ? "photos" : pricingMode === "custom" ? customLabel : "sq ft"}{tierLabel ? ` · ${tierLabel}` : ""} ✎
+                {Number(squareFootage || sqftInput).toLocaleString()} {pricingMode === "photos" ? "photos" : pricingMode === "custom" ? customLabel : unitLabel}{tierLabel ? ` · ${tierLabel}` : ""} ✎
               </button>
             )}
           </div>
