@@ -216,15 +216,19 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
           bookingConfig: tenantDoc.bookingConfig || null,
           showWeather:   tenantDoc.availability?.showWeather ?? true,
         });
-        // A member appears in the photographer picker when showInScheduling is
-        // on. For members saved before that toggle existed, fall back to role:
-        // photographers/assistants shoot, admins/managers don't.
+        // Who appears in the photographer picker:
+        //  - Shooting roles (anything other than admin/manager — e.g.
+        //    photographer/editor/assistant) ALWAYS appear. This avoids the bug
+        //    where a stale showInScheduling:false (e.g. carried over from a
+        //    manager→photographer promotion) silently hid a real photographer.
+        //  - Non-shooting roles (admin/manager) appear only when explicitly
+        //    enabled for scheduling.
         const NON_SHOOTING_ROLES = ["admin", "manager"];
-        setTeam((teamData.members || []).filter((m) =>
-          m.showInScheduling !== undefined
-            ? m.showInScheduling
-            : !NON_SHOOTING_ROLES.includes(m.role)
-        ));
+        setTeam((teamData.members || []).filter((m) => {
+          const role = String(m.role || "").toLowerCase();
+          const shootingRole = !NON_SHOOTING_ROLES.includes(role);
+          return shootingRole || m.showInScheduling === true;
+        }));
         setTimeBlocks(blocks.blocks || []);
         setBookings((list.listings || []).filter((b) => b.id !== bookingId));
         setAgents(agentsData.agents || []);

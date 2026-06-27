@@ -453,7 +453,7 @@ export default function AgentsPage() {
   const { permissions, userRole } = useDashboardPermissions();
   const isOwnerOrAdmin = userRole === "owner" || userRole === "admin" || userRole === null;
   const canViewRevenue = isOwnerOrAdmin || !!permissions?.canViewRevenue;
-  const COLS = canViewRevenue ? "1.5fr 1fr 0.9fr 0.6fr 0.7fr 24px" : "1.5fr 1fr 0.9fr 0.8fr 24px";
+  const COLS = canViewRevenue ? "1.5fr 1fr 0.9fr 0.6fr 0.7fr 60px" : "1.5fr 1fr 0.9fr 0.8fr 60px";
 
   useEffect(() => { loadAll(); }, []);
 

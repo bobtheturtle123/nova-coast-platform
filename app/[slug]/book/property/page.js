@@ -6,6 +6,7 @@ import { useBookingStore } from "@/store/bookingStore";
 import StepProgress from "@/components/booking/StepProgress";
 import PriceSummary from "@/components/booking/PriceSummary";
 import PlacesAutocomplete from "@/components/PlacesAutocomplete";
+import { getMeasurementUnitLabel } from "@/lib/catalogUtils";
 
 const PROPERTY_TYPES = [
   { value: "residential", label: "Residential" },
@@ -192,10 +193,13 @@ export default function TenantPropertyPage() {
               {shownFields.squareFootage && (
                 <div>
                   <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
-                    Square Footage <span className="text-gray-400 font-normal ml-1">(approximate)</span>
+                    {catalog?.pricingConfig?.unit === "sqm" ? "Square Meters" : "Square Footage"}{" "}
+                    <span className="text-gray-400 font-normal ml-1">
+                      (approximate, {getMeasurementUnitLabel(catalog?.pricingConfig)})
+                    </span>
                   </label>
                   <input name="squareFootage" value={squareFootage} onChange={handleChange}
-                    placeholder="2,400" type="number" className="input-field" />
+                    placeholder={catalog?.pricingConfig?.unit === "sqm" ? "220" : "2,400"} type="number" className="input-field" />
                 </div>
               )}
 

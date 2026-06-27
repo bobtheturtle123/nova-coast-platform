@@ -20,6 +20,7 @@ export default function AryeoImport({ onImported }) {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [importing, setImporting] = useState(false);
   const [results,  setResults]   = useState(null);
+  const [open,     setOpen]      = useState(false);
 
   const token = () => auth.currentUser?.getIdToken();
   const note = (text, type = "success") => { setMsg({ text, type }); setTimeout(() => setMsg(null), 5000); };
@@ -110,15 +111,24 @@ export default function AryeoImport({ onImported }) {
 
   return (
     <div className="border border-gray-200 rounded-xl p-5">
-      <div className="flex items-center justify-between gap-3 mb-3">
+      <button type="button" onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 text-left">
         <div>
           <h3 className="text-sm font-semibold text-[#0F172A]">Aryeo Import</h3>
           <p className="text-xs text-gray-500 mt-0.5">Migrating from Aryeo? Import your products, pricing, and durations as draft services.</p>
         </div>
-        {status?.connected && (
-          <span className="text-[11px] font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full whitespace-nowrap">Connected</span>
-        )}
-      </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {status?.connected && (
+            <span className="text-[11px] font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full whitespace-nowrap">Connected</span>
+          )}
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"
+            className={`text-gray-400 transition-transform ${open ? "rotate-90" : ""}`}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </button>
+
+      {open && (<div className="mt-3">
 
       {msg && (
         <div className={`text-xs mb-3 px-3 py-2 rounded-lg ${msg.type === "error" ? "bg-red-50 text-red-600 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"}`}>
@@ -248,6 +258,7 @@ export default function AryeoImport({ onImported }) {
           </div>
         </div>
       )}
+      </div>)}
     </div>
   );
 }
