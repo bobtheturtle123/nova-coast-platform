@@ -5,13 +5,19 @@ async function getTenantFromToken(req) {
   if (!auth) return null;
   const decoded = await adminAuth.verifyIdToken(auth);
   if (!decoded.tenantId) return null;
-  return { uid: decoded.uid, tenantId: decoded.tenantId };
+  return { uid: decoded.uid, tenantId: decoded.tenantId, role: decoded.role || "owner" };
 }
 
 export async function PATCH(req) {
   try {
     const ctx = await getTenantFromToken(req);
     if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Only the owner/admin may change business/account settings. A team member
+    // (photographer/manager/custom) must not be able to edit the business.
+    if (ctx.role !== "owner" && ctx.role !== "admin") {
+      return Response.json({ error: "Only the account owner can change business settings." }, { status: 403 });
+    }
 
     const body = await req.json();
 

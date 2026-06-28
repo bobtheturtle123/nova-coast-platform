@@ -81,24 +81,47 @@ function GalleryLightbox({ images, startIndex, unlocked, onClose }) {
                   style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "rgba(255,255,255,0.7)" }} />
               </div>
             )}
-            <img
-              key={img?.url}
-              src={img?.url}
-              alt={img?.fileName || `Photo ${idx + 1}`}
-              draggable={false}
-              onLoad={() => setLoaded(true)}
-              onContextMenu={(e) => { if (!unlocked) e.preventDefault(); }}
-              className="block select-none"
-              style={{
-                maxHeight: "calc(100vh - 160px)",
-                maxWidth: "100%",
-                objectFit: "contain",
-                opacity: loaded ? 1 : 0,
-                transition: "opacity 0.18s ease",
-                pointerEvents: !unlocked ? "none" : undefined,
-                boxShadow: loaded ? "0 8px 48px rgba(0,0,0,0.6)" : "none",
-              }}
-            />
+            {unlocked ? (
+              <img
+                key={img?.url}
+                src={img?.url}
+                alt={img?.fileName || `Photo ${idx + 1}`}
+                draggable={false}
+                onLoad={() => setLoaded(true)}
+                className="block select-none"
+                style={{
+                  maxHeight: "calc(100vh - 160px)",
+                  maxWidth: "100%",
+                  objectFit: "contain",
+                  opacity: loaded ? 1 : 0,
+                  transition: "opacity 0.18s ease",
+                  boxShadow: loaded ? "0 8px 48px rgba(0,0,0,0.6)" : "none",
+                }}
+              />
+            ) : (
+              // Locked: background image (not <img>) so iOS "Save Image" can't
+              // grab the clean file; callout/selection disabled.
+              <div
+                key={img?.url}
+                role="img"
+                aria-label={img?.fileName || `Photo ${idx + 1}`}
+                onContextMenu={(e) => e.preventDefault()}
+                className="block select-none"
+                style={{
+                  width: "min(100%, 1200px)",
+                  height: "calc(100vh - 160px)",
+                  backgroundImage: `url(${img?.url})`,
+                  backgroundSize: "contain",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center",
+                  pointerEvents: "none",
+                  WebkitTouchCallout: "none",
+                  WebkitUserSelect: "none",
+                  userSelect: "none",
+                  boxShadow: "0 8px 48px rgba(0,0,0,0.6)",
+                }}
+              />
+            )}
             {/* Watermark — positioned over the image only */}
             {!unlocked && (
               <div className="absolute inset-0 pointer-events-none select-none"
@@ -750,12 +773,21 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
               {group.items.map(({ m, gi: i }) => (
                 <div key={i} className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer"
                   onClick={() => setLightboxIdx(i)}>
-                  <img src={m.url} alt={m.fileName || `Photo ${i + 1}`} draggable={false}
-                    loading={i < 12 ? "eager" : "lazy"}
-                    decoding="async"
-                    onContextMenu={(e) => { if (!unlocked) e.preventDefault(); }}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 select-none"
-                    style={!unlocked ? { pointerEvents: "none" } : {}} />
+                  {unlocked ? (
+                    <img src={m.url} alt={m.fileName || `Photo ${i + 1}`} draggable={false}
+                      loading={i < 12 ? "eager" : "lazy"}
+                      decoding="async"
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 select-none" />
+                  ) : (
+                    // Locked: render as a background image (not an <img>) so iOS
+                    // long-press "Save Image" can't grab the clean full-res file,
+                    // and disable the touch callout / context menu.
+                    <div role="img" aria-label={m.fileName || `Photo ${i + 1}`}
+                      onContextMenu={(e) => e.preventDefault()}
+                      className="w-full h-full transition-transform duration-300 group-hover:scale-105 select-none"
+                      style={{ backgroundImage: `url(${m.url})`, backgroundSize: "cover", backgroundPosition: "center",
+                        pointerEvents: "none", WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }} />
+                  )}
 
                   {!unlocked && (
                     <div className="absolute inset-0 pointer-events-none select-none overflow-hidden"
