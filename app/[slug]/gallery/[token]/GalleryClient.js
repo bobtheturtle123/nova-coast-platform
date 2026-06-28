@@ -5,7 +5,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { getAppUrl } from "@/lib/appUrl";
 
 // ── Gallery Lightbox ──────────────────────────────────────────────────────────
-function GalleryLightbox({ images, startIndex, unlocked, onClose }) {
+function GalleryLightbox({ images, startIndex, unlocked, onClose, token }) {
   const [idx,    setIdx]    = useState(startIndex);
   const [loaded, setLoaded] = useState(false);
 
@@ -110,7 +110,7 @@ function GalleryLightbox({ images, startIndex, unlocked, onClose }) {
                 style={{
                   width: "min(100%, 1200px)",
                   height: "calc(100vh - 160px)",
-                  backgroundImage: `url(${img?.url})`,
+                  backgroundImage: `url(${img?.key && token ? `/api/gallery/preview-image?token=${token}&key=${encodeURIComponent(img.key)}` : img?.url})`,
                   backgroundSize: "contain",
                   backgroundRepeat: "no-repeat",
                   backgroundPosition: "center",
@@ -788,7 +788,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                     <div role="img" aria-label={m.fileName || `Photo ${i + 1}`}
                       onContextMenu={(e) => e.preventDefault()}
                       className="w-full h-full transition-transform duration-300 group-hover:scale-105 select-none"
-                      style={{ backgroundImage: `url(${m.url})`, backgroundSize: "cover", backgroundPosition: "center",
+                      style={{ backgroundImage: `url(${m.key ? `/api/gallery/preview-image?token=${token}&key=${encodeURIComponent(m.key)}` : m.url})`, backgroundSize: "cover", backgroundPosition: "center",
                         pointerEvents: "none", WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }} />
                   )}
 
@@ -1182,6 +1182,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           images={images}
           startIndex={lightboxIdx}
           unlocked={!previewLocked}
+          token={token}
           onClose={() => setLightboxIdx(null)}
         />
       )}
