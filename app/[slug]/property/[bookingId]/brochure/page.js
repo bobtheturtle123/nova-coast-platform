@@ -43,6 +43,13 @@ export default async function BrochurePage({ params }) {
       return <ErrorPage message="Property website not set up yet. Go to the listing's Property Site tab to add details first." />;
     }
 
+    // Lock the brochure while a balance is owed (marketing materials require
+    // full payment).
+    const balanceDue = (Number(booking.remainingBalance) || 0) > 0 && !booking.paidInFull;
+    if (balanceDue) {
+      return <ErrorPage message="This brochure isn't available yet." />;
+    }
+
     // Fetch all gallery images for the brochure
     let images = [];
     if (booking.galleryId) {

@@ -79,7 +79,10 @@ export default async function PropertyWebsitePage({ params, searchParams }) {
   const booking = sanitize(rawBooking);
   const pw = booking.propertyWebsite;
 
-  if (!pw?.published) {
+  // An outstanding balance locks the public property website too (neutral
+  // message — don't expose payment status publicly).
+  const balanceDue = (Number(booking.remainingBalance) || 0) > 0 && !booking.paidInFull;
+  if (!pw?.published || balanceDue) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
