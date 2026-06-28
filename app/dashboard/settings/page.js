@@ -312,7 +312,9 @@ function StaffAccessSection({ tenant }) {
                     {m.role} ·{" "}
                     {m.status === "invited"
                       ? <span className="text-amber-500">Invite pending</span>
-                      : <span className="text-green-600">Active</span>}
+                      : m.active === false
+                        ? <span className="text-red-500 font-medium">{m.deactivatedSelf ? "Deactivated their account" : "Deactivated"}</span>
+                        : <span className="text-green-600">Active</span>}
                     {m.email && m.name ? ` · ${m.email}` : ""}
                   </p>
                 </div>
