@@ -405,7 +405,9 @@ export default function DashboardHome() {
   const today    = new Date();
   const hour     = today.getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const firstName = (tenant?.businessName || "").split(" ")[0] || "";
+  // Greet the logged-in person by their own name (team members shouldn't be
+  // greeted with the business name), falling back to owner/business name.
+  const firstName = (auth.currentUser?.displayName || tenant?.ownerName || tenant?.businessName || "").split(" ")[0] || "";
   const dateLabel = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   // Ops subhead parts (only non-zero)

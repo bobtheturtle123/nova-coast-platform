@@ -1,6 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { v4 as uuidv4 } from "uuid";
-import { normalizeRole } from "@/lib/roles";
+import { normalizeRole, defaultPermissions } from "@/lib/roles";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -66,10 +66,20 @@ export async function PATCH(req, { params }) {
   // Safety net: promoting a non-shooting role (manager/admin) to photographer
   // must make them schedulable, even if a stale showInScheduling:false carried
   // over from their old role (otherwise they never appear in manual booking).
+  const newRole  = normalizeRole(body.role);
   const prevRole = memberDoc.exists ? normalizeRole(memberDoc.data().role) : null;
-  if (normalizeRole(body.role) === "photographer" && (prevRole === "manager" || prevRole === "admin")) {
-    update.showInScheduling = true;
-    update.active = true; // ensure they appear (and aren't "unavailable") in scheduling
+  if (prevRole && newRole !== prevRole) {
+    // Role changed — reset access to the new role's defaults so elevated
+    // permissions never carry over (e.g. a manager promoted to photographer
+    // must lose settings/team/revenue access). "custom" keeps the explicitly
+    // chosen permissions sent by the client.
+    if (newRole !== "custom") {
+      update.permissions = defaultPermissions(newRole);
+    }
+    if (newRole === "photographer") {
+      update.showInScheduling = true;
+      update.active = true; // appears (and isn't "unavailable") in scheduling
+    }
   }
 
   let newCalToken = null;
