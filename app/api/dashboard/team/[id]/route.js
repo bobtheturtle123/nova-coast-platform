@@ -98,11 +98,17 @@ export async function PATCH(req, { params }) {
   }
   await batch.commit();
 
-  // If the member has an accepted Firebase account, update their custom claims
-  // so the role change takes effect on their next token refresh (within 1 hour).
-  if (memberDoc.exists && memberDoc.data().uid) {
-    try {
-      const uid = memberDoc.data().uid;
+  // Update the member's Firebase custom claims so the role change actually takes
+  // effect (e.g. a manager promoted to photographer gets the photographer portal).
+  // Members invited via different flows may not have `uid` on the doc, so fall
+  // back to looking the account up by email. The dashboard force-refreshes the
+  // token on load, so the new role applies on their next page load.
+  try {
+    let uid = memberDoc.exists ? memberDoc.data().uid : null;
+    if (!uid && update.email) {
+      try { uid = (await adminAuth.getUserByEmail(update.email)).uid; } catch { /* no account yet */ }
+    }
+    if (uid) {
       const existing = (await adminAuth.getUser(uid)).customClaims || {};
       await adminAuth.setCustomUserClaims(uid, {
         ...existing,
@@ -110,8 +116,10 @@ export async function PATCH(req, { params }) {
         tenantId: ctx.tenantId,
         memberId: params.id,
       });
-    } catch { /* user may not exist in auth */ }
-  }
+      // Backfill uid onto the member doc so future updates find it directly.
+      if (!memberDoc.data()?.uid) { try { await memberRef.update({ uid }); } catch {} }
+    }
+  } catch { /* non-fatal */ }
 
   // Return the updated member so the client can refresh state without re-fetching
   const updatedDoc = await memberRef.get();
