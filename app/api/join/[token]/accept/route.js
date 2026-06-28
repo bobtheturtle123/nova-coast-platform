@@ -94,6 +94,11 @@ export async function POST(req, { params }) {
     memberId,
     role: memberRole,
   });
+  // Top-level account mapping so claims can always be repaired on login
+  // (no collection-group index needed) — keeps members out of company onboarding.
+  adminDb.collection("memberAccounts").doc(uid).set({
+    tenantId, memberId, role: memberRole, email: email.trim().toLowerCase(),
+  }).catch(() => {});
 
   // Mark invite accepted
   await inviteRef.update({ accepted: true, acceptedAt: new Date(), memberId, uid });

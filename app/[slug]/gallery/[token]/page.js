@@ -51,6 +51,8 @@ export default async function TenantGalleryPage({ params }) {
       .collection("galleries").doc(galleryDoc.id)
       .update({ unlocked: true })
       .catch(() => {});
+    // Paid → discard the locked watermarked previews.
+    import("@/lib/galleryPreviews").then((m) => m.deleteGalleryPreviews(galleryDoc.id)).catch(() => {});
   }
 
   // Log gallery view — respects tenant's viewer tracking preference (default: on)

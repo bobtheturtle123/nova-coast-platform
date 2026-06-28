@@ -122,6 +122,7 @@ export async function POST(req) {
               .collection("tenants").doc(tenantId)
               .collection("galleries").doc(galleryId)
               .update({ unlocked: true });
+            import("@/lib/galleryPreviews").then((m) => m.deleteGalleryPreviews(galleryId)).catch(() => {});
           }
           if (shouldNotify) {
             console.log(`[stripe/webhook] full payment_intent.succeeded — notifying bookingId=${bookingId}`);
@@ -279,6 +280,7 @@ export async function POST(req) {
               .collection("tenants").doc(tenantId)
               .collection("galleries").doc(galleryId)
               .update({ unlocked: true });
+            import("@/lib/galleryPreviews").then((m) => m.deleteGalleryPreviews(galleryId)).catch(() => {});
           }
           if (shouldNotify) {
             console.log(`[stripe/webhook] checkout balance confirmed — bookingId=${bookingId}`);

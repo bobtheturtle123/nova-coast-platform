@@ -128,6 +128,10 @@ export async function PATCH(req, { params }) {
       });
       // Backfill uid onto the member doc so future updates find it directly.
       if (!memberDoc.data()?.uid) { try { await memberRef.update({ uid }); } catch {} }
+      // Top-level mapping for robust claim repair on login (no index needed).
+      adminDb.collection("memberAccounts").doc(uid).set({
+        tenantId: ctx.tenantId, memberId: params.id, role: update.role, email: update.email || null,
+      }).catch(() => {});
     }
   } catch { /* non-fatal */ }
 

@@ -24,9 +24,22 @@ export async function POST(req) {
       return Response.json({ ok: true, tenantId, businessName });
     }
 
-    // 2) Team member — find their team doc by uid (then email) across tenants and
-    // restore member claims, so a member whose claims were lost isn't wrongly
-    // sent to company onboarding.
+    // 2) Team member — restore member claims so a member whose claims were lost
+    // isn't wrongly sent to company onboarding.
+    // 2a) Fast path: a top-level memberAccounts/{uid} mapping (no index needed).
+    try {
+      const mapDoc = await adminDb.collection("memberAccounts").doc(uid).get();
+      if (mapDoc.exists) {
+        const { tenantId, memberId, role } = mapDoc.data();
+        if (tenantId && memberId) {
+          await adminAuth.setCustomUserClaims(uid, { role: role || "photographer", tenantId, memberId });
+          const tDoc = await adminDb.collection("tenants").doc(tenantId).get();
+          return Response.json({ ok: true, tenantId, businessName: tDoc.data()?.businessName || "" });
+        }
+      }
+    } catch {}
+
+    // 2b) Fallback: find their team doc by uid (then email) across tenants.
     let memberDoc = null;
     try {
       const byUid = await adminDb.collectionGroup("team").where("uid", "==", uid).limit(1).get();
@@ -46,6 +59,8 @@ export async function POST(req) {
       const role     = memberDoc.data().role || "photographer";
       if (!memberDoc.data().uid) { try { await memberDoc.ref.update({ uid }); } catch {} }
       await adminAuth.setCustomUserClaims(uid, { role, tenantId, memberId });
+      // Self-heal: write the top-level mapping so next time uses the fast path.
+      adminDb.collection("memberAccounts").doc(uid).set({ tenantId, memberId, role, email: decoded.email || null }).catch(() => {});
       const tDoc = await adminDb.collection("tenants").doc(tenantId).get();
       return Response.json({ ok: true, tenantId, businessName: tDoc.data()?.businessName || "" });
     }

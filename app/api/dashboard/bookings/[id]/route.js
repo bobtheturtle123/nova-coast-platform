@@ -123,6 +123,8 @@ export async function PATCH(req, { params }) {
         // Unlock the gallery so the agent can download
         if (!galSnap.data()?.unlocked) {
           await galRef.update({ unlocked: true });
+          // Paid → locked previews are no longer needed; free the storage.
+          import("@/lib/galleryPreviews").then((m) => m.deleteGalleryPreviews(prev.galleryId)).catch(() => {});
         }
         // Auto-advance workflowStatus to completed if delivered and no pending revisions
         if (galSnap.data()?.delivered && (prev.workflowStatus === "delivered" || prev.workflowStatus === "appointment_confirmed" || prev.workflowStatus === "booked")) {
