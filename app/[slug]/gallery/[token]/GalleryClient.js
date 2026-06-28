@@ -270,7 +270,10 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const name    = tenant.branding?.businessName || tenant.businessName;
 
   const requireAgentPortal = !!tenant.bookingConfig?.requireAgentPortal;
-  const canDownload        = unlocked && (!requireAgentPortal || isAgentSignedIn);
+  // Any outstanding balance re-locks everything (gallery, brochure, website) —
+  // a partial/manual payment must not grant full access.
+  const balanceDue         = (booking?.remainingBalance ?? 0) > 0;
+  const canDownload        = unlocked && !balanceDue && (!requireAgentPortal || isAgentSignedIn);
   // Wait for the session check before showing the callout — avoids a flash for signed-in agents.
   const showSignupCallout  = agentCheckDone && !isAgentSignedIn;
 
@@ -536,30 +539,28 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           }`}>
             <div className="min-w-0">
               <p className="font-semibold text-gray-900 text-sm">
-                {requireAgentPortal ? "Sign up to download your media" : "Access your agent portal"}
+                {balanceDue ? "Sign in to unlock & pay for your media" : "Sign in to download your media"}
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
-                {requireAgentPortal
-                  ? "Create a free account to download your full-resolution photos, floor plans, and marketing files."
-                  : "Save this gallery, access marketing tools, captions, and QR codes anytime — free."}
+                {balanceDue
+                  ? "Sign in or create a free account to pay your balance and download your full-resolution files."
+                  : "Sign in or create a free account to download your full-resolution photos, floor plans, and marketing files."}
               </p>
             </div>
-            <div className="flex-shrink-0 flex items-center gap-2">
+            {/* Single CTA — the login page also offers "create account", so this
+                one button covers both sign in and sign up. */}
+            <div className="flex-shrink-0">
               <a href={`/${slug}/agent/login?returnTo=/${slug}/gallery/${token}`}
-                className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors whitespace-nowrap">
-                Sign in
-              </a>
-              <a href={`/${slug}/agent/register?returnTo=/${slug}/gallery/${token}`}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
                 style={{ background: primary }}>
-                {requireAgentPortal ? "Create Account to Download →" : "Create Free Account →"}
+                {balanceDue ? "Sign in or sign up to unlock & pay →" : "Sign in or sign up to download →"}
               </a>
             </div>
           </div>
         )}
 
         {/* Preview notice */}
-        {!unlocked && balance <= 0 && (
+        {!unlocked && !balanceDue && (
           <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-center gap-2">
             <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -569,8 +570,9 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           </div>
         )}
 
-        {/* Balance gate */}
-        {!unlocked && balance > 0 && (
+        {/* Balance gate — any outstanding balance shows the pay prompt, even if
+            the gallery was previously unlocked (e.g. a partial manual payment). */}
+        {balanceDue && (
           <div className="bg-white rounded-2xl border border-gray-200 p-6 max-w-lg">
             <h2 className="font-display text-xl text-gray-900 mb-2">Unlock your media</h2>
             <p className="text-gray-500 text-sm mb-4">
@@ -690,13 +692,12 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                   </span>
                 )}
               </div>
-            ) : requireAgentPortal ? (
-              <a href={`/${slug}/agent/register?returnTo=/${slug}/gallery/${token}`}
-                className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
-                style={{ background: primary }}>
-                Sign up to Download →
-              </a>
-            ) : null}
+            ) : (
+              <span className="flex-shrink-0 inline-flex items-center gap-1.5 text-sm font-medium text-gray-400">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="5" y="11" width="14" height="10" rx="2" /><path strokeLinecap="round" d="M8 11V7a4 4 0 118 0v4" /></svg>
+                {balanceDue ? "Locked — balance due" : "Locked"}
+              </span>
+            )}
           </div>
         )}
 
@@ -728,13 +729,12 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                       ↓ Web / MLS
                     </a>
                   </div>
-                ) : requireAgentPortal ? (
-                  <a href={`/${slug}/agent/register?returnTo=/${slug}/gallery/${token}`}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90"
-                    style={{ background: primary }}>
-                    Sign up to Download →
-                  </a>
-                ) : null
+                ) : (
+                  <span className="text-xs font-medium text-gray-400 inline-flex items-center gap-1">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="5" y="11" width="14" height="10" rx="2" /><path strokeLinecap="round" d="M8 11V7a4 4 0 118 0v4" /></svg>
+                    Locked
+                  </span>
+                )
               )}
             </div>
             <div className="p-3">
