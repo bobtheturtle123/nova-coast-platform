@@ -297,6 +297,9 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   // a partial/manual payment must not grant full access.
   const balanceDue         = (booking?.remainingBalance ?? 0) > 0;
   const canDownload        = unlocked && !balanceDue && (!requireAgentPortal || isAgentSignedIn);
+  // Images are watermarked + save-protected whenever the media isn't fully paid
+  // for (not just when the unlocked flag is false) — a balance due re-protects.
+  const previewLocked      = !unlocked || balanceDue;
   // Wait for the session check before showing the callout — avoids a flash for signed-in agents.
   const showSignupCallout  = agentCheckDone && !isAgentSignedIn;
 
@@ -773,7 +776,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
               {group.items.map(({ m, gi: i }) => (
                 <div key={i} className="group relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] cursor-pointer"
                   onClick={() => setLightboxIdx(i)}>
-                  {unlocked ? (
+                  {!previewLocked ? (
                     <img src={m.url} alt={m.fileName || `Photo ${i + 1}`} draggable={false}
                       loading={i < 12 ? "eager" : "lazy"}
                       decoding="async"
@@ -789,7 +792,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                         pointerEvents: "none", WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }} />
                   )}
 
-                  {!unlocked && (
+                  {previewLocked && (
                     <div className="absolute inset-0 pointer-events-none select-none overflow-hidden"
                       style={{ userSelect: "none", WebkitUserSelect: "none" }}>
                       {Array.from({ length: 5 }).map((_, row) =>
@@ -1178,7 +1181,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         <GalleryLightbox
           images={images}
           startIndex={lightboxIdx}
-          unlocked={unlocked}
+          unlocked={!previewLocked}
           onClose={() => setLightboxIdx(null)}
         />
       )}

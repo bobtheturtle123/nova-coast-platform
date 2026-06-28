@@ -44,21 +44,58 @@ export async function PATCH(req) {
   return Response.json({ ok: true });
 }
 
-// DELETE — the member deactivates (closes) their own profile. Sets active:false
-// and revokes their login so they can no longer access the account.
+// DELETE — the member deactivates (closes) their own profile. Marks them
+// inactive and ends their session, but KEEPS their tenant/role claims so that
+// signing back in returns them to their (deactivated) account — not the company
+// onboarding flow. Logs a record so the owner knows it happened.
 export async function DELETE(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
   const ref = memberRef(ctx);
   if (!ref) return Response.json({ error: "Owners can't deactivate from here." }, { status: 400 });
   try {
+    const snap = await ref.get();
+    const name = snap.data()?.name || snap.data()?.email || "A team member";
     await ref.update({ active: false, deactivatedAt: new Date(), deactivatedSelf: true });
-    if (ctx.uid) {
-      try { await adminAuth.setCustomUserClaims(ctx.uid, {}); } catch {}
-      try { await adminAuth.revokeRefreshTokens(ctx.uid); } catch {}
-    }
+
+    // Record for the owner/admin.
+    adminDb.collection("tenants").doc(ctx.tenantId).collection("teamEvents").add({
+      type: "self_deactivated", memberId: ctx.memberId, name, timestamp: new Date(),
+    }).catch(() => {});
+    (async () => {
+      try {
+        const key = process.env.RESEND_API_KEY;
+        if (!key) return;
+        const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
+        const ownerEmail = tenantDoc.data()?.email;
+        if (!ownerEmail) return;
+        const { Resend } = await import("resend");
+        await new Resend(key).emails.send({
+          from: `KyoriaOS <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`,
+          to: ownerEmail,
+          subject: `${name} deactivated their team profile`,
+          html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:28px 24px"><p><strong>${name}</strong> deactivated their own profile. They can reactivate by signing back in, or you can manage them from your Team page.</p></div>`,
+        });
+      } catch {}
+    })();
+
+    // End the current session (keep claims so re-login returns to their account).
+    if (ctx.uid) { try { await adminAuth.revokeRefreshTokens(ctx.uid); } catch {} }
   } catch (e) {
     return Response.json({ error: "Could not deactivate." }, { status: 500 });
   }
+  return Response.json({ ok: true });
+}
+
+// POST — reactivate own profile (the deactivated member signing back in).
+export async function POST(req) {
+  const ctx = await getCtx(req);
+  if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const ref = memberRef(ctx);
+  if (!ref) return Response.json({ error: "No member profile." }, { status: 400 });
+  await ref.update({ active: true, reactivatedAt: new Date(), deactivatedSelf: false });
+  adminDb.collection("tenants").doc(ctx.tenantId).collection("teamEvents").add({
+    type: "self_reactivated", memberId: ctx.memberId, timestamp: new Date(),
+  }).catch(() => {});
   return Response.json({ ok: true });
 }

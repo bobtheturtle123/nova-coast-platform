@@ -152,6 +152,8 @@ export default function DashboardLayout({ children }) {
   const [tenantPlan,         setTenantPlan]         = useState("starter");
   const [tenantSettings,     setTenantSettings]     = useState({ tempUnit: "F", locale: "en-US", currency: "USD" });
   const [subscriptionLapsed, setSubscriptionLapsed] = useState(false);
+  const [deactivated,        setDeactivated]        = useState(false);
+  const [reactivating,       setReactivating]       = useState(false);
 
   const hadRealUser = useRef(false);
   useEffect(() => {
@@ -227,11 +229,31 @@ export default function DashboardLayout({ children }) {
         return;
       }
 
+      // Detect a member who deactivated their own profile — show a reactivate
+      // screen instead of the dashboard (and never the company onboarding).
+      try {
+        const meRes = await fetch("/api/dashboard/team/me", { headers: { Authorization: `Bearer ${tok}` } });
+        if (meRes.ok) {
+          const me = await meRes.json();
+          if (me.member && me.member.active === false) setDeactivated(true);
+        }
+      } catch {}
+
       setUser(u);
       setUserRole(role);
     });
     return unsub;
   }, [router]);
+
+  async function reactivateSelf() {
+    setReactivating(true);
+    try {
+      const tok = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/dashboard/team/me", { method: "POST", headers: { Authorization: `Bearer ${tok}` } });
+      if (res.ok) { setDeactivated(false); router.refresh(); }
+    } catch {}
+    setReactivating(false);
+  }
 
   const refreshSettings = useCallback(async () => {
     const u = auth.currentUser;
@@ -283,6 +305,27 @@ export default function DashboardLayout({ children }) {
     );
   }
   if (!user) return null;
+
+  // Deactivated team member — offer reactivation instead of the dashboard.
+  if (deactivated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6" style={{ background: "var(--bg-base)" }}>
+        <div className="max-w-sm w-full text-center bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#d97706" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+          </div>
+          <h1 className="text-lg font-bold text-[#0F172A]">Your profile is deactivated</h1>
+          <p className="text-sm text-gray-500 mt-1 mb-5">Welcome back. Reactivate your profile to access your account again.</p>
+          <button onClick={reactivateSelf} disabled={reactivating}
+            className="btn-primary w-full py-2.5 text-sm disabled:opacity-50">
+            {reactivating ? "Reactivating…" : "Reactivate my profile"}
+          </button>
+          <button onClick={async () => { const { signOut } = await import("firebase/auth"); await signOut(auth); router.push("/auth/login"); }}
+            className="w-full text-sm text-gray-400 hover:text-gray-600 mt-3">Sign out</button>
+        </div>
+      </div>
+    );
+  }
 
   function isActive(item) {
     if (item.exact) return pathname === item.href;

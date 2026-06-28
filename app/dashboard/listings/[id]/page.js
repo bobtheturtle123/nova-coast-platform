@@ -1057,11 +1057,18 @@ if (loading) return (
                       disabled={userRole === "manager"}
                       onChange={(e) => {
                         const v = e.target.value;
+                        const total = Number(booking.totalPrice) || 0;
+                        // Real money already received (a paid deposit or a recorded
+                        // offline payment) — never discard this when changing status.
+                        const paidSoFar = Math.max(Number(booking.offlinePaymentAmount) || 0, Number(booking.depositAmount) || 0);
                         // Include paidInFull so the derived status text updates
                         // immediately (not just after a page refresh).
                         if (v === "paid_full")         patchBooking({ depositPaid: true,  balancePaid: true,  paidInFull: true,  remainingBalance: 0 });
-                        else if (v === "deposit_paid") patchBooking({ depositPaid: true,  balancePaid: false, paidInFull: false });
-                        else                           patchBooking({ depositPaid: false, balancePaid: false, paidInFull: false, remainingBalance: booking.totalPrice || 0 });
+                        else if (v === "deposit_paid") patchBooking({ depositPaid: true,  balancePaid: false, paidInFull: false, remainingBalance: Math.max(0, total - paidSoFar) });
+                        // "Unpaid" reverts the milestone flags but keeps any money
+                        // actually paid, so the balance stays accurate (it used to
+                        // wrongly jump back to the full total).
+                        else                           patchBooking({ depositPaid: paidSoFar > 0, balancePaid: false, paidInFull: false, remainingBalance: Math.max(0, total - paidSoFar) });
                       }}
                       className="input-field text-xs disabled:opacity-50 disabled:cursor-not-allowed" style={{ width: "auto", minWidth: 150, height: 30 }}>
                       <option value="unpaid">○ Unpaid</option>
