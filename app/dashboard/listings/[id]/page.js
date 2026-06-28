@@ -251,6 +251,8 @@ const [listingUrl,       setListingUrl]        = useState("");
   const [manualAmount, setManualAmount] = useState("");
   const [manualMethod, setManualMethod] = useState("card"); // card | check | cash | other
   const [manualMethodOther, setManualMethodOther] = useState("");
+  const [editingCollected, setEditingCollected] = useState(false);
+  const [collectedDraft, setCollectedDraft] = useState("");
 
   // Cancel / hide state
   const [cancelling,  setCancelling]  = useState(false);
@@ -689,6 +691,27 @@ if (loading) return (
       })
     : null;
   const canViewRevenue = userRole !== "manager";
+
+  // Accurate money tracking: how much has actually been collected, and the real
+  // remaining balance = total - collected (don't trust a stale remainingBalance).
+  const bookingTotal   = Number(booking.totalPrice) || 0;
+  const amountCollected = Number(booking.offlinePaymentAmount)
+    || ((booking.paidInFull || booking.balancePaid) ? bookingTotal
+        : booking.depositPaid ? (Number(booking.depositAmount) || 0) : 0);
+  const accurateBalance = Math.max(0, bookingTotal - amountCollected);
+
+  // Record an exact collected amount (single source of truth for the balance).
+  async function setCollectedAmount(amt) {
+    const a = Math.max(0, Number(amt) || 0);
+    await patchBooking({
+      offlinePaymentAmount: a,
+      remainingBalance:     Math.max(0, bookingTotal - a),
+      depositPaid:          a > 0,
+      depositAmount:        a > 0 && a < bookingTotal ? a : (Number(booking.depositAmount) || 0),
+      balancePaid:          a >= bookingTotal && bookingTotal > 0,
+      paidInFull:           a >= bookingTotal && bookingTotal > 0,
+    });
+  }
   const balanceDue = !booking.paidInFull && !booking.balancePaid;
 
   // Stepper state computation
@@ -1057,18 +1080,11 @@ if (loading) return (
                       disabled={userRole === "manager"}
                       onChange={(e) => {
                         const v = e.target.value;
-                        const total = Number(booking.totalPrice) || 0;
-                        // Real money already received (a paid deposit or a recorded
-                        // offline payment) — never discard this when changing status.
-                        const paidSoFar = Math.max(Number(booking.offlinePaymentAmount) || 0, Number(booking.depositAmount) || 0);
-                        // Include paidInFull so the derived status text updates
-                        // immediately (not just after a page refresh).
-                        if (v === "paid_full")         patchBooking({ depositPaid: true,  balancePaid: true,  paidInFull: true,  remainingBalance: 0 });
-                        else if (v === "deposit_paid") patchBooking({ depositPaid: true,  balancePaid: false, paidInFull: false, remainingBalance: Math.max(0, total - paidSoFar) });
-                        // "Unpaid" reverts the milestone flags but keeps any money
-                        // actually paid, so the balance stays accurate (it used to
-                        // wrongly jump back to the full total).
-                        else                           patchBooking({ depositPaid: paidSoFar > 0, balancePaid: false, paidInFull: false, remainingBalance: Math.max(0, total - paidSoFar) });
+                        // Drive everything off the collected amount so the balance
+                        // stays accurate and consistent with the Collected field.
+                        if (v === "paid_full")         setCollectedAmount(bookingTotal);
+                        else if (v === "deposit_paid") setCollectedAmount(amountCollected > 0 ? amountCollected : (Number(booking.depositAmount) || 0));
+                        else                           setCollectedAmount(0);
                       }}
                       className="input-field text-xs disabled:opacity-50 disabled:cursor-not-allowed" style={{ width: "auto", minWidth: 150, height: 30 }}>
                       <option value="unpaid">○ Unpaid</option>
@@ -1361,16 +1377,37 @@ if (loading) return (
                   </div>
                   <div className="p-[18px]">
                     <div className="space-y-0">
-                      {[
-                        { k: "Total", v: formatCurrency(booking.totalPrice, currency, locale), color: "#0F172A" },
-                        { k: "Deposit", v: booking.depositPaid ? `${formatCurrency(booking.depositAmount, currency, locale)} paid` : `${formatCurrency(booking.depositAmount, currency, locale)} due`, color: booking.depositPaid ? "#059669" : "#D97706" },
-                        { k: "Balance", v: (booking.paidInFull || booking.balancePaid) ? "Paid" : formatCurrency(booking.remainingBalance, currency, locale), color: (booking.paidInFull || booking.balancePaid) ? "#059669" : "#D97706" },
-                      ].map((row) => (
-                        <div key={row.k} className="flex items-baseline justify-between py-1.5 border-b last:border-b-0" style={{ borderColor: "#F4F0E3" }}>
-                          <span style={{ fontSize: 12.5, color: "#6B7280" }}>{row.k}</span>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: row.color }}>{row.v}</span>
-                        </div>
-                      ))}
+                      <div className="flex items-baseline justify-between py-1.5 border-b" style={{ borderColor: "#F4F0E3" }}>
+                        <span style={{ fontSize: 12.5, color: "#6B7280" }}>Total</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>{formatCurrency(bookingTotal, currency, locale)}</span>
+                      </div>
+                      {/* Collected — editable single source of truth for the balance */}
+                      <div className="flex items-center justify-between py-1.5 border-b" style={{ borderColor: "#F4F0E3" }}>
+                        <span style={{ fontSize: 12.5, color: "#6B7280" }}>Collected</span>
+                        {editingCollected ? (
+                          <span className="flex items-center gap-1">
+                            <span style={{ fontSize: 12, color: "#9CA3AF" }}>{currency === "USD" ? "$" : ""}</span>
+                            <input type="number" min="0" step="0.01" value={collectedDraft} autoFocus
+                              onChange={(e) => setCollectedDraft(e.target.value)}
+                              className="input-field text-xs" style={{ width: 80, height: 26 }} />
+                            <button onClick={async () => { await setCollectedAmount(collectedDraft); setEditingCollected(false); }}
+                              className="text-[11px] font-semibold text-white bg-[#3486cf] rounded px-2 py-1">Save</button>
+                            <button onClick={() => setEditingCollected(false)} className="text-[11px] text-gray-400">✕</button>
+                          </span>
+                        ) : (
+                          <button onClick={() => { setCollectedDraft(String(amountCollected || "")); setEditingCollected(true); }}
+                            className="flex items-center gap-1" style={{ fontSize: 13, fontWeight: 600, color: "#059669" }}>
+                            {formatCurrency(amountCollected, currency, locale)}
+                            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-baseline justify-between py-1.5 border-b last:border-b-0" style={{ borderColor: "#F4F0E3" }}>
+                        <span style={{ fontSize: 12.5, color: "#6B7280" }}>Balance</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: accurateBalance <= 0 ? "#059669" : "#D97706" }}>
+                          {accurateBalance <= 0 ? "Paid" : formatCurrency(accurateBalance, currency, locale)}
+                        </span>
+                      </div>
                       {booking.tipAmount > 0 && (
                         <div className="flex items-baseline justify-between py-1.5">
                           <span style={{ fontSize: 12.5, color: "#6B7280" }}>Tip</span>

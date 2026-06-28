@@ -89,7 +89,12 @@ export async function PATCH(req, { params }) {
   // A canceled subscription stops new work, but existing listings stay
   // manageable: publishing/unpublishing the website, hiding, notes and status
   // are always allowed. Only broader edits are blocked.
-  const MANAGE_WHEN_CANCELED = new Set(["propertyWebsite", "hidden", "notes", "status", "workflowStatus", "updatedAt"]);
+  const MANAGE_WHEN_CANCELED = new Set([
+    "propertyWebsite", "hidden", "notes", "status", "workflowStatus", "updatedAt",
+    // Recording payments received on existing bookings is allowed when canceled.
+    "depositPaid", "balancePaid", "paidInFull", "remainingBalance", "depositAmount",
+    "offlinePaymentAmount", "offlinePaymentMethod",
+  ]);
   const touchedKeys = Object.keys(update);
   const onlyManageFields = touchedKeys.length > 0 && touchedKeys.every((k) => MANAGE_WHEN_CANCELED.has(k));
   if (tenantSnap.exists && tenantSnap.data().subscriptionStatus === "canceled" && !onlyManageFields) {
