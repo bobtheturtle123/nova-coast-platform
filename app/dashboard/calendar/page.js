@@ -527,6 +527,49 @@ export default function SchedulePage() {
   const [listings,  setListings]  = useState([]);
   const [blocks,    setBlocks]    = useState([]);
   const [loading,   setLoading]   = useState(true);
+  const [showBlock, setShowBlock] = useState(false);
+  const [me,        setMe]        = useState(null); // { id, name } current member (null = owner)
+  const [blockForm, setBlockForm] = useState({ startDate: "", endDate: "", allDay: true, startTime: "", endTime: "", reason: "Time off", note: "" });
+  const [savingBlock, setSavingBlock] = useState(false);
+
+  useEffect(() => {
+    auth.currentUser?.getIdToken().then(async (token) => {
+      if (!token) return;
+      try {
+        const r = await fetch("/api/dashboard/team/me", { headers: { Authorization: `Bearer ${token}` } });
+        if (r.ok) { const d = await r.json(); setMe(d.member || null); }
+      } catch {}
+    });
+  }, []);
+
+  async function saveBlock() {
+    if (!blockForm.startDate) return;
+    setSavingBlock(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/dashboard/team/blocks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          memberId:   me?.id || null,
+          memberName: me?.name || null,
+          startDate:  blockForm.startDate,
+          endDate:    blockForm.endDate || blockForm.startDate,
+          allDay:     blockForm.allDay,
+          startTime:  blockForm.allDay ? null : blockForm.startTime,
+          endTime:    blockForm.allDay ? null : blockForm.endTime,
+          reason:     blockForm.reason,
+          note:       blockForm.note,
+        }),
+      });
+      if (res.ok) {
+        setShowBlock(false);
+        setBlockForm({ startDate: "", endDate: "", allDay: true, startTime: "", endTime: "", reason: "Time off", note: "" });
+        fetchData();
+      }
+    } catch {}
+    setSavingBlock(false);
+  }
 
   async function fetchData() {
     try {
@@ -589,14 +632,60 @@ export default function SchedulePage() {
         <div>
           <h1 className="page-title">Schedule</h1>
         </div>
-        <Link href="/dashboard/bookings/create"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[#3486cf] text-white hover:bg-[#2a6dab] transition-colors">
-          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          New Booking
-        </Link>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowBlock(true)}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+            Block time off
+          </button>
+          <Link href="/dashboard/bookings/create"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[#3486cf] text-white hover:bg-[#2a6dab] transition-colors">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            New Booking
+          </Link>
+        </div>
       </div>
+
+      {showBlock && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)" }} onClick={() => setShowBlock(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-semibold text-[#0F172A] text-base mb-1">Block time off</h2>
+            <p className="text-xs text-gray-400 mb-4">{me?.name ? `Mark when you (${me.name}) are unavailable.` : "Mark unavailable time on the schedule."}</p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label-field">From</label>
+                  <input type="date" value={blockForm.startDate} onChange={(e) => setBlockForm((f) => ({ ...f, startDate: e.target.value }))} className="input-field w-full" />
+                </div>
+                <div>
+                  <label className="label-field">To</label>
+                  <input type="date" value={blockForm.endDate} onChange={(e) => setBlockForm((f) => ({ ...f, endDate: e.target.value }))} className="input-field w-full" />
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-[#0F172A]">
+                <input type="checkbox" checked={blockForm.allDay} onChange={(e) => setBlockForm((f) => ({ ...f, allDay: e.target.checked }))} />
+                All day
+              </label>
+              {!blockForm.allDay && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="label-field">Start</label><input type="time" value={blockForm.startTime} onChange={(e) => setBlockForm((f) => ({ ...f, startTime: e.target.value }))} className="input-field w-full" /></div>
+                  <div><label className="label-field">End</label><input type="time" value={blockForm.endTime} onChange={(e) => setBlockForm((f) => ({ ...f, endTime: e.target.value }))} className="input-field w-full" /></div>
+                </div>
+              )}
+              <div>
+                <label className="label-field">Reason</label>
+                <input type="text" value={blockForm.reason} onChange={(e) => setBlockForm((f) => ({ ...f, reason: e.target.value }))} placeholder="e.g. Time off, Vacation" className="input-field w-full" />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={saveBlock} disabled={savingBlock || !blockForm.startDate} className="btn-primary flex-1 py-2.5 text-sm disabled:opacity-50">{savingBlock ? "Saving…" : "Block time"}</button>
+              <button onClick={() => setShowBlock(false)} className="btn-outline px-5 text-sm">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tab bar */}
       <div className="flex gap-0 px-6 pt-4 border-b border-gray-200">
