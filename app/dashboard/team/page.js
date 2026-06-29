@@ -1308,6 +1308,21 @@ function CalendarSyncModal({ member, onClose, onRegenerate, onDisconnect }) {
   const [calendarId,     setCalendarId]     = useState(member.googleCalendar?.calendarId || "primary");
   const [savingCalId,    setSavingCalId]    = useState(false);
   const [calIdSaved,     setCalIdSaved]     = useState(false);
+  const [syncEnabled,    setSyncEnabled]    = useState(member.googleCalendar?.syncEnabled !== false);
+
+  async function toggleSyncEnabled() {
+    const next = !syncEnabled;
+    setSyncEnabled(next);
+    try {
+      const { auth: firebaseAuth } = await import("@/lib/firebase");
+      const token = await firebaseAuth.currentUser.getIdToken();
+      await fetch("/api/dashboard/team/google-sync", {
+        method:  "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body:    JSON.stringify({ memberId: member.id, syncEnabled: next }),
+      });
+    } catch { setSyncEnabled(!next); }
+  }
 
   async function saveCalendarId() {
     setSavingCalId(true); setCalIdSaved(false); setSyncError("");
@@ -1450,6 +1465,14 @@ function CalendarSyncModal({ member, onClose, onRegenerate, onDisconnect }) {
                   are imported as unavailable blocks (with their title &amp; time). Events marked &quot;Free&quot; or declined
                   are ignored. Syncs run automatically; use <strong>Sync Now</strong> to refresh immediately.
                 </p>
+                {/* Admin: turn this member's calendar events on/off without disconnecting them. */}
+                <label className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-green-200/60 cursor-pointer">
+                  <span className="text-[11px] text-green-800 font-medium">{syncEnabled ? "Calendar events are ON for this member" : "Calendar events are OFF (ignored in scheduling)"}</span>
+                  <button type="button" onClick={toggleSyncEnabled}
+                    className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors flex-shrink-0 ${syncEnabled ? "bg-green-600" : "bg-gray-300"}`}>
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${syncEnabled ? "translate-x-3.5" : "translate-x-0.5"}`} />
+                  </button>
+                </label>
               </div>
 
               {/* Specific calendar selection */}

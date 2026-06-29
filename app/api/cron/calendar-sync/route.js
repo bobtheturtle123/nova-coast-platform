@@ -128,6 +128,8 @@ export async function GET(req) {
         membersSnap.docs.map(async (memberDoc) => {
           const gcal = memberDoc.data().googleCalendar;
           if (!gcal?.refreshToken) return;
+          // Admin can switch a member's calendar events off without disconnecting.
+          if (gcal.syncEnabled === false) return;
           const memberId  = memberDoc.id;
           const memberRef = tenantRef.collection("team").doc(memberId);
           try {

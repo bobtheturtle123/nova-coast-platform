@@ -41,24 +41,30 @@ function isAllDayBusy(start, end) {
   );
 }
 
-// PATCH { memberId, calendarId } — save which Google Calendar to sync
+// PATCH { memberId, calendarId?, syncEnabled? } — set which calendar to sync
+// and/or turn a member's calendar events on/off (admin control).
 export async function PATCH(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { memberId, calendarId } = await req.json().catch(() => ({}));
+  const { memberId, calendarId, syncEnabled } = await req.json().catch(() => ({}));
   if (!memberId) return Response.json({ error: "memberId required" }, { status: 400 });
 
   const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
-  const id = (calendarId || "").trim() || "primary";
+  const update = {};
+  if (calendarId !== undefined) update["googleCalendar.calendarId"] = (calendarId || "").trim() || "primary";
+  if (syncEnabled !== undefined) update["googleCalendar.syncEnabled"] = !!syncEnabled;
+  if (!Object.keys(update).length) return Response.json({ error: "Nothing to update" }, { status: 400 });
 
   if (memberId === "__owner__") {
-    await tenantRef.update({ "ownerGoogleCalendar.calendarId": id });
+    const ownerUpdate = {};
+    for (const k of Object.keys(update)) ownerUpdate[k.replace("googleCalendar.", "ownerGoogleCalendar.")] = update[k];
+    await tenantRef.update(ownerUpdate);
   } else {
-    await tenantRef.collection("team").doc(memberId).update({ "googleCalendar.calendarId": id });
+    await tenantRef.collection("team").doc(memberId).update(update);
   }
 
-  return Response.json({ ok: true, calendarId: id });
+  return Response.json({ ok: true });
 }
 
 // DELETE { memberId } — admin removes a member's Google Calendar connection + clears google blocks

@@ -542,6 +542,23 @@ export default function SchedulePage() {
     });
   }, []);
 
+  async function connectGoogle() {
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) return;
+    // No owner flag — the route derives the member from the token claims, so
+    // any team member connects their OWN Google Calendar.
+    const popup = window.open(`/api/calendar/oauth/start?token=${encodeURIComponent(token)}`, "gcal", "width=520,height=680");
+    const timer = setInterval(() => {
+      if (!popup || popup.closed) {
+        clearInterval(timer);
+        // Refresh connection status.
+        auth.currentUser?.getIdToken().then(async (t) => {
+          try { const r = await fetch("/api/dashboard/team/me", { headers: { Authorization: `Bearer ${t}` } }); if (r.ok) { const d = await r.json(); setMe(d.member || null); } } catch {}
+        });
+      }
+    }, 800);
+  }
+
   async function saveBlock() {
     if (!blockForm.startDate) return;
     setSavingBlock(true);
@@ -632,7 +649,19 @@ export default function SchedulePage() {
         <div>
           <h1 className="page-title">Schedule</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {me?.googleConnected ? (
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg bg-green-50 text-green-700 border border-green-200">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              Google Calendar connected
+            </span>
+          ) : (
+            <button onClick={connectGoogle}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="18" rx="2" /><path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18" /></svg>
+              Connect Google Calendar
+            </button>
+          )}
           <button onClick={() => setShowBlock(true)}
             className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
             <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" /></svg>

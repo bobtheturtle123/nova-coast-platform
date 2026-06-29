@@ -24,7 +24,12 @@ export async function GET(req) {
   const doc = await ref.get();
   const d = doc.exists ? doc.data() : {};
   return Response.json({
-    member: { id: ctx.memberId, name: d.name || "", email: d.email || "", phone: d.phone || "", role: d.role || "", active: d.active !== false },
+    member: {
+      id: ctx.memberId, name: d.name || "", email: d.email || "", phone: d.phone || "",
+      role: d.role || "", active: d.active !== false,
+      googleConnected: !!d.googleCalendar?.refreshToken,
+      googleSyncEnabled: d.googleCalendar?.syncEnabled !== false,
+    },
     isOwner: ctx.role === "owner" || ctx.role === "admin",
   });
 }
