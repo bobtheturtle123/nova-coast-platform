@@ -8,6 +8,7 @@ import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 import { getAppUrl } from "@/lib/appUrl";
 import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 import { payLabel, paidAmount } from "@/lib/payment";
+import MyShootsView from "@/components/dashboard/MyShootsView";
 import { avatarColor, initials } from "@/lib/avatar";
 import { getEffectivePlan } from "@/lib/plans";
 import { isDemo, getDemoDashboard } from "@/lib/demoData";
@@ -161,6 +162,9 @@ export default function DashboardHome() {
   const canCreateBookings = isOwnerOrAdmin || !!permissions?.canCreateBookings;
   const canViewListings   = isOwnerOrAdmin || !!permissions?.canViewListings;
   const canViewRevenue    = isOwnerOrAdmin || !!permissions?.canViewRevenue;
+  // A restricted team member (e.g. photographer) with no listing access sees a
+  // private, member-scoped "My Shoots" view — never the business overview.
+  const restrictedMember  = !!ctxRole && !isOwnerOrAdmin && !permissions?.canViewListings;
 
   // Init localStorage prefs on mount
   useEffect(() => {
@@ -217,7 +221,7 @@ export default function DashboardHome() {
     setLoading(false);
   }
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { if (!restrictedMember) loadAll(); else setLoading(false); }, [restrictedMember]);
 
   // Refetch silently when the tab regains focus (picks up team/listing changes made in other tabs)
   useEffect(() => {
@@ -394,6 +398,11 @@ export default function DashboardHome() {
       setTenant(t => ({ ...t, starterGuideCompleted: true }));
     } catch {}
     setDismissingGuide(false);
+  }
+
+  // Restricted member (photographer): private "My Shoots" view, no business data.
+  if (restrictedMember) {
+    return <MyShootsView firstName={(auth.currentUser?.displayName || "").split(" ")[0]} />;
   }
 
   if (loading) return (

@@ -6,8 +6,19 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId };
+    return { tenantId: decoded.tenantId, role: decoded.role || "owner", memberId: decoded.memberId || null };
   } catch { return null; }
+}
+
+// Listings are private business data — only owners/admins or members the tenant
+// has granted canViewListings may read them (photographers cannot).
+async function canReadListings(ctx) {
+  if (ctx.role === "owner" || ctx.role === "admin") return true;
+  if (!ctx.memberId) return false;
+  try {
+    const m = await adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(ctx.memberId).get();
+    return !!m.data()?.permissions?.canViewListings;
+  } catch { return false; }
 }
 
 function serialize(data) {
@@ -22,6 +33,9 @@ function serialize(data) {
 export async function GET(req) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await canReadListings(ctx))) {
+    return Response.json({ error: "Forbidden", listings: [] }, { status: 403 });
+  }
 
   const { searchParams } = new URL(req.url);
   const PAGE_SIZE  = Math.min(parseInt(searchParams.get("limit") || "50", 10), 200);
