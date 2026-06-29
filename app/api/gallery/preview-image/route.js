@@ -61,7 +61,7 @@ export async function GET(req) {
   // The requested key must belong to this gallery.
   if (!(gallery.media || []).some((m) => m.key === key)) return new Response("Not found", { status: 404 });
 
-  const previewKey = `previews/${galleryId}/${crypto.createHash("sha1").update(key).digest("hex")}.jpg`;
+  const previewKey = `previews/${tenantId}/${galleryId}/${crypto.createHash("sha1").update(key).digest("hex")}.jpg`;
   const headers = { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=86400, immutable" };
 
   // Serve the cached preview if it exists.

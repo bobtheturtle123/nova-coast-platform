@@ -120,11 +120,10 @@ export async function PATCH(req, { params }) {
         .collection("galleries").doc(prev.galleryId);
       const galSnap = await galRef.get();
       if (galSnap.exists) {
-        // Unlock the gallery so the agent can download
+        // Unlock the gallery so the agent can download. Stamp unlockedAt so the
+        // cleanup cron can remove the (now-unneeded) previews 30+ days later.
         if (!galSnap.data()?.unlocked) {
-          await galRef.update({ unlocked: true });
-          // Paid → locked previews are no longer needed; free the storage.
-          import("@/lib/galleryPreviews").then((m) => m.deleteGalleryPreviews(prev.galleryId)).catch(() => {});
+          await galRef.update({ unlocked: true, unlockedAt: new Date() });
         }
         // Auto-advance workflowStatus to completed if delivered and no pending revisions
         if (galSnap.data()?.delivered && (prev.workflowStatus === "delivered" || prev.workflowStatus === "appointment_confirmed" || prev.workflowStatus === "booked")) {
