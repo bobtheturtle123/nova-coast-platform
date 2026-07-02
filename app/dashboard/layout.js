@@ -49,6 +49,8 @@ const NAV = [
   {
     href: "/dashboard/calendar",
     label: "My Schedule",
+    // Only for members who don't have the Team & Schedule page (photographers).
+    restrictedOnly: true,
     icon: (
       <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
         <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -366,8 +368,12 @@ export default function DashboardLayout({ children }) {
       <nav className="ky-nav">
         {NAV.map((item) => {
           const isOwner = userRole === "owner" || userRole === "admin";
+          const hasTeamPage = isOwner || !!permissions?.canManageTeam;
           if (item.demoHidden && isDemo()) return null;
           if (item.ownerOnly && !isOwner) return null;
+          // "My Schedule" is only for restricted members (photographers) — anyone
+          // with the Team & Schedule page uses that instead.
+          if (item.restrictedOnly && hasTeamPage) return null;
           if (item.permKey && !isOwner && !permissions?.[item.permKey]) return null;
           const active = isActive(item);
           // Public guide pages open in a new tab so the user keeps their place.
