@@ -10,10 +10,12 @@ async function getCtx(req) {
   } catch { return null; }
 }
 
-// Listings are private business data — only owners/admins or members the tenant
-// has granted canViewListings may read them (photographers cannot).
+// Listings are private business data. Owners/admins/managers and custom
+// dashboard members keep access; ONLY photographers are blocked unless the
+// tenant explicitly grants them canViewListings. (Narrow, so we never break
+// legitimate staff/schedule access.)
 async function canReadListings(ctx) {
-  if (ctx.role === "owner" || ctx.role === "admin") return true;
+  if (ctx.role !== "photographer") return true;
   if (!ctx.memberId) return false;
   try {
     const m = await adminDb.collection("tenants").doc(ctx.tenantId).collection("team").doc(ctx.memberId).get();
