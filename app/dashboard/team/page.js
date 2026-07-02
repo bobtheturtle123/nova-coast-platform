@@ -2685,7 +2685,7 @@ export default function TeamPage() {
 
                           return (
                             <td key={d.toISOString()}
-                              className={`text-center py-2 px-1 border-r last:border-r-0 border-gray-100 min-w-14 align-middle ${
+                              className={`text-center py-4 px-2 border-r last:border-r-0 border-gray-100 min-w-[68px] align-middle ${
                                 isToday  ? "bg-[#3486cf]/3"  :
                                 isWeek2  ? "bg-gray-50/50" :
                                 isPast   ? "bg-gray-50/30" : ""
