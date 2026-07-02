@@ -130,12 +130,23 @@ export async function POST(req, { params }) {
     note:      allRecipients.length ? `Sent to ${allRecipients.join(", ")}` : null,
   }).catch(() => {});
 
-  // Advance booking workflow status to "delivered"
+  // Advance booking workflow status to "delivered" + log to listing activity
+  // with the actual message and the (re-copyable) gallery link.
   if (gallery.bookingId) {
     adminDb.collection("tenants").doc(ctx.tenantId)
       .collection("bookings").doc(gallery.bookingId)
       .update({ workflowStatus: "delivered" })
       .catch((e) => console.error("[send/gallery] workflowStatus update failed:", e?.message));
+
+    const galleryLink = gallery.accessToken ? `${getAppUrl()}/${tenant.slug}/gallery/${gallery.accessToken}` : null;
+    import("@/lib/activityLog").then((m) => m.logBookingActivity(ctx.tenantId, gallery.bookingId, {
+      type:      "gallery_delivered",
+      title:     `Gallery delivered${allRecipients.length ? ` to ${allRecipients.join(", ")}` : ""}`,
+      channel:   "email",
+      recipient: allRecipients.join(", ") || null,
+      link:      galleryLink,
+      message:   `${subject ? subject + "\n\n" : ""}${note || "Your media is ready."}${galleryLink ? `\n\nGallery: ${galleryLink}` : ""}`,
+    })).catch(() => {});
   }
 
   // Cancel any pending scheduled delivery for this gallery since we just sent
