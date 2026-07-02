@@ -4,6 +4,7 @@ import { sendPaymentReminder } from "@/lib/email";
 import { safeDate } from "@/lib/dateUtils";
 import { stripe } from "@/lib/stripe";
 import { getAppUrl } from "@/lib/appUrl";
+import { logBookingActivity } from "@/lib/activityLog";
 
 const EMAIL_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours between reminder sends
 
@@ -119,10 +120,20 @@ export async function POST(req, { params }) {
 
   await sendPaymentReminder({ booking, galleryToken, paymentUrl, tenant });
 
+  const galleryLink = galleryToken ? `${appUrl}/${tenant.slug || ""}/gallery/${galleryToken}` : null;
+  await logBookingActivity(ctx.tenantId, params.id, {
+    type:      "reminder_sent",
+    title:     `Payment reminder emailed — $${amountDue.toLocaleString()} due`,
+    channel:   "email",
+    recipient: booking.clientEmail || null,
+    link:      paymentUrl || galleryLink,
+    message:   `Payment reminder for ${address}.\n${booking.depositPaid ? "Balance due" : "Deposit"}: $${amountDue.toLocaleString()}.${paymentUrl ? `\nPay: ${paymentUrl}` : galleryLink ? `\nGallery: ${galleryLink}` : ""}`,
+  });
+
   await adminDb
     .collection("tenants").doc(ctx.tenantId)
     .collection("bookings").doc(params.id)
     .update({ "emailCooldowns.reminder": new Date() });
 
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, paymentUrl });
 }

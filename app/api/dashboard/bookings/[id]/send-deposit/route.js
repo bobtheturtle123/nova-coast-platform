@@ -132,5 +132,15 @@ export async function POST(req, { params }) {
     }
   }
 
+  const { logBookingActivity } = await import("@/lib/activityLog");
+  await logBookingActivity(ctx.tenantId, params.id, {
+    type:      "deposit_link",
+    title:     emailSent ? "Deposit request emailed" : "Deposit link generated",
+    channel:   emailSent ? "email" : null,
+    recipient: emailSent ? (booking.clientEmail || null) : null,
+    link:      session.url,
+    message:   `Deposit request for ${booking.fullAddress || booking.address || "property"}.\nPay deposit: ${session.url}`,
+  });
+
   return Response.json({ url: session.url, sessionId: session.id, emailSent });
 }

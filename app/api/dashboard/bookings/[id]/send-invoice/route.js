@@ -4,6 +4,7 @@ import { sendInvoiceEmail } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 import { getAppUrl } from "@/lib/appUrl";
 import { safeDate } from "@/lib/dateUtils";
+import { logBookingActivity } from "@/lib/activityLog";
 
 const EMAIL_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours between invoice sends
 
@@ -133,11 +134,20 @@ export async function POST(req, { params }) {
 
   await sendInvoiceEmail({ booking, paymentUrl, tenant });
 
+  await logBookingActivity(ctx.tenantId, params.id, {
+    type:      "invoice_sent",
+    title:     `Invoice emailed${amountDue >= 0.5 ? ` — ${paymentLabel} $${amountDue.toLocaleString()}` : ""}`,
+    channel:   "email",
+    recipient: booking.clientEmail || null,
+    link:      paymentUrl || null,
+    message:   `Invoice for ${address}.\n${paymentLabel}: $${amountDue.toLocaleString()}.${paymentUrl ? `\nPayment link: ${paymentUrl}` : ""}`,
+  });
+
   // Stamp cooldown timestamp so rapid re-sends are blocked
   await adminDb
     .collection("tenants").doc(ctx.tenantId)
     .collection("bookings").doc(params.id)
     .update({ "emailCooldowns.invoice": new Date() });
 
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, paymentUrl });
 }

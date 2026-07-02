@@ -95,11 +95,12 @@ export async function POST(req) {
         });
         shouldNotify = true;
       });
+      const paidAmount = (pi.amount_received ?? pi.amount ?? 0) / 100;
       if (galleryId) {
         await adminDb
           .collection("tenants").doc(tenantId)
           .collection("galleries").doc(galleryId)
-          .update({ unlocked: true }).catch(() => {});
+          .update({ unlocked: true, unlockedAt: new Date() }).catch(() => {});
         // Record the payment in the gallery's activity log, with who paid.
         if (shouldNotify) {
           adminDb
@@ -108,7 +109,7 @@ export async function POST(req) {
             .collection("activityLog")
             .add({
               event: "payment",
-              amount: (pi.amount_received ?? pi.amount ?? 0) / 100,
+              amount: paidAmount,
               viewerEmail: booking.clientEmail || pi.receipt_email || null,
               viewerName:  booking.clientName || null,
               timestamp: new Date(),
@@ -117,6 +118,8 @@ export async function POST(req) {
       }
       if (shouldNotify) {
         console.log(`[verify-payment] balance confirmed bookingId=${bookingId}`);
+        // Notify the tenant that the balance was paid + log it on the listing.
+        _notifyBalancePaid(tenantId, bookingId, booking, paidAmount);
       } else {
         console.log(`[verify-payment] balance already recorded bookingId=${bookingId}`);
       }
@@ -150,5 +153,36 @@ async function _sendNotifications(tenantId, bookingId, booking) {
       .catch((e) => console.error("[verify-payment] SMS FAILED:", e?.message || e));
   } catch (e) {
     console.error("[verify-payment] _sendNotifications error (non-fatal):", e?.message || e);
+  }
+}
+
+// Notify the tenant that a client/agent paid their balance, and log it on the
+// listing's activity.
+async function _notifyBalancePaid(tenantId, bookingId, booking, amount) {
+  const address = booking.fullAddress || booking.address || "a listing";
+  const who     = booking.clientName || booking.clientEmail || "The client";
+  try {
+    const { logBookingActivity } = await import("@/lib/activityLog");
+    await logBookingActivity(tenantId, bookingId, {
+      type:    "payment",
+      title:   `Balance paid — $${Number(amount).toLocaleString()}`,
+      message: `${who} paid the remaining balance of $${Number(amount).toLocaleString()} for ${address}.`,
+    });
+  } catch {}
+  try {
+    const tenant = await getTenantById(tenantId);
+    const ownerEmail = tenant?.email;
+    const key = process.env.RESEND_API_KEY;
+    if (ownerEmail && key) {
+      const { Resend } = await import("resend");
+      await new Resend(key).emails.send({
+        from: `KyoriaOS <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`,
+        to: ownerEmail,
+        subject: `Payment received — $${Number(amount).toLocaleString()} for ${address}`,
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:28px 24px"><h2 style="color:#16a34a;margin:0 0 12px">Balance paid ✓</h2><p style="color:#555"><strong>${who}</strong> just paid the remaining balance of <strong>$${Number(amount).toLocaleString()}</strong> for <strong>${address}</strong>. The gallery is now unlocked.</p></div>`,
+      }).catch(() => {});
+    }
+  } catch (e) {
+    console.error("[verify-payment] _notifyBalancePaid error (non-fatal):", e?.message || e);
   }
 }

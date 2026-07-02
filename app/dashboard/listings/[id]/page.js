@@ -305,15 +305,16 @@ const [listingUrl,       setListingUrl]        = useState("");
     load();
   }, [id]);
 
-  async function loadActivity(galleryId) {
-    if (!galleryId) return;
+  async function loadActivity() {
     setActivityLoading(true);
     try {
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch(`/api/dashboard/galleries/${galleryId}/activity`, {
+      // Merged booking activity: everything sent from the platform (invoices,
+      // reminders, links, deliveries, payments) + gallery view/download events.
+      const res = await fetch(`/api/dashboard/bookings/${id}/activity`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) { const d = await res.json(); setActivityLog(d.events || []); }
+      if (res.ok) { const d = await res.json(); setActivityLog(d.activity || []); }
     } catch { /* ignore */ }
     setActivityLoading(false);
   }
@@ -883,7 +884,7 @@ if (loading) return (
               <button key={t.id} onClick={() => {
                 setTab(t.id);
                 if (t.id === "marketing" && !analytics) loadAnalytics();
-                if (t.id === "activity" && activityLog.length === 0) loadActivity(gallery?.id);
+                if (t.id === "activity" && activityLog.length === 0) loadActivity();
                 if (t.id === "revisions" && revisions === null) loadRevisions();
               }}
                 className={`px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${tab === t.id ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-400 hover:text-gray-600"}`}>
@@ -2672,8 +2673,8 @@ if (loading) return (
           <div className="max-w-2xl space-y-4">
             <div className="card p-5">
               <div className="flex items-center justify-between mb-4">
-                <p className="text-xs uppercase tracking-wide text-gray-400">Gallery Activity Log</p>
-                <button onClick={() => loadActivity(gallery?.id)}
+                <p className="text-xs uppercase tracking-wide text-gray-400">Listing Activity</p>
+                <button onClick={() => loadActivity()}
                   className="text-xs text-[#3486cf] hover:underline">Refresh</button>
               </div>
 
@@ -2681,38 +2682,54 @@ if (loading) return (
                 <div className="flex justify-center py-8">
                   <div className="w-4 h-4 border-2 border-[#3486cf]/30 border-t-[#3486cf] rounded-full animate-spin" />
                 </div>
-              ) : !gallery ? (
-                <p className="text-sm text-gray-400 text-center py-6">No gallery attached to this listing yet.</p>
               ) : activityLog.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">No activity recorded yet. Activity appears here once the gallery is delivered and accessed.</p>
+                <p className="text-sm text-gray-400 text-center py-6">No activity yet. Emails, links, deliveries, payments, and gallery views will appear here.</p>
               ) : (
                 <div className="space-y-0 divide-y divide-gray-50">
                   {activityLog.map((ev) => {
                     const icons = {
-                      delivered:      { icon: "📨", label: "Gallery delivered", color: "text-indigo-600 bg-indigo-50" },
-                      view:           { icon: "👁", label: "Gallery viewed", color: "text-blue-600 bg-blue-50" },
-                      download:       { icon: "⬇", label: "File downloaded", color: "text-green-600 bg-green-50" },
-                      download_zip:   { icon: "⬇", label: `Downloaded all media${ev.format === "package" ? " (Print + Web/MLS)" : ""}`, color: "text-green-600 bg-green-50" },
-                      download_video: { icon: "🎬", label: "Video downloaded", color: "text-green-600 bg-green-50" },
-                      payment:        { icon: "💳", label: ev.amount ? `Paid balance ($${Number(ev.amount).toLocaleString()})` : "Balance paid", color: "text-emerald-700 bg-emerald-50" },
-                      link_copy:      { icon: "🔗", label: "Gallery link copied", color: "text-purple-600 bg-purple-50" },
-                      note:           { icon: "📝", label: "Admin note", color: "text-gray-600 bg-gray-50" },
+                      invoice_sent:     { icon: "🧾", label: "Invoice emailed",      color: "text-amber-700 bg-amber-50" },
+                      reminder_sent:    { icon: "⏰", label: "Payment reminder sent", color: "text-amber-700 bg-amber-50" },
+                      deposit_link:     { icon: "🔗", label: "Deposit link",          color: "text-blue-700 bg-blue-50" },
+                      agent_access:     { icon: "🔑", label: "Agent access sent",     color: "text-purple-700 bg-purple-50" },
+                      gallery_delivered:{ icon: "📨", label: "Gallery delivered",     color: "text-indigo-600 bg-indigo-50" },
+                      delivered:        { icon: "📨", label: "Gallery delivered",     color: "text-indigo-600 bg-indigo-50" },
+                      view:             { icon: "👁", label: "Gallery viewed",        color: "text-blue-600 bg-blue-50" },
+                      download:         { icon: "⬇", label: "File downloaded",        color: "text-green-600 bg-green-50" },
+                      download_zip:     { icon: "⬇", label: `Downloaded all media${ev.format === "package" ? " (Print + Web/MLS)" : ""}`, color: "text-green-600 bg-green-50" },
+                      download_video:   { icon: "🎬", label: "Video downloaded",      color: "text-green-600 bg-green-50" },
+                      payment:          { icon: "💳", label: ev.amount ? `Paid balance ($${Number(ev.amount).toLocaleString()})` : "Payment received", color: "text-emerald-700 bg-emerald-50" },
+                      status:           { icon: "🔄", label: `Status: ${String(ev.status || "").replace(/_/g, " ")}`, color: "text-gray-600 bg-gray-50" },
+                      note:             { icon: "📝", label: "Note",                  color: "text-gray-600 bg-gray-50" },
                     };
-                    const meta = icons[ev.event] || { icon: "·", label: ev.event, color: "text-gray-500 bg-gray-50" };
-                    const who = ev.viewerEmail || ev.email;
+                    const meta = icons[ev.type] || { icon: "·", label: ev.title || ev.type, color: "text-gray-500 bg-gray-50" };
+                    const who  = ev.recipient || ev.viewerEmail || ev.email;
+                    const when = ev.timestamp || ev.changedAt;
                     return (
-                      <div key={ev.id} className="flex items-start gap-3 py-3">
+                      <div key={ev.id || `${ev.type}-${when}`} className="flex items-start gap-3 py-3">
                         <span className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${meta.color}`}>
                           {meta.icon}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-[#0F172A]">{meta.label}</p>
-                          {who && <p className="text-xs text-gray-500 truncate">{ev.viewerName ? `${ev.viewerName} · ` : ""}{who}</p>}
+                          <p className="text-sm font-medium text-[#0F172A]">{ev.title || meta.label}</p>
+                          {who && <p className="text-xs text-gray-500 truncate">{ev.viewerName ? `${ev.viewerName} · ` : ""}{who}{ev.channel ? ` · ${ev.channel}` : ""}</p>}
                           {ev.fileName && <p className="text-xs text-gray-500 truncate">{ev.fileName}</p>}
-                          {ev.note && <p className="text-xs text-gray-500 italic">{ev.note}</p>}
+                          {ev.message && (
+                            <details className="mt-1">
+                              <summary className="text-xs text-[#3486cf] cursor-pointer select-none">View message</summary>
+                              <pre className="text-xs text-gray-600 whitespace-pre-wrap mt-1 bg-gray-50 rounded-lg p-2 border border-gray-100">{ev.message}</pre>
+                            </details>
+                          )}
+                          {ev.link && (
+                            <button onClick={() => { navigator.clipboard.writeText(ev.link); toast("Link copied."); }}
+                              className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[#3486cf] hover:underline">
+                              <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                              Copy link
+                            </button>
+                          )}
                         </div>
                         <p className="text-xs text-gray-400 flex-shrink-0">
-                          {ev.timestamp ? new Date(ev.timestamp).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}
+                          {when ? new Date(when).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}
                         </p>
                       </div>
                     );
