@@ -213,6 +213,7 @@ export default function ListingDetailPage() {
   const [reschedApptIdx,      setReschedApptIdx]      = useState(null); // null = main booking, number = additional appt index
   const [showReschedDtPicker, setShowReschedDtPicker] = useState(false);
   const [waiveReschedFee,     setWaiveReschedFee]     = useState(false);
+  const [notifyResched,       setNotifyResched]       = useState(true);
   const [schedApprovalDate,     setSchedApprovalDate]     = useState("");
   const [schedApprovalTime,     setSchedApprovalTime]     = useState("");
   const [schedApprovalSaving,   setSchedApprovalSaving]   = useState(false);
@@ -1025,7 +1026,7 @@ if (loading) return (
                   <span className="font-semibold text-[#0F172A] text-[13px] flex items-center gap-2">
                     {booking.shootDate ? <>{shootDateDisplay}{booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}</> : <span className="text-gray-400 font-normal">Not set</span>}
                     {booking.shootDate && (
-                      <button type="button" onClick={() => { setReschedApptIdx(null); setReschedDate(booking.shootDate?.split?.("T")?.[0] || ""); setReschedTime(booking.shootTime || ""); setWaiveReschedFee(false); setShowReschedModal(true); }}
+                      <button type="button" onClick={() => { setReschedApptIdx(null); setReschedDate(booking.shootDate?.split?.("T")?.[0] || ""); setReschedTime(booking.shootTime || ""); setWaiveReschedFee(false); setNotifyResched(true); setShowReschedModal(true); }}
                         className="text-[11px] text-[#3486cf] font-semibold">Reschedule</button>
                     )}
                   </span>
@@ -1110,7 +1111,7 @@ if (loading) return (
                     {(booking.additionalAppointments || []).map((appt, i) => (
                       <div key={i} className="flex items-center justify-between py-1">
                         <span className="text-[12px] text-gray-500">Appt {i + 2}: {appt.date ? new Date(appt.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "TBD"}{appt.time ? ` · ${valToLabel(appt.time)}` : ""}</span>
-                        <button type="button" onClick={() => { setReschedApptIdx(i); setReschedDate(""); setReschedTime(""); setWaiveReschedFee(false); setShowReschedModal(true); }} className="text-[11px] text-[#3486cf] font-semibold">Reschedule</button>
+                        <button type="button" onClick={() => { setReschedApptIdx(i); setReschedDate(""); setReschedTime(""); setWaiveReschedFee(false); setNotifyResched(true); setShowReschedModal(true); }} className="text-[11px] text-[#3486cf] font-semibold">Reschedule</button>
                       </div>
                     ))}
                   </div>
@@ -3037,6 +3038,12 @@ if (loading) return (
                     </label>
                   </div>
                 )}
+                <label className="flex items-start gap-2 mb-3 cursor-pointer">
+                  <input type="checkbox" className="mt-0.5" checked={notifyResched} onChange={(e) => setNotifyResched(e.target.checked)} />
+                  <span className="text-xs text-[#0F172A]">Notify the customer/agent of the new date &amp; time
+                    <span className="block text-[11px] text-gray-400">Sends the email{/* SMS if enabled */} so their calendar stays up to date. Uncheck to reschedule quietly.</span>
+                  </span>
+                </label>
                 <div className="flex gap-2 mt-1">
                   <button type="button" onClick={() => setShowReschedModal(false)}
                     className="btn-outline flex-1 py-2 text-sm">Cancel</button>
@@ -3055,8 +3062,22 @@ if (loading) return (
                         else if (fee > 0 && waiveReschedFee) { fields.rescheduleFee = 0; fields.rescheduleFeeWaived = true; }
                         await patchBooking(fields);
                       }
+                      // Keep the client's calendar current: push the updated event
+                      // to the tenant's Google Calendar and notify the customer.
+                      if (notifyResched) {
+                        try {
+                          const token = await auth.currentUser?.getIdToken();
+                          const h = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+                          fetch(`/api/dashboard/bookings/${id}/push-gcal`, { method: "POST", headers: h }).catch(() => {});
+                          const r = await fetch(`/api/dashboard/bookings/${id}/notify-reschedule`, { method: "POST", headers: h });
+                          if (r.ok) toast("Customer notified of the new date & time."); else toast("Rescheduled (notification could not be sent).", "error");
+                        } catch { toast("Rescheduled (notification could not be sent).", "error"); }
+                      } else {
+                        toast("Rescheduled.");
+                      }
                       setShowReschedModal(false);
                       setWaiveReschedFee(false);
+                      setNotifyResched(true);
                     }}
                     className="btn-primary flex-1 py-2 text-sm">
                     {saving ? "Saving…" : "Confirm Reschedule"}
