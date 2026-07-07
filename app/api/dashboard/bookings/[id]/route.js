@@ -55,6 +55,8 @@ export async function PATCH(req, { params }) {
     // Scheduling & status
     "status", "workflowStatus", "shootDate", "shootTime", "shootDuration", "preferredTime",
     "additionalAppointments",
+    // Reschedule fee (0 when waived) + waived flag
+    "rescheduleFee", "rescheduleFeeWaived",
     // Photographer assignment
     "photographerId", "photographerEmail", "photographerName", "photographerPhone",
     "additionalPhotographers",

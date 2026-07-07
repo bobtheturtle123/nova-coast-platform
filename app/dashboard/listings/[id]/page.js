@@ -212,6 +212,7 @@ export default function ListingDetailPage() {
   const [reschedTime,         setReschedTime]         = useState("");
   const [reschedApptIdx,      setReschedApptIdx]      = useState(null); // null = main booking, number = additional appt index
   const [showReschedDtPicker, setShowReschedDtPicker] = useState(false);
+  const [waiveReschedFee,     setWaiveReschedFee]     = useState(false);
   const [schedApprovalDate,     setSchedApprovalDate]     = useState("");
   const [schedApprovalTime,     setSchedApprovalTime]     = useState("");
   const [schedApprovalSaving,   setSchedApprovalSaving]   = useState(false);
@@ -1024,7 +1025,7 @@ if (loading) return (
                   <span className="font-semibold text-[#0F172A] text-[13px] flex items-center gap-2">
                     {booking.shootDate ? <>{shootDateDisplay}{booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}</> : <span className="text-gray-400 font-normal">Not set</span>}
                     {booking.shootDate && (
-                      <button type="button" onClick={() => { setReschedApptIdx(null); setReschedDate(booking.shootDate?.split?.("T")?.[0] || ""); setReschedTime(booking.shootTime || ""); setShowReschedModal(true); }}
+                      <button type="button" onClick={() => { setReschedApptIdx(null); setReschedDate(booking.shootDate?.split?.("T")?.[0] || ""); setReschedTime(booking.shootTime || ""); setWaiveReschedFee(false); setShowReschedModal(true); }}
                         className="text-[11px] text-[#3486cf] font-semibold">Reschedule</button>
                     )}
                   </span>
@@ -1109,7 +1110,7 @@ if (loading) return (
                     {(booking.additionalAppointments || []).map((appt, i) => (
                       <div key={i} className="flex items-center justify-between py-1">
                         <span className="text-[12px] text-gray-500">Appt {i + 2}: {appt.date ? new Date(appt.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "TBD"}{appt.time ? ` · ${valToLabel(appt.time)}` : ""}</span>
-                        <button type="button" onClick={() => { setReschedApptIdx(i); setReschedDate(""); setReschedTime(""); setShowReschedModal(true); }} className="text-[11px] text-[#3486cf] font-semibold">Reschedule</button>
+                        <button type="button" onClick={() => { setReschedApptIdx(i); setReschedDate(""); setReschedTime(""); setWaiveReschedFee(false); setShowReschedModal(true); }} className="text-[11px] text-[#3486cf] font-semibold">Reschedule</button>
                       </div>
                     ))}
                   </div>
@@ -3026,10 +3027,14 @@ if (loading) return (
                   </span>
                 </button>
                 {fee > 0 && (
-                  <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                    <p className="text-[10px] font-semibold text-amber-700 uppercase tracking-wide mb-0.5">Reschedule Fee</p>
-                    <p className="text-xl font-bold text-amber-700">{formatCurrency(fee, currency, locale)}</p>
-                    <p className="text-[10px] text-amber-600 mt-0.5">{reschedPct}% of booking total — within {reschedWindowHrs}hr window</p>
+                  <div className={`mb-3 p-3 rounded-xl border ${waiveReschedFee ? "bg-gray-50 border-gray-200" : "bg-amber-50 border-amber-200"}`}>
+                    <p className={`text-[10px] font-semibold uppercase tracking-wide mb-0.5 ${waiveReschedFee ? "text-gray-400" : "text-amber-700"}`}>Reschedule Fee</p>
+                    <p className={`text-xl font-bold ${waiveReschedFee ? "text-gray-400 line-through" : "text-amber-700"}`}>{formatCurrency(fee, currency, locale)}</p>
+                    <p className={`text-[10px] mt-0.5 ${waiveReschedFee ? "text-gray-400" : "text-amber-600"}`}>{reschedPct}% of booking total — within {reschedWindowHrs}hr window</p>
+                    <label className="flex items-center gap-2 mt-2 pt-2 border-t border-amber-200/60 cursor-pointer">
+                      <input type="checkbox" checked={waiveReschedFee} onChange={(e) => setWaiveReschedFee(e.target.checked)} />
+                      <span className="text-xs font-medium text-[#0F172A]">Waive this fee (don&apos;t charge the customer)</span>
+                    </label>
                   </div>
                 )}
                 <div className="flex gap-2 mt-1">
@@ -3045,10 +3050,13 @@ if (loading) return (
                         await patchBooking({ additionalAppointments: updated });
                       } else {
                         const fields = { shootDate: reschedDate, shootTime: reschedTime };
-                        if (fee > 0) fields.rescheduleFee = fee;
+                        // Waived fees are not charged; record that it was waived.
+                        if (fee > 0 && !waiveReschedFee) fields.rescheduleFee = fee;
+                        else if (fee > 0 && waiveReschedFee) { fields.rescheduleFee = 0; fields.rescheduleFeeWaived = true; }
                         await patchBooking(fields);
                       }
                       setShowReschedModal(false);
+                      setWaiveReschedFee(false);
                     }}
                     className="btn-primary flex-1 py-2 text-sm">
                     {saving ? "Saving…" : "Confirm Reschedule"}
