@@ -688,10 +688,13 @@ if (loading) return (
   const images   = (gallery?.media || []).filter((m) => !m.fileType?.startsWith("video/"));
   const videos   = (gallery?.media || []).filter((m) =>  m.fileType?.startsWith("video/"));
   const address  = booking.fullAddress || booking.address || "Property";
-  const shootDateDisplay = booking.shootDate || booking.preferredDate
-    ? new Date(booking.shootDate || booking.preferredDate).toLocaleDateString("en-US", {
-        weekday: "short", month: "short", day: "numeric", year: "numeric",
-      })
+  // A date-only string ("2026-07-16") parses as UTC midnight and would display
+  // as the PREVIOUS day in negative-offset timezones — after a reschedule that
+  // made it read like the old date. Anchor date-only values to local noon.
+  const shootDateRaw = booking.shootDate || booking.preferredDate;
+  const shootDateDisplay = shootDateRaw
+    ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(shootDateRaw) ? `${shootDateRaw}T12:00:00` : shootDateRaw)
+        .toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
     : null;
   const canViewRevenue = userRole !== "manager";
 

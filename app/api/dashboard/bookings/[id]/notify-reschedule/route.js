@@ -86,13 +86,50 @@ export async function POST(req, { params }) {
     } catch (e) { console.error("[notify-reschedule] SMS failed:", e?.message); }
   }
 
+  // Notify the ASSIGNED photographer too (email always; SMS if team SMS is on)
+  // with the same .ics so their calendar updates.
+  let photogNotified = false;
+  const photogEmail = booking.photographerEmail || null;
+  const photogPhone = booking.photographerPhone || null;
+  const biz2 = tenant?.branding?.businessName || tenant?.businessName || "Your studio";
+  if (photogEmail && process.env.RESEND_API_KEY) {
+    try {
+      const uid      = booking.icsUid || `booking-${params.id}@kyoriaos.com`;
+      const sequence = Number(booking.icsSequence) || 0;
+      const ics = buildBookingIcs({ booking, tenant, shootDate, shootTime, uid, sequence, method: "REQUEST" });
+      const { Resend } = await import("resend");
+      await new Resend(process.env.RESEND_API_KEY).emails.send({
+        from:    `${biz2} <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`,
+        to:      photogEmail,
+        subject: `Shoot rescheduled — ${booking.fullAddress || booking.address || "listing"}`,
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:28px 24px">
+          <h2 style="color:#0F172A;margin:0 0 8px">A shoot you're assigned to was rescheduled</h2>
+          <p style="color:#555;margin:0 0 4px">New date &amp; time:</p>
+          <p style="font-size:18px;font-weight:700;color:#0F172A;margin:0 0 16px">${whenText}</p>
+          <p style="color:#555;margin:0">Location: <strong>${booking.fullAddress || booking.address || "the property"}</strong></p>
+        </div>`,
+        attachments: [{ filename: "shoot.ics", content: Buffer.from(ics).toString("base64"), contentType: 'text/calendar; method=REQUEST; name="shoot.ics"' }],
+      });
+      photogNotified = true;
+    } catch (e) { console.error("[notify-reschedule] photographer email failed:", e?.message); }
+  }
+  const teamSmsOn = tenant?.notificationPrefs?.team_appointment_assigned?.channels?.sms === true
+                 || tenant?.notificationPrefs?.team_appointment_reminder?.channels?.sms === true;
+  if (teamSmsOn && photogPhone) {
+    try { await sendSms(photogPhone, `${biz2}: shoot at ${booking.fullAddress || booking.address || "a listing"} rescheduled to ${whenText}.`); photogNotified = true; } catch {}
+  }
+
+  const notified = [
+    (emailSent || smsSent) && (booking.clientName || "client"),
+    photogNotified && (booking.photographerName || "photographer"),
+  ].filter(Boolean).join(" & ");
   logBookingActivity(ctx.tenantId, params.id, {
     type:      "reschedule_notice",
     title:     `Reschedule notice sent — ${whenText}`,
-    channel:   [emailSent && "email", smsSent && "sms"].filter(Boolean).join(" + ") || null,
-    recipient: booking.clientEmail || booking.clientPhone || null,
-    message:   `Notified ${booking.clientName || "the client"} that the shoot at ${booking.fullAddress || booking.address || "the property"} was rescheduled to ${whenText}.`,
+    channel:   [emailSent && "email", smsSent && "sms", photogNotified && "photographer"].filter(Boolean).join(" + ") || null,
+    recipient: [booking.clientEmail, photogEmail].filter(Boolean).join(", ") || null,
+    message:   `Notified ${notified || "no one"} that the shoot at ${booking.fullAddress || booking.address || "the property"} was rescheduled to ${whenText}.`,
   }).catch(() => {});
 
-  return Response.json({ ok: true, emailSent, smsSent });
+  return Response.json({ ok: true, emailSent, smsSent, photogNotified });
 }
