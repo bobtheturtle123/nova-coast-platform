@@ -1,8 +1,8 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getTenantById } from "@/lib/tenants";
-import { sendScheduleConfirmed } from "@/lib/email";
 import { sendSms } from "@/lib/sms";
 import { logBookingActivity } from "@/lib/activityLog";
+import { buildBookingIcs } from "@/lib/ics";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -41,10 +41,39 @@ export async function POST(req, { params }) {
 
   let emailSent = false, smsSent = false;
 
-  // Email — respects the appointment_scheduled email preference (default on).
+  // Email with an .ics calendar update — respects the appointment_scheduled
+  // email preference (default on). A stable UID + incrementing SEQUENCE makes
+  // the client's calendar UPDATE the existing event in place on reschedule.
   const emailOn = tenant?.notificationPrefs?.appointment_scheduled?.channels?.email !== false;
-  if (emailOn && booking.clientEmail) {
-    try { await sendScheduleConfirmed({ booking, tenant, shootDate, shootTime }); emailSent = true; } catch (e) { console.error("[notify-reschedule] email failed:", e?.message); }
+  if (emailOn && booking.clientEmail && process.env.RESEND_API_KEY) {
+    try {
+      const uid      = booking.icsUid || `booking-${params.id}@kyoriaos.com`;
+      const sequence = (Number(booking.icsSequence) || 0) + 1;
+      await bookingRef.update({ icsUid: uid, icsSequence: sequence });
+
+      const ics = buildBookingIcs({ booking, tenant, shootDate, shootTime, uid, sequence, method: "REQUEST" });
+      const biz = tenant?.branding?.businessName || tenant?.businessName || "Your photographer";
+      const { Resend } = await import("resend");
+      await new Resend(process.env.RESEND_API_KEY).emails.send({
+        from:    `${biz} <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`,
+        to:      booking.clientEmail,
+        subject: `Rescheduled: your shoot at ${booking.fullAddress || booking.address || "your property"}`,
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:28px 24px">
+          <h2 style="color:#0F172A;margin:0 0 8px">Your shoot has been rescheduled</h2>
+          <p style="color:#555;margin:0 0 4px">New date &amp; time:</p>
+          <p style="font-size:18px;font-weight:700;color:#0F172A;margin:0 0 16px">${whenText}</p>
+          <p style="color:#555;margin:0 0 4px">Location: <strong>${booking.fullAddress || booking.address || "your property"}</strong></p>
+          <p style="color:#888;font-size:13px;margin-top:18px">The attached calendar invite will update the event on your calendar automatically.</p>
+          <p style="color:#888;font-size:13px">— ${biz}</p>
+        </div>`,
+        attachments: [{
+          filename: "shoot.ics",
+          content: Buffer.from(ics).toString("base64"),
+          contentType: 'text/calendar; method=REQUEST; name="shoot.ics"',
+        }],
+      });
+      emailSent = true;
+    } catch (e) { console.error("[notify-reschedule] email failed:", e?.message); }
   }
 
   // SMS — only when the tenant has SMS enabled for appointment updates
