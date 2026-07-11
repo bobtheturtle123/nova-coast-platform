@@ -1,4 +1,5 @@
 import Link from "next/link";
+import MarketingMobileNav from "@/components/MarketingMobileNav";
 
 export default function MarketingShell({ children }) {
   return (
@@ -29,7 +30,7 @@ export default function MarketingShell({ children }) {
           <div className="flex items-center gap-3">
             <Link
               href="/auth/login"
-              className="text-sm text-gray-600 hover:text-navy px-3 py-2 transition-colors"
+              className="hidden md:block text-sm text-gray-600 hover:text-navy px-3 py-2 transition-colors"
             >
               Sign in
             </Link>
@@ -39,6 +40,7 @@ export default function MarketingShell({ children }) {
             >
               Get Started
             </Link>
+            <MarketingMobileNav />
           </div>
         </div>
       </header>

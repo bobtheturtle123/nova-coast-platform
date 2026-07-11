@@ -1,5 +1,6 @@
 import Link from "next/link";
 import DiscountPopup from "@/components/DiscountPopup";
+import LandingMobileNav from "@/components/LandingMobileNav";
 import { PLANS } from "@/lib/plans";
 
 export const metadata = {
@@ -189,6 +190,17 @@ const CSS = `
 .lp .footer a:hover{color:var(--ink);}
 .lp .footer .base{display:flex;justify-content:space-between;padding-top:22px;font-size:12.5px;color:var(--muted-2);}
 
+/* Mobile hamburger nav (hidden on desktop) */
+.lp .lp-mnav{display:none;position:relative;}
+.lp .lp-mnav-btn{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:none;background:transparent;color:var(--ink);cursor:pointer;border-radius:10px;}
+.lp .lp-mnav-btn:active{background:rgba(0,0,0,0.05);}
+.lp .lp-mnav-backdrop{position:fixed;inset:0;top:68px;background:rgba(15,23,42,0.35);z-index:60;}
+.lp .lp-mnav-panel{position:fixed;top:68px;left:0;right:0;z-index:61;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 16px 40px rgba(0,0,0,0.12);display:flex;flex-direction:column;padding:10px 20px 20px;}
+.lp .lp-mnav-panel a{display:block;padding:14px 4px;font-size:16px;font-weight:500;color:var(--ink);border-bottom:1px solid rgba(0,0,0,0.04);}
+.lp .lp-mnav-panel a:last-child{border-bottom:none;}
+.lp .lp-mnav-sep{height:8px;}
+.lp .lp-mnav-panel .lp-mnav-cta{margin-top:10px;background:var(--ink);color:#fff;text-align:center;border-radius:12px;padding:14px;font-weight:600;border-bottom:none;}
+
 @media(max-width:980px){
   .lp .hero h1{font-size:40px;}
   .lp .ba,.lp .shots,.lp .kit{grid-template-columns:1fr;}
@@ -197,6 +209,31 @@ const CSS = `
   .lp .quotes,.lp .price-grid{grid-template-columns:1fr;}
   .lp .scale-bar{flex-direction:column;align-items:flex-start;gap:18px;}
   .lp .footer .cols{grid-template-columns:1fr 1fr;}
+}
+
+/* Tablet/large-phone: collapse the desktop nav into the hamburger */
+@media(max-width:840px){
+  .lp .nav nav{display:none;}
+  .lp .nav .cta .signin{display:none;}
+  .lp .lp-mnav{display:block;}
+}
+
+/* Phones: real one-column layout, readable type, full-width CTAs */
+@media(max-width:640px){
+  .lp .wrap{padding-left:18px;padding-right:18px;}
+  .lp .hero{padding-top:48px;}
+  .lp .hero h1{font-size:31px;line-height:1.15;letter-spacing:-0.02em;}
+  .lp .hero .lede{font-size:16px;}
+  .lp .ctas{flex-direction:column;align-items:stretch;}
+  .lp .ctas .btn{width:100%;text-align:center;}
+  .lp .chips{gap:8px;}
+  .lp .chip{font-size:12px;padding:6px 10px;}
+  .lp .steps,.lp .bens{grid-template-columns:1fr;}
+  .lp .kit{padding:36px 20px;gap:28px;}
+  .lp h2{font-size:26px;}
+  .lp .footer .cols{grid-template-columns:1fr;}
+  .lp .footer .base{flex-direction:column;gap:8px;}
+  .lp .scale-bar{padding:24px 20px;}
 }
 `;
 
@@ -292,6 +329,7 @@ export default function MarketingPage() {
               <Link className="signin" href="/auth/login">Sign in</Link>
               <Link className="btn btn-ink btn-sm" href="/auth/register">Get Started</Link>
             </div>
+            <LandingMobileNav />
           </div>
         </header>
 
