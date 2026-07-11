@@ -90,7 +90,7 @@ export async function POST(req) {
         await adminDb
           .collection("tenants").doc(tenantId)
           .collection("galleries").doc(galleryId)
-          .update({ unlocked: true });
+          .update({ unlocked: true, unlockedAt: new Date() });
       }
       if (shouldNotify) {
         console.log(`[verify-session] balance confirmed bookingId=${bookingId}`);
@@ -98,6 +98,37 @@ export async function POST(req) {
         console.log(`[verify-session] balance already recorded bookingId=${bookingId}`);
       }
       return Response.json({ ok: true, type: "balance" });
+    }
+
+    if (type === "full") {
+      // Invoice "pay full" checkout — mark everything paid (mirrors the
+      // webhook's payment_intent.succeeded "full" handler). Previously this
+      // type fell through unhandled, so the success-page fallback did nothing.
+      let shouldNotify = false;
+      let galleryId = null;
+      await adminDb.runTransaction(async (tx) => {
+        const snap = await tx.get(bookingRef);
+        if (!snap.exists || snap.data().paidInFull) return;
+        galleryId = snap.data().galleryId || null;
+        tx.update(bookingRef, {
+          depositPaid: true, balancePaid: true, paidInFull: true,
+          remainingBalance: 0, status: "requested",
+          stripeFullSessionId: session.id,
+        });
+        shouldNotify = true;
+      });
+      if (galleryId) {
+        await adminDb
+          .collection("tenants").doc(tenantId)
+          .collection("galleries").doc(galleryId)
+          .update({ unlocked: true, unlockedAt: new Date() })
+          .catch(() => {});
+      }
+      if (shouldNotify) {
+        console.log(`[verify-session] full payment confirmed bookingId=${bookingId}`);
+        _sendNotifications(tenantId, bookingId, { ...booking, depositPaid: true, paidInFull: true });
+      }
+      return Response.json({ ok: true, type: "full" });
     }
 
     return Response.json({ ok: true, type });

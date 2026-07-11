@@ -2,7 +2,6 @@ import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { adminDb } from "@/lib/firebase-admin";
 import { rateLimit } from "@/lib/rateLimit";
-import { partitionVideos } from "@/lib/galleryZip";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +41,15 @@ export async function GET(req) {
   const gallery = galleryDoc.data();
   if (gallery.accessToken !== token) return Response.json({ error: "Gallery not found" }, { status: 404 });
   if (!gallery.unlocked) return Response.json({ error: "Gallery is locked" }, { status: 403 });
+
+  // Any outstanding balance keeps downloads locked (matches the gallery UI).
+  if (gallery.bookingId) {
+    const bSnap = await adminDb.collection("tenants").doc(tenantId).collection("bookings").doc(gallery.bookingId).get();
+    const bk = bSnap.exists ? bSnap.data() : null;
+    if (bk && (Number(bk.remainingBalance) || 0) > 0 && !bk.paidInFull && !bk.balancePaid) {
+      return Response.json({ error: "Balance due" }, { status: 403 });
+    }
+  }
 
   const bucket = process.env.R2_BUCKET_NAME;
   if (!bucket) return Response.json({ error: "Storage not configured" }, { status: 500 });

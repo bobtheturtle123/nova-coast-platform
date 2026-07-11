@@ -53,6 +53,12 @@ async function resolveGallery(token) {
   if (!galleryDoc.exists) return null;
   const gallery = galleryDoc.data();
   if (gallery.accessToken !== token || !gallery.unlocked) return null;
+  // Any outstanding balance keeps downloads locked (matches the gallery UI).
+  if (gallery.bookingId) {
+    const bSnap = await adminDb.collection("tenants").doc(tenantId).collection("bookings").doc(gallery.bookingId).get();
+    const bk = bSnap.exists ? bSnap.data() : null;
+    if (bk && (Number(bk.remainingBalance) || 0) > 0 && !bk.paidInFull && !bk.balancePaid) return null;
+  }
   const slug = tenantDoc.data()?.slug || null;
   const autoRename = tenantDoc.data()?.gallerySettings?.autoRenameDownloads === true;
   return { tenantId, galleryId, gallery, slug, autoRename };

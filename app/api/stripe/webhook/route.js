@@ -163,7 +163,7 @@ export async function POST(req) {
             await adminDb
               .collection("tenants").doc(tenantId)
               .collection("galleries").doc(balanceGalleryId)
-              .update({ unlocked: true });
+              .update({ unlocked: true, unlockedAt: new Date() });
           }
           if (balanceShouldNotify) {
             console.log(`[stripe/webhook] balance payment_intent.succeeded — bookingId=${bookingId}`);

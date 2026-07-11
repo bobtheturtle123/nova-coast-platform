@@ -88,7 +88,7 @@ export async function POST(req, { params }) {
           quantity: 1,
         }],
         customer_email: booking.clientEmail || undefined,
-        success_url: `${appUrl}/payment-success?bookingId=${params.id}&type=${paymentType}`,
+        success_url: `${appUrl}/payment-success?bookingId=${params.id}&type=${paymentType}&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url:  `${appUrl}/${tenant.slug || ""}/book/payment?cancelled=true`,
         metadata: {
           bookingId:  params.id,
@@ -100,7 +100,8 @@ export async function POST(req, { params }) {
 
       let session;
       if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
-        const platformFee = Math.round(amountDue * 100 * (Number(process.env.PLATFORM_FEE_BPS || 150) / 10000));
+        const { calculatePlatformFee, getEffectivePlan } = await import("@/lib/plans");
+        const platformFee = calculatePlatformFee(Math.round(amountDue * 100), getEffectivePlan(tenant));
         session = await stripe.checkout.sessions.create({
           ...sessionParams,
           payment_intent_data: {

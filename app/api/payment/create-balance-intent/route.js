@@ -1,6 +1,7 @@
 import { adminDb } from "@/lib/firebase-admin";
-import { stripe } from "@/lib/stripe";
+import { stripe, createConnectedPaymentIntent } from "@/lib/stripe";
 import { rateLimit } from "@/lib/rateLimit";
+import { getEffectivePlan } from "@/lib/plans";
 
 export async function POST(req) {
   const rl = await rateLimit(req, "balance-intent", 10, 3600);
@@ -37,17 +38,31 @@ export async function POST(req) {
       return Response.json({ error: "Balance too low to charge" }, { status: 400 });
     }
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount:   balanceCents,
-      currency: "usd",
-      metadata: {
-        bookingId,
-        tenantId,
-        type: "balance",
-      },
-      description:   `Balance payment - ${booking.fullAddress}`,
-      receipt_email: booking.clientEmail,
-    });
+    // Route funds to the tenant's Stripe Connect account when onboarded —
+    // this legacy route previously charged the PLATFORM account with no
+    // transfer, so the tenant never received legacy-gallery balance payments.
+    const tenantDoc = await adminDb.collection("tenants").doc(tenantId).get();
+    const tenant    = tenantDoc.exists ? tenantDoc.data() : null;
+
+    let paymentIntent;
+    if (tenant?.stripeConnectAccountId && tenant?.stripeConnectOnboarded) {
+      paymentIntent = await createConnectedPaymentIntent({
+        amountCents: balanceCents,
+        connectedAccountId: tenant.stripeConnectAccountId,
+        metadata: { bookingId, tenantId, type: "balance" },
+        description: `Balance payment - ${booking.fullAddress}`,
+        receiptEmail: booking.clientEmail,
+        planId: getEffectivePlan(tenant),
+      });
+    } else {
+      paymentIntent = await stripe.paymentIntents.create({
+        amount:   balanceCents,
+        currency: "usd",
+        metadata: { bookingId, tenantId, type: "balance" },
+        description:   `Balance payment - ${booking.fullAddress}`,
+        receipt_email: booking.clientEmail,
+      });
+    }
 
     return Response.json({ clientSecret: paymentIntent.client_secret });
   } catch (err) {

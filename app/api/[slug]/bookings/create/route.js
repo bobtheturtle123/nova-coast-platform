@@ -67,9 +67,11 @@ export async function POST(req, { params }) {
       return Response.json({ error: `Online bookings above ${Number(cap.max).toLocaleString()} are not available. Please contact us for a custom quote.` }, { status: 400 });
     }
 
-    // Re-calculate server-side to prevent tampering (pass squareFootage for tier pricing)
+    // Re-calculate server-side to prevent tampering (pass squareFootage for tier pricing).
+    // Clamp the client-supplied travel fee — a negative value would lower the price.
+    const safeTravelFee = Math.max(0, Number(travelFee) || 0);
     const catalog = await getTenantCatalog(tenant.id);
-    const pricing = calculateTenantPrice(packageIds, serviceIds, addonIds, travelFee || 0, catalog, squareFootage || 0);
+    const pricing = calculateTenantPrice(packageIds, serviceIds, addonIds, safeTravelFee, catalog, squareFootage || 0);
     const tip = Math.max(0, Number(rawTip) || 0);
 
     // ── Re-validate promo code server-side (never trust client discount) ──────
@@ -212,7 +214,7 @@ export async function POST(req, { params }) {
 
         basePrice:        pricing.base,
         addonPrice:       pricing.addonTotal,
-        travelFee:        travelFee || 0,
+        travelFee:        safeTravelFee,
         tipAmount:        tip,
         // Discounted figures — promo is applied to the price actually charged.
         promoCode:        appliedPromo?.code || null,

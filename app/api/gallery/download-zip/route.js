@@ -46,6 +46,16 @@ export async function GET(req) {
   if (gallery.accessToken !== token) return new Response("Gallery not found", { status: 404 });
   if (!gallery.unlocked) return new Response("Gallery is locked", { status: 403 });
 
+  // Any outstanding balance keeps downloads locked (matches the gallery UI) —
+  // a stale unlocked flag after a partial payment must not allow downloads.
+  if (gallery.bookingId) {
+    const bSnap = await adminDb.collection("tenants").doc(tenantId).collection("bookings").doc(gallery.bookingId).get();
+    const bk = bSnap.exists ? bSnap.data() : null;
+    if (bk && (Number(bk.remainingBalance) || 0) > 0 && !bk.paidInFull && !bk.balancePaid) {
+      return new Response("Balance due — downloads are locked until the balance is paid", { status: 403 });
+    }
+  }
+
   const slug  = tenantDoc.data()?.slug || null;
   const autoRename = tenantDoc.data()?.gallerySettings?.autoRenameDownloads === true;
   const counters = new Map(); // per-folder sequential counters for auto-rename

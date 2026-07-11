@@ -2,6 +2,7 @@ import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
 import { createConnectedPaymentIntent, stripe } from "@/lib/stripe";
 import { rateLimit } from "@/lib/rateLimit";
+import { getEffectivePlan } from "@/lib/plans";
 
 export async function POST(req, { params }) {
   try {
@@ -42,6 +43,9 @@ export async function POST(req, { params }) {
         metadata: { bookingId, type: "balance", tenantId: tenant.id },
         description: `${tenant.businessName} balance — ${booking.fullAddress}`,
         receiptEmail: booking.clientEmail,
+        // Use the tenant's actual plan for the platform fee — omitting this
+        // defaulted to the Solo rate and overcharged Pro/Scale tenants.
+        planId: getEffectivePlan(tenant),
       });
     } else {
       paymentIntent = await stripe.paymentIntents.create({
