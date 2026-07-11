@@ -9,7 +9,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "vitest run"
+    "test": "vitest run && node scripts/check-payment-fallbacks.mjs",
+    "check:payments": "node scripts/check-payment-fallbacks.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",

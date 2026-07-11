@@ -91,25 +91,34 @@ export async function POST(req, { params }) {
     },
   };
 
+  // Fail closed: a payable deposit link requires a verified Connect account.
+  let connectedAccountId;
+  try {
+    const { requireTenantPaymentAccount } = await import("@/lib/connect");
+    connectedAccountId = await requireTenantPaymentAccount(tenant);
+  } catch (e) {
+    console.error(`[send-deposit] payment blocked — tenant=${ctx.tenantId} reason=${e?.reason || e?.message}`);
+    const { tenantPaymentBlockedResponse } = await import("@/lib/connect");
+    return tenantPaymentBlockedResponse();
+  }
+
   let session;
   try {
-    if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
-      const { calculatePlatformFee, getEffectivePlan } = await import("@/lib/plans");
-      const platformFee = calculatePlatformFee(Math.round(depositAmount * 100), getEffectivePlan(tenant));
-      session = await stripe.checkout.sessions.create({
-        ...sessionParams,
-        payment_intent_data: {
-          ...sessionParams.payment_intent_data,
-          application_fee_amount: platformFee,
-          transfer_data: { destination: tenant.stripeConnectAccountId },
-        },
-      });
-    } else {
-      session = await stripe.checkout.sessions.create(sessionParams);
-    }
+    const { getEffectivePlan } = await import("@/lib/plans");
+    const { buildConnectedSessionPaymentData } = await import("@/lib/stripe");
+    const { paymentIntentData } = await buildConnectedSessionPaymentData({
+      amountCents: Math.round(depositAmount * 100),
+      connectedAccountId,
+      planId: getEffectivePlan(tenant),
+      metadata: sessionParams.payment_intent_data.metadata,
+    });
+    session = await stripe.checkout.sessions.create(
+      { ...sessionParams, payment_intent_data: paymentIntentData },
+      { idempotencyKey: `dep_${params.id}_${Math.round(depositAmount * 100)}` }
+    );
   } catch (e) {
     console.error("[send-deposit] Stripe checkout failed:", e?.message);
-    return Response.json({ error: e?.message || "Failed to create payment link." }, { status: 500 });
+    return Response.json({ error: "Failed to create payment link." }, { status: 500 });
   }
 
   // Store the checkout session ID and cooldown timestamp

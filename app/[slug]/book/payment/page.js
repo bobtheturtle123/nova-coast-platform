@@ -206,6 +206,7 @@ export default function TenantPaymentPage() {
   const [bookingId,    setBookingId]     = useState(null);
   const [initLoading,  setInitLoading]   = useState(false);
   const [initError,    setInitError]     = useState(null);
+  const [paymentsDisabled, setPaymentsDisabled] = useState(false);
   const [lookupState,  setLookupState]   = useState(null);
   const [catalog,      setCatalog]       = useState(null);
   const [fieldErrors,  setFieldErrors]   = useState({});
@@ -305,6 +306,13 @@ export default function TenantPaymentPage() {
         }),
       });
       const data = await res.json();
+      if (data.code === "TENANT_PAYMENT_SETUP_INCOMPLETE") {
+        // Studio can't accept online payments — show the safe message and
+        // don't allow repeated submissions.
+        setPaymentsDisabled(true);
+        setInitError(data.error);
+        return;
+      }
       if (!res.ok) throw new Error(data.error || "Failed to create booking");
       setBookingId(data.bookingId);
       // Free / sub-minimum bookings have no payment to collect — skip Stripe and
@@ -583,16 +591,25 @@ export default function TenantPaymentPage() {
                     </div>
                   )}
 
-                  <button onClick={initPayment} disabled={initLoading} className="btn-primary w-full mt-2">
-                    {initLoading
-                      ? <span className="flex items-center justify-center gap-2">
-                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Creating booking…
-                        </span>
-                      : chargeAmount < 0.5
-                        ? "Confirm Booking →"
-                        : `Proceed to Payment — $${chargeAmount.toLocaleString()} →`}
-                  </button>
+                  {paymentsDisabled ? (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-2">
+                      <p className="text-sm font-semibold text-amber-800">Online payment unavailable</p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        This studio is temporarily unable to accept online payments. Please contact the studio directly to complete your booking.
+                      </p>
+                    </div>
+                  ) : (
+                    <button onClick={initPayment} disabled={initLoading} className="btn-primary w-full mt-2">
+                      {initLoading
+                        ? <span className="flex items-center justify-center gap-2">
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Creating booking…
+                          </span>
+                        : chargeAmount < 0.5
+                          ? "Confirm Booking →"
+                          : `Proceed to Payment — $${chargeAmount.toLocaleString()} →`}
+                    </button>
+                  )}
                 </>
               )}
               {initError && (

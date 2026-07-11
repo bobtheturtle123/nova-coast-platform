@@ -48,18 +48,50 @@ export async function POST(req) {
     if (!bookingDoc.exists) return Response.json({ error: "Booking not found" }, { status: 404 });
     const booking = bookingDoc.data();
 
+    // Retrieve the session's PaymentIntent once — used for routing
+    // verification AND the activity entry.
+    let sessionPi = null;
+    try {
+      if (session.payment_intent) {
+        sessionPi = await stripe.paymentIntents.retrieve(
+          typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent.id
+        );
+      }
+    } catch {}
+
+    // Routing verification — never finalize a tenant client payment that
+    // didn't route to the tenant's verified connected account.
+    {
+      const routingTenantDoc = await adminDb.collection("tenants").doc(tenantId).get();
+      const expectedAcct = routingTenantDoc.data()?.stripeConnectAccountId || null;
+      const { verifyPiRouting } = await import("@/lib/connect");
+      const routing = verifyPiRouting(sessionPi, expectedAcct);
+      if (!routing.ok) {
+        const { sendCriticalAlert } = await import("@/lib/alerts");
+        await sendCriticalAlert({
+          type: routing.destination ? "payment_destination_mismatch" : "platform_only_payment",
+          tenantId, bookingId, paymentId: sessionPi?.id || session.id,
+          expected: { destination: expectedAcct },
+          actual:   { destination: routing.destination, feeCents: sessionPi?.application_fee_amount ?? null },
+          amountCents: session.amount_total ?? 0,
+          message: `verify-session blocked from finalizing: ${routing.mismatches.join("; ")}`,
+        });
+        logPaymentActivity(tenantId, bookingId, {
+          paymentType: "blocked", status: "routing_failed",
+          grossCents: session.amount_total ?? 0,
+          piId: sessionPi?.id || null, sessionId: session.id,
+          source: "session verification (routing)",
+          idKey: `routingfail_${sessionPi?.id || session.id}`,
+        });
+        return Response.json({ error: "Payment could not be verified. Please contact the studio." }, { status: 409 });
+      }
+    }
+
     // Keyed on the session's PaymentIntent — merges with the webhook's entry
     // instead of duplicating when both process the same payment (or the client
     // refreshes the success page).
     const logSess = async (paymentType) => {
-      let pi = null;
-      try {
-        if (session.payment_intent) {
-          pi = await stripe.paymentIntents.retrieve(
-            typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent.id
-          );
-        }
-      } catch {}
+      const pi = sessionPi;
       return logPaymentActivity(tenantId, bookingId, {
         paymentType,
         payerName:  booking.clientName  || session.metadata?.clientName || null,

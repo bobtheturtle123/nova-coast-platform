@@ -126,31 +126,32 @@ export async function POST(req, { params }) {
     const chargeCents  = Math.round(chargeAmount * 100);
     const fullAddress  = `${address}, ${city}, ${state} ${zip}`;
 
-    // Create payment intent — routed to tenant's Connect account (if onboarded).
-    // Skipped entirely for free / sub-minimum bookings.
+    // Create payment intent — ALWAYS routed to the tenant's verified Connect
+    // account. There is no platform-account fallback: if the tenant can't
+    // safely receive funds, the payment fails closed (free bookings collect
+    // no money, so they proceed without a payment intent).
     const tenantPlanId = getEffectivePlan(tenant);
 
     let paymentIntent = null;
     if (!isFreeBooking) {
-      if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
-        paymentIntent = await createConnectedPaymentIntent({
-          amountCents:        chargeCents,
-          connectedAccountId: tenant.stripeConnectAccountId,
-          metadata: { bookingId, type: paymentType, tenantId: tenant.id, clientName, clientEmail },
-          description: `${tenant.businessName} ${paymentType === "full" ? "full payment" : "deposit"} — ${address}, ${city}`,
-          receiptEmail: clientEmail,
-          planId:  tenantPlanId,
-        });
-      } else {
-        const { stripe } = await import("@/lib/stripe");
-        paymentIntent = await stripe.paymentIntents.create({
-          amount:   chargeCents,
-          currency: "usd",
-          metadata: { bookingId, type: paymentType, tenantId: tenant.id, clientName, clientEmail },
-          description: `${tenant.businessName} ${paymentType === "full" ? "full payment" : "deposit"} — ${address}, ${city}`,
-          receipt_email: clientEmail,
-        });
+      let connectedAccountId;
+      try {
+        const { requireTenantPaymentAccount } = await import("@/lib/connect");
+        connectedAccountId = await requireTenantPaymentAccount(tenant);
+      } catch (e) {
+        console.error(`[booking/create] payment blocked — tenant=${tenant.id} reason=${e?.reason || e?.message}`);
+        const { customerPaymentBlockedResponse } = await import("@/lib/connect");
+        return customerPaymentBlockedResponse();
       }
+      paymentIntent = await createConnectedPaymentIntent({
+        amountCents:        chargeCents,
+        connectedAccountId,
+        metadata: { bookingId, type: paymentType, tenantId: tenant.id, clientName, clientEmail },
+        description: `${tenant.businessName} ${paymentType === "full" ? "full payment" : "deposit"} — ${address}, ${city}`,
+        receiptEmail: clientEmail,
+        planId:  tenantPlanId,
+        idempotencyKey: `book_${bookingId}_${paymentType}_${chargeCents}`,
+      });
     }
 
     // For a free booking, the amount due now is considered paid (nothing owed).

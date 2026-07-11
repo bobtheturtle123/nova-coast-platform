@@ -78,6 +78,16 @@ export async function POST(req, { params }) {
   let paymentUrl = null;
 
   if (amountDue >= 0.5) {
+    // Fail closed: a payable invoice link requires a verified Connect account.
+    let connectedAccountId;
+    try {
+      const { requireTenantPaymentAccount } = await import("@/lib/connect");
+      connectedAccountId = await requireTenantPaymentAccount(tenant);
+    } catch (e) {
+      console.error(`[send-invoice] payment blocked — tenant=${ctx.tenantId} reason=${e?.reason || e?.message}`);
+      const { tenantPaymentBlockedResponse } = await import("@/lib/connect");
+      return tenantPaymentBlockedResponse();
+    }
     try {
       const sessionParams = {
         mode: "payment",
@@ -111,21 +121,18 @@ export async function POST(req, { params }) {
         },
       };
 
-      let session;
-      if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
-        const { calculatePlatformFee, getEffectivePlan } = await import("@/lib/plans");
-        const platformFee = calculatePlatformFee(Math.round(amountDue * 100), getEffectivePlan(tenant));
-        session = await stripe.checkout.sessions.create({
-          ...sessionParams,
-          payment_intent_data: {
-            ...sessionParams.payment_intent_data,
-            application_fee_amount: platformFee,
-            transfer_data: { destination: tenant.stripeConnectAccountId },
-          },
-        });
-      } else {
-        session = await stripe.checkout.sessions.create(sessionParams);
-      }
+      const { getEffectivePlan } = await import("@/lib/plans");
+      const { buildConnectedSessionPaymentData } = await import("@/lib/stripe");
+      const { paymentIntentData } = await buildConnectedSessionPaymentData({
+        amountCents: Math.round(amountDue * 100),
+        connectedAccountId,
+        planId: getEffectivePlan(tenant),
+        metadata: sessionParams.payment_intent_data.metadata,
+      });
+      const session = await stripe.checkout.sessions.create(
+        { ...sessionParams, payment_intent_data: paymentIntentData },
+        { idempotencyKey: `inv_${params.id}_${paymentType}_${Math.round(amountDue * 100)}` }
+      );
 
       paymentUrl = session.url;
     } catch (e) {

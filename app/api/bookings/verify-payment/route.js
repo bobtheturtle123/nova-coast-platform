@@ -46,6 +46,33 @@ export async function POST(req) {
 
     const booking = bookingDoc.data();
 
+    // Routing verification — never finalize a tenant client payment that
+    // didn't route to the tenant's verified connected account.
+    {
+      const routingTenantDoc = await adminDb.collection("tenants").doc(tenantId).get();
+      const expectedAcct = routingTenantDoc.data()?.stripeConnectAccountId || null;
+      const { verifyPiRouting } = await import("@/lib/connect");
+      const routing = verifyPiRouting(pi, expectedAcct);
+      if (!routing.ok) {
+        const { sendCriticalAlert } = await import("@/lib/alerts");
+        await sendCriticalAlert({
+          type: routing.destination ? "payment_destination_mismatch" : "platform_only_payment",
+          tenantId, bookingId, paymentId: pi.id,
+          expected: { destination: expectedAcct },
+          actual:   { destination: routing.destination, feeCents: pi.application_fee_amount ?? null },
+          amountCents: pi.amount_received ?? pi.amount ?? 0,
+          message: `verify-payment blocked from finalizing: ${routing.mismatches.join("; ")}`,
+        });
+        logPaymentActivity(tenantId, bookingId, {
+          paymentType: "blocked", status: "routing_failed",
+          grossCents: pi.amount_received ?? pi.amount ?? 0,
+          piId: pi.id, source: "payment verification (routing)",
+          idKey: `routingfail_${pi.id}`,
+        });
+        return Response.json({ error: "Payment could not be verified. Please contact the studio." }, { status: 409 });
+      }
+    }
+
     // Keyed on the PaymentIntent id — merges with the webhook's entry instead
     // of duplicating when both this fallback and the webhook process the payment.
     const logPi = (paymentType) => logPaymentActivity(tenantId, bookingId, {

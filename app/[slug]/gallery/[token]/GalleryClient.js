@@ -267,6 +267,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const [unlocked,        setUnlocked]        = useState(gallery.unlocked);
   const [clientSecret,    setClientSecret]    = useState(null);
   const [loadingPay,      setLoadingPay]      = useState(false);
+  const [paymentsDisabled, setPaymentsDisabled] = useState(false);
   const [payMsg,          setPayMsg]          = useState("");
   const [lightboxIdx,     setLightboxIdx]     = useState(null);
   const [isAgentSignedIn, setIsAgentSignedIn] = useState(false);
@@ -434,6 +435,11 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
       });
       const data = await res.json();
       if (data.clientSecret) setClientSecret(data.clientSecret);
+      else if (data.code === "TENANT_PAYMENT_SETUP_INCOMPLETE") {
+        // Studio can't accept online payments — block further attempts.
+        setPaymentsDisabled(true);
+        setPayMsg(data.error);
+      }
       else setPayMsg(data.error || "Could not start payment.");
     } catch { setPayMsg("Something went wrong."); }
     finally { setLoadingPay(false); }
@@ -605,7 +611,13 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
               Pay your remaining balance of <strong>${balance}</strong> to download full-resolution files.
             </p>
             {payMsg && <p className="text-sm mb-4 text-blue-600">{payMsg}</p>}
-            {!clientSecret && (
+            {paymentsDisabled ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <p className="text-xs text-amber-700">
+                  This studio is temporarily unable to accept online payments. Please contact the studio directly to pay your balance.
+                </p>
+              </div>
+            ) : !clientSecret && (
               <button onClick={startBalancePayment} disabled={loadingPay}
                 className="py-2.5 px-6 rounded-xl font-semibold text-sm text-white transition-opacity hover:opacity-90"
                 style={{ background: primary }}>

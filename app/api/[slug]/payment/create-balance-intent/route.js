@@ -35,27 +35,26 @@ export async function POST(req, { params }) {
       return Response.json({ error: "Balance too low to charge" }, { status: 400 });
     }
 
-    let paymentIntent;
-    if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
-      paymentIntent = await createConnectedPaymentIntent({
-        amountCents,
-        connectedAccountId: tenant.stripeConnectAccountId,
-        metadata: { bookingId, type: "balance", tenantId: tenant.id },
-        description: `${tenant.businessName} balance — ${booking.fullAddress}`,
-        receiptEmail: booking.clientEmail,
-        // Use the tenant's actual plan for the platform fee — omitting this
-        // defaulted to the Solo rate and overcharged Pro/Scale tenants.
-        planId: getEffectivePlan(tenant),
-      });
-    } else {
-      paymentIntent = await stripe.paymentIntents.create({
-        amount:   amountCents,
-        currency: "usd",
-        metadata: { bookingId, type: "balance", tenantId: tenant.id },
-        description: `${tenant.businessName} balance — ${booking.fullAddress}`,
-        receipt_email: booking.clientEmail,
-      });
+    // Fail closed: no platform-account fallback for tenant client payments.
+    let connectedAccountId;
+    try {
+      const { requireTenantPaymentAccount } = await import("@/lib/connect");
+      connectedAccountId = await requireTenantPaymentAccount(tenant);
+    } catch (e) {
+      console.error(`[balance-intent] payment blocked — tenant=${tenant.id} reason=${e?.reason || e?.message}`);
+      const { customerPaymentBlockedResponse } = await import("@/lib/connect");
+      return customerPaymentBlockedResponse();
     }
+
+    const paymentIntent = await createConnectedPaymentIntent({
+      amountCents,
+      connectedAccountId,
+      metadata: { bookingId, type: "balance", tenantId: tenant.id },
+      description: `${tenant.businessName} balance — ${booking.fullAddress}`,
+      receiptEmail: booking.clientEmail,
+      planId: getEffectivePlan(tenant),
+      idempotencyKey: `bal_${bookingId}_${amountCents}`,
+    });
 
     return Response.json({ clientSecret: paymentIntent.client_secret });
   } catch (err) {

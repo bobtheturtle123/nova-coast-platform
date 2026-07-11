@@ -38,31 +38,30 @@ export async function POST(req) {
       return Response.json({ error: "Balance too low to charge" }, { status: 400 });
     }
 
-    // Route funds to the tenant's Stripe Connect account when onboarded —
-    // this legacy route previously charged the PLATFORM account with no
-    // transfer, so the tenant never received legacy-gallery balance payments.
+    // Fail closed: tenant client payments require a verified Connect account —
+    // no platform-account fallback.
     const tenantDoc = await adminDb.collection("tenants").doc(tenantId).get();
     const tenant    = tenantDoc.exists ? tenantDoc.data() : null;
 
-    let paymentIntent;
-    if (tenant?.stripeConnectAccountId && tenant?.stripeConnectOnboarded) {
-      paymentIntent = await createConnectedPaymentIntent({
-        amountCents: balanceCents,
-        connectedAccountId: tenant.stripeConnectAccountId,
-        metadata: { bookingId, tenantId, type: "balance" },
-        description: `Balance payment - ${booking.fullAddress}`,
-        receiptEmail: booking.clientEmail,
-        planId: getEffectivePlan(tenant),
-      });
-    } else {
-      paymentIntent = await stripe.paymentIntents.create({
-        amount:   balanceCents,
-        currency: "usd",
-        metadata: { bookingId, tenantId, type: "balance" },
-        description:   `Balance payment - ${booking.fullAddress}`,
-        receipt_email: booking.clientEmail,
-      });
+    let connectedAccountId;
+    try {
+      const { requireTenantPaymentAccount } = await import("@/lib/connect");
+      connectedAccountId = await requireTenantPaymentAccount(tenant);
+    } catch (e) {
+      console.error(`[legacy-balance-intent] payment blocked — tenant=${tenantId} reason=${e?.reason || e?.message}`);
+      const { customerPaymentBlockedResponse } = await import("@/lib/connect");
+      return customerPaymentBlockedResponse();
     }
+
+    const paymentIntent = await createConnectedPaymentIntent({
+      amountCents: balanceCents,
+      connectedAccountId,
+      metadata: { bookingId, tenantId, type: "balance" },
+      description: `Balance payment - ${booking.fullAddress}`,
+      receiptEmail: booking.clientEmail,
+      planId: getEffectivePlan(tenant),
+      idempotencyKey: `bal_${bookingId}_${balanceCents}`,
+    });
 
     return Response.json({ clientSecret: paymentIntent.client_secret });
   } catch (err) {

@@ -46,6 +46,8 @@ export default function BillingPage() {
   const [working,       setWorking]      = useState(false);
   const [msg,           setMsg]          = useState({ text: "", type: "error" });
   const [cancelStep,      setCancelStep]     = useState(null); // null | "feedback" | "discount"
+  // Live Stripe payment-setup status — never trust the stored boolean alone.
+  const [connectStatus,   setConnectStatus]  = useState(null); // null = loading
   const [cancelReason,    setCancelReason]   = useState("");
   const [cancelNote,      setCancelNote]     = useState("");
   const [discountSaving,  setDiscountSaving] = useState(false);
@@ -224,6 +226,17 @@ export default function BillingPage() {
       setAgentProWorking(false);
     }
   }
+
+  useEffect(() => {
+    auth.currentUser?.getIdToken().then(async (t) => {
+      try {
+        const r = await fetch("/api/dashboard/connect/status", { headers: { Authorization: `Bearer ${t}` } });
+        setConnectStatus(r.ok ? await r.json() : { status: "temporarily_unavailable", ok: false });
+      } catch {
+        setConnectStatus({ status: "temporarily_unavailable", ok: false });
+      }
+    });
+  }, []);
 
   async function startConnect() {
     setWorking(true);
@@ -732,10 +745,15 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Stripe Connect */}
+      {/* Stripe Connect — live status (never "connected" from a stored id alone) */}
       <div className="card">
         <h2 className="font-semibold text-[#0F172A] text-sm mb-4">Stripe Connect — Accept Payments</h2>
-        {tenant?.stripeConnectOnboarded ? (
+        {connectStatus === null ? (
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <div className="w-4 h-4 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
+            Checking payment setup…
+          </div>
+        ) : connectStatus.ok ? (
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" className="text-emerald-600">
@@ -743,18 +761,48 @@ export default function BillingPage() {
               </svg>
             </div>
             <div>
-              <p className="font-semibold text-emerald-700 text-sm">Stripe account connected</p>
-              <p className="text-xs text-gray-400">Client payments flow directly to your bank account.</p>
+              <p className="font-semibold text-emerald-700 text-sm">Connected — online payments enabled</p>
+              <p className="text-xs text-gray-400">Client payments flow to your bank account, minus the platform fee.</p>
             </div>
           </div>
         ) : (
           <div>
-            <p className="text-sm text-gray-600 mb-4">
-              Connect your Stripe account to accept client deposits and balance payments directly through KyoriaOS.
-            </p>
-            <button onClick={startConnect} disabled={working} className="btn-primary">
-              {working ? "Loading…" : "Connect Stripe Account"}
-            </button>
+            {(() => {
+              const LABELS = {
+                not_connected:           "Not connected",
+                charges_disabled:        "Charges disabled",
+                payouts_disabled:        "Payouts disabled",
+                restricted:              "Restricted",
+                information_required:    "Information required",
+                capability_inactive:     "Setup incomplete",
+                account_disconnected:    "Account disconnected",
+                account_missing:         "Account disconnected",
+                temporarily_unavailable: "Temporarily unavailable",
+              };
+              return (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-amber-500">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-amber-700 text-sm">{LABELS[connectStatus.status] || "Setup incomplete"}</p>
+                      <p className="text-xs text-amber-700/80 break-words">
+                        Online client payments are <strong>disabled</strong> until your Stripe setup is complete.
+                        {connectStatus.detail ? ` (${connectStatus.detail})` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  {connectStatus.status !== "temporarily_unavailable" && (
+                    <button onClick={startConnect} disabled={working} className="btn-primary flex-shrink-0">
+                      {working ? "Loading…" : connectStatus.status === "not_connected" ? "Connect Stripe Account" : "Continue Stripe Setup"}
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

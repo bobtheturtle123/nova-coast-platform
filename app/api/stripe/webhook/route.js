@@ -87,6 +87,37 @@ export async function POST(req) {
         if (!bookingDoc.exists) break;
         const booking = bookingDoc.data();
 
+        // TENANT CLIENT PAYMENT ROUTING VERIFICATION — a succeeded payment
+        // without a verified transfer destination (or with the wrong one)
+        // must never mark work paid, unlock media, or reduce a balance.
+        if (["deposit", "full", "balance"].includes(type)) {
+          const routingTenant = await adminDb.collection("tenants").doc(tenantId).get();
+          const expectedAcct  = routingTenant.data()?.stripeConnectAccountId || null;
+          const { verifyPiRouting } = await import("@/lib/connect");
+          const routing = verifyPiRouting(pi, expectedAcct);
+          if (!routing.ok) {
+            const { sendCriticalAlert } = await import("@/lib/alerts");
+            await sendCriticalAlert({
+              type: routing.destination ? "payment_destination_mismatch" : "platform_only_payment",
+              tenantId, bookingId, paymentId: pi.id,
+              expected: { destination: expectedAcct },
+              actual:   { destination: routing.destination, feeCents: pi.application_fee_amount ?? null },
+              amountCents: pi.amount_received ?? pi.amount ?? 0,
+              message: `payment_intent.succeeded blocked from finalizing: ${routing.mismatches.join("; ")}`,
+            });
+            // Operational record only — NOT a completed customer payment.
+            logPaymentActivity(tenantId, bookingId, {
+              paymentType: "blocked",
+              status:      "routing_failed",
+              grossCents:  pi.amount_received ?? pi.amount ?? 0,
+              piId:        pi.id,
+              source:      "stripe webhook (routing verification)",
+              idKey:       `routingfail_${pi.id}`,
+            });
+            break;
+          }
+        }
+
         if (type === "deposit") {
           // Use a transaction so concurrent Stripe retries don't double-notify
           let shouldNotify = false;
@@ -253,6 +284,40 @@ export async function POST(req) {
         if (!bookingDoc.exists) break;
         const booking = bookingDoc.data();
 
+        // Routing verification for checkout payments (deposit/balance links) —
+        // retrieve the PI once; block finalization on any routing mismatch.
+        let sessionPi = null;
+        if (["deposit", "balance"].includes(type)) {
+          try {
+            if (session.payment_intent) sessionPi = await stripe.paymentIntents.retrieve(session.payment_intent);
+          } catch {}
+          const routingTenant = await adminDb.collection("tenants").doc(tenantId).get();
+          const expectedAcct  = routingTenant.data()?.stripeConnectAccountId || null;
+          const { verifyPiRouting } = await import("@/lib/connect");
+          const routing = verifyPiRouting(sessionPi, expectedAcct);
+          if (!routing.ok) {
+            const { sendCriticalAlert } = await import("@/lib/alerts");
+            await sendCriticalAlert({
+              type: routing.destination ? "payment_destination_mismatch" : "platform_only_payment",
+              tenantId, bookingId, paymentId: sessionPi?.id || session.id,
+              expected: { destination: expectedAcct },
+              actual:   { destination: routing.destination, feeCents: sessionPi?.application_fee_amount ?? null },
+              amountCents: session.amount_total ?? 0,
+              message: `checkout.session.completed blocked from finalizing: ${routing.mismatches.join("; ")}`,
+            });
+            logPaymentActivity(tenantId, bookingId, {
+              paymentType: "blocked",
+              status:      "routing_failed",
+              grossCents:  session.amount_total ?? 0,
+              piId:        sessionPi?.id || null,
+              sessionId:   session.id,
+              source:      "stripe webhook (routing verification)",
+              idKey:       `routingfail_${sessionPi?.id || session.id}`,
+            });
+            break;
+          }
+        }
+
         if (type === "deposit") {
           let shouldNotify = false;
           await adminDb.runTransaction(async (tx) => {
@@ -268,10 +333,7 @@ export async function POST(req) {
             });
             shouldNotify = true;
           });
-          try {
-            const sessPi = session.payment_intent ? await stripe.paymentIntents.retrieve(session.payment_intent) : null;
-            if (sessPi) logPiActivity(tenantId, bookingId, booking, sessPi, "deposit", { sessionId: session.id, source: "stripe webhook (checkout)" });
-          } catch {}
+          if (sessionPi) logPiActivity(tenantId, bookingId, booking, sessionPi, "deposit", { sessionId: session.id, source: "stripe webhook (checkout)" });
           if (shouldNotify) {
             console.log(`[stripe/webhook] checkout deposit confirmed — bookingId=${bookingId}`);
             try {
@@ -311,10 +373,7 @@ export async function POST(req) {
               .collection("galleries").doc(galleryId)
               .update({ unlocked: true, unlockedAt: new Date() });
           }
-          try {
-            const sessPi = session.payment_intent ? await stripe.paymentIntents.retrieve(session.payment_intent) : null;
-            if (sessPi) logPiActivity(tenantId, bookingId, booking, sessPi, "balance", { sessionId: session.id, source: "stripe webhook (checkout)" });
-          } catch {}
+          if (sessionPi) logPiActivity(tenantId, bookingId, booking, sessionPi, "balance", { sessionId: session.id, source: "stripe webhook (checkout)" });
           if (shouldNotify) {
             console.log(`[stripe/webhook] checkout balance confirmed — bookingId=${bookingId}`);
           }
@@ -493,6 +552,40 @@ export async function POST(req) {
           cancelAtPeriodEnd:  false,
           addonSeats:         0,
         });
+        break;
+      }
+
+      // Connected-account status changed — keep the tenant record truthful and
+      // invalidate the payment-validation cache so fail-closed checks see the
+      // new state immediately.
+      case "account.updated": {
+        const account = event.data.object;
+        const tSnap = await adminDb.collection("tenants")
+          .where("stripeConnectAccountId", "==", account.id).limit(1).get();
+        if (tSnap.empty) break;
+        const { assessConnectAccount, invalidateAccountCache } = await import("@/lib/connect");
+        invalidateAccountCache(account.id);
+        const assessment = assessConnectAccount(account);
+        await tSnap.docs[0].ref.update({
+          stripeConnectChargesEnabled: account.charges_enabled === true,
+          stripeConnectPayoutsEnabled: account.payouts_enabled === true,
+          stripeConnectStatus:         assessment.status,
+          stripeConnectStatusReason:   assessment.reason || null,
+          // Keep the legacy boolean truthful — it must never claim "onboarded"
+          // for an account that can't charge or receive payouts.
+          stripeConnectOnboarded:      assessment.ok,
+          stripeConnectUpdatedAt:      new Date(),
+        });
+        if (!assessment.ok) {
+          const { sendCriticalAlert } = await import("@/lib/alerts");
+          sendCriticalAlert({
+            type: "connect_account_restricted",
+            tenantId: tSnap.docs[0].id,
+            expected: { status: "connected" },
+            actual:   { status: assessment.status },
+            message:  `Stripe account ${assessment.status}: ${assessment.reason || "see Stripe dashboard"} — online client payments are disabled for this tenant.`,
+          }).catch(() => {});
+        }
         break;
       }
 
