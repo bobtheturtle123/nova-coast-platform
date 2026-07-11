@@ -2704,6 +2704,9 @@ if (loading) return (
                       download_zip:     { icon: "⬇", label: `Downloaded all media${ev.format === "package" ? " (Print + Web/MLS)" : ""}`, color: "text-green-600 bg-green-50" },
                       download_video:   { icon: "🎬", label: "Video downloaded",      color: "text-green-600 bg-green-50" },
                       payment:          { icon: "💳", label: ev.amount ? `Paid balance ($${Number(ev.amount).toLocaleString()})` : "Payment received", color: "text-emerald-700 bg-emerald-50" },
+                      refund:           { icon: "💸", label: "Refund issued",         color: "text-rose-600 bg-rose-50" },
+                      payment_failed:   { icon: "⚠️", label: "Payment failed",        color: "text-red-600 bg-red-50" },
+                      reschedule_notice:{ icon: "📅", label: "Reschedule notice sent", color: "text-blue-600 bg-blue-50" },
                       status:           { icon: "🔄", label: `Status: ${String(ev.status || "").replace(/_/g, " ")}`, color: "text-gray-600 bg-gray-50" },
                       note:             { icon: "📝", label: "Note",                  color: "text-gray-600 bg-gray-50" },
                     };
@@ -2716,13 +2719,14 @@ if (loading) return (
                           {meta.icon}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-[#0F172A]">{ev.title || meta.label}</p>
-                          {who && <p className="text-xs text-gray-500 truncate">{ev.viewerName ? `${ev.viewerName} · ` : ""}{who}{ev.channel ? ` · ${ev.channel}` : ""}</p>}
-                          {ev.fileName && <p className="text-xs text-gray-500 truncate">{ev.fileName}</p>}
+                          {/* break-words (not truncate) so long names/emails/refs wrap on mobile instead of clipping */}
+                          <p className="text-sm font-medium text-[#0F172A] break-words">{ev.title || meta.label}</p>
+                          {who && <p className="text-xs text-gray-500 break-words">{ev.viewerName ? `${ev.viewerName} · ` : ""}{who}{ev.channel ? ` · ${ev.channel}` : ""}</p>}
+                          {ev.fileName && <p className="text-xs text-gray-500 break-words">{ev.fileName}</p>}
                           {ev.message && (
                             <details className="mt-1">
-                              <summary className="text-xs text-[#3486cf] cursor-pointer select-none">View message</summary>
-                              <pre className="text-xs text-gray-600 whitespace-pre-wrap mt-1 bg-gray-50 rounded-lg p-2 border border-gray-100">{ev.message}</pre>
+                              <summary className="text-xs text-[#3486cf] cursor-pointer select-none">View details</summary>
+                              <pre className="text-xs text-gray-600 whitespace-pre-wrap break-words mt-1 bg-gray-50 rounded-lg p-2 border border-gray-100 overflow-x-auto">{ev.message}</pre>
                             </details>
                           )}
                           {ev.link && (

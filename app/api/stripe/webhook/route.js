@@ -6,6 +6,30 @@ import { sendBookingCreatedNotifications } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendBookingConfirmedSms } from "@/lib/sms";
 import { getTenantByStripeCustomerId, triggerReferralReward, applyPendingReferralCredits } from "@/lib/referral";
+import { logPaymentActivity } from "@/lib/activityLog";
+
+// Idempotent payment activity entry from a PaymentIntent (fire-and-forget —
+// deterministic doc key means webhook retries and the success-page fallback
+// all land on the same entry).
+function logPiActivity(tenantId, bookingId, booking, pi, paymentType, { sessionId = null, source = "stripe webhook" } = {}) {
+  logPaymentActivity(tenantId, bookingId, {
+    paymentType,
+    payerName:  booking?.clientName  || pi.metadata?.clientName || null,
+    payerEmail: booking?.clientEmail || pi.receipt_email || null,
+    grossCents: pi.amount_received ?? pi.amount ?? 0,
+    tipCents:   paymentType !== "balance" ? Math.round((Number(booking?.tipAmount) || 0) * 100) : 0,
+    feeCents:   pi.application_fee_amount ?? null,
+    currency:   pi.currency || "usd",
+    status:     paymentType === "failed" ? "failed" : "succeeded",
+    piId:       pi.id,
+    sessionId,
+    chargeId:   typeof pi.latest_charge === "string" ? pi.latest_charge : null,
+    connectedAccountId: pi.transfer_data?.destination || null,
+    source,
+    address:    booking?.fullAddress || booking?.address || null,
+    method:     "card",
+  });
+}
 
 export const dynamic     = "force-dynamic";
 export const maxDuration = 60;
@@ -79,6 +103,7 @@ export async function POST(req) {
             });
             shouldNotify = true;
           });
+          logPiActivity(tenantId, bookingId, booking, pi, "deposit");
           if (shouldNotify) {
             console.log(`[stripe/webhook] deposit payment_intent.succeeded — notifying bookingId=${bookingId}`);
             try {
@@ -123,6 +148,7 @@ export async function POST(req) {
               .collection("galleries").doc(galleryId)
               .update({ unlocked: true, unlockedAt: new Date() });
           }
+          logPiActivity(tenantId, bookingId, booking, pi, "full");
           if (shouldNotify) {
             console.log(`[stripe/webhook] full payment_intent.succeeded — notifying bookingId=${bookingId}`);
             try {
@@ -165,6 +191,7 @@ export async function POST(req) {
               .collection("galleries").doc(balanceGalleryId)
               .update({ unlocked: true, unlockedAt: new Date() });
           }
+          logPiActivity(tenantId, bookingId, booking, pi, "balance");
           if (balanceShouldNotify) {
             console.log(`[stripe/webhook] balance payment_intent.succeeded — bookingId=${bookingId}`);
             try {
@@ -241,6 +268,10 @@ export async function POST(req) {
             });
             shouldNotify = true;
           });
+          try {
+            const sessPi = session.payment_intent ? await stripe.paymentIntents.retrieve(session.payment_intent) : null;
+            if (sessPi) logPiActivity(tenantId, bookingId, booking, sessPi, "deposit", { sessionId: session.id, source: "stripe webhook (checkout)" });
+          } catch {}
           if (shouldNotify) {
             console.log(`[stripe/webhook] checkout deposit confirmed — bookingId=${bookingId}`);
             try {
@@ -280,6 +311,10 @@ export async function POST(req) {
               .collection("galleries").doc(galleryId)
               .update({ unlocked: true, unlockedAt: new Date() });
           }
+          try {
+            const sessPi = session.payment_intent ? await stripe.paymentIntents.retrieve(session.payment_intent) : null;
+            if (sessPi) logPiActivity(tenantId, bookingId, booking, sessPi, "balance", { sessionId: session.id, source: "stripe webhook (checkout)" });
+          } catch {}
           if (shouldNotify) {
             console.log(`[stripe/webhook] checkout balance confirmed — bookingId=${bookingId}`);
           }
@@ -297,10 +332,49 @@ export async function POST(req) {
           console.warn(`[stripe/webhook] payment_intent.payment_failed missing metadata — pi=${pi.id} bookingId=${bookingId} tenantId=${tenantId}`);
           break;
         }
-        await adminDb
+        const failedRef = adminDb
           .collection("tenants").doc(tenantId)
-          .collection("bookings").doc(bookingId)
-          .update({ status: "payment_failed" });
+          .collection("bookings").doc(bookingId);
+        await failedRef.update({ status: "payment_failed" });
+        const failedBooking = (await failedRef.get()).data() || null;
+        logPiActivity(tenantId, bookingId, failedBooking, pi, "failed");
+        break;
+      }
+
+      // Refund issued (full or partial) — record it on the listing's activity.
+      // amount_refunded is cumulative, and the entry key is the charge id, so
+      // partial refunds update one entry with the running total.
+      case "charge.refunded": {
+        const charge = event.data.object;
+        const { bookingId, tenantId } = charge.metadata || {};
+        if (!bookingId || !tenantId) {
+          console.warn(`[stripe/webhook] charge.refunded missing metadata — charge=${charge.id}`);
+          break;
+        }
+        const refundBookingRef = adminDb
+          .collection("tenants").doc(tenantId)
+          .collection("bookings").doc(bookingId);
+        const refundBookingDoc = await refundBookingRef.get();
+        if (!refundBookingDoc.exists) break;
+        const refundBooking = refundBookingDoc.data();
+        const refundedCents = charge.amount_refunded || 0;
+        await refundBookingRef.update({
+          refundedAmount: refundedCents / 100,
+          lastRefundAt:   new Date(),
+        }).catch(() => {});
+        logPaymentActivity(tenantId, bookingId, {
+          paymentType: "refund",
+          status:      "refunded",
+          payerName:   refundBooking.clientName  || null,
+          payerEmail:  refundBooking.clientEmail || null,
+          grossCents:  refundedCents,
+          currency:    charge.currency || "usd",
+          piId:        typeof charge.payment_intent === "string" ? charge.payment_intent : null,
+          chargeId:    charge.id,
+          connectedAccountId: charge.transfer_data?.destination || null,
+          source:      "stripe webhook (refund)",
+          address:     refundBooking.fullAddress || refundBooking.address || null,
+        });
         break;
       }
 

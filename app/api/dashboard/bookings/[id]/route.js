@@ -175,6 +175,26 @@ export async function PATCH(req, { params }) {
 
   await bookingRef.update(update);
 
+  // Manual payment recorded from the dashboard — log it to the listing's
+  // activity (idempotent key on booking + amount, so a retried request
+  // doesn't duplicate but a corrected amount creates a new entry).
+  if (update.offlinePaymentAmount !== undefined &&
+      Number(update.offlinePaymentAmount) > 0 &&
+      Number(update.offlinePaymentAmount) !== Number(prev.offlinePaymentAmount || 0)) {
+    const cents = Math.round(Number(update.offlinePaymentAmount) * 100);
+    import("@/lib/activityLog").then((m) => m.logPaymentActivity(ctx.tenantId, params.id, {
+      paymentType: "manual",
+      payerName:  prev.clientName  || null,
+      payerEmail: prev.clientEmail || null,
+      grossCents: cents,
+      feeCents:   0, // recorded outside Stripe — no platform fee
+      method:     update.offlinePaymentMethod || prev.offlinePaymentMethod || "manual",
+      source:     "dashboard (recorded manually)",
+      address:    prev.fullAddress || prev.address || null,
+      idKey:      `manual_${params.id}_${cents}`,
+    })).catch(() => {});
+  }
+
   // Send photographer notification when photographer is newly assigned or changed
   const newPhotographerEmail = update.photographerEmail;
   if (newPhotographerEmail && newPhotographerEmail !== prev.photographerEmail) {

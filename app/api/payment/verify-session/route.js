@@ -5,6 +5,7 @@ import { getTenantById } from "@/lib/tenants";
 import { sendBookingCreatedNotifications } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendBookingConfirmedSms } from "@/lib/sms";
+import { logPaymentActivity } from "@/lib/activityLog";
 
 // POST /api/payment/verify-session
 // Called from the /payment-success page as a belt-and-suspenders fallback
@@ -47,6 +48,36 @@ export async function POST(req) {
     if (!bookingDoc.exists) return Response.json({ error: "Booking not found" }, { status: 404 });
     const booking = bookingDoc.data();
 
+    // Keyed on the session's PaymentIntent — merges with the webhook's entry
+    // instead of duplicating when both process the same payment (or the client
+    // refreshes the success page).
+    const logSess = async (paymentType) => {
+      let pi = null;
+      try {
+        if (session.payment_intent) {
+          pi = await stripe.paymentIntents.retrieve(
+            typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent.id
+          );
+        }
+      } catch {}
+      return logPaymentActivity(tenantId, bookingId, {
+        paymentType,
+        payerName:  booking.clientName  || session.metadata?.clientName || null,
+        payerEmail: booking.clientEmail || session.customer_details?.email || null,
+        grossCents: pi?.amount_received ?? session.amount_total ?? 0,
+        tipCents:   0,
+        feeCents:   pi?.application_fee_amount ?? null,
+        currency:   session.currency || "usd",
+        piId:       pi?.id || (typeof session.payment_intent === "string" ? session.payment_intent : null),
+        sessionId:  session.id,
+        chargeId:   typeof pi?.latest_charge === "string" ? pi.latest_charge : null,
+        connectedAccountId: pi?.transfer_data?.destination || null,
+        source:     "session verification",
+        address:    booking.fullAddress || booking.address || null,
+        method:     "card",
+      });
+    };
+
     if (type === "deposit") {
       let shouldNotify = false;
       await adminDb.runTransaction(async (tx) => {
@@ -68,6 +99,7 @@ export async function POST(req) {
       } else {
         console.log(`[verify-session] deposit already recorded bookingId=${bookingId}`);
       }
+      await logSess("deposit");
       return Response.json({ ok: true, type: "deposit" });
     }
 
@@ -97,6 +129,7 @@ export async function POST(req) {
       } else {
         console.log(`[verify-session] balance already recorded bookingId=${bookingId}`);
       }
+      await logSess("balance");
       return Response.json({ ok: true, type: "balance" });
     }
 
@@ -128,6 +161,7 @@ export async function POST(req) {
         console.log(`[verify-session] full payment confirmed bookingId=${bookingId}`);
         _sendNotifications(tenantId, bookingId, { ...booking, depositPaid: true, paidInFull: true });
       }
+      await logSess("full");
       return Response.json({ ok: true, type: "full" });
     }
 

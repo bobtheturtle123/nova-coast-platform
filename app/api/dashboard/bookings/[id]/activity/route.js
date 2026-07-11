@@ -56,6 +56,9 @@ export async function GET(req, { params }) {
         .collection("galleries").doc(data.galleryId).collection("activityLog").get();
       gsnap.forEach((d) => {
         const x = d.data();
+        // Payments are logged canonically on the booking (idempotent, with fee
+        // breakdown) — skip the gallery's legacy payment rows to avoid dupes.
+        if (x.event === "payment") return;
         all.push({ id: `g_${d.id}`, type: x.event || "gallery", title: null, message: x.note || null, recipient: x.viewerEmail || null, changedAt: x.timestamp, format: x.format || null, fileName: x.fileName || null, viewerName: x.viewerName || null, _ms: tsMs(x.timestamp) });
       });
     } catch {}

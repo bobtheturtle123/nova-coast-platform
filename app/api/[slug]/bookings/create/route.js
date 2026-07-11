@@ -1,6 +1,6 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug, getTenantCatalog } from "@/lib/tenants";
-import { calculateTenantPrice, getSqftTier } from "@/lib/catalogUtils";
+import { calculateTenantPrice, getSqftTier, clampMoney } from "@/lib/catalogUtils";
 import { createConnectedPaymentIntent } from "@/lib/stripe";
 import { sendBookingConfirmation } from "@/lib/email";
 import { v4 as uuidv4 } from "uuid";
@@ -68,11 +68,11 @@ export async function POST(req, { params }) {
     }
 
     // Re-calculate server-side to prevent tampering (pass squareFootage for tier pricing).
-    // Clamp the client-supplied travel fee — a negative value would lower the price.
-    const safeTravelFee = Math.max(0, Number(travelFee) || 0);
+    // Clamp client-supplied money — negative/NaN values must never lower the price.
+    const safeTravelFee = clampMoney(travelFee);
     const catalog = await getTenantCatalog(tenant.id);
     const pricing = calculateTenantPrice(packageIds, serviceIds, addonIds, safeTravelFee, catalog, squareFootage || 0);
-    const tip = Math.max(0, Number(rawTip) || 0);
+    const tip = clampMoney(rawTip);
 
     // ── Re-validate promo code server-side (never trust client discount) ──────
     let promoDiscount = 0;

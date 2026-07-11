@@ -5,6 +5,7 @@ import { getTenantById } from "@/lib/tenants";
 import { sendBookingCreatedNotifications } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendBookingConfirmedSms } from "@/lib/sms";
+import { logPaymentActivity } from "@/lib/activityLog";
 
 export async function POST(req) {
   // 20 attempts per IP per hour — prevents payment intent probing
@@ -45,6 +46,24 @@ export async function POST(req) {
 
     const booking = bookingDoc.data();
 
+    // Keyed on the PaymentIntent id — merges with the webhook's entry instead
+    // of duplicating when both this fallback and the webhook process the payment.
+    const logPi = (paymentType) => logPaymentActivity(tenantId, bookingId, {
+      paymentType,
+      payerName:  booking.clientName  || null,
+      payerEmail: booking.clientEmail || pi.receipt_email || null,
+      grossCents: pi.amount_received ?? pi.amount ?? 0,
+      tipCents:   paymentType !== "balance" ? Math.round((Number(booking.tipAmount) || 0) * 100) : 0,
+      feeCents:   pi.application_fee_amount ?? null,
+      currency:   pi.currency || "usd",
+      piId:       pi.id,
+      chargeId:   typeof pi.latest_charge === "string" ? pi.latest_charge : null,
+      connectedAccountId: pi.transfer_data?.destination || null,
+      source:     "payment verification",
+      address:    booking.fullAddress || booking.address || null,
+      method:     "card",
+    });
+
     if (type === "deposit") {
       let shouldNotify = false;
       await adminDb.runTransaction(async (tx) => {
@@ -53,6 +72,7 @@ export async function POST(req) {
         tx.update(bookingRef, { depositPaid: true, status: "requested", stripeDepositIntentId: pi.id });
         shouldNotify = true;
       });
+      logPi("deposit");
       if (shouldNotify) {
         console.log(`[verify-payment] deposit confirmed bookingId=${bookingId}`);
         _sendNotifications(tenantId, bookingId, { ...booking, depositPaid: true });
@@ -73,6 +93,7 @@ export async function POST(req) {
         });
         shouldNotify = true;
       });
+      logPi("full");
       if (shouldNotify) {
         console.log(`[verify-payment] full payment confirmed bookingId=${bookingId}`);
         _sendNotifications(tenantId, bookingId, { ...booking, depositPaid: true, paidInFull: true });
@@ -116,9 +137,10 @@ export async function POST(req) {
             }).catch(() => {});
         }
       }
+      logPi("balance");
       if (shouldNotify) {
         console.log(`[verify-payment] balance confirmed bookingId=${bookingId}`);
-        // Notify the tenant that the balance was paid + log it on the listing.
+        // Notify the tenant that the balance was paid.
         _notifyBalancePaid(tenantId, bookingId, booking, paidAmount);
       } else {
         console.log(`[verify-payment] balance already recorded bookingId=${bookingId}`);
@@ -156,19 +178,12 @@ async function _sendNotifications(tenantId, bookingId, booking) {
   }
 }
 
-// Notify the tenant that a client/agent paid their balance, and log it on the
-// listing's activity.
+// Notify the tenant that a client/agent paid their balance. (The activity-log
+// entry is written by logPi("balance") with an idempotent key — no keyless
+// duplicate here.)
 async function _notifyBalancePaid(tenantId, bookingId, booking, amount) {
   const address = booking.fullAddress || booking.address || "a listing";
   const who     = booking.clientName || booking.clientEmail || "The client";
-  try {
-    const { logBookingActivity } = await import("@/lib/activityLog");
-    await logBookingActivity(tenantId, bookingId, {
-      type:    "payment",
-      title:   `Balance paid — $${Number(amount).toLocaleString()}`,
-      message: `${who} paid the remaining balance of $${Number(amount).toLocaleString()} for ${address}.`,
-    });
-  } catch {}
   try {
     const tenant = await getTenantById(tenantId);
     const ownerEmail = tenant?.email;

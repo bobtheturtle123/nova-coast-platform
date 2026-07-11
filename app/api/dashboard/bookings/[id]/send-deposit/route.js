@@ -94,7 +94,8 @@ export async function POST(req, { params }) {
   let session;
   try {
     if (tenant.stripeConnectAccountId && tenant.stripeConnectOnboarded) {
-      const platformFee = Math.round(depositAmount * 100 * (Number(process.env.PLATFORM_FEE_BPS || 150) / 10000));
+      const { calculatePlatformFee, getEffectivePlan } = await import("@/lib/plans");
+      const platformFee = calculatePlatformFee(Math.round(depositAmount * 100), getEffectivePlan(tenant));
       session = await stripe.checkout.sessions.create({
         ...sessionParams,
         payment_intent_data: {
