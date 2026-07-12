@@ -18,6 +18,13 @@ export async function POST(req, { params }) {
   const { publicUrl, fileName, fileType, key, size } = await req.json();
   const bytes = Number(size) || 0;
 
+  // Defense in depth: the R2 key must live under THIS tenant's namespace
+  // (galleries/{tenantId}/...). Prevents attaching another tenant's object to
+  // your gallery — our upload-url route always issues keys in this shape.
+  if (key && !String(key).startsWith(`galleries/${ctx.tenantId}/`)) {
+    return Response.json({ error: "Invalid media key" }, { status: 400 });
+  }
+
   await adminDb
     .collection("tenants").doc(ctx.tenantId)
     .collection("galleries").doc(params.id)
