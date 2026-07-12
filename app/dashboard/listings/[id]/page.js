@@ -873,10 +873,11 @@ if (loading) return (
         </div>
       </div>
 
-      {/* Sticky Tabs */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 mt-4" style={{ paddingLeft: 28, paddingRight: 28 }}>
-        <div className="flex items-center justify-between">
-          <div className="flex gap-0">
+      {/* Sticky Tabs — the strip scrolls horizontally on phones instead of
+          overflowing the page; Upload wraps below when space runs out. */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 mt-4 px-4 sm:px-7">
+        <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex gap-0 overflow-x-auto whitespace-nowrap min-w-0 flex-1 -mb-px">
             {[
               { id: "overview",  label: "Overview" },
               { id: "orders",    label: "Payments" },
@@ -892,7 +893,7 @@ if (loading) return (
                 if (t.id === "activity" && activityLog.length === 0) loadActivity();
                 if (t.id === "revisions" && revisions === null) loadRevisions();
               }}
-                className={`px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${tab === t.id ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-400 hover:text-gray-600"}`}>
+                className={`flex-shrink-0 px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${tab === t.id ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-400 hover:text-gray-600"}`}>
                 {t.label}
                 {t.badge > 0 && <span style={{ background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 9999, padding: "1px 6px" }}>{t.badge}</span>}
               </button>

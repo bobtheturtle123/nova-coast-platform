@@ -1458,11 +1458,11 @@ export default function ProductsPage() {
 
 
 
-      {/* Type tabs */}
-      <div className="flex gap-1 mb-4" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+      {/* Type tabs — scrolls horizontally on phones instead of overflowing */}
+      <div className="flex gap-1 mb-4 overflow-x-auto whitespace-nowrap" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
         {Object.entries(TYPE_META).map(([type, meta]) => (
           <button key={type} onClick={() => { setActiveType(type); setSearch(""); }}
-            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+            className={`flex-shrink-0 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
               activeType === type ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}>
             {meta.label}

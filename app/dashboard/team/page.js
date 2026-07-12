@@ -629,11 +629,11 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
             <h2 className="font-semibold text-[#0F172A] text-base">{member ? "Edit Team Member" : "Add Team Member"}</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
           </div>
-          {/* Tab bar */}
-          <div className="flex border-b border-gray-200 -mx-6 px-6">
+          {/* Tab bar — scrolls horizontally in narrow (mobile) modals */}
+          <div className="flex border-b border-gray-200 -mx-6 px-6 overflow-x-auto whitespace-nowrap">
             {MEMBER_TABS.map((t) => (
               <button key={t.id} type="button" onClick={() => setTab(t.id)}
-                className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                className={`flex-shrink-0 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
                   tab === t.id ? "border-[#3486cf] text-[#3486cf]" : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}>
                 {t.label}
