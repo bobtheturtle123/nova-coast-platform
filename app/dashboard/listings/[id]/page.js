@@ -964,7 +964,7 @@ if (loading) return (
 
         {/* ── OVERVIEW TAB ─────────────────────────────────────────────────── */}
         {tab === "overview" && (
-          <div className="grid gap-4" style={{ gridTemplateColumns: "1fr 340px", alignItems: "start" }}>
+          <div className="grid gap-4 grid-cols-1 lg:[grid-template-columns:1fr_340px]" style={{ alignItems: "start" }}>
             {/* ── Main column ── */}
             <div className="space-y-4">
             {/* Client / Agent */}

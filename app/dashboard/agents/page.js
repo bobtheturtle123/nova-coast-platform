@@ -672,7 +672,7 @@ export default function AgentsPage() {
           <button onClick={() => setShowModal(true)} className="btn-primary text-sm px-5 py-2">+ Add First Customer</button>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.1fr 1.6fr", gap: 14, marginBottom: 20 }}>
+        <div className="grid grid-cols-1 md:[grid-template-columns:1.1fr_1.1fr_1.6fr]" style={{ gap: 14, marginBottom: 20 }}>
 
           {/* Navy — Total Customers */}
           <div style={{
