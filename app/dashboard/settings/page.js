@@ -716,7 +716,7 @@ export default function SettingsPage() {
   const [form, setForm] = useState({
     businessName: "", phone: "", fromZip: "",
     tagline: "", primaryColor: "#3486cf", accentColor: "#c9a96e",
-    country: "US", tempUnit: "F", currency: "USD", locale: "en-US",
+    country: "US", tempUnit: "F", currency: "USD", locale: "en-US", timezone: "",
   });
   const [logoUrl,       setLogoUrl]       = useState("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -1156,6 +1156,7 @@ export default function SettingsPage() {
           primaryColor:  data.tenant.branding?.primaryColor || "#3486cf",
           accentColor:   data.tenant.branding?.accentColor  || "#c9a96e",
           country:       data.tenant.country  || "US",
+          timezone:      data.tenant.timezone || "",
           tempUnit:      data.tenant.tempUnit || "F",
           currency:      data.tenant.currency || "USD",
           locale:        data.tenant.locale   || "en-US",
@@ -1319,6 +1320,7 @@ export default function SettingsPage() {
           phone:        form.phone,
           fromZip:      form.fromZip,
           country:      form.country,
+          timezone:     form.timezone,
           tempUnit:     form.tempUnit,
           currency:     form.currency,
           locale:       form.locale,
@@ -1958,6 +1960,20 @@ export default function SettingsPage() {
 
             {/* Regional settings - Extra (Detailed view) */}
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 adv">
+              <div>
+                <label className="label-field">Time zone</label>
+                <p className="field-help">Used for calendar events &amp; reminders. Get this right so shoots land at the correct time on Google Calendar.</p>
+                <select value={form.timezone} onChange={set("timezone")} className="input-field w-full">
+                  <option value="">Auto (from your ZIP)</option>
+                  <option value="America/New_York">Eastern (New York)</option>
+                  <option value="America/Chicago">Central (Chicago)</option>
+                  <option value="America/Denver">Mountain (Denver)</option>
+                  <option value="America/Phoenix">Arizona (no DST)</option>
+                  <option value="America/Los_Angeles">Pacific (Los Angeles)</option>
+                  <option value="America/Anchorage">Alaska (Anchorage)</option>
+                  <option value="Pacific/Honolulu">Hawaii (Honolulu)</option>
+                </select>
+              </div>
               <div>
                 <label className="label-field">Country / Region<span className="adv-tag">Extra</span></label>
                 <p className="field-help">Sets your address format.</p>

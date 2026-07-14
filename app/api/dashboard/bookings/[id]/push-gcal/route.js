@@ -87,28 +87,27 @@ export async function POST(req, { params }) {
     return Response.json({ error: "Booking has no scheduled date" }, { status: 400 });
   }
 
+  // Determine the studio timezone (explicit setting → coords → ZIP → Eastern).
+  const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
+  const { resolveTenantTimezone, addMinutesToNaive } = await import("@/lib/timezone");
+  const tenantTimezone = resolveTenantTimezone(tenantDoc.exists ? tenantDoc.data() : null);
+
   let startDateTime, endDateTime;
   if (timeStr) {
     const [h, m] = timeStr.split(":").map(Number);
-    // Build datetime string then parse — avoids DST edge cases from setHours
     const paddedH = String(h).padStart(2, "0");
     const paddedM = String(m).padStart(2, "0");
+    // Naive wall-clock string; Google interprets it in `timeZone` below.
     startDateTime = `${dateStr}T${paddedH}:${paddedM}:00`;
     const durationMin = Number(booking.shootDuration) > 0 ? Number(booking.shootDuration) : 120;
-    const endMs = new Date(startDateTime).getTime() + durationMin * 60 * 1000;
-    // Use split('.')[0] so any non-zero ms don't leave a dangling "Z"
-    endDateTime = new Date(endMs).toISOString().split(".")[0];
+    // Server-timezone-independent end (do NOT round-trip through toISOString,
+    // which is UTC and only happened to work when the server ran in UTC).
+    endDateTime = addMinutesToNaive(dateStr, h, m, durationMin);
   } else {
     // All-day event — GCal requires end = next day (exclusive end)
     startDateTime = null;
     endDateTime   = null;
   }
-
-  // Determine tenant timezone for GCal events — fall back to UTC
-  const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
-  const tenantTimezone = tenantDoc.exists
-    ? (tenantDoc.data().timezone || tenantDoc.data().bookingConfig?.timezone || "America/New_York")
-    : "America/New_York";
 
   const address = booking.fullAddress || booking.bookingAddress || booking.address || "Address TBD";
   const client  = booking.agentName   || booking.clientName     || booking.clientEmail || "Client";
