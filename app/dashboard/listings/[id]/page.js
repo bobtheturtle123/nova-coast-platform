@@ -2707,6 +2707,7 @@ if (loading) return (
                       payment:          { icon: "💳", label: ev.amount ? `Paid balance ($${Number(ev.amount).toLocaleString()})` : "Payment received", color: "text-emerald-700 bg-emerald-50" },
                       refund:           { icon: "💸", label: "Refund issued",         color: "text-rose-600 bg-rose-50" },
                       payment_failed:   { icon: "⚠️", label: "Payment failed",        color: "text-red-600 bg-red-50" },
+                      reschedule:       { icon: "📅", label: "Rescheduled", color: "text-blue-600 bg-blue-50" },
                       reschedule_notice:{ icon: "📅", label: "Reschedule notice sent", color: "text-blue-600 bg-blue-50" },
                       status:           { icon: "🔄", label: `Status: ${String(ev.status || "").replace(/_/g, " ")}`, color: "text-gray-600 bg-gray-50" },
                       note:             { icon: "📝", label: "Note",                  color: "text-gray-600 bg-gray-50" },

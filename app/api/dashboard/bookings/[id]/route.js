@@ -10,7 +10,12 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId, role: decoded.role || (decoded.memberId ? "photographer" : "owner") };
+    return {
+      tenantId: decoded.tenantId,
+      role: decoded.role || (decoded.memberId ? "photographer" : "owner"),
+      actorName: decoded.name || decoded.email || "A team member",
+      uid: decoded.uid,
+    };
   } catch { return null; }
 }
 
@@ -174,6 +179,31 @@ export async function PATCH(req, { params }) {
   }
 
   await bookingRef.update(update);
+
+  // Schedule change → record it on the activity log (who + old→new) AND re-push
+  // the Google Calendar event so its time stays correct. Runs for ANY editor
+  // (owner or team member), regardless of whether a client notice was sent.
+  const dateChanged = update.shootDate !== undefined && update.shootDate !== prev.shootDate;
+  const timeChanged = update.shootTime !== undefined && update.shootTime !== prev.shootTime;
+  if (dateChanged || timeChanged) {
+    const fmtWhen = (dt, tm) => {
+      if (!dt) return "unscheduled";
+      const d = new Date(`${String(dt).split("T")[0]}T12:00:00`);
+      const dl = isNaN(d) ? dt : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      return tm ? `${dl} at ${tm}` : dl;
+    };
+    const fromWhen = fmtWhen(prev.shootDate, prev.shootTime);
+    const toWhen   = fmtWhen(update.shootDate ?? prev.shootDate, update.shootTime ?? prev.shootTime);
+    import("@/lib/activityLog").then((m) => m.logBookingActivity(ctx.tenantId, params.id, {
+      type:    "reschedule",
+      title:   `Rescheduled to ${toWhen} by ${ctx.actorName}`,
+      message: `${ctx.actorName} changed the shoot from ${fromWhen} to ${toWhen}.`,
+    })).catch(() => {});
+    // Re-push to the assigned photographer's Google Calendar (property timezone).
+    if (prev.photographerId) {
+      import("@/lib/pushGcal").then((m) => m.pushBookingToGcal(ctx.tenantId, params.id)).catch((e) => console.error("[booking/PATCH] gcal re-push failed:", e?.message));
+    }
+  }
 
   // Manual payment recorded from the dashboard — log it to the listing's
   // activity (idempotent key on booking + amount, so a retried request

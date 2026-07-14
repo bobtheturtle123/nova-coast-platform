@@ -1879,6 +1879,20 @@ export default function TeamPage() {
   const [inviteUrl,     setInviteUrl]     = useState("");
   const [timeBlocks,    setTimeBlocks]    = useState([]);
   const [showBlockModal,    setShowBlockModal]    = useState(false);
+  const [resyncing,         setResyncing]         = useState(false);
+
+  async function resyncCalendar() {
+    setResyncing(true);
+    try {
+      const { auth } = await import("@/lib/firebase");
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/dashboard/calendar/resync", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { alert(d.error || "Could not re-sync the calendar."); return; }
+      alert(`Calendar times corrected.\n\nUpdated: ${d.resynced}\nSkipped: ${d.skipped}${d.failed ? `\nFailed: ${d.failed}` : ""}`);
+    } catch { alert("Something went wrong re-syncing the calendar."); }
+    finally { setResyncing(false); }
+  }
   const [blockDetail,       setBlockDetail]       = useState(null); // { member, blocks, date }
   const [eventDetail,       setEventDetail]       = useState(null); // booking event for popover
   const [showOwnerCalModal, setShowOwnerCalModal] = useState(false);
@@ -2290,13 +2304,21 @@ export default function TeamPage() {
             )}
           </div>
         ) : (
-          <Link href="/dashboard/bookings/create"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[#3486cf] text-white hover:bg-[#2a6dab] transition-colors">
-            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            New Booking
-          </Link>
+          <div className="flex items-center gap-2">
+            <button onClick={resyncCalendar} disabled={resyncing}
+              title="Re-push upcoming shoots to Google Calendar with corrected (property) timezones"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a8 8 0 0114-3m2 8a8 8 0 01-14 3" /></svg>
+              {resyncing ? "Fixing times…" : "Fix calendar times"}
+            </button>
+            <Link href="/dashboard/bookings/create"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-[#3486cf] text-white hover:bg-[#2a6dab] transition-colors">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              New Booking
+            </Link>
+          </div>
         )}
       </div>
 

@@ -40,14 +40,38 @@ export async function GET(req, { params }) {
     all.push({ type: "note", note: n.text, changedAt: n.createdAt, changedBy: n.createdBy, authorName: n.authorName || null, _ms: tsMs(n.createdAt) });
   }
 
-  // Platform-sent notifications (booking activityLog).
+  // Platform-sent notifications + logged payments (booking activityLog).
+  let loggedDeposit = false, loggedBalance = false, loggedFull = false;
   try {
     const snap = await bookingRef.collection("activityLog").get();
     snap.forEach((d) => {
       const x = d.data();
-      all.push({ id: d.id, type: x.type || "sent", title: x.title || null, message: x.message || null, recipient: x.recipient || null, link: x.link || null, channel: x.channel || null, changedAt: x.timestamp, _ms: tsMs(x.timestamp) });
+      if (x.paymentType === "deposit") loggedDeposit = true;
+      if (x.paymentType === "balance") loggedBalance = true;
+      if (x.paymentType === "full")    loggedFull = true;
+      all.push({ id: d.id, type: x.type || "sent", paymentType: x.paymentType || null, title: x.title || null, message: x.message || null, recipient: x.recipient || null, link: x.link || null, channel: x.channel || null, changedAt: x.timestamp, _ms: tsMs(x.timestamp) });
     });
   } catch {}
+
+  // Backfill: payments collected BEFORE activity logging existed have no entry.
+  // Synthesize from the booking's stored payment state so the deposit/balance
+  // still shows (amount + best-available date). Skipped if already logged.
+  const money = (n) => `$${(Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const paidAtMs = tsMs(data.updatedAt) || tsMs(data.createdAt) || 0;
+  const who = data.clientName || data.clientEmail || "The client";
+  if (data.paidInFull && !loggedFull && !loggedBalance && !loggedDeposit) {
+    const amt = Number(data.totalPrice) || Number(data.depositAmount) || 0;
+    all.push({ id: "synth_full", type: "payment", paymentType: "full", title: `A full payment of ${money(amt)} was received from ${who}.`, message: `Recorded from the booking's payment status (exact time unavailable).`, changedAt: data.createdAt, _ms: paidAtMs, synthesized: true });
+  } else {
+    if (data.depositPaid && !loggedDeposit) {
+      const amt = Number(data.depositAmount) || 0;
+      all.push({ id: "synth_deposit", type: "payment", paymentType: "deposit", title: `${who} paid a ${money(amt)} booking deposit.`, message: `Recorded from the booking's payment status (exact time unavailable).`, changedAt: data.createdAt, _ms: tsMs(data.createdAt) || paidAtMs, synthesized: true });
+    }
+    if ((data.balancePaid || data.paidInFull) && !loggedBalance) {
+      const amt = Number(data.balancePaidAmount) || Math.max(0, (Number(data.totalPrice) || 0) - (Number(data.depositAmount) || 0));
+      all.push({ id: "synth_balance", type: "payment", paymentType: "balance", title: `${who} paid the remaining balance of ${money(amt)}.`, message: `Recorded from the booking's payment status (exact time unavailable).`, changedAt: data.updatedAt, _ms: paidAtMs, synthesized: true });
+    }
+  }
 
   // Gallery events (view / download / delivered / payment).
   if (data.galleryId) {
