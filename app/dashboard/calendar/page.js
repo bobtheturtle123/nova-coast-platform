@@ -531,6 +531,7 @@ export default function SchedulePage() {
   const [me,        setMe]        = useState(null); // { id, name } current member (null = owner)
   const [blockForm, setBlockForm] = useState({ startDate: "", endDate: "", allDay: true, startTime: "", endTime: "", reason: "Time off", note: "" });
   const [savingBlock, setSavingBlock] = useState(false);
+  const [resyncing,   setResyncing]   = useState(false);
 
   useEffect(() => {
     auth.currentUser?.getIdToken().then(async (token) => {
@@ -557,6 +558,18 @@ export default function SchedulePage() {
         });
       }
     }, 800);
+  }
+
+  async function resyncCalendar() {
+    setResyncing(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const r = await fetch("/api/dashboard/calendar/resync", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { alert(d.error || "Could not re-sync the calendar."); return; }
+      alert(`Calendar times corrected.\n\nUpdated: ${d.resynced}\nSkipped: ${d.skipped}${d.failed ? `\nFailed: ${d.failed}` : ""}`);
+    } catch { alert("Something went wrong re-syncing the calendar."); }
+    finally { setResyncing(false); }
   }
 
   async function saveBlock() {
@@ -651,10 +664,18 @@ export default function SchedulePage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {me?.googleConnected ? (
-            <span className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg bg-green-50 text-green-700 border border-green-200">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-              Google Calendar connected
-            </span>
+            <>
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg bg-green-50 text-green-700 border border-green-200">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                Google Calendar connected
+              </span>
+              <button onClick={resyncCalendar} disabled={resyncing}
+                title="Re-push upcoming shoots to Google Calendar with corrected (property) timezones"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a8 8 0 0114-3m2 8a8 8 0 01-14 3" /></svg>
+                {resyncing ? "Fixing times…" : "Fix calendar times"}
+              </button>
+            </>
           ) : (
             <button onClick={connectGoogle}
               className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
