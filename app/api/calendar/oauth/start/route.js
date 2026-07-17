@@ -76,11 +76,17 @@ export async function GET(req) {
     authUrl.searchParams.set("client_id",     clientId);
     authUrl.searchParams.set("redirect_uri",  redirectUri);
     authUrl.searchParams.set("response_type", "code");
-    // calendar.freebusy is a non-sensitive scope, so Google does NOT show the
-    // "unverified app" warning. It returns only busy time intervals (no event
-    // titles), which is all we need — blocks are labelled "Busy" under the
-    // member's name.
-    authUrl.searchParams.set("scope",         "https://www.googleapis.com/auth/calendar.freebusy");
+    // Two scopes:
+    //  - calendar.freebusy: read busy intervals for availability blocks.
+    //  - calendar.events: WRITE booking events to the connected calendar so
+    //    assigned shoots auto-appear. Without this, push-gcal cannot create
+    //    events (that was why "connected" calendars still showed nothing).
+    // calendar.events is a sensitive scope: Google may show an "unverified app"
+    // screen until the OAuth consent screen is verified — users click
+    // Advanced → Continue to proceed. Existing connections have only freebusy
+    // and must reconnect once to grant write access.
+    authUrl.searchParams.set("scope",         "https://www.googleapis.com/auth/calendar.freebusy https://www.googleapis.com/auth/calendar.events");
+    authUrl.searchParams.set("include_granted_scopes", "true");
     authUrl.searchParams.set("access_type",   "offline");
     authUrl.searchParams.set("prompt",        "consent");
     authUrl.searchParams.set("state",         state);

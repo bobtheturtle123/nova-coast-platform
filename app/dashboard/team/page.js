@@ -1569,7 +1569,7 @@ function EventDetailPopover({ event, members, onClose }) {
   const color  = event.memberColor || member?.color || "#3486cf";
 
   const displayDate = event.shootDate || event.preferredDate;
-  const displayTime = event.shootTime || event.preferredTime;
+  const displayTime = fmt12(event.shootTime || event.preferredTime) || event.shootTime || event.preferredTime;
 
   const dateLabel = displayDate
     ? new Date(displayDate + "T12:00:00").toLocaleDateString("en-US", {
@@ -2730,9 +2730,10 @@ export default function TeamPage() {
                                   </span>
                                   {(() => {
                                     const t = dayEvents[0].shootTime || dayEvents[0].preferredTime;
+                                    const isClock = t && /^\d{1,2}:\d{2}/.test(t.trim());
                                     const valid = t && /^(\d{1,2}:\d{2}|morning|afternoon|evening|flexible|twilight)$/i.test(t.trim());
                                     return valid ? (
-                                      <span className="text-[10px] text-gray-400 capitalize leading-none">{t.slice(0, 3)}</span>
+                                      <span className="text-[10px] text-gray-400 capitalize leading-none">{isClock ? fmt12(t) : t.slice(0, 3)}</span>
                                     ) : null;
                                   })()}
                                 </button>
@@ -2888,7 +2889,7 @@ export default function TeamPage() {
                               </div>
                             ))}
                             {dayEvents.map((ev) => {
-                              const displayTime = ev.shootTime || ev.preferredTime;
+                              const displayTime = fmt12(ev.shootTime || ev.preferredTime) || ev.shootTime || ev.preferredTime;
                               const validTime = displayTime && /^(\d{1,2}:\d{2}|morning|afternoon|evening|flexible|twilight)$/i.test(displayTime.trim());
                               const line2 = [validTime ? displayTime : null, ev.address?.split(",")[0]].filter(Boolean).join(" · ");
                               const color = member.color || "#0b2a55";
@@ -2928,7 +2929,7 @@ export default function TeamPage() {
                           {dayUnscheduled.map((b) => (
                             <div key={b.id} className="text-xs bg-amber-50 border-l-2 border-amber-400 px-1.5 py-1 rounded-xl mb-1">
                               <p className="font-medium text-amber-700 truncate">{b.address}</p>
-                              <p className="text-amber-500 capitalize">{b.preferredTime}</p>
+                              <p className="text-amber-500 capitalize">{fmt12(b.preferredTime) || b.preferredTime}</p>
                             </div>
                           ))}
                         </div>
@@ -3057,7 +3058,7 @@ export default function TeamPage() {
                       const color  = member?.color || "#0b2a55";
                       const t = ev.shootTime || ev.preferredTime;
                       const validTime = t && /^\d{1,2}:\d{2}/.test(t.trim());
-                      const label = [validTime ? t.slice(0,5) : null, ev.clientName?.split(" ")[0]].filter(Boolean).join(" ");
+                      const label = [validTime ? fmt12(t) : null, ev.clientName?.split(" ")[0]].filter(Boolean).join(" ");
                       return (
                         <button key={ev.id}
                           onClick={(e) => { e.stopPropagation(); setEventDetail({ ...ev, memberColor: color }); }}
@@ -3181,7 +3182,7 @@ export default function TeamPage() {
                                   <div className="w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0" style={{ background: color }} />
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-[#0F172A] truncate">{ev.fullAddress || ev.address}</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">{ev.clientName} · {ev.shootTime || ev.preferredTime || "Time TBD"}</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">{ev.clientName} · {fmt12(ev.shootTime || ev.preferredTime) || ev.shootTime || ev.preferredTime || "Time TBD"}</p>
                                   </div>
                                   <span className="text-xs text-[#3486cf] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">Details →</span>
                                 </div>

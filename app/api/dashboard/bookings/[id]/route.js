@@ -282,8 +282,15 @@ export async function PATCH(req, { params }) {
           try {
             const { buildBookingIcs } = await import("@/lib/ics");
             const uid = prev.icsUid || `booking-${params.id}@kyoriaos.com`;
-            const ics = buildBookingIcs({ booking: { ...prev, ...update }, tenant, shootDate: String(shootDate).split("T")[0], shootTime, uid, sequence: (Number(prev.icsSequence) || 0) + 1, method: "REQUEST" });
-            icsAttachment = { filename: "shoot.ics", content: Buffer.from(ics).toString("base64"), contentType: 'text/calendar; method=REQUEST; name="shoot.ics"' };
+            // PUBLISH: the photographer simply ADDS this to their calendar (they
+            // aren't an RSVP attendee), which loads reliably in Gmail.
+            const ics = buildBookingIcs({
+              booking: { ...prev, ...update }, tenant,
+              shootDate: String(shootDate).split("T")[0], shootTime,
+              uid, sequence: (Number(prev.icsSequence) || 0) + 1, method: "PUBLISH",
+              description: `${dateLabel || ""}${timeLabel ? ` at ${timeLabel}` : ""}\\nClient: ${clientName}${clientPhone ? ` (${clientPhone})` : ""}${duration ? `\\nDuration: ${duration} min` : ""}${notes ? `\\nNotes: ${notes}` : ""}`,
+            });
+            icsAttachment = { filename: "shoot.ics", content: Buffer.from(ics).toString("base64"), contentType: 'text/calendar; method=PUBLISH; name="shoot.ics"' };
           } catch (e) { console.error("[email] assignment ICS build failed:", e?.message); }
 
           const row = (label, val) => val ? `<tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px;width:36%">${label}</td><td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${val}</td></tr>` : "";

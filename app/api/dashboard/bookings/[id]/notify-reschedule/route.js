@@ -51,7 +51,8 @@ export async function POST(req, { params }) {
       const sequence = (Number(booking.icsSequence) || 0) + 1;
       await bookingRef.update({ icsUid: uid, icsSequence: sequence });
 
-      const ics = buildBookingIcs({ booking, tenant, shootDate, shootTime, uid, sequence, method: "REQUEST" });
+      // Client is the RSVP attendee → their event updates in place on reschedule.
+      const ics = buildBookingIcs({ booking, tenant, shootDate, shootTime, uid, sequence, method: "REQUEST", attendeeEmail: booking.clientEmail, attendeeName: booking.clientName });
       const biz = tenant?.branding?.businessName || tenant?.businessName || "Your photographer";
       // Late-reschedule fee notice (booking already reflects the added fee).
       const fee = Number(booking.rescheduleFee) || 0;
@@ -105,7 +106,9 @@ export async function POST(req, { params }) {
     try {
       const uid      = booking.icsUid || `booking-${params.id}@kyoriaos.com`;
       const sequence = Number(booking.icsSequence) || 0;
-      const ics = buildBookingIcs({ booking, tenant, shootDate, shootTime, uid, sequence, method: "REQUEST" });
+      // PUBLISH (not REQUEST): the photographer isn't an RSVP attendee, they
+      // just ADD it — this is what fixes Gmail's "Unable to load event".
+      const ics = buildBookingIcs({ booking, tenant, shootDate, shootTime, uid, sequence, method: "PUBLISH", description: `${whenText}\\nLocation: ${booking.fullAddress || booking.address || "the property"}\\nClient: ${booking.clientName || ""}${booking.clientPhone ? ` (${booking.clientPhone})` : ""}` });
       const { Resend } = await import("resend");
       await new Resend(process.env.RESEND_API_KEY).emails.send({
         from:    `${biz2} <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`,
