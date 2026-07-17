@@ -1029,17 +1029,17 @@ if (loading) return (
 
             {/* Shoot Details */}
             <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
-              <div className="px-[18px] py-3.5 border-b border-gray-100">
-                <span className="text-[13.5px] font-bold text-[#0F172A]">Shoot Details</span>
+              <div className="px-5 py-4 border-b border-gray-100">
+                <span className="text-[15px] font-bold text-[#0F172A]">Shoot Details</span>
               </div>
-              <div className="p-[18px] space-y-0">
+              <div className="p-5 space-y-0">
                 {/* shoot date row */}
-                <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
-                  <span className="text-[12.5px] text-gray-500 flex items-center gap-2">
+                <div className="flex items-center justify-between py-3.5 border-b border-gray-50">
+                  <span className="text-[13.5px] text-gray-500 flex items-center gap-2">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                     Shoot date
                   </span>
-                  <span className="font-semibold text-[#0F172A] text-[13px] flex items-center gap-2 flex-wrap justify-end">
+                  <span className="font-semibold text-[#0F172A] text-[14px] flex items-center gap-2 flex-wrap justify-end">
                     {booking.status === "cancelled"
                       ? <span className="text-red-500 font-semibold">Cancelled</span>
                       : booking.workflowStatus === "postponed"
@@ -1050,7 +1050,7 @@ if (loading) return (
                   </span>
                 </div>
                 {/* photographer row */}
-                <div className="py-2.5 border-b border-gray-50">
+                <div className="py-3.5 border-b border-gray-50">
                   {showAssignPicker ? (
                     <div className="flex items-center gap-2">
                       <select
@@ -1079,11 +1079,11 @@ if (loading) return (
                     </div>
                   ) : (
                     <div className="flex items-center justify-between">
-                      <span className="text-[12.5px] text-gray-500 flex items-center gap-2">
+                      <span className="text-[13.5px] text-gray-500 flex items-center gap-2">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                         Photographer
                       </span>
-                      <span className="font-semibold text-[#0F172A] text-[13px] flex items-center gap-2">
+                      <span className="font-semibold text-[#0F172A] text-[14px] flex items-center gap-2">
                         {booking.photographerName || <span className="text-gray-400 font-normal">Unassigned</span>}
                         <button type="button" onClick={() => setShowAssignPicker(true)} className="text-[11px] text-[#3486cf] font-semibold">
                           {booking.photographerName ? "Reassign" : "Assign"}
@@ -1094,8 +1094,8 @@ if (loading) return (
                 </div>
                 {/* payment status row */}
                 {canViewRevenue && (
-                  <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
-                    <span className="text-[12.5px] text-gray-500">Payment</span>
+                  <div className="flex items-center justify-between py-3.5 border-b border-gray-50">
+                    <span className="text-[13.5px] text-gray-500">Payment</span>
                     <select
                       value={booking.paidInFull || booking.balancePaid ? "paid_full" : booking.depositPaid ? "deposit_paid" : "unpaid"}
                       disabled={userRole === "manager"}
@@ -1258,25 +1258,24 @@ if (loading) return (
 
                 {/* Appointment actions */}
                 {booking.status !== "cancelled" && (
-                  <div className="pt-3 mt-1 border-t border-gray-100 flex flex-wrap gap-2">
-                    {booking.workflowStatus !== "postponed" && (
-                      <button type="button"
-                        onClick={() => { setReschedApptIdx(null); setReschedDate(booking.shootDate?.split?.("T")?.[0] || ""); setReschedTime(booking.shootTime || ""); setWaiveReschedFee(false); setNotifyResched(true); setShowReschedModal(true); }}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-[#3486cf]/30 text-[#3486cf] hover:bg-[#3486cf]/5 transition-colors">
-                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        {booking.shootDate ? "Reschedule" : "Set date"}
-                      </button>
-                    )}
-                    {booking.workflowStatus !== "postponed" && (
+                  <div className="pt-4 mt-2 border-t border-gray-100 flex flex-wrap gap-2.5">
+                    {/* Always available (this is how a postponed shoot gets a new date) */}
+                    <button type="button"
+                      onClick={() => { setReschedApptIdx(null); setReschedDate(booking.shootDate?.split?.("T")?.[0] || ""); setReschedTime(booking.shootTime || ""); setWaiveReschedFee(false); setNotifyResched(true); setShowReschedModal(true); }}
+                      className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg border border-[#3486cf]/30 text-[#3486cf] hover:bg-[#3486cf]/5 transition-colors">
+                      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      {booking.workflowStatus === "postponed" || !booking.shootDate ? "Set new date" : "Reschedule"}
+                    </button>
+                    {booking.workflowStatus !== "postponed" && booking.shootDate && (
                       <button type="button" onClick={postponeBooking}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors">
-                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                        className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors">
+                        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
                         Postpone
                       </button>
                     )}
                     <button type="button" onClick={cancelBooking}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors">
-                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                      className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors">
+                      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                       Cancel booking
                     </button>
                   </div>
@@ -3112,6 +3111,8 @@ if (loading) return (
                         await patchBooking({ additionalAppointments: updated });
                       } else {
                         const fields = { shootDate: reschedDate, shootTime: reschedTime };
+                        // Setting a date on a postponed shoot un-postpones it.
+                        if (booking.workflowStatus === "postponed") fields.workflowStatus = "booked";
                         // Waived fees are not charged; record that it was waived.
                         if (fee > 0 && !waiveReschedFee) fields.rescheduleFee = fee;
                         else if (fee > 0 && waiveReschedFee) { fields.rescheduleFee = 0; fields.rescheduleFeeWaived = true; }
