@@ -53,6 +53,14 @@ export async function POST(req, { params }) {
 
       const ics = buildBookingIcs({ booking, tenant, shootDate, shootTime, uid, sequence, method: "REQUEST" });
       const biz = tenant?.branding?.businessName || tenant?.businessName || "Your photographer";
+      // Late-reschedule fee notice (booking already reflects the added fee).
+      const fee = Number(booking.rescheduleFee) || 0;
+      const feeBlock = fee > 0 && !booking.rescheduleFeeWaived
+        ? `<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:12px 16px;margin:16px 0">
+             <p style="color:#92400e;font-size:14px;margin:0 0 2px;font-weight:700">Late-reschedule fee: $${fee.toLocaleString()}</p>
+             <p style="color:#92400e;font-size:12px;margin:0">This has been added to your balance${booking.remainingBalance != null ? ` — new balance due: $${Number(booking.remainingBalance).toLocaleString()}` : ""}.</p>
+           </div>`
+        : "";
       const { Resend } = await import("resend");
       await new Resend(process.env.RESEND_API_KEY).emails.send({
         from:    `${biz} <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`,
@@ -63,6 +71,7 @@ export async function POST(req, { params }) {
           <p style="color:#555;margin:0 0 4px">New date &amp; time:</p>
           <p style="font-size:18px;font-weight:700;color:#0F172A;margin:0 0 16px">${whenText}</p>
           <p style="color:#555;margin:0 0 4px">Location: <strong>${booking.fullAddress || booking.address || "your property"}</strong></p>
+          ${feeBlock}
           <p style="color:#888;font-size:13px;margin-top:18px">The attached calendar invite will update the event on your calendar automatically.</p>
           <p style="color:#888;font-size:13px">— ${biz}</p>
         </div>`,

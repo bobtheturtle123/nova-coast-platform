@@ -178,6 +178,19 @@ export async function PATCH(req, { params }) {
     }
   }
 
+  // Late-reschedule fee → actually charge it: add to the total AND the balance
+  // due so the client owes it. (Previously rescheduleFee was stored but never
+  // affected what the client owed.) Applied server-side so it works for any
+  // editor and can't be bypassed. Waived fees add nothing.
+  let appliedReschedFee = 0;
+  if (update.rescheduleFee !== undefined && Number(update.rescheduleFee) > 0 && !update.rescheduleFeeWaived) {
+    appliedReschedFee = Number(update.rescheduleFee);
+    update.totalPrice       = Math.round(((Number(prev.totalPrice) || 0) + appliedReschedFee) * 100) / 100;
+    update.remainingBalance = Math.round(((Number(prev.remainingBalance) || 0) + appliedReschedFee) * 100) / 100;
+    // A previously fully-paid booking now has the fee outstanding.
+    if (prev.paidInFull || prev.balancePaid) { update.paidInFull = false; update.balancePaid = false; }
+  }
+
   await bookingRef.update(update);
 
   // Schedule change → record it on the activity log (who + old→new) AND re-push
@@ -194,10 +207,11 @@ export async function PATCH(req, { params }) {
     };
     const fromWhen = fmtWhen(prev.shootDate, prev.shootTime);
     const toWhen   = fmtWhen(update.shootDate ?? prev.shootDate, update.shootTime ?? prev.shootTime);
+    const feeNote  = appliedReschedFee > 0 ? ` A late-reschedule fee of $${appliedReschedFee.toLocaleString()} was added to the balance.` : (update.rescheduleFeeWaived ? " The late-reschedule fee was waived." : "");
     import("@/lib/activityLog").then((m) => m.logBookingActivity(ctx.tenantId, params.id, {
       type:    "reschedule",
-      title:   `Rescheduled to ${toWhen} by ${ctx.actorName}`,
-      message: `${ctx.actorName} changed the shoot from ${fromWhen} to ${toWhen}.`,
+      title:   `Rescheduled to ${toWhen} by ${ctx.actorName}${appliedReschedFee > 0 ? ` (+$${appliedReschedFee.toLocaleString()} late fee)` : ""}`,
+      message: `${ctx.actorName} changed the shoot from ${fromWhen} to ${toWhen}.${feeNote}`,
     })).catch(() => {});
     // Re-push to the assigned photographer's Google Calendar (property timezone).
     if (prev.photographerId) {
@@ -242,26 +256,59 @@ export async function PATCH(req, { params }) {
           const shootTime = update.shootTime || prev.shootTime;
           const clientName = prev.clientName || "";
           const clientPhone = prev.clientPhone || "";
-          const shootInfo = shootDate
-            ? `${new Date(shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}${shootTime ? ` at ${shootTime}` : ""}`
-            : null;
+          const clientEmail = prev.clientEmail || "";
+          const duration   = Number(prev.shootDuration) > 0 ? Number(prev.shootDuration) : null;
+          const notes      = prev.notes || "";
+          const twilight   = prev.twilightTime || null;
+          const propType   = prev.propertyType || "";
+          const sqft       = prev.squareFootage || "";
+
+          // 12-hour time (e.g. "2:00 PM") — bookings store 24h "14:00".
+          const time12 = (t) => {
+            if (!t || !/^\d{1,2}:\d{2}/.test(t)) return t || "";
+            const [hh, mm] = t.split(":"); let h = parseInt(hh, 10);
+            const ap = h >= 12 ? "PM" : "AM"; if (h > 12) h -= 12; if (h === 0) h = 12;
+            return `${h}:${mm} ${ap}`;
+          };
+          const dateLabel = shootDate ? new Date(String(shootDate).split("T")[0] + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : null;
+          const timeLabel = time12(shootTime);
+
+          const { getAppUrl } = await import("@/lib/appUrl");
+          const shootUrl = `${getAppUrl()}/photographer/shoots/${params.id}`;
+
+          // Attach a calendar invite so the photographer gets an event even
+          // without connecting Google (anchored to the property timezone).
+          let icsAttachment = null;
+          try {
+            const { buildBookingIcs } = await import("@/lib/ics");
+            const uid = prev.icsUid || `booking-${params.id}@kyoriaos.com`;
+            const ics = buildBookingIcs({ booking: { ...prev, ...update }, tenant, shootDate: String(shootDate).split("T")[0], shootTime, uid, sequence: (Number(prev.icsSequence) || 0) + 1, method: "REQUEST" });
+            icsAttachment = { filename: "shoot.ics", content: Buffer.from(ics).toString("base64"), contentType: 'text/calendar; method=REQUEST; name="shoot.ics"' };
+          } catch (e) { console.error("[email] assignment ICS build failed:", e?.message); }
+
+          const row = (label, val) => val ? `<tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px;width:36%">${label}</td><td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${val}</td></tr>` : "";
 
           await new Resend(resendKey).emails.send({
             from, to: [newPhotographerEmail],
             subject: `Shoot assigned to you — ${address}`,
             html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:40px 20px">
               <h2 style="color:${primary};font-family:Georgia,serif;margin:0 0 12px">Shoot Assigned</h2>
-              <p style="color:#555;margin:0 0 20px">Hi ${update.photographerName || "there"},</p>
+              <p style="color:#555;margin:0 0 20px">Hi ${update.photographerName || "there"}, here's everything you'll need for this shoot:</p>
               <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
-                <tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px;width:36%">Property</td>
-                    <td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${address}</td></tr>
-                <tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px">Client</td>
-                    <td style="padding:8px 0;border-bottom:1px solid #eee">${clientName}${clientPhone ? ` · ${clientPhone}` : ""}</td></tr>
-                ${shootInfo ? `<tr><td style="padding:8px 0;color:#888;font-size:13px">Scheduled</td>
-                    <td style="padding:8px 0;font-weight:500">${shootInfo}</td></tr>` : ""}
+                ${row("Property", address)}
+                ${row("Date", dateLabel)}
+                ${row("Time", timeLabel ? `${timeLabel}${duration ? ` · ${duration} min` : ""}` : (duration ? `${duration} min` : ""))}
+                ${twilight ? row("Twilight", time12(twilight)) : ""}
+                ${row("Property type", propType ? `${propType}${sqft ? ` · ${Number(sqft).toLocaleString()} sqft` : ""}` : "")}
+                ${row("Client", `${clientName}${clientPhone ? ` · ${clientPhone}` : ""}`)}
+                ${row("Client email", clientEmail)}
               </table>
+              ${notes ? `<div style="background:#f9f9f7;border-left:3px solid ${primary};padding:12px 16px;margin-bottom:20px"><p style="color:#555;font-size:13px;margin:0;font-style:italic">"${notes}"</p></div>` : ""}
+              <a href="${shootUrl}" style="display:inline-block;background:${primary};color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px">View full shoot details →</a>
+              <p style="color:#888;font-size:12px;margin-top:16px">The attached calendar invite will add this shoot to your calendar.</p>
               <p style="color:#ccc;font-size:11px">${bizName}</p>
             </div>`,
+            ...(icsAttachment ? { attachments: [icsAttachment] } : {}),
           }).then(() => console.log("[email] photographer assignment sent to", newPhotographerEmail))
             .catch((e) => console.error("[email] photographer assignment FAILED to", newPhotographerEmail, ":", e?.message));
         }

@@ -3038,12 +3038,17 @@ if (loading) return (
                 </button>
                 {fee > 0 && (
                   <div className={`mb-3 p-3 rounded-xl border ${waiveReschedFee ? "bg-gray-50 border-gray-200" : "bg-amber-50 border-amber-200"}`}>
-                    <p className={`text-[10px] font-semibold uppercase tracking-wide mb-0.5 ${waiveReschedFee ? "text-gray-400" : "text-amber-700"}`}>Reschedule Fee</p>
+                    <p className={`text-[10px] font-semibold uppercase tracking-wide mb-0.5 ${waiveReschedFee ? "text-gray-400" : "text-amber-700"}`}>Late-reschedule fee</p>
                     <p className={`text-xl font-bold ${waiveReschedFee ? "text-gray-400 line-through" : "text-amber-700"}`}>{formatCurrency(fee, currency, locale)}</p>
                     <p className={`text-[10px] mt-0.5 ${waiveReschedFee ? "text-gray-400" : "text-amber-600"}`}>{reschedPct}% of booking total — within {reschedWindowHrs}hr window</p>
+                    <p className={`text-[11px] mt-1.5 font-medium ${waiveReschedFee ? "text-gray-500" : "text-amber-800"}`}>
+                      {waiveReschedFee
+                        ? "Fee waived — the customer will NOT be charged."
+                        : `This fee will be added to the customer's balance${notifyResched ? " and included in their reschedule email" : ""}.`}
+                    </p>
                     <label className="flex items-center gap-2 mt-2 pt-2 border-t border-amber-200/60 cursor-pointer">
                       <input type="checkbox" checked={waiveReschedFee} onChange={(e) => setWaiveReschedFee(e.target.checked)} />
-                      <span className="text-xs font-medium text-[#0F172A]">Waive this fee (don&apos;t charge the customer)</span>
+                      <span className="text-xs font-medium text-[#0F172A]">Waive this fee (courtesy — don&apos;t charge)</span>
                     </label>
                   </div>
                 )}
@@ -3073,16 +3078,18 @@ if (loading) return (
                       }
                       // Keep the client's calendar current: push the updated event
                       // to the tenant's Google Calendar and notify the customer.
+                      const feeCharged = !isAdditional && fee > 0 && !waiveReschedFee;
+                      const feeMsg = feeCharged ? ` $${fee.toLocaleString()} late fee added to balance.` : "";
                       if (notifyResched) {
                         try {
                           const token = await auth.currentUser?.getIdToken();
                           const h = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
                           fetch(`/api/dashboard/bookings/${id}/push-gcal`, { method: "POST", headers: h }).catch(() => {});
                           const r = await fetch(`/api/dashboard/bookings/${id}/notify-reschedule`, { method: "POST", headers: h });
-                          if (r.ok) toast("Customer notified of the new date & time."); else toast("Rescheduled (notification could not be sent).", "error");
+                          if (r.ok) toast(`Customer notified of the new date & time.${feeMsg}`); else toast("Rescheduled (notification could not be sent).", "error");
                         } catch { toast("Rescheduled (notification could not be sent).", "error"); }
                       } else {
-                        toast("Rescheduled.");
+                        toast(`Rescheduled.${feeMsg}`);
                       }
                       setShowReschedModal(false);
                       setWaiveReschedFee(false);
