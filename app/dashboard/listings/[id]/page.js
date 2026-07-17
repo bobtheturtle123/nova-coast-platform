@@ -408,6 +408,24 @@ const [listingUrl,       setListingUrl]        = useState("");
     setLoading(false);
   }
 
+  // Re-fetch the booking when returning to this tab, so a date/appointment set
+  // elsewhere (e.g. the booking edit form) shows up without a manual refresh.
+  async function refreshBooking() {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return;
+      const r = await fetch(`/api/dashboard/bookings/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (r.ok) { const { booking: b } = await r.json(); if (b) setBooking(b); }
+    } catch { /* ignore */ }
+  }
+  useEffect(() => {
+    const onFocus = () => refreshBooking();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshBooking(); });
+    return () => { window.removeEventListener("focus", onFocus); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   async function patchBooking(fields) {
     setSaving(true);
     try {
@@ -1257,7 +1275,16 @@ if (loading) return (
                 })()}
 
                 {/* Appointment actions */}
-                {booking.status !== "cancelled" && (
+                {booking.status === "cancelled" ? (
+                  <div className="pt-4 mt-2 border-t border-gray-100 flex flex-wrap items-center gap-3">
+                    <span className="text-[13px] text-red-500 font-medium">This booking is cancelled.</span>
+                    <button type="button"
+                      onClick={async () => { if (!confirm("Reactivate this booking?")) return; await patchBooking({ status: "requested" }); setBooking((b) => ({ ...b, status: "requested" })); }}
+                      className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg border border-[#3486cf]/30 text-[#3486cf] hover:bg-[#3486cf]/5 transition-colors">
+                      Reactivate booking
+                    </button>
+                  </div>
+                ) : (
                   <div className="pt-4 mt-2 border-t border-gray-100 flex flex-wrap gap-2.5">
                     {/* Always available (this is how a postponed shoot gets a new date) */}
                     <button type="button"
