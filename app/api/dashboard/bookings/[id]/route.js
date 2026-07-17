@@ -193,12 +193,54 @@ export async function PATCH(req, { params }) {
 
   await bookingRef.update(update);
 
+  const isCancelling = update.status === "cancelled" && prev.status !== "cancelled";
+  const isPostponing = update.workflowStatus === "postponed" && prev.workflowStatus !== "postponed";
+
+  // Cancel / postpone → remove the calendar event, log it, and notify the
+  // photographer + client. (Handled before the reschedule block so clearing the
+  // date doesn't also fire a "rescheduled" notice.)
+  if (isCancelling || isPostponing) {
+    import("@/lib/pushGcal").then((m) => m.deleteBookingGcalEvent(ctx.tenantId, params.id)).catch(() => {});
+    const verb = isCancelling ? "cancelled" : "postponed";
+    import("@/lib/activityLog").then((m) => m.logBookingActivity(ctx.tenantId, params.id, {
+      type:    verb === "cancelled" ? "cancelled" : "postponed",
+      title:   `Booking ${verb} by ${ctx.actorName}`,
+      message: `${ctx.actorName} ${verb} the shoot at ${prev.fullAddress || prev.address || "the property"}.${isPostponing ? " Awaiting a new date." : ""}`,
+    })).catch(() => {});
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const tenant  = await getTenantById(ctx.tenantId);
+        const bizName = tenant?.branding?.businessName || tenant?.businessName || "KyoriaOS";
+        const primary = tenant?.branding?.primaryColor || "#3486cf";
+        const from    = `${bizName} <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`;
+        const addr    = prev.fullAddress || prev.address || "your property";
+        const headline = isCancelling ? "Your shoot has been cancelled" : "Your shoot has been postponed";
+        const sub      = isCancelling
+          ? `We've cancelled the shoot at <strong>${addr}</strong>.`
+          : `The shoot at <strong>${addr}</strong> has been postponed — we'll reach out to reschedule.`;
+        const body = (hi) => `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 20px">
+          <h2 style="color:${primary};font-family:Georgia,serif;margin:0 0 10px">${headline}</h2>
+          <p style="color:#555;margin:0 0 8px">${hi}</p>
+          <p style="color:#555;margin:0">${sub}</p>
+          <p style="color:#ccc;font-size:11px;margin-top:18px">${bizName}</p>
+        </div>`;
+        const R = new Resend(process.env.RESEND_API_KEY);
+        if (body.notifyClientOnCancel !== false && prev.clientEmail) {
+          R.emails.send({ from, to: [prev.clientEmail], subject: `${isCancelling ? "Cancelled" : "Postponed"} — ${addr}`, html: body(`Hi ${prev.clientName || "there"},`) }).catch(() => {});
+        }
+        if (prev.photographerEmail) {
+          R.emails.send({ from, to: [prev.photographerEmail], subject: `Shoot ${verb} — ${addr}`, html: body(`Hi ${prev.photographerName || "there"},`) }).catch(() => {});
+        }
+      } catch (e) { console.error("[booking/PATCH] cancel/postpone notify error:", e?.message); }
+    }
+  }
+
   // Schedule change → record it on the activity log (who + old→new) AND re-push
   // the Google Calendar event so its time stays correct. Runs for ANY editor
   // (owner or team member), regardless of whether a client notice was sent.
   const dateChanged = update.shootDate !== undefined && update.shootDate !== prev.shootDate;
   const timeChanged = update.shootTime !== undefined && update.shootTime !== prev.shootTime;
-  if (dateChanged || timeChanged) {
+  if ((dateChanged || timeChanged) && !isCancelling && !isPostponing) {
     const fmtWhen = (dt, tm) => {
       if (!dt) return "unscheduled";
       const d = new Date(`${String(dt).split("T")[0]}T12:00:00`);

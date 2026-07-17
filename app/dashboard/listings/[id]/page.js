@@ -428,6 +428,18 @@ const [listingUrl,       setListingUrl]        = useState("");
     finally { setSaving(false); }
   }
 
+  async function postponeBooking() {
+    if (!confirm("Postpone this shoot? The date/time will be cleared and it's marked as awaiting a new date. The calendar event is removed and the client & photographer are notified.")) return;
+    await patchBooking({ workflowStatus: "postponed", shootDate: "", shootTime: "" });
+    setBooking((b) => ({ ...b, workflowStatus: "postponed", shootDate: "", shootTime: "" }));
+  }
+
+  async function cancelBooking() {
+    if (!confirm("Cancel this booking? This marks it cancelled, removes the calendar event, and notifies the client & photographer. This does not automatically refund any payment.")) return;
+    await patchBooking({ status: "cancelled" });
+    setBooking((b) => ({ ...b, status: "cancelled" }));
+  }
+
   async function sendAgentAccess(sendEmail = true) {
     setSendingAgentAccess(true);
     setAgentAccessMsg("");
@@ -1027,11 +1039,27 @@ if (loading) return (
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                     Shoot date
                   </span>
-                  <span className="font-semibold text-[#0F172A] text-[13px] flex items-center gap-2">
-                    {booking.shootDate ? <>{shootDateDisplay}{booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}</> : <span className="text-gray-400 font-normal">Not set</span>}
-                    {booking.shootDate && (
-                      <button type="button" onClick={() => { setReschedApptIdx(null); setReschedDate(booking.shootDate?.split?.("T")?.[0] || ""); setReschedTime(booking.shootTime || ""); setWaiveReschedFee(false); setNotifyResched(true); setShowReschedModal(true); }}
-                        className="text-[11px] text-[#3486cf] font-semibold">Reschedule</button>
+                  <span className="font-semibold text-[#0F172A] text-[13px] flex items-center gap-2 flex-wrap justify-end">
+                    {booking.status === "cancelled"
+                      ? <span className="text-red-500 font-semibold">Cancelled</span>
+                      : booking.workflowStatus === "postponed"
+                        ? <span className="text-amber-600 font-semibold">Postponed — awaiting new date</span>
+                        : booking.shootDate
+                          ? <>{shootDateDisplay}{booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}</>
+                          : <span className="text-gray-400 font-normal">Not set</span>}
+                    {booking.status !== "cancelled" && (
+                      <span className="flex items-center gap-2">
+                        {booking.shootDate && booking.workflowStatus !== "postponed" && (
+                          <button type="button" onClick={() => { setReschedApptIdx(null); setReschedDate(booking.shootDate?.split?.("T")?.[0] || ""); setReschedTime(booking.shootTime || ""); setWaiveReschedFee(false); setNotifyResched(true); setShowReschedModal(true); }}
+                            className="text-[11px] text-[#3486cf] font-semibold">Reschedule</button>
+                        )}
+                        {booking.workflowStatus !== "postponed" && (
+                          <button type="button" onClick={postponeBooking}
+                            className="text-[11px] text-amber-600 font-semibold">Postpone</button>
+                        )}
+                        <button type="button" onClick={cancelBooking}
+                          className="text-[11px] text-red-500 font-semibold">Cancel</button>
+                      </span>
                     )}
                   </span>
                 </div>
@@ -2708,6 +2736,8 @@ if (loading) return (
                       refund:           { icon: "💸", label: "Refund issued",         color: "text-rose-600 bg-rose-50" },
                       payment_failed:   { icon: "⚠️", label: "Payment failed",        color: "text-red-600 bg-red-50" },
                       reschedule:       { icon: "📅", label: "Rescheduled", color: "text-blue-600 bg-blue-50" },
+                      postponed:        { icon: "⏸️", label: "Postponed", color: "text-amber-600 bg-amber-50" },
+                      cancelled:        { icon: "🚫", label: "Booking cancelled", color: "text-red-600 bg-red-50" },
                       reschedule_notice:{ icon: "📅", label: "Reschedule notice sent", color: "text-blue-600 bg-blue-50" },
                       status:           { icon: "🔄", label: `Status: ${String(ev.status || "").replace(/_/g, " ")}`, color: "text-gray-600 bg-gray-50" },
                       note:             { icon: "📝", label: "Note",                  color: "text-gray-600 bg-gray-50" },
