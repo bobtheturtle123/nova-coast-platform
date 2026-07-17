@@ -3080,16 +3080,27 @@ if (loading) return (
                       // to the tenant's Google Calendar and notify the customer.
                       const feeCharged = !isAdditional && fee > 0 && !waiveReschedFee;
                       const feeMsg = feeCharged ? ` $${fee.toLocaleString()} late fee added to balance.` : "";
+                      // Push to the photographer's Google Calendar and surface
+                      // a hint if it couldn't (e.g. Google not connected).
+                      let gcalWarn = "";
+                      try {
+                        const token = await auth.currentUser?.getIdToken();
+                        const h = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+                        const gr = await fetch(`/api/dashboard/bookings/${id}/push-gcal`, { method: "POST", headers: h });
+                        if (!gr.ok) {
+                          const gd = await gr.json().catch(() => ({}));
+                          if (/not connected/i.test(gd.error || "")) gcalWarn = " (Connect Google Calendar to auto-add events.)";
+                        }
+                      } catch {}
                       if (notifyResched) {
                         try {
                           const token = await auth.currentUser?.getIdToken();
                           const h = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
-                          fetch(`/api/dashboard/bookings/${id}/push-gcal`, { method: "POST", headers: h }).catch(() => {});
                           const r = await fetch(`/api/dashboard/bookings/${id}/notify-reschedule`, { method: "POST", headers: h });
-                          if (r.ok) toast(`Customer notified of the new date & time.${feeMsg}`); else toast("Rescheduled (notification could not be sent).", "error");
+                          if (r.ok) toast(`Customer notified of the new date & time.${feeMsg}${gcalWarn}`); else toast("Rescheduled (notification could not be sent).", "error");
                         } catch { toast("Rescheduled (notification could not be sent).", "error"); }
                       } else {
-                        toast(`Rescheduled.${feeMsg}`);
+                        toast(`Rescheduled.${feeMsg}${gcalWarn}`);
                       }
                       setShowReschedModal(false);
                       setWaiveReschedFee(false);
