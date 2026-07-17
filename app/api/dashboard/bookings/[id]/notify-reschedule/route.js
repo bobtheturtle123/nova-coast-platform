@@ -96,35 +96,14 @@ export async function POST(req, { params }) {
     } catch (e) { console.error("[notify-reschedule] SMS failed:", e?.message); }
   }
 
-  // Notify the ASSIGNED photographer too (email always; SMS if team SMS is on)
-  // with the same .ics so their calendar updates.
+  // NOTE: the assigned photographer's calendar update (email + .ics + Google
+  // push) is handled by the booking PATCH on EVERY reschedule — independent of
+  // this client-notify path — so it's not duplicated here. We still send the
+  // photographer an SMS if team SMS is enabled.
   let photogNotified = false;
   const photogEmail = booking.photographerEmail || null;
   const photogPhone = booking.photographerPhone || null;
   const biz2 = tenant?.branding?.businessName || tenant?.businessName || "Your studio";
-  if (photogEmail && process.env.RESEND_API_KEY) {
-    try {
-      const uid      = booking.icsUid || `booking-${params.id}@kyoriaos.com`;
-      const sequence = Number(booking.icsSequence) || 0;
-      // PUBLISH (not REQUEST): the photographer isn't an RSVP attendee, they
-      // just ADD it — this is what fixes Gmail's "Unable to load event".
-      const ics = buildBookingIcs({ booking, tenant, shootDate, shootTime, uid, sequence, method: "PUBLISH", description: `${whenText}\\nLocation: ${booking.fullAddress || booking.address || "the property"}\\nClient: ${booking.clientName || ""}${booking.clientPhone ? ` (${booking.clientPhone})` : ""}` });
-      const { Resend } = await import("resend");
-      await new Resend(process.env.RESEND_API_KEY).emails.send({
-        from:    `${biz2} <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`,
-        to:      photogEmail,
-        subject: `Shoot rescheduled — ${booking.fullAddress || booking.address || "listing"}`,
-        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:28px 24px">
-          <h2 style="color:#0F172A;margin:0 0 8px">A shoot you're assigned to was rescheduled</h2>
-          <p style="color:#555;margin:0 0 4px">New date &amp; time:</p>
-          <p style="font-size:18px;font-weight:700;color:#0F172A;margin:0 0 16px">${whenText}</p>
-          <p style="color:#555;margin:0">Location: <strong>${booking.fullAddress || booking.address || "the property"}</strong></p>
-        </div>`,
-        attachments: [{ filename: "shoot.ics", content: Buffer.from(ics).toString("base64"), contentType: 'text/calendar; method=REQUEST; name="shoot.ics"' }],
-      });
-      photogNotified = true;
-    } catch (e) { console.error("[notify-reschedule] photographer email failed:", e?.message); }
-  }
   const teamSmsOn = tenant?.notificationPrefs?.team_appointment_assigned?.channels?.sms === true
                  || tenant?.notificationPrefs?.team_appointment_reminder?.channels?.sms === true;
   if (teamSmsOn && photogPhone) {

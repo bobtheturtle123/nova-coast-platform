@@ -213,9 +213,49 @@ export async function PATCH(req, { params }) {
       title:   `Rescheduled to ${toWhen} by ${ctx.actorName}${appliedReschedFee > 0 ? ` (+$${appliedReschedFee.toLocaleString()} late fee)` : ""}`,
       message: `${ctx.actorName} changed the shoot from ${fromWhen} to ${toWhen}.${feeNote}`,
     })).catch(() => {});
-    // Re-push to the assigned photographer's Google Calendar (property timezone).
+    // Keep the assigned photographer's calendar current on EVERY reschedule —
+    // independent of the client-notify checkbox. Two paths, same as a new
+    // booking: (1) push to their Google Calendar if they granted write access,
+    // and (2) always email them an updating .ics they can add with one tap.
     if (prev.photographerId) {
       import("@/lib/pushGcal").then((m) => m.pushBookingToGcal(ctx.tenantId, params.id)).catch((e) => console.error("[booking/PATCH] gcal re-push failed:", e?.message));
+    }
+    const photogEmail = update.photographerEmail || prev.photographerEmail;
+    // Skip if the photographer was just newly assigned (the assignment email
+    // below already includes the .ics).
+    const photographerUnchanged = !(update.photographerEmail && update.photographerEmail !== prev.photographerEmail);
+    if (photogEmail && photographerUnchanged && process.env.RESEND_API_KEY) {
+      try {
+        const tenant  = await getTenantById(ctx.tenantId);
+        const bizName = tenant?.branding?.businessName || tenant?.businessName || "KyoriaOS";
+        const primary = tenant?.branding?.primaryColor || "#3486cf";
+        const from    = `${bizName} <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`;
+        const addr    = update.fullAddress || prev.fullAddress || prev.address || "Property";
+        const sDate   = String(update.shootDate ?? prev.shootDate ?? "").split("T")[0];
+        const sTime   = update.shootTime ?? prev.shootTime;
+        const t12 = (t) => { if (!t || !/^\d{1,2}:\d{2}/.test(t)) return t || ""; const [hh, mm] = t.split(":"); let h = parseInt(hh, 10); const ap = h >= 12 ? "PM" : "AM"; if (h > 12) h -= 12; if (h === 0) h = 12; return `${h}:${mm} ${ap}`; };
+        const dLabel  = sDate ? new Date(sDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "";
+        const whenTxt = `${dLabel}${t12(sTime) ? ` at ${t12(sTime)}` : ""}`;
+
+        const { buildBookingIcs } = await import("@/lib/ics");
+        const uid = prev.icsUid || `booking-${params.id}@kyoriaos.com`;
+        const seq = (Number(prev.icsSequence) || 0) + 1;
+        await bookingRef.update({ icsUid: uid, icsSequence: seq });
+        const ics = buildBookingIcs({ booking: { ...prev, ...update }, tenant, shootDate: sDate, shootTime: sTime, uid, sequence: seq, method: "PUBLISH", description: `${whenTxt}\\nClient: ${prev.clientName || ""}${prev.clientPhone ? ` (${prev.clientPhone})` : ""}` });
+
+        await new Resend(process.env.RESEND_API_KEY).emails.send({
+          from, to: [photogEmail],
+          subject: `Shoot rescheduled — ${addr}`,
+          html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 20px">
+            <h2 style="color:${primary};font-family:Georgia,serif;margin:0 0 10px">Shoot rescheduled</h2>
+            <p style="color:#555;margin:0 0 4px">New date &amp; time:</p>
+            <p style="font-size:18px;font-weight:700;color:#0F172A;margin:0 0 14px">${whenTxt}</p>
+            <p style="color:#555;margin:0 0 4px">Location: <strong>${addr}</strong></p>
+            <p style="color:#888;font-size:12px;margin-top:16px">The attached invite updates this shoot on your calendar.</p>
+          </div>`,
+          attachments: [{ filename: "shoot.ics", content: Buffer.from(ics).toString("base64"), contentType: 'text/calendar; method=PUBLISH; name="shoot.ics"' }],
+        }).catch((e) => console.error("[booking/PATCH] photographer reschedule email failed:", e?.message));
+      } catch (e) { console.error("[booking/PATCH] photographer reschedule email error:", e?.message); }
     }
   }
 
