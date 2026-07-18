@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { exitDemo } from "@/lib/demoData";
 import { isUnlimitedTenant } from "@/lib/plans";
@@ -80,13 +80,17 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email.trim());
-      setInfo("Reset link sent — check your inbox (and spam folder).");
+      // Use our own branded reset email (Resend) instead of Firebase's default,
+      // which sends from noreply@shootflow-...firebaseapp.com. Always succeeds
+      // (no account enumeration).
+      await fetch("/api/auth/send-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      setInfo("If that email is registered, a reset link is on its way. Check your inbox (and spam folder).");
     } catch (err) {
-      if (err.code === "auth/user-not-found") {
-        // Don't reveal whether account exists
-        setInfo("If that email is registered, a reset link is on its way.");
-      } else if (err.code === "auth/too-many-requests") {
+      if (err.code === "auth/too-many-requests") {
         setError("Too many requests. Please wait a few minutes and try again.");
       } else {
         setError("Couldn't send reset email. Please try again.");

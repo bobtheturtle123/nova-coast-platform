@@ -279,11 +279,20 @@ export async function PATCH(req, { params }) {
         const dLabel  = sDate ? new Date(sDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "";
         const whenTxt = `${dLabel}${t12(sTime) ? ` at ${t12(sTime)}` : ""}`;
 
+        // What's being shot, so the photographer knows what to bring/do.
+        let svcNames = [];
+        try {
+          const { getTenantCatalog } = await import("@/lib/tenants");
+          const { resolveBookingServiceNames } = await import("@/lib/bookingServices");
+          svcNames = resolveBookingServiceNames({ ...prev, ...update }, await getTenantCatalog(ctx.tenantId));
+        } catch {}
+        const svcTxt = svcNames.join(", ");
+
         const { buildBookingIcs } = await import("@/lib/ics");
         const uid = prev.icsUid || `booking-${params.id}@kyoriaos.com`;
         const seq = (Number(prev.icsSequence) || 0) + 1;
         await bookingRef.update({ icsUid: uid, icsSequence: seq });
-        const ics = buildBookingIcs({ booking: { ...prev, ...update }, tenant, shootDate: sDate, shootTime: sTime, uid, sequence: seq, method: "PUBLISH", description: `${whenTxt}\\nClient: ${prev.clientName || ""}${prev.clientPhone ? ` (${prev.clientPhone})` : ""}` });
+        const ics = buildBookingIcs({ booking: { ...prev, ...update }, tenant, shootDate: sDate, shootTime: sTime, uid, sequence: seq, method: "PUBLISH", description: `${whenTxt}\\nClient: ${prev.clientName || ""}${prev.clientPhone ? ` (${prev.clientPhone})` : ""}${svcTxt ? `\\nServices: ${svcTxt}` : ""}` });
 
         await new Resend(process.env.RESEND_API_KEY).emails.send({
           from, to: [photogEmail],
@@ -293,6 +302,7 @@ export async function PATCH(req, { params }) {
             <p style="color:#555;margin:0 0 4px">New date &amp; time:</p>
             <p style="font-size:18px;font-weight:700;color:#0F172A;margin:0 0 14px">${whenTxt}</p>
             <p style="color:#555;margin:0 0 4px">Location: <strong>${addr}</strong></p>
+            ${svcTxt ? `<p style="color:#555;margin:6px 0 0">Services: <strong>${svcTxt}</strong></p>` : ""}
             <p style="color:#888;font-size:12px;margin-top:16px">The attached invite updates this shoot on your calendar.</p>
           </div>`,
           attachments: [{ filename: "shoot.ics", content: Buffer.from(ics).toString("base64"), contentType: 'text/calendar; method=PUBLISH; name="shoot.ics"' }],
@@ -358,6 +368,15 @@ export async function PATCH(req, { params }) {
           const { getAppUrl } = await import("@/lib/appUrl");
           const shootUrl = `${getAppUrl()}/photographer/shoots/${params.id}`;
 
+          // What's being shot, so the photographer knows what to bring/do.
+          let svcNames = [];
+          try {
+            const { getTenantCatalog } = await import("@/lib/tenants");
+            const { resolveBookingServiceNames } = await import("@/lib/bookingServices");
+            svcNames = resolveBookingServiceNames({ ...prev, ...update }, await getTenantCatalog(ctx.tenantId));
+          } catch {}
+          const svcTxt = svcNames.join(", ");
+
           // Attach a calendar invite so the photographer gets an event even
           // without connecting Google (anchored to the property timezone).
           let icsAttachment = null;
@@ -370,7 +389,7 @@ export async function PATCH(req, { params }) {
               booking: { ...prev, ...update }, tenant,
               shootDate: String(shootDate).split("T")[0], shootTime,
               uid, sequence: (Number(prev.icsSequence) || 0) + 1, method: "PUBLISH",
-              description: `${dateLabel || ""}${timeLabel ? ` at ${timeLabel}` : ""}\\nClient: ${clientName}${clientPhone ? ` (${clientPhone})` : ""}${duration ? `\\nDuration: ${duration} min` : ""}${notes ? `\\nNotes: ${notes}` : ""}`,
+              description: `${dateLabel || ""}${timeLabel ? ` at ${timeLabel}` : ""}\\nClient: ${clientName}${clientPhone ? ` (${clientPhone})` : ""}${duration ? `\\nDuration: ${duration} min` : ""}${svcTxt ? `\\nServices: ${svcTxt}` : ""}${notes ? `\\nNotes: ${notes}` : ""}`,
             });
             icsAttachment = { filename: "shoot.ics", content: Buffer.from(ics).toString("base64"), contentType: 'text/calendar; method=PUBLISH; name="shoot.ics"' };
           } catch (e) { console.error("[email] assignment ICS build failed:", e?.message); }
@@ -388,6 +407,7 @@ export async function PATCH(req, { params }) {
                 ${row("Date", dateLabel)}
                 ${row("Time", timeLabel ? `${timeLabel}${duration ? ` · ${duration} min` : ""}` : (duration ? `${duration} min` : ""))}
                 ${twilight ? row("Twilight", time12(twilight)) : ""}
+                ${row("Services", svcTxt)}
                 ${row("Property type", propType ? `${propType}${sqft ? ` · ${Number(sqft).toLocaleString()} sqft` : ""}` : "")}
                 ${row("Client", `${clientName}${clientPhone ? ` · ${clientPhone}` : ""}`)}
                 ${row("Client email", clientEmail)}
