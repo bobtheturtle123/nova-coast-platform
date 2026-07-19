@@ -10,6 +10,7 @@ import { resolveWorkflowStatus } from "@/lib/workflowStatus";
 import { getAppUrl } from "@/lib/appUrl";
 import WeatherWidget from "@/components/dashboard/WeatherWidget";
 import { useTenantSettings, formatCurrency } from "@/lib/TenantSettingsContext";
+import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 
 // ─── Agent Image Field (upload file OR paste URL) ────────────────────────────
 function AgentImageField({ label, value, onChange, folder, placeholder, hint, preview }) {
@@ -192,6 +193,7 @@ export default function ListingDetailPage() {
   const router  = useRouter();
   const toast   = useToast();
   const { tempUnit, locale, currency } = useTenantSettings();
+  const { permissions } = useDashboardPermissions();
 
   const [booking,    setBooking]   = useState(null);
   const [gallery,    setGallery]   = useState(null);
@@ -726,7 +728,14 @@ if (loading) return (
     ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(shootDateRaw) ? `${shootDateRaw}T12:00:00` : shootDateRaw)
         .toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
     : null;
-  const canViewRevenue = userRole !== "manager";
+  // Prices/revenue are gated by the "View Revenue & Pricing" permission
+  // (canViewRevenue), which the owner grants per member and which defaults OFF
+  // for managers/custom roles. Owners & admins always see it.
+  const canViewRevenue = userRole === "owner" || userRole === "admin" || !!permissions?.canViewRevenue;
+  // Strip dollar amounts (e.g. a reschedule late-fee note) from activity text
+  // for members who can't view pricing.
+  const scrubMoney = (text) => canViewRevenue ? text
+    : String(text || "").replace(/\s*\(\+?\$[\d,.]+[^)]*\)/g, "").replace(/\$[\d,.]+/g, "an amount");
 
   // Accurate money tracking: how much has actually been collected, and the real
   // remaining balance = total - collected (don't trust a stale remainingBalance).
@@ -1349,7 +1358,7 @@ if (loading) return (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">Custom</span>
                             <span className="text-sm text-[#0F172A]">{l.label}</span>
                           </div>
-                          <span className="text-sm font-medium text-[#3486cf]">${l.price}</span>
+                          {canViewRevenue && <span className="text-sm font-medium text-[#3486cf]">${l.price}</span>}
                         </div>
                       ))}
                     </div>
@@ -1574,7 +1583,7 @@ if (loading) return (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">Custom</span>
                             <span className="text-[#0F172A]">{l.label}</span>
                           </div>
-                          <span className="text-sm font-medium text-[#3486cf]">${l.price}</span>
+                          {canViewRevenue && <span className="text-sm font-medium text-[#3486cf]">${l.price}</span>}
                         </div>
                       ))}
                     </div>
@@ -2757,7 +2766,11 @@ if (loading) return (
                 <p className="text-sm text-gray-400 text-center py-6">No activity yet. Emails, links, deliveries, payments, and gallery views will appear here.</p>
               ) : (
                 <div className="space-y-0 divide-y divide-gray-50">
-                  {activityLog.map((ev) => {
+                  {activityLog
+                    // Hide money entries (payments, refunds, invoices, reminders,
+                    // deposit links) from members without "View Revenue & Pricing".
+                    .filter((ev) => canViewRevenue || !["payment","refund","payment_failed","manual","invoice_sent","reminder_sent","deposit_link"].includes(ev.type))
+                    .map((ev) => {
                     const icons = {
                       invoice_sent:     { icon: "🧾", label: "Invoice emailed",      color: "text-amber-700 bg-amber-50" },
                       reminder_sent:    { icon: "⏰", label: "Payment reminder sent", color: "text-amber-700 bg-amber-50" },
@@ -2789,13 +2802,13 @@ if (loading) return (
                         </span>
                         <div className="flex-1 min-w-0">
                           {/* break-words (not truncate) so long names/emails/refs wrap on mobile instead of clipping */}
-                          <p className="text-sm font-medium text-[#0F172A] break-words">{ev.title || meta.label}</p>
+                          <p className="text-sm font-medium text-[#0F172A] break-words">{scrubMoney(ev.title || meta.label)}</p>
                           {who && <p className="text-xs text-gray-500 break-words">{ev.viewerName ? `${ev.viewerName} · ` : ""}{who}{ev.channel ? ` · ${ev.channel}` : ""}</p>}
                           {ev.fileName && <p className="text-xs text-gray-500 break-words">{ev.fileName}</p>}
                           {ev.message && (
                             <details className="mt-1">
                               <summary className="text-xs text-[#3486cf] cursor-pointer select-none">View details</summary>
-                              <pre className="text-xs text-gray-600 whitespace-pre-wrap break-words mt-1 bg-gray-50 rounded-lg p-2 border border-gray-100 overflow-x-auto">{ev.message}</pre>
+                              <pre className="text-xs text-gray-600 whitespace-pre-wrap break-words mt-1 bg-gray-50 rounded-lg p-2 border border-gray-100 overflow-x-auto">{scrubMoney(ev.message)}</pre>
                             </details>
                           )}
                           {ev.link && (
