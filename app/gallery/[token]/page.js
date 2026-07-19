@@ -56,6 +56,7 @@ export default async function GalleryPage({ params }) {
     <GalleryClient
       gallery={sanitize(galleryData)}
       booking={booking ? sanitize(booking) : null}
+      token={token}
     />
   );
 }

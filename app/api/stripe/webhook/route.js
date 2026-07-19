@@ -68,6 +68,45 @@ export async function POST(req) {
     return new Response(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
+  // ── Idempotency ledger keyed on Stripe's immutable event.id ────────────────
+  // Atomically reserve the event so duplicate / simultaneous / replayed
+  // deliveries never process twice, while still allowing a controlled retry
+  // after a failed attempt. No secrets or payloads are stored.
+  const eventRef = adminDb.collection("_stripeEvents").doc(event.id);
+  const STALE_MS = 5 * 60 * 1000; // a "processing" lock older than this is retryable
+  try {
+    const proceed = await adminDb.runTransaction(async (tx) => {
+      const doc = await tx.get(eventRef);
+      const now = new Date();
+      if (doc.exists) {
+        const d = doc.data();
+        if (d.status === "completed") return false; // already handled — skip
+        if (d.status === "processing" && d.lastAttemptAt?.toMillis && (now.getTime() - d.lastAttemptAt.toMillis()) < STALE_MS) {
+          return false; // another instance is actively handling it
+        }
+        tx.update(eventRef, { status: "processing", attempts: (d.attempts || 0) + 1, lastAttemptAt: now });
+        return true;
+      }
+      tx.set(eventRef, {
+        type: event.type,
+        account: event.account || null,   // Connect account context (destination charges = platform → null)
+        livemode: !!event.livemode,
+        status: "processing",
+        attempts: 1,
+        firstSeenAt: now,
+        lastAttemptAt: now,
+        completedAt: null,
+        error: null,
+      });
+      return true;
+    });
+    if (!proceed) return new Response("OK (duplicate)", { status: 200 });
+  } catch (e) {
+    // If the ledger itself fails, don't drop the event — let Stripe retry.
+    console.error("[stripe/webhook] event ledger error:", e?.message);
+    return new Response("ledger error", { status: 500 });
+  }
+
   try {
     switch (event.type) {
 
@@ -594,7 +633,16 @@ export async function POST(req) {
     }
   } catch (err) {
     console.error("Webhook handler error:", err);
+    // Record a sanitized failure and return non-200 so Stripe retries; the
+    // ledger's stale-lock logic lets the retry re-enter and re-run this event.
+    await eventRef.update({
+      status: "failed",
+      error: String(err?.message || "handler error").slice(0, 300),
+      lastAttemptAt: new Date(),
+    }).catch(() => {});
+    return new Response("handler error", { status: 500 });
   }
 
+  await eventRef.update({ status: "completed", completedAt: new Date() }).catch(() => {});
   return new Response("OK", { status: 200 });
 }

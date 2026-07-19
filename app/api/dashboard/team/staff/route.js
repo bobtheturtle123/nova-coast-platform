@@ -63,18 +63,34 @@ export async function POST(req) {
     return Response.json({ error: "Your subscription has ended. Reactivate to invite team members." }, { status: 403 });
   }
 
-  // Enforce the plan's seat limit SERVER-SIDE (the UI gate is not enough — a
-  // direct API call could otherwise add unlimited members beyond the plan).
+  // Enforce the plan's seat limit SERVER-SIDE and ATOMICALLY. Pending/active
+  // members and the owner each consume a seat. The UI gate is not enough — a
+  // direct API call (or two simultaneous invites when one seat remains) could
+  // otherwise exceed the plan. We compute the authoritative member count, then
+  // reserve a seat inside a transaction using a short-lived reservation window
+  // so concurrent requests can't both slip past the boundary. Reservations
+  // auto-expire (the created member doc becomes the real count), so there is no
+  // persistent counter to drift.
   const { getEffectivePlan, getSeatLimit } = await import("@/lib/plans");
+  const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
   const seatLimit = getSeatLimit(getEffectivePlan(tenantData), tenantData.addonSeats || 0);
   if (seatLimit !== null) {
-    const teamSnap = await adminDb.collection("tenants").doc(ctx.tenantId).collection("team").get();
-    // seats used = active/invited members + the owner (1)
-    const used = teamSnap.docs.filter((d) => {
+    const teamSnap = await tenantRef.collection("team").get();
+    const activeMembers = teamSnap.docs.filter((d) => {
       const m = d.data();
       return m.status !== "removed" && m.active !== false;
-    }).length + 1;
-    if (used >= seatLimit) {
+    }).length;
+    const RESERVE_TTL = 15000;
+    const reserved = await adminDb.runTransaction(async (tx) => {
+      const t = await tx.get(tenantRef);
+      const now = Date.now();
+      const inflight = (t.data()?.seatReservations || []).filter((ts) => now - ts < RESERVE_TTL);
+      const used = activeMembers + 1 /* owner */ + inflight.length;
+      if (used >= seatLimit) return false;
+      tx.update(tenantRef, { seatReservations: [...inflight, now] });
+      return true;
+    });
+    if (!reserved) {
       return Response.json({ error: `Your plan includes ${seatLimit} seat${seatLimit !== 1 ? "s" : ""}. Upgrade or add a seat to invite more team members.`, code: "SEAT_LIMIT" }, { status: 403 });
     }
   }

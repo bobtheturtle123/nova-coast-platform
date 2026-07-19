@@ -147,7 +147,7 @@ function BalancePaymentForm({ balance, onSuccess }) {
   );
 }
 
-function PaymentModal({ booking, onClose, onUnlock }) {
+function PaymentModal({ booking, token, onClose, onUnlock }) {
   const [clientSecret, setClientSecret] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -159,7 +159,8 @@ function PaymentModal({ booking, onClose, onUnlock }) {
       const res = await fetch("/api/payment/create-balance-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: booking.id }),
+        // Tenant/gallery/booking are derived server-side from this strong token.
+        body: JSON.stringify({ token }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -228,7 +229,7 @@ function LockGate({ label, balance, onPay }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function GalleryClient({ gallery, booking }) {
+export default function GalleryClient({ gallery, booking, token }) {
   const [lightboxIdx, setLightboxIdx] = useState(null);
   const [showPayment, setShowPayment] = useState(false);
   const [isUnlocked, setIsUnlocked]   = useState(gallery.unlocked);
@@ -510,6 +511,7 @@ export default function GalleryClient({ gallery, booking }) {
       {showPayment && booking && (
         <PaymentModal
           booking={booking}
+          token={token}
           onClose={() => setShowPayment(false)}
           onUnlock={() => { setIsUnlocked(true); setShowPayment(false); }}
         />
