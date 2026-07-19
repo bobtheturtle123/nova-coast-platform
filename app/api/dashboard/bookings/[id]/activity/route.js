@@ -89,7 +89,14 @@ export async function GET(req, { params }) {
   }
 
   all.sort((a, b) => (b._ms || 0) - (a._ms || 0));
-  return Response.json({ activity: all.map(({ _ms, ...rest }) => rest) });
+  // Normalize changedAt to an ISO string — raw Firestore Timestamps serialize as
+  // { _seconds, _nanoseconds }, which the client's new Date() reads as Invalid Date.
+  return Response.json({
+    activity: all.map(({ _ms, ...rest }) => ({
+      ...rest,
+      changedAt: _ms ? new Date(_ms).toISOString() : null,
+    })),
+  });
 }
 
 // POST — append a manual note to bookingNotes

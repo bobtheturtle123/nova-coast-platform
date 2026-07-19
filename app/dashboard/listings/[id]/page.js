@@ -2794,7 +2794,13 @@ if (loading) return (
                     };
                     const meta = icons[ev.type] || { icon: "·", label: ev.title || ev.type, color: "text-gray-500 bg-gray-50" };
                     const who  = ev.recipient || ev.viewerEmail || ev.email;
-                    const when = ev.timestamp || ev.changedAt;
+                    const rawWhen = ev.timestamp || ev.changedAt;
+                    // Tolerate Firestore Timestamps ({_seconds}) alongside ISO strings.
+                    const whenDate = rawWhen?.toDate?.()
+                      ?? (rawWhen?._seconds ? new Date(rawWhen._seconds * 1000) : new Date(rawWhen));
+                    const when = rawWhen && !isNaN(whenDate?.getTime())
+                      ? whenDate.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+                      : null;
                     return (
                       <div key={ev.id || `${ev.type}-${when}`} className="flex items-start gap-3 py-3">
                         <span className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${meta.color}`}>
@@ -2820,7 +2826,7 @@ if (loading) return (
                           )}
                         </div>
                         <p className="text-xs text-gray-400 flex-shrink-0">
-                          {when ? new Date(when).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}
+                          {when || "—"}
                         </p>
                       </div>
                     );
