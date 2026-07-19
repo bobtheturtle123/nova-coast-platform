@@ -30,21 +30,36 @@ export async function POST(req, { params }) {
   }
 
   const inviteRef  = adminDb.collection("tenants").doc(tenantId).collection("staffInvites").doc(token);
+
+  // Atomically claim the invite so two simultaneous accepts (or replays) can't
+  // both succeed, and enforce email binding + expiry INSIDE the transaction so
+  // the checks and the state change can't be separated by a race.
   let inviteData;
   try {
-    const inviteDoc = await inviteRef.get();
-    if (!inviteDoc.exists) return Response.json({ error: "Invite not found." }, { status: 404 });
-    inviteData = inviteDoc.data();
-  } catch {
-    return Response.json({ error: "Could not verify invite." }, { status: 500 });
-  }
-
-  if (inviteData.accepted) {
-    return Response.json({ error: "This invite has already been used." }, { status: 400 });
-  }
-  const expiresAt = safeDate(inviteData.expiresAt);
-  if (!expiresAt || expiresAt < new Date()) {
-    return Response.json({ error: "This invite has expired." }, { status: 400 });
+    inviteData = await adminDb.runTransaction(async (tx) => {
+      const doc = await tx.get(inviteRef);
+      if (!doc.exists) throw new Error("not_found");
+      const data = doc.data();
+      if (data.accepted) throw new Error("already_used");
+      const exp = safeDate(data.expiresAt);
+      if (!exp || exp < new Date()) throw new Error("expired");
+      // Email binding: the invite is for a specific address — only that account
+      // may accept it. Prevents a different logged-in user from claiming it.
+      if (data.email && data.email.toLowerCase() !== String(email || "").toLowerCase()) {
+        throw new Error("wrong_email");
+      }
+      tx.update(inviteRef, { accepted: true, acceptedAt: new Date(), uid, email: email || data.email });
+      return data;
+    });
+  } catch (e) {
+    const map = {
+      not_found:    ["Invite not found.", 404],
+      already_used: ["This invite has already been used.", 400],
+      expired:      ["This invite has expired.", 400],
+      wrong_email:  ["This invitation was sent to a different email address. Sign in with that email to accept.", 403],
+    };
+    const [msg, status] = map[e.message] || ["Could not verify invite.", 500];
+    return Response.json({ error: msg }, { status });
   }
 
   const role = inviteData.role || "manager";
@@ -58,14 +73,11 @@ export async function POST(req, { params }) {
     memberId,
   });
 
-  await Promise.all([
-    inviteRef.update({ accepted: true, acceptedAt: new Date(), uid, email: email || inviteData.email }),
-    adminDb.collection("tenants").doc(tenantId).collection("team").doc(memberId).update({
-      uid,
-      status: "active",
-      acceptedAt: new Date(),
-    }).catch(() => {}),
-  ]);
+  await adminDb.collection("tenants").doc(tenantId).collection("team").doc(memberId).update({
+    uid,
+    status: "active",
+    acceptedAt: new Date(),
+  }).catch(() => {});
 
   // Notify the tenant owner (fire-and-forget).
   (async () => {

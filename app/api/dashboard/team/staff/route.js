@@ -58,14 +58,34 @@ export async function POST(req) {
   }
 
   const tenantSnap = await adminDb.collection("tenants").doc(ctx.tenantId).get();
-  if (tenantSnap.exists && tenantSnap.data().subscriptionStatus === "canceled") {
+  const tenantData = tenantSnap.exists ? tenantSnap.data() : {};
+  if (tenantData.subscriptionStatus === "canceled") {
     return Response.json({ error: "Your subscription has ended. Reactivate to invite team members." }, { status: 403 });
+  }
+
+  // Enforce the plan's seat limit SERVER-SIDE (the UI gate is not enough — a
+  // direct API call could otherwise add unlimited members beyond the plan).
+  const { getEffectivePlan, getSeatLimit } = await import("@/lib/plans");
+  const seatLimit = getSeatLimit(getEffectivePlan(tenantData), tenantData.addonSeats || 0);
+  if (seatLimit !== null) {
+    const teamSnap = await adminDb.collection("tenants").doc(ctx.tenantId).collection("team").get();
+    // seats used = active/invited members + the owner (1)
+    const used = teamSnap.docs.filter((d) => {
+      const m = d.data();
+      return m.status !== "removed" && m.active !== false;
+    }).length + 1;
+    if (used >= seatLimit) {
+      return Response.json({ error: `Your plan includes ${seatLimit} seat${seatLimit !== 1 ? "s" : ""}. Upgrade or add a seat to invite more team members.`, code: "SEAT_LIMIT" }, { status: 403 });
+    }
   }
 
   const { email, role, permissions, customRoleTitle } = await req.json();
   if (!email?.trim()) return Response.json({ error: "Email is required" }, { status: 400 });
 
-  const staffRole = normalizeRole(role);
+  let staffRole = normalizeRole(role);
+  // Invites must never create an owner (ownership isn't transferred via the
+  // invite flow). A crafted request sending role:"owner" is downgraded.
+  if (staffRole === "owner") staffRole = "admin";
   const roleTitle = (customRoleTitle || "").slice(0, 40);
   const VALID_PERM_KEYS = ["canViewListings","canCreateBookings","canViewRevenue","canViewReports","canManageTeam","canManageProducts","canEditSettings"];
   const savedPerms = permissions && typeof permissions === "object"
