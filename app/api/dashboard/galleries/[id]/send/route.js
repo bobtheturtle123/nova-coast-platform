@@ -5,6 +5,7 @@ import { sendMediaDeliveredSms } from "@/lib/sms";
 import { getAppUrl } from "@/lib/appUrl";
 import { safeDate } from "@/lib/dateUtils";
 import { getEffectivePlan } from "@/lib/plans";
+import { resolveActor } from "@/lib/actor";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -12,7 +13,12 @@ async function getCtx(req) {
   try {
     const decoded = await adminAuth.verifyIdToken(auth);
     if (!decoded.tenantId) return null;
-    return { tenantId: decoded.tenantId };
+    return {
+      tenantId: decoded.tenantId,
+      uid:      decoded.uid,
+      email:    decoded.email,
+      memberId: decoded.memberId,
+    };
   } catch { return null; }
 }
 
@@ -22,6 +28,10 @@ export async function POST(req, { params }) {
 
   const body = await req.json().catch(() => ({}));
   const { subject, note, to, cc, scheduledAt, websiteUrl, tourUrl, agentCanShare } = body;
+
+  // Who is sending — recorded on every activity entry below so the Activity tab
+  // shows which team member delivered, not just that a delivery happened.
+  const actor = await resolveActor(ctx);
 
   const galleryRef = adminDb
     .collection("tenants").doc(ctx.tenantId)
@@ -60,6 +70,10 @@ export async function POST(req, { params }) {
       cc:          cc      || [],
       status:      "pending",
       createdAt:   new Date(),
+      // Carried into the activity log when the cron actually sends it.
+      scheduledById:   actor.id,
+      scheduledByName: actor.name,
+      scheduledByRole: actor.role,
     });
     await batch.commit();
     await galleryRef.update({ scheduledDelivery: { scheduledAt: schedTime, status: "pending" } });
@@ -128,6 +142,9 @@ export async function POST(req, { params }) {
     timestamp: new Date(),
     recipients: allRecipients,
     note:      allRecipients.length ? `Sent to ${allRecipients.join(", ")}` : null,
+    actorId:   actor.id,
+    actorName: actor.name,
+    actorRole: actor.role,
   }).catch(() => {});
 
   // Advance booking workflow status to "delivered" + log to listing activity
@@ -143,6 +160,9 @@ export async function POST(req, { params }) {
       type:      "gallery_delivered",
       title:     `Gallery delivered${allRecipients.length ? ` to ${allRecipients.join(", ")}` : ""}`,
       channel:   "email",
+      actorId:   actor.id,
+      actorName: actor.name,
+      actorRole: actor.role,
       recipient: allRecipients.join(", ") || null,
       link:      galleryLink,
       message:   `${subject ? subject + "\n\n" : ""}${note || "Your media is ready."}${galleryLink ? `\n\nGallery: ${galleryLink}` : ""}`,

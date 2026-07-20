@@ -2810,6 +2810,12 @@ if (loading) return (
                           {/* break-words (not truncate) so long names/emails/refs wrap on mobile instead of clipping */}
                           <p className="text-sm font-medium text-[#0F172A] break-words">{scrubMoney(ev.title || meta.label)}</p>
                           {who && <p className="text-xs text-gray-500 break-words">{ev.viewerName ? `${ev.viewerName} · ` : ""}{who}{ev.channel ? ` · ${ev.channel}` : ""}</p>}
+                          {/* Which team member performed the action (deliveries, sends). */}
+                          {ev.actorName && (
+                            <p className="text-xs text-gray-500 break-words">
+                              by {ev.actorName}{ev.actorRole ? ` · ${ev.actorRole}` : ""}
+                            </p>
+                          )}
                           {ev.fileName && <p className="text-xs text-gray-500 break-words">{ev.fileName}</p>}
                           {ev.message && (
                             <details className="mt-1">

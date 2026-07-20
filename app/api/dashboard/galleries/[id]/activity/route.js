@@ -39,6 +39,8 @@ export async function GET(req, { params }) {
       amount:      data.amount      ?? null,
       ip:          data.ip          || null,
       userAgent:   data.userAgent   || null,
+      actorName:   data.actorName   || null,
+      actorRole:   data.actorRole   || null,
       timestamp:   ts ? ts.toISOString() : null,
     };
   });

@@ -49,7 +49,7 @@ export async function GET(req, { params }) {
       if (x.paymentType === "deposit") loggedDeposit = true;
       if (x.paymentType === "balance") loggedBalance = true;
       if (x.paymentType === "full")    loggedFull = true;
-      all.push({ id: d.id, type: x.type || "sent", paymentType: x.paymentType || null, title: x.title || null, message: x.message || null, recipient: x.recipient || null, link: x.link || null, channel: x.channel || null, changedAt: x.timestamp, _ms: tsMs(x.timestamp) });
+      all.push({ id: d.id, type: x.type || "sent", paymentType: x.paymentType || null, title: x.title || null, message: x.message || null, recipient: x.recipient || null, link: x.link || null, channel: x.channel || null, actorName: x.actorName || null, actorRole: x.actorRole || null, changedAt: x.timestamp, _ms: tsMs(x.timestamp) });
     });
   } catch {}
 
@@ -83,7 +83,7 @@ export async function GET(req, { params }) {
         // Payments are logged canonically on the booking (idempotent, with fee
         // breakdown) — skip the gallery's legacy payment rows to avoid dupes.
         if (x.event === "payment") return;
-        all.push({ id: `g_${d.id}`, type: x.event || "gallery", title: null, message: x.note || null, recipient: x.viewerEmail || null, changedAt: x.timestamp, format: x.format || null, fileName: x.fileName || null, viewerName: x.viewerName || null, _ms: tsMs(x.timestamp) });
+        all.push({ id: `g_${d.id}`, type: x.event || "gallery", title: null, message: x.note || null, recipient: x.viewerEmail || null, changedAt: x.timestamp, format: x.format || null, fileName: x.fileName || null, viewerName: x.viewerName || null, actorName: x.actorName || null, actorRole: x.actorRole || null, _ms: tsMs(x.timestamp) });
       });
     } catch {}
   }

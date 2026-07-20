@@ -121,12 +121,21 @@ export async function GET(req) {
             doc.ref.update({ status: "sent", sentAt: now }),
           ]);
 
-          // Log the scheduled delivery in the gallery activity log.
+          // Log the scheduled delivery in the gallery activity log. The send was
+          // automated, so credit the member who scheduled it (jobs created before
+          // this was recorded have no name — those stay unattributed).
+          const by = job.scheduledByName
+            ? ` (scheduled by ${job.scheduledByName}${job.scheduledByRole ? `, ${job.scheduledByRole}` : ""})`
+            : "";
           galleryRef.collection("activityLog").add({
             event:      "delivered",
             timestamp:  now,
             recipients: allRecipients,
-            note:       allRecipients.length ? `Scheduled delivery sent to ${allRecipients.join(", ")}` : "Scheduled delivery sent",
+            note:       (allRecipients.length ? `Scheduled delivery sent to ${allRecipients.join(", ")}` : "Scheduled delivery sent") + by,
+            actorId:    job.scheduledById   || null,
+            actorName:  job.scheduledByName || null,
+            actorRole:  job.scheduledByRole || null,
+            scheduled:  true,
           }).catch(() => {});
 
           // Advance booking workflow status to "delivered"
