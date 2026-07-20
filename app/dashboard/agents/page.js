@@ -16,6 +16,11 @@ function TeamGroupModal({ group, allAgents, onClose, onSaved }) {
     name:    group?.name    || "",
     members: group?.members || [],
     notes:   group?.notes   || "",
+    partnerDiscount: {
+      active:  group?.partnerDiscount?.active  || false,
+      percent: group?.partnerDiscount?.percent || "",
+      label:   group?.partnerDiscount?.label   || "Partner pricing",
+    },
   });
   const [saving, setSaving] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
@@ -75,6 +80,38 @@ function TeamGroupModal({ group, allAgents, onClose, onSaved }) {
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               className="input-field w-full" placeholder="Optional description" />
           </div>
+          {/* Partner pricing — applies automatically to every member at checkout.
+              Edit-only: the create endpoint doesn't persist it, so offering it on
+              a new team would silently drop the rate. Save the team, then set it. */}
+          {isEdit && (
+          <div style={{ border: "1px solid var(--border-subtle)", borderRadius: 10, padding: 12 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input type="checkbox" checked={form.partnerDiscount.active}
+                onChange={(e) => setForm((f) => ({ ...f, partnerDiscount: { ...f.partnerDiscount, active: e.target.checked } }))} />
+              <span className="text-[13px] font-semibold text-[#0F172A]">Partner pricing</span>
+            </label>
+            <p className="text-xs text-gray-500 mt-1">
+              Every member gets this discount automatically when they book — no promo code needed.
+            </p>
+            {form.partnerDiscount.active && (
+              <div className="flex gap-2 mt-2.5">
+                <div style={{ width: 110 }}>
+                  <label className="label-field">% off</label>
+                  <input type="number" min="1" max="100" step="0.5"
+                    value={form.partnerDiscount.percent}
+                    onChange={(e) => setForm((f) => ({ ...f, partnerDiscount: { ...f.partnerDiscount, percent: e.target.value } }))}
+                    className="input-field w-full" placeholder="15" required />
+                </div>
+                <div className="flex-1">
+                  <label className="label-field">Label shown to client</label>
+                  <input type="text" value={form.partnerDiscount.label}
+                    onChange={(e) => setForm((f) => ({ ...f, partnerDiscount: { ...f.partnerDiscount, label: e.target.value } }))}
+                    className="input-field w-full" placeholder="e.g. Coldwell Banker partner rate" />
+                </div>
+              </div>
+            )}
+          </div>
+          )}
           <div>
             <label className="label-field">Members ({form.members.length} selected)</label>
             <input type="text" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)}

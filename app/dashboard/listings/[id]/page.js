@@ -1041,7 +1041,7 @@ if (loading) return (
                   <button onClick={() => sendAgentAccess(true)} disabled={sendingAgentAccess}
                     className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
                     <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
-                    {sendingAgentAccess ? "Sending…" : "Portal access"}
+                    {sendingAgentAccess ? "Sending…" : "Send Portal Access"}
                   </button>
                 </div>
                 {agentAccessMsg && <p className="text-xs text-green-600 mt-2">{agentAccessMsg}</p>}
@@ -1440,10 +1440,13 @@ if (loading) return (
                       Open editor
                     </button>
                     {gallery?.accessToken && tenantSlug && (
-                      <button onClick={() => { navigator.clipboard.writeText(`${getAppUrl()}/${tenantSlug}/gallery/${gallery.accessToken}`); toast("Link copied."); }}
-                        className="flex-1 text-xs font-semibold py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
-                        Copy link
-                      </button>
+                      // Opens the real client-facing gallery so a broken link is
+                      // obvious here rather than after it's been sent out.
+                      <a href={`/${tenantSlug}/gallery/${gallery.accessToken}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="flex-1 text-xs font-semibold py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors text-center">
+                        View gallery
+                      </a>
                     )}
                   </div>
                 </div>

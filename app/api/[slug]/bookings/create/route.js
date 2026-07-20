@@ -6,6 +6,7 @@ import { sendBookingConfirmation } from "@/lib/email";
 import { v4 as uuidv4 } from "uuid";
 import { rateLimit } from "@/lib/rateLimit";
 import { getListingLimit, getEffectivePlan } from "@/lib/plans";
+import { resolvePartnerDiscount, partnerDiscountAmount } from "@/lib/partnerDiscount";
 
 export async function POST(req, { params }) {
   // 5 booking attempts per IP per hour
@@ -99,8 +100,21 @@ export async function POST(req, { params }) {
       } catch (e) { console.error("[booking/create] promo validation failed:", e?.message); }
     }
 
+    // ── Partner pricing ───────────────────────────────────────────────────────
+    // Resolved from the booking email, never from the client payload. Partner
+    // pricing and a promo code do NOT stack — the better of the two wins.
+    const partner = await resolvePartnerDiscount(tenant.id, clientEmail);
+    const partnerDiscount = partnerDiscountAmount(partner, pricing.subtotal);
+    let appliedPartner = null;
+    if (partnerDiscount > promoDiscount) {
+      appliedPartner = { percent: partner.percent, label: partner.label, sourceAgentId: partner.sourceAgentId };
+      promoDiscount = 0;
+      appliedPromo  = null;
+    }
+    const totalDiscount = Math.max(promoDiscount, partnerDiscount);
+
     // Apply discount to the total. Deposit can't exceed the discounted total.
-    const effectiveTotal = Math.max(0, pricing.subtotal - promoDiscount);
+    const effectiveTotal = Math.max(0, pricing.subtotal - totalDiscount);
     const effDeposit     = Math.min(pricing.deposit || 0, effectiveTotal);
 
     // Determine payment type and amount.
@@ -221,6 +235,11 @@ export async function POST(req, { params }) {
         promoCode:        appliedPromo?.code || null,
         promoId:          appliedPromo?.id   || null,
         promoDiscount,
+        // Partner pricing (mutually exclusive with a promo — best one wins).
+        partnerDiscount:        appliedPartner ? partnerDiscount : 0,
+        partnerDiscountPercent: appliedPartner?.percent || null,
+        partnerDiscountLabel:   appliedPartner?.label   || null,
+        partnerAgentId:         appliedPartner?.sourceAgentId || null,
         totalPrice:       effectiveTotal,
         depositAmount:    isFullPayment ? effectiveTotal : effDeposit,
         remainingBalance,

@@ -73,11 +73,17 @@ function formatPhone(raw) {
 }
 
 // ─── Order summary line items ─────────────────────────────────────────────────
-function OrderSummary({ pricing, catalog, packageIds, serviceIds, addonIds, address, city, payFull, tip }) {
+function OrderSummary({ pricing, catalog, packageIds, serviceIds, addonIds, address, city, payFull, tip, partner }) {
   if (!pricing || !catalog) return null;
   const depLabel = depositLabel(catalog?.bookingConfig?.deposit);
-  const discount      = pricing.discount || 0;
-  const effectiveTotal = pricing.finalTotal ?? pricing.subtotal ?? 0;
+  const promoDiscount   = pricing.discount || 0;
+  // Partner pricing and a promo code don't stack — the better one wins.
+  const partnerDiscount = partner?.discount || 0;
+  const usePartner      = partnerDiscount > promoDiscount;
+  const discount        = usePartner ? partnerDiscount : promoDiscount;
+  const effectiveTotal  = usePartner
+    ? Math.max(0, (pricing.subtotal ?? 0) - partnerDiscount)
+    : (pricing.finalTotal ?? pricing.subtotal ?? 0);
   const effDeposit    = Math.min(pricing.deposit ?? 0, effectiveTotal);
   const effBalance    = Math.max(0, effectiveTotal - effDeposit);
   const totalCharge   = (payFull ? effectiveTotal : effDeposit) + (tip || 0);
@@ -144,9 +150,14 @@ function OrderSummary({ pricing, catalog, packageIds, serviceIds, addonIds, addr
       <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
         {discount > 0 && (
           <div className="flex justify-between text-green-600">
-            <span>Promo discount</span>
+            <span>{usePartner ? `${partner.label} (${partner.percent}% off)` : "Promo discount"}</span>
             <span>−${discount.toLocaleString()}</span>
           </div>
+        )}
+        {usePartner && (
+          <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-2.5 py-1.5">
+            You&apos;re saving ${discount.toLocaleString()} with your partner rate.
+          </p>
         )}
         <div className="flex justify-between font-semibold">
           <span>Total</span>
@@ -208,6 +219,9 @@ export default function TenantPaymentPage() {
   const [initError,    setInitError]     = useState(null);
   const [paymentsDisabled, setPaymentsDisabled] = useState(false);
   const [lookupState,  setLookupState]   = useState(null);
+  // Standing partner rate for this email, resolved on blur. Display only — the
+  // booking route re-resolves it server-side before charging.
+  const [partner,      setPartner]       = useState(null);
   const [catalog,      setCatalog]       = useState(null);
   const [fieldErrors,  setFieldErrors]   = useState({});
   const [payFull,      setPayFull]       = useState(false);
@@ -227,7 +241,10 @@ export default function TenantPaymentPage() {
   // Use the discounted total when a promo is applied (finalTotal); fall back to
   // subtotal. Previously this charged subtotal, so promo codes were recorded but
   // never reduced the amount actually charged.
-  const effectiveTotal = pricing?.finalTotal ?? pricing?.subtotal ?? 0;
+  // A partner rate overrides the promo when it saves more (they never stack).
+  const promoTotal     = pricing?.finalTotal ?? pricing?.subtotal ?? 0;
+  const partnerTotal   = Math.max(0, (pricing?.subtotal ?? 0) - (partner?.discount || 0));
+  const effectiveTotal = partner?.discount ? Math.min(promoTotal, partnerTotal) : promoTotal;
   // Deposit can't exceed the discounted total.
   const deposit      = Math.min(pricing?.deposit ?? 0, effectiveTotal);
   const chargeAmount = (effectivePayFull ? effectiveTotal : deposit) + tip;
@@ -244,6 +261,17 @@ export default function TenantPaymentPage() {
   const handleEmailBlur = useCallback(async () => {
     const email = clientEmail.trim();
     if (!email.includes("@")) return;
+
+    // Standing partner rate, if this agent (or their team) has one.
+    fetch(`/api/${params.slug}/partner-discount`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, subtotal: pricing?.subtotal || 0 }),
+    })
+      .then((r) => r.json())
+      .then((d) => setPartner(d.partner || null))
+      .catch(() => setPartner(null));
+
     try {
       const res  = await fetch(`/api/${params.slug}/agents/lookup?email=${encodeURIComponent(email)}`);
       const data = await res.json();
@@ -259,7 +287,7 @@ export default function TenantPaymentPage() {
     } catch {
       setLookupState("new");
     }
-  }, [clientEmail, clientName, clientPhone, params.slug, setClientInfo]);
+  }, [clientEmail, clientName, clientPhone, params.slug, setClientInfo, pricing?.subtotal]);
 
   function validate() {
     const errs = {};
@@ -657,6 +685,7 @@ export default function TenantPaymentPage() {
               city={city}
               payFull={effectivePayFull}
               tip={tip}
+              partner={partner}
             />
           </div>
         </div>

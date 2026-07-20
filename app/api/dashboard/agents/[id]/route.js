@@ -1,4 +1,5 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { sanitizePartnerDiscount } from "@/lib/partnerDiscount";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -19,6 +20,14 @@ export async function PATCH(req, { params }) {
   const update = {};
   for (const k of allowed) {
     if (body[k] !== undefined) update[k] = body[k];
+  }
+
+  // Partner pricing for this individual agent (a team-wide rate lives on the
+  // customer team instead). Sanitized — it reduces what clients are charged.
+  if (body.partnerDiscount !== undefined) {
+    const { value, error } = sanitizePartnerDiscount(body.partnerDiscount);
+    if (error) return Response.json({ error }, { status: 400 });
+    update.partnerDiscount = value;
   }
 
   await adminDb

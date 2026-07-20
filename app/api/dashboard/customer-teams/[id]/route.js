@@ -1,4 +1,5 @@
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { sanitizePartnerDiscount } from "@/lib/partnerDiscount";
 
 async function getTenantId(req) {
   const auth = req.headers.get("Authorization") || "";
@@ -19,6 +20,14 @@ export async function PATCH(req, { params }) {
     const update = {};
     for (const key of allowed) {
       if (key in body) update[key] = body[key];
+    }
+
+    // Partner pricing for the whole team — every member gets this rate
+    // automatically at checkout, no code required.
+    if (body.partnerDiscount !== undefined) {
+      const { value, error } = sanitizePartnerDiscount(body.partnerDiscount);
+      if (error) return Response.json({ error }, { status: 400 });
+      update.partnerDiscount = value;
     }
 
     await adminDb
