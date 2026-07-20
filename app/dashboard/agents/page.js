@@ -168,6 +168,11 @@ function CustomerModal({ agent, teams, onClose, onSaved, onDelete }) {
     phone:   agent?.phone   || "",
     company: agent?.company || "",
     notes:   agent?.notes   || "",
+    partnerDiscount: {
+      active:  agent?.partnerDiscount?.active  || false,
+      percent: agent?.partnerDiscount?.percent || "",
+      label:   agent?.partnerDiscount?.label   || "Partner pricing",
+    },
   });
   const [teamId,  setTeamId]  = useState("");
   const [saving,  setSaving]  = useState(false);
@@ -256,6 +261,38 @@ function CustomerModal({ agent, teams, onClose, onSaved, onDelete }) {
               </select>
             )}
           </div>
+          {/* Partner pricing for this one customer. Edit-only: the create
+              endpoint doesn't persist it, so it would be dropped on a new
+              customer. A team-wide rate lives on the group instead. */}
+          {isEdit && (
+            <div style={{ border: "1px solid var(--border-subtle)", borderRadius: 10, padding: 12 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                <input type="checkbox" checked={form.partnerDiscount.active}
+                  onChange={(e) => setForm((f) => ({ ...f, partnerDiscount: { ...f.partnerDiscount, active: e.target.checked } }))} />
+                <span className="text-[13px] font-semibold text-[#0F172A]">Partner pricing</span>
+              </label>
+              <p className="text-xs text-gray-500 mt-1">
+                Applies automatically whenever this customer books — no promo code needed.
+              </p>
+              {form.partnerDiscount.active && (
+                <div className="flex gap-2 mt-2.5">
+                  <div style={{ width: 110 }}>
+                    <label className="label-field">% off</label>
+                    <input type="number" min="1" max="100" step="0.5"
+                      value={form.partnerDiscount.percent}
+                      onChange={(e) => setForm((f) => ({ ...f, partnerDiscount: { ...f.partnerDiscount, percent: e.target.value } }))}
+                      className="input-field w-full" placeholder="15" required />
+                  </div>
+                  <div className="flex-1">
+                    <label className="label-field">Label shown to client</label>
+                    <input type="text" value={form.partnerDiscount.label}
+                      onChange={(e) => setForm((f) => ({ ...f, partnerDiscount: { ...f.partnerDiscount, label: e.target.value } }))}
+                      className="input-field w-full" placeholder="e.g. Coldwell Banker partner rate" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <div>
             <label className="label-field">Internal Notes</label>
             <textarea value={form.notes} onChange={set("notes")} rows={3}
@@ -822,6 +859,8 @@ export default function AgentsPage() {
                   count={cnt}
                   active={selectedGroup === team.id}
                   onClick={() => setSelectedGroup(team.id)}
+                  badge={team.partnerDiscount?.active ? `${team.partnerDiscount.percent}% off` : null}
+                  onEdit={() => { setEditingTeam(team); setShowTeamModal(true); }}
                 />
               );
             })}
@@ -1043,12 +1082,12 @@ export default function AgentsPage() {
 }
 
 // ─── Group rail item ──────────────────────────────────────────────────────────
-function GItem({ label, count, active, onClick, muted }) {
+function GItem({ label, count, active, onClick, muted, onEdit, badge }) {
   return (
     <div
       onClick={onClick}
       style={{
-        display: "flex", alignItems: "center",
+        display: "flex", alignItems: "center", gap: 6,
         padding: "8px 10px", borderRadius: 8, cursor: "pointer",
         background: active ? "var(--accent-50)" : "transparent",
         transition: "background .1s",
@@ -1059,12 +1098,36 @@ function GItem({ label, count, active, onClick, muted }) {
       <span style={{
         flex: 1, fontSize: 13, fontWeight: active ? 600 : 500,
         color: muted ? "#9CA3AF" : active ? "var(--info-text, #1E5A8A)" : "#0F172A",
+        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
       }}>
         {label}
       </span>
+      {/* Partner rate badge — makes discounted teams visible at a glance. */}
+      {badge && (
+        <span style={{
+          fontSize: 9.5, fontWeight: 700, color: "#15803D", background: "#F0FDF4",
+          border: "1px solid #BBF7D0", borderRadius: 99, padding: "1px 5px", flexShrink: 0,
+        }}>
+          {badge}
+        </span>
+      )}
       <span style={{ fontSize: 11, fontWeight: 600, color: active ? "var(--accent)" : "#9CA3AF" }}>
         {count}
       </span>
+      {onEdit && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          title="Edit team & partner pricing"
+          style={{
+            border: "none", background: "transparent", cursor: "pointer",
+            color: "#9CA3AF", padding: 0, display: "flex", alignItems: "center", flexShrink: 0,
+          }}
+        >
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
