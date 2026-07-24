@@ -152,9 +152,15 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   const [loadingSlots,      setLoadingSlots]      = useState(false);
   const [contractSignerName, setContractSignerName] = useState(init.contractSignerName || "");
   const [contractSigned,     setContractSigned]     = useState(!!init.contractSignerName);
-  // Promo code (manual-booking create flow). Stores the code's type/value so the
-  // discount recomputes live as services change; the server re-validates on save.
-  const [promo,        setPromo]        = useState(null);
+  // Promo code. Create flow stores the code's type/value so the discount
+  // recomputes live as services change (server re-validates on save). Edit flow
+  // persists immediately via the booking's apply-promo endpoint and stores the
+  // server-computed discount (no type/value on the booking doc).
+  const [promo,        setPromo]        = useState(
+    init.promoCode
+      ? { code: init.promoCode, promoId: init.promoId || null, discount: init.promoDiscount || 0 }
+      : null
+  );
   const [promoInput,   setPromoInput]   = useState("");
   const [promoMsg,     setPromoMsg]     = useState(null);
   const [promoLoading, setPromoLoading] = useState(false);
@@ -279,9 +285,14 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   const promoDiscount = useMemo(() => {
     if (!promo) return 0;
     const t = pricing.total;
-    return promo.type === "flat"
-      ? Math.min(Number(promo.value) || 0, t)
-      : Math.min(t, Math.round((t * (Number(promo.value) || 0)) / 100 * 100) / 100);
+    // Create flow knows the code's shape → recompute live. Edit flow only has
+    // the server-computed discount stored on the booking.
+    if (promo.type) {
+      return promo.type === "flat"
+        ? Math.min(Number(promo.value) || 0, t)
+        : Math.min(t, Math.round((t * (Number(promo.value) || 0)) / 100 * 100) / 100);
+    }
+    return Math.min(promo.discount || 0, t);
   }, [promo, pricing.total]);
   const discountedTotal = Math.max(0, pricing.total - promoDiscount);
 
@@ -290,6 +301,28 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
     setPromoLoading(true); setPromoMsg(null);
     try {
       const token = await getToken();
+
+      // Edit flow: apply against the existing booking so usage is counted and
+      // the discount persists (same endpoint the booking detail page uses).
+      if (isEdit) {
+        const res = await fetch(`/api/dashboard/bookings/${bookingId}/apply-promo`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ code: promoInput.trim() }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setPromo({ code: data.code, discount: data.discount });
+          setPromoMsg({ text: `${data.code} applied — ${formatPrice(data.discount)} off`, ok: true });
+          setPromoInput("");
+        } else {
+          setPromoMsg({ text: data.error || "Invalid code", ok: false });
+        }
+        setPromoLoading(false);
+        return;
+      }
+
+      // Create flow: validate only; the create route applies + counts on submit.
       const res = await fetch("/api/dashboard/promo-codes/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -310,7 +343,17 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
     setPromoLoading(false);
   }
 
-  function clearPromo() {
+  async function clearPromo() {
+    // Edit flow: remove from the booking (decrements usage) before clearing UI.
+    if (isEdit && promo) {
+      try {
+        const token = await getToken();
+        await fetch(`/api/dashboard/bookings/${bookingId}/apply-promo`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch { /* best-effort; UI clears regardless */ }
+    }
     setPromo(null);
     setPromoMsg(null);
   }
@@ -1338,36 +1381,35 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                 <p className="text-xs text-gray-400 mb-4">Select services to auto-calculate.</p>
               )}
 
-              {/* Promo code — manual bookings only; edit existing bookings from
-                  the booking's detail page, which owns usage counting. */}
-              {!isEdit && (
-                <div className="mb-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Promo Code</p>
-                  {promo ? (
-                    <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-                      <span className="text-sm font-medium text-emerald-800">
-                        {promo.code} · {promo.type === "flat" ? formatPrice(promo.value) : `${promo.value}%`} off
-                      </span>
-                      <button type="button" onClick={clearPromo}
-                        className="text-xs text-emerald-600 hover:text-emerald-800 underline">Remove</button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <input type="text" value={promoInput}
-                        onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
-                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyPromo(); } }}
-                        placeholder="Code" className="input-field flex-1 text-sm uppercase" />
-                      <button type="button" onClick={applyPromo} disabled={promoLoading || !promoInput.trim()}
-                        className="btn-outline px-3 py-2 text-sm flex-shrink-0 disabled:opacity-40">
-                        {promoLoading ? "…" : "Apply"}
-                      </button>
-                    </div>
-                  )}
-                  {promoMsg && (
-                    <p className={`text-xs mt-1.5 ${promoMsg.ok ? "text-emerald-600" : "text-red-500"}`}>{promoMsg.text}</p>
-                  )}
-                </div>
-              )}
+              {/* Promo code — available on new and existing bookings. */}
+              <div className="mb-4">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Promo Code</p>
+                {promo ? (
+                  <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                    <span className="text-sm font-medium text-emerald-800">
+                      {promo.code} · {promo.type
+                        ? (promo.type === "flat" ? formatPrice(promo.value) : `${promo.value}%`)
+                        : formatPrice(promo.discount || promoDiscount)} off
+                    </span>
+                    <button type="button" onClick={clearPromo} disabled={promoLoading}
+                      className="text-xs text-emerald-600 hover:text-emerald-800 underline disabled:opacity-40">Remove</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input type="text" value={promoInput}
+                      onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyPromo(); } }}
+                      placeholder="Code" className="input-field flex-1 text-sm uppercase" />
+                    <button type="button" onClick={applyPromo} disabled={promoLoading || !promoInput.trim()}
+                      className="btn-outline px-3 py-2 text-sm flex-shrink-0 disabled:opacity-40">
+                      {promoLoading ? "…" : "Apply"}
+                    </button>
+                  </div>
+                )}
+                {promoMsg && (
+                  <p className={`text-xs mt-1.5 ${promoMsg.ok ? "text-emerald-600" : "text-red-500"}`}>{promoMsg.text}</p>
+                )}
+              </div>
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Add Custom Item</p>
                 <div className="flex gap-2">

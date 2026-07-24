@@ -89,6 +89,9 @@ export async function POST(req) {
       }
     }
 
+    // finalPrice (discounted) drives deposit + balance so the charge reflects
+    // the promo. totalPrice is stored PRE-discount with promoDiscount separate —
+    // the convention reports/invoice/detail all rely on (totalPrice − discount).
     const finalPrice = Math.max(0, subtotal - promoDiscount);
 
     // Calculate deposit from the tenant's deposit config (percent / fixed / none).
@@ -123,7 +126,7 @@ export async function POST(req) {
       preferredDate,
       preferredTime,
       notes,
-      totalPrice:      finalPrice,
+      totalPrice:      subtotal,
       promoCode:       appliedPromoCode,
       promoId:         appliedPromoId,
       promoDiscount,

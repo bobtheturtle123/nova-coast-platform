@@ -45,3 +45,33 @@ describe("validatePromo", () => {
     expect(validatePromo({ ...base, minOrder: 150 }, 200).ok).toBe(true);
   });
 });
+
+// Mirrors the apply-promo endpoint's balance math: applying a code reduces the
+// remaining balance, replacing a code restores the prior discount first (so it
+// stays idempotent), and removing a code adds the discount back.
+describe("apply-promo balance adjustment", () => {
+  const apply = (remaining, priorDiscount, newDiscount) => {
+    const basis = Math.max(0, remaining + priorDiscount);
+    return Math.max(0, basis - newDiscount);
+  };
+  const remove = (remaining, priorDiscount) => Math.max(0, remaining + priorDiscount);
+
+  it("reduces the balance by the discount on first apply", () => {
+    expect(apply(200, 0, 30)).toBe(170);
+  });
+
+  it("is idempotent when replacing an existing code", () => {
+    // 200 → apply 10% (−20) → 180 → replace with 25% (−50) → 150, not 130
+    const after10 = apply(200, 0, 20);
+    expect(after10).toBe(180);
+    expect(apply(after10, 20, 50)).toBe(150);
+  });
+
+  it("never drops below zero", () => {
+    expect(apply(100, 0, 250)).toBe(0);
+  });
+
+  it("restores the discount on remove", () => {
+    expect(remove(170, 30)).toBe(200);
+  });
+});

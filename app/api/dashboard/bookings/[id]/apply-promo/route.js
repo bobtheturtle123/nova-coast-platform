@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import { validatePromo } from "@/lib/promo";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -41,43 +42,34 @@ export async function POST(req, { params }) {
   const promoDoc  = promoSnap.docs[0];
   const promo     = promoDoc.data();
 
-  // Validation
-  if (!promo.active) {
-    return Response.json({ error: "This promo code is inactive" }, { status: 400 });
-  }
-  if (promo.expiresAt && new Date(promo.expiresAt) < new Date()) {
-    return Response.json({ error: "This promo code has expired" }, { status: 400 });
-  }
-  if (promo.usageLimit > 0 && promo.usageCount >= promo.usageLimit) {
-    return Response.json({ error: "This promo code has reached its usage limit" }, { status: 400 });
-  }
-
+  // Validate against the PRE-discount order total (shared with the create flow).
   const orderTotal = booking.totalPrice || 0;
-  if (promo.minOrder > 0 && orderTotal < promo.minOrder) {
-    return Response.json({
-      error: `This code requires a minimum order of $${promo.minOrder}`,
-    }, { status: 400 });
-  }
+  const result = validatePromo(promo, orderTotal);
+  if (!result.ok) return Response.json({ error: result.error }, { status: 400 });
+  const discount = result.discount;
 
-  // Calculate discount
-  let discount = 0;
-  if (promo.type === "percent") {
-    discount = Math.round(orderTotal * (promo.value / 100) * 100) / 100;
-  } else {
-    discount = Math.min(promo.value, orderTotal);
-  }
+  // Reduce the balance so the discount is actually collected, not just shown.
+  // Restore any prior promo first so re-applying a different code is idempotent.
+  // Replacing an existing code leaves usageCount as-is (net zero); a fresh
+  // application increments it.
+  const priorDiscount = booking.promoCode ? (booking.promoDiscount || 0) : 0;
+  const basisRemaining = Math.max(0, (booking.remainingBalance || 0) + priorDiscount);
+  const newRemaining   = Math.max(0, basisRemaining - discount);
 
-  // Apply to booking and increment usage
-  await Promise.all([
+  const updates = [
     bookingRef.update({
-      promoCode:     normalized,
-      promoDiscount: discount,
-      updatedAt:     new Date(),
+      promoCode:        normalized,
+      promoDiscount:    discount,
+      remainingBalance: newRemaining,
+      updatedAt:        new Date(),
     }),
-    promoDoc.ref.update({ usageCount: FieldValue.increment(1) }),
-  ]);
+  ];
+  if (!booking.promoCode) {
+    updates.push(promoDoc.ref.update({ usageCount: FieldValue.increment(1) }));
+  }
+  await Promise.all(updates);
 
-  return Response.json({ ok: true, discount, code: normalized });
+  return Response.json({ ok: true, discount, code: normalized, remainingBalance: newRemaining });
 }
 
 // DELETE — remove the applied promo code from a booking
@@ -110,11 +102,16 @@ export async function DELETE(req, { params }) {
     }
   }
 
+  // Add the discount back to the balance so removing the code un-does the charge
+  // reduction it applied.
+  const restoredRemaining = Math.max(0, (booking.remainingBalance || 0) + (booking.promoDiscount || 0));
+
   await bookingRef.update({
-    promoCode:     null,
-    promoDiscount: null,
-    updatedAt:     new Date(),
+    promoCode:        null,
+    promoDiscount:    null,
+    remainingBalance: restoredRemaining,
+    updatedAt:        new Date(),
   });
 
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, remainingBalance: restoredRemaining });
 }
