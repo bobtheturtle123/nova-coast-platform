@@ -115,10 +115,14 @@ function AgentImageField({ label, value, onChange, folder, placeholder, hint, pr
 }
 
 // ─── Date/Time Picker ────────────────────────────────────────────────────────
-const TIME_OPTIONS = [
-  "7:00 AM","8:00 AM","8:30 AM","9:00 AM","9:30 AM","10:00 AM","10:30 AM",
-  "11:00 AM","11:30 AM","12:00 PM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM",
-];
+// Admin reschedule: every 30 minutes across the full day — an admin can schedule
+// any time, not just working hours. (The agent-facing booking form keeps its own
+// working-hours slots.) The free time input below allows off-grid times too.
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${i % 2 ? "30" : "00"} ${ampm}`;
+});
 function timeToVal(label) {
   const [time, ampm] = label.split(" ");
   let [h, m] = time.split(":").map(Number);
@@ -168,7 +172,10 @@ function DateTimePicker({ date, time, onConfirm, onClose }) {
             })}
           </div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Time</p>
-          <div className="grid grid-cols-5 gap-1 mb-4">
+          {/* Free input for any exact time (e.g. 6:15 AM), plus 30-min presets. */}
+          <input type="time" value={selTime} onChange={(e)=>setSelTime(e.target.value)}
+            className="input-field w-full mb-2 text-sm" />
+          <div className="grid grid-cols-4 gap-1 mb-4 max-h-40 overflow-y-auto">
             {TIME_OPTIONS.map((t)=>{
               const v=timeToVal(t);
               return <button key={t} type="button" onClick={()=>setSelTime(v)}
@@ -446,6 +453,24 @@ const [listingUrl,       setListingUrl]        = useState("");
       }
     } catch { toast("Something went wrong.", "error"); }
     finally { setSaving(false); }
+  }
+
+  const [syncingGcal, setSyncingGcal] = useState(false);
+  // Re-push this booking (main + all additional appointments) to the assigned
+  // photographer's Google Calendar. Fixes bookings whose extra appointments
+  // never landed on the calendar.
+  async function syncToCalendar() {
+    setSyncingGcal(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/bookings/${id}/push-gcal`, {
+        method: "POST", headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) toast("Synced all appointments to Google Calendar.");
+      else toast(d.error || "Could not sync to Google Calendar.", "error");
+    } catch { toast("Could not sync to Google Calendar.", "error"); }
+    finally { setSyncingGcal(false); }
   }
 
   async function postponeBooking() {
@@ -1164,6 +1189,14 @@ if (loading) return (
                       </div>
                     ))}
                   </div>
+                )}
+                {/* Re-push every appointment to the photographer's Google Calendar. */}
+                {booking.photographerId && (booking.shootDate || booking.preferredDate) && (
+                  <button type="button" onClick={syncToCalendar} disabled={syncingGcal}
+                    className="mt-2.5 flex items-center gap-1.5 text-[11px] font-semibold text-[#3486cf] hover:underline disabled:opacity-50">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    {syncingGcal ? "Syncing…" : "Sync to Google Calendar"}
+                  </button>
                 )}
                 {/* LEGACY: kept for schedule-approval flow */}
                 {(booking.preferredDate || booking.preferredTime) && false && (
