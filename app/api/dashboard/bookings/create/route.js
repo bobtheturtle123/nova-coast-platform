@@ -176,6 +176,15 @@ export async function POST(req) {
         .catch((e) => console.error("[booking/create] gcal push failed:", e?.message));
     }
 
+    // Notify any team members opted into new-order alerts (e.g. a QC manager),
+    // independent of the client-confirmation toggle. Fire-and-forget.
+    (async () => {
+      try {
+        const { notifyTeamOfNewBooking } = await import("@/lib/notifyTeam");
+        await notifyTeamOfNewBooking(ctx.tenantId, bookingData, await getTenantById(ctx.tenantId));
+      } catch (e) { console.error("[booking/create] team notify failed:", e?.message); }
+    })();
+
     // Upsert customer record
     if (normalizedEmail) {
       const agentKey = Buffer.from(normalizedEmail).toString("base64").replace(/[+/=]/g, "");

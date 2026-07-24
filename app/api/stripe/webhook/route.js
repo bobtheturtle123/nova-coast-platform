@@ -189,6 +189,7 @@ export async function POST(req) {
                 sendBookingConfirmedSms({ booking, tenant })
                   .then(() => console.log(`[stripe/webhook] SMS sent for bookingId=${bookingId}`))
                   .catch((e) => console.error("[stripe/webhook] SMS FAILED:", e?.message || e));
+                import("@/lib/notifyTeam").then((m) => m.notifyTeamOfNewBooking(tenantId, { ...booking, depositPaid: true }, tenant)).catch(() => {});
                 try {
                   const { dispatchZapier, bookingWebhookData } = await import("@/lib/zapier");
                   await dispatchZapier(tenant, "booking.paid", bookingWebhookData({ ...booking, depositPaid: true, status: "requested" }));
@@ -234,6 +235,7 @@ export async function POST(req) {
                 sendBookingConfirmedSms({ booking, tenant })
                   .then(() => console.log(`[stripe/webhook] SMS sent for bookingId=${bookingId}`))
                   .catch((e) => console.error("[stripe/webhook] SMS FAILED:", e?.message || e));
+                import("@/lib/notifyTeam").then((m) => m.notifyTeamOfNewBooking(tenantId, { ...booking, depositPaid: true }, tenant)).catch(() => {});
               }
             } catch (e) { console.error("[stripe/webhook] full payment notification FAILED:", e?.message || e); }
           }

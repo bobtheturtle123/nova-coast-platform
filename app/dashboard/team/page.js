@@ -571,6 +571,8 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
     // Only photographers shoot by default; managers/admins/custom default off.
     showInScheduling: member?.showInScheduling ?? (initialRole === "photographer"),
     photoUrl:      member?.photoUrl      || "",
+    // Email this member whenever a new order comes in (e.g. a QC manager).
+    notifyOnNewBooking: member?.notifyOnNewBooking || false,
   });
   const [saving,   setSaving]   = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -754,6 +756,15 @@ function MemberForm({ member, products, onSave, onDelete, onClose }) {
                 <input type="checkbox" id="member-active" checked={form.active}
                   onChange={(e) => setForm((f) => ({...f, active: e.target.checked}))} />
                 <label htmlFor="member-active" className="text-sm text-[#0F172A] cursor-pointer">Active — visible on schedule</label>
+              </div>
+
+              <div className="flex items-start gap-2 pt-1">
+                <input type="checkbox" id="member-notify" className="mt-0.5" checked={form.notifyOnNewBooking}
+                  onChange={(e) => setForm((f) => ({...f, notifyOnNewBooking: e.target.checked}))} />
+                <label htmlFor="member-notify" className="text-sm text-[#0F172A] cursor-pointer">
+                  Email on new orders
+                  <span className="block text-xs text-gray-400">Notify this member every time a new order comes in — useful for a QC manager.</span>
+                </label>
               </div>
             </>
           )}

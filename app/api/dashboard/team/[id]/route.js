@@ -53,6 +53,8 @@ export async function PATCH(req, { params }) {
       ? !!body.showInScheduling
       : normalizeRole(body.role) === "photographer",
     photoUrl:      typeof body.photoUrl === "string" ? body.photoUrl.slice(0, 500) : "",
+    // Email this member whenever a new order comes in (e.g. a QC manager).
+    notifyOnNewBooking: !!body.notifyOnNewBooking,
   };
 
   // Only overwrite permissions when the caller explicitly sends them

@@ -309,6 +309,20 @@ export async function POST(req, { params }) {
       });
     }
 
+    // Paid orders notify opted-in team members from the Stripe webhook (on
+    // payment). Free bookings skip payment entirely, so notify here instead.
+    if (isFreeBooking) {
+      (async () => {
+        try {
+          const { notifyTeamOfNewBooking } = await import("@/lib/notifyTeam");
+          await notifyTeamOfNewBooking(tenant.id, {
+            clientName, clientEmail, clientPhone, fullAddress, notes,
+            preferredDate, preferredTime, totalPrice: effectiveTotal,
+          }, tenant);
+        } catch (e) { console.error("[booking/create] team notify failed:", e?.message); }
+      })();
+    }
+
     // Fire Zapier webhook (fire-and-forget).
     (async () => {
       try {
