@@ -225,11 +225,6 @@ export async function POST(req) {
             const bizName   = tenant.branding?.businessName || tenant.businessName || "KyoriaOS";
             const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
             const from      = `${bizName} <${fromEmail}>`;
-            const shootInfo = shootDate
-              ? `${new Date(shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}${shootTime ? ` at ${shootTime}` : ""}`
-              : preferredDate
-              ? `${new Date(preferredDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}${preferredTime ? ` at ${preferredTime}` : ""}`
-              : null;
             const adminEmail = tenant.email || adminRecord?.email || null;
 
             // Build .ics attachment FIRST so it's available when pushing client email below
@@ -246,22 +241,41 @@ export async function POST(req) {
               }
               return t;
             }
-            let icsAttachment = [];
-            const calDate = shootDate || preferredDate;
-            const calTimeRaw = shootTime || preferredTime;
-            const calTime = to24h(calTimeRaw);
-            if (calDate && calTime && !["flexible","morning","afternoon"].includes(calTimeRaw)) {
+            // Every appointment on this booking — the main shoot plus any extras —
+            // gets a line in the "Scheduled" section and its own .ics, so the client
+            // and photographer are notified of ALL of them, not just the first.
+            const allAppointments = [
+              { date: shootDate || preferredDate, time: shootTime || preferredTime },
+              ...(Array.isArray(additionalAppointments) ? additionalAppointments : []),
+            ].filter((a) => a?.date);
+            const isVague = (t) => ["flexible", "morning", "afternoon"].includes(t);
+            const fmtAppt = (a) => {
+              const dLabel = new Date(a.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+              if (a.time && isVague(a.time)) return `${dLabel} (${a.time})`;
+              const t24 = to24h(a.time);
+              if (!t24) return dLabel;
+              const [h, m] = t24.split(":");
+              const hn = Number(h);
+              return `${dLabel} at ${hn % 12 || 12}:${m} ${hn >= 12 ? "PM" : "AM"}`;
+            };
+            const multiAppt = allAppointments.length > 1;
+            const scheduleHtml = allAppointments.length
+              ? allAppointments.map((a, i) => `<div style="font-weight:500${i ? ";margin-top:4px" : ""}">${multiAppt ? `${i + 1}. ` : ""}${fmtAppt(a)}</div>`).join("")
+              : "";
+
+            const icsAttachment = [];
+            allAppointments.forEach((a, i) => {
+              const t24 = to24h(a.time);
+              if (!t24 || isVague(a.time)) return; // skip vague/no-time appts (no calendar slot)
               const icsContent = generateCalendarICS({
-                summary:         `Photo Shoot — ${fullAddress}`,
+                summary:         `Photo Shoot — ${fullAddress}${multiAppt ? ` (${i + 1} of ${allAppointments.length})` : ""}`,
                 description:     `Client: ${clientName}\nProperty: ${fullAddress}${notes ? `\nNotes: ${notes}` : ""}`,
                 location:        fullAddress,
-                startISO:        `${calDate}T${calTime}:00`,
+                startISO:        `${a.date}T${t24}:00`,
                 durationMinutes: 120,
               });
-              if (icsContent) {
-                icsAttachment = [{ filename: "shoot-appointment.ics", content: Buffer.from(icsContent).toString("base64") }];
-              }
-            }
+              if (icsContent) icsAttachment.push({ filename: multiAppt ? `shoot-${i + 1}.ics` : "shoot-appointment.ics", content: Buffer.from(icsContent).toString("base64") });
+            });
 
             const sends = [];
 
@@ -274,8 +288,8 @@ export async function POST(req) {
                       <td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${fullAddress}</td></tr>
                   <tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px">Client</td>
                       <td style="padding:8px 0;border-bottom:1px solid #eee">${clientName}${clientPhone ? ` · ${clientPhone}` : ""}</td></tr>
-                  ${shootInfo ? `<tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px">Scheduled</td>
-                      <td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${shootInfo}</td></tr>` : ""}
+                  ${scheduleHtml ? `<tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px">${multiAppt ? "Appointments" : "Scheduled"}</td>
+                      <td style="padding:8px 0;border-bottom:1px solid #eee">${scheduleHtml}</td></tr>` : ""}
                   ${notes ? `<tr><td style="padding:8px 0;color:#888;font-size:13px">Notes</td>
                       <td style="padding:8px 0;font-style:italic;color:#666">${notes}</td></tr>` : ""}
                 </table>
@@ -294,7 +308,7 @@ export async function POST(req) {
                     `Hi ${clientName}, your booking for <strong>${fullAddress}</strong> has been created.`,
                     `<p style="color:#888;font-size:12px;margin:0">Questions? Reply to this email.</p>`
                   ),
-                  ...(icsAttachment.length ? { attachments: [{ ...icsAttachment[0], filename: "shoot-appointment.ics" }] } : {}),
+                  ...(icsAttachment.length ? { attachments: icsAttachment } : {}),
                 }).then(() => console.log("[email] client confirmation sent to", clientEmail))
                   .catch((e) => console.error("[email] client confirmation FAILED:", e?.message || e))
               );
