@@ -152,6 +152,12 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
   const [loadingSlots,      setLoadingSlots]      = useState(false);
   const [contractSignerName, setContractSignerName] = useState(init.contractSignerName || "");
   const [contractSigned,     setContractSigned]     = useState(!!init.contractSignerName);
+  // Promo code (manual-booking create flow). Stores the code's type/value so the
+  // discount recomputes live as services change; the server re-validates on save.
+  const [promo,        setPromo]        = useState(null);
+  const [promoInput,   setPromoInput]   = useState("");
+  const [promoMsg,     setPromoMsg]     = useState(null);
+  const [promoLoading, setPromoLoading] = useState(false);
 
   const getToken = () => auth.currentUser?.getIdToken();
 
@@ -267,6 +273,47 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
     const customTotal = form.customLineItems.reduce((s, i) => s + (Number(i.price) || 0), 0);
     return { ...base, customTotal, total: base.subtotal + customTotal };
   }, [form.packageId, form.serviceIds, form.addonIds, form.sqft, form.customLineItems, catalog]);
+
+  // Live promo discount — recomputed from the current total so it stays correct
+  // when services change after a code is applied. Server re-validates on save.
+  const promoDiscount = useMemo(() => {
+    if (!promo) return 0;
+    const t = pricing.total;
+    return promo.type === "flat"
+      ? Math.min(Number(promo.value) || 0, t)
+      : Math.min(t, Math.round((t * (Number(promo.value) || 0)) / 100 * 100) / 100);
+  }, [promo, pricing.total]);
+  const discountedTotal = Math.max(0, pricing.total - promoDiscount);
+
+  async function applyPromo() {
+    if (!promoInput.trim()) return;
+    setPromoLoading(true); setPromoMsg(null);
+    try {
+      const token = await getToken();
+      const res = await fetch("/api/dashboard/promo-codes/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code: promoInput.trim(), subtotal: pricing.total }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setPromo({ code: data.code, promoId: data.promoId, type: data.type, value: data.value });
+        setPromoMsg({ text: data.message, ok: true });
+        setPromoInput("");
+      } else {
+        setPromo(null);
+        setPromoMsg({ text: data.message || "Invalid code", ok: false });
+      }
+    } catch {
+      setPromoMsg({ text: "Error checking code", ok: false });
+    }
+    setPromoLoading(false);
+  }
+
+  function clearPromo() {
+    setPromo(null);
+    setPromoMsg(null);
+  }
 
   const computedDuration = useMemo(() => {
     const sqftTier = getSqftTier(Number(form.sqft) || 0, catalog.pricingConfig);
@@ -630,7 +677,9 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             ...form,
-            totalPrice:         pricing.total,
+            totalPrice:         pricing.total, // pre-discount subtotal; server applies the promo
+            promoCode:          promo?.code   || null,
+            promoId:            promo?.promoId || null,
             sqft:               Number(form.sqft) || "",
             contractSignerName: contractSigned ? contractSignerName.trim() : null,
             sendAgreementEmail: !contractSigned && form.sendAgreementEmail ? true : undefined,
@@ -1274,13 +1323,50 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                       </div>
                     </div>
                   ))}
+                  {promoDiscount > 0 && (
+                    <div className="flex justify-between text-emerald-600">
+                      <span>Promo {promo?.code ? `(${promo.code})` : ""}</span>
+                      <span>−{formatPrice(promoDiscount)}</span>
+                    </div>
+                  )}
                   <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between font-semibold text-[#0F172A]">
                     <span>Total</span>
-                    <span className="text-[#3486cf]">{formatPrice(pricing.total)}</span>
+                    <span className="text-[#3486cf]">{formatPrice(discountedTotal)}</span>
                   </div>
                 </div>
               ) : (
                 <p className="text-xs text-gray-400 mb-4">Select services to auto-calculate.</p>
+              )}
+
+              {/* Promo code — manual bookings only; edit existing bookings from
+                  the booking's detail page, which owns usage counting. */}
+              {!isEdit && (
+                <div className="mb-4">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Promo Code</p>
+                  {promo ? (
+                    <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                      <span className="text-sm font-medium text-emerald-800">
+                        {promo.code} · {promo.type === "flat" ? formatPrice(promo.value) : `${promo.value}%`} off
+                      </span>
+                      <button type="button" onClick={clearPromo}
+                        className="text-xs text-emerald-600 hover:text-emerald-800 underline">Remove</button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input type="text" value={promoInput}
+                        onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyPromo(); } }}
+                        placeholder="Code" className="input-field flex-1 text-sm uppercase" />
+                      <button type="button" onClick={applyPromo} disabled={promoLoading || !promoInput.trim()}
+                        className="btn-outline px-3 py-2 text-sm flex-shrink-0 disabled:opacity-40">
+                        {promoLoading ? "…" : "Apply"}
+                      </button>
+                    </div>
+                  )}
+                  {promoMsg && (
+                    <p className={`text-xs mt-1.5 ${promoMsg.ok ? "text-emerald-600" : "text-red-500"}`}>{promoMsg.text}</p>
+                  )}
+                </div>
               )}
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Add Custom Item</p>
@@ -1381,7 +1467,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                   ? (isEdit ? "Saving…" : "Creating…")
                   : isEdit
                     ? "Save Changes"
-                    : `Create Booking${pricing.total > 0 ? ` · ${formatPrice(pricing.total)}` : ""}`
+                    : `Create Booking${discountedTotal > 0 ? ` · ${formatPrice(discountedTotal)}` : ""}`
                 }
               </button>
               <Link href={backHref} className="block text-center text-sm text-gray-400 hover:text-gray-600 mt-3">

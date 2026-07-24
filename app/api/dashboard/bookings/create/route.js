@@ -1,10 +1,12 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { getTenantById } from "@/lib/tenants";
 import { sendBookingCreatedNotifications, generateCalendarICS, sendServiceAgreementEmail } from "@/lib/email";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendBookingConfirmedSms } from "@/lib/sms";
 import { tenantHasActivePlan, paymentRequired } from "@/lib/requireSubscription";
 import { calculateDeposit } from "@/lib/catalogUtils";
+import { validatePromo } from "@/lib/promo";
 
 async function getAuthContext(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -37,6 +39,7 @@ export async function POST(req) {
       sendNotification = true,
       sendAgreementEmail = false,
       zoneId = null,
+      promoCode = null, promoId = null,
     } = await req.json();
 
     if (!clientName || !clientEmail || !address) {
@@ -55,7 +58,38 @@ export async function POST(req) {
     const autoConvert  = tenantData.bookingConfig?.autoConvertToListing === true;
 
     const fullAddress = [address, unit, city, state, zip].filter(Boolean).join(", ");
-    const finalPrice  = Number(totalPrice) || 0;
+
+    // ── Promo code — re-validate server-side; never trust a client discount ──
+    // The form sends totalPrice as the pre-discount subtotal; we compute the
+    // discount here and charge subtotal − discount. Usage is counted only if a
+    // promo actually applies. `promoRef` is captured so we can increment it.
+    const subtotal = Number(totalPrice) || 0;
+    let promoDiscount = 0;
+    let appliedPromoCode = null;
+    let appliedPromoId = null;
+    let promoRef = null;
+    if (promoCode || promoId) {
+      try {
+        const promosRef = tenantRef.collection("promoCodes");
+        const normalized = String(promoCode || "").trim().toUpperCase();
+        const doc = promoId
+          ? await promosRef.doc(promoId).get()
+          : (await promosRef.where("code", "==", normalized).limit(1).get()).docs[0];
+        if (doc?.exists) {
+          const result = validatePromo(doc.data(), subtotal);
+          if (result.ok && result.discount > 0) {
+            promoDiscount    = result.discount;
+            appliedPromoCode = doc.data().code;
+            appliedPromoId   = doc.id;
+            promoRef         = doc.ref;
+          }
+        }
+      } catch (e) {
+        console.error("[booking/create] promo validation failed:", e?.message);
+      }
+    }
+
+    const finalPrice = Math.max(0, subtotal - promoDiscount);
 
     // Calculate deposit from the tenant's deposit config (percent / fixed / none).
     // Honors "no deposit" — previously this fell back to 50% whenever
@@ -90,6 +124,9 @@ export async function POST(req) {
       preferredTime,
       notes,
       totalPrice:      finalPrice,
+      promoCode:       appliedPromoCode,
+      promoId:         appliedPromoId,
+      promoDiscount,
       depositAmount:   calculatedDeposit,
       depositPaid:     isDepositPaid,
       balancePaid:     isBalancePaid,
@@ -120,6 +157,12 @@ export async function POST(req) {
     };
 
     await bookingRef.set(bookingData);
+
+    // Count the promo usage now that the booking exists (best-effort).
+    if (promoRef) {
+      promoRef.update({ usageCount: FieldValue.increment(1) })
+        .catch((e) => console.error("[booking/create] promo usage increment failed:", e?.message));
+    }
 
     // Upsert customer record
     if (normalizedEmail) {
