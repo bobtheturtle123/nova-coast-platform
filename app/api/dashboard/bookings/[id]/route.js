@@ -1,6 +1,7 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { sendBookingApproved } from "@/lib/email";
 import { getTenantById } from "@/lib/tenants";
+import { recomputeBalance } from "@/lib/bookingBalance";
 import { v4 as uuidv4 } from "uuid";
 import { Resend } from "resend";
 
@@ -76,7 +77,7 @@ export async function PATCH(req, { params }) {
     // Property / address
     "address", "unit", "addressLine", "city", "state", "zip", "fullAddress", "squareFootage", "propertyType",
     // Services
-    "packageId", "serviceIds", "addonIds", "totalPrice",
+    "packageId", "serviceIds", "addonIds", "retainerIds", "customLineItems", "totalPrice",
     // Promo
     "promoCode", "promoDiscount",
     // Payment overrides (privileged only — enforced above)
@@ -143,15 +144,28 @@ export async function PATCH(req, { params }) {
     } catch (e) { console.error("[booking/PATCH] payment unlock failed (non-fatal):", e?.message); }
   }
 
-  // Recalculate deposit and balance when totalPrice changes
+  // Recalculate the balance when totalPrice changes (e.g. adding/removing custom
+  // line items). A paid deposit is never re-derived — see lib/bookingBalance.
   if (update.totalPrice !== undefined && isPrivileged) {
-    const newTotal = Number(update.totalPrice) || 0;
-    const tenant = await getTenantById(ctx.tenantId);
-    const depositPct = Number(tenant?.bookingConfig?.depositPercent ?? 50) / 100;
-    const newDepositAmount = Math.round(newTotal * depositPct * 100) / 100;
     const depositPaid = update.depositPaid ?? prev.depositPaid ?? false;
-    update.depositAmount = newDepositAmount;
-    update.remainingBalance = depositPaid ? Math.max(0, newTotal - newDepositAmount) : newTotal;
+    const balancePaid = update.balancePaid ?? prev.balancePaid ?? false;
+    // Only fetch the tenant when we actually need the deposit % (nothing paid).
+    let depositPct = 0.5;
+    if (!depositPaid && !balancePaid && !update.paidInFull) {
+      const tenant = await getTenantById(ctx.tenantId);
+      depositPct = Number(tenant?.bookingConfig?.depositPercent ?? 50) / 100;
+    }
+    const result = recomputeBalance({
+      newTotal:     Number(update.totalPrice) || 0,
+      discount:     Number(update.promoDiscount ?? prev.promoDiscount ?? 0),
+      depositPaid,
+      balancePaid,
+      paidInFull:   update.paidInFull ?? prev.paidInFull ?? false,
+      priorDeposit: Number(prev.depositAmount) || 0,
+      depositPct,
+    });
+    if (result.depositAmount !== undefined) update.depositAmount = result.depositAmount;
+    update.remainingBalance = result.remainingBalance;
   }
 
   // Re-lock gallery when a new service is added post-delivery and raises the total

@@ -1,7 +1,7 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug, getTenantCatalog } from "@/lib/tenants";
 import { calculateTenantPrice, getSqftTier, clampMoney } from "@/lib/catalogUtils";
-import { createConnectedPaymentIntent } from "@/lib/stripe";
+import { createConnectedPaymentIntent, paymentDescription } from "@/lib/stripe";
 import { sendBookingConfirmation } from "@/lib/email";
 import { v4 as uuidv4 } from "uuid";
 import { rateLimit } from "@/lib/rateLimit";
@@ -161,7 +161,10 @@ export async function POST(req, { params }) {
         amountCents:        chargeCents,
         connectedAccountId,
         metadata: { bookingId, type: paymentType, tenantId: tenant.id, clientName, clientEmail },
-        description: `${tenant.businessName} ${paymentType === "full" ? "full payment" : "deposit"} — ${address}, ${city}`,
+        description: paymentDescription(paymentType === "full" ? "full" : "deposit", {
+          businessName: tenant.businessName,
+          address: [address, city].filter(Boolean).join(", "),
+        }),
         receiptEmail: clientEmail,
         planId:  tenantPlanId,
         idempotencyKey: `book_${bookingId}_${paymentType}_${chargeCents}`,

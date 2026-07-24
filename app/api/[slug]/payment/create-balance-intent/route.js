@@ -1,6 +1,6 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
-import { createConnectedPaymentIntent, stripe } from "@/lib/stripe";
+import { createConnectedPaymentIntent, stripe, paymentDescription } from "@/lib/stripe";
 import { rateLimit } from "@/lib/rateLimit";
 import { getEffectivePlan } from "@/lib/plans";
 
@@ -50,7 +50,7 @@ export async function POST(req, { params }) {
       amountCents,
       connectedAccountId,
       metadata: { bookingId, type: "balance", tenantId: tenant.id },
-      description: `${tenant.businessName} balance — ${booking.fullAddress}`,
+      description: paymentDescription("balance", { businessName: tenant.businessName, address: booking.fullAddress }),
       receiptEmail: booking.clientEmail,
       planId: getEffectivePlan(tenant),
       idempotencyKey: `bal_${bookingId}_${amountCents}`,
