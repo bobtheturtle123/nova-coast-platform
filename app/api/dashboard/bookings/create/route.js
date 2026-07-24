@@ -167,6 +167,15 @@ export async function POST(req) {
         .catch((e) => console.error("[booking/create] promo usage increment failed:", e?.message));
     }
 
+    // Push to the assigned photographer's Google Calendar (main + any additional
+    // appointments). Fire-and-forget — never block booking creation on it, and
+    // it no-ops cleanly when no photographer is assigned or Calendar isn't linked.
+    if (bookingData.photographerId) {
+      import("@/lib/pushGcal")
+        .then((m) => m.pushBookingToGcal(ctx.tenantId, bookingId))
+        .catch((e) => console.error("[booking/create] gcal push failed:", e?.message));
+    }
+
     // Upsert customer record
     if (normalizedEmail) {
       const agentKey = Buffer.from(normalizedEmail).toString("base64").replace(/[+/=]/g, "");

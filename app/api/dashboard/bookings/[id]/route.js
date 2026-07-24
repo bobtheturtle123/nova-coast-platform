@@ -325,6 +325,19 @@ export async function PATCH(req, { params }) {
     }
   }
 
+  // Additional appointments changed (without a main date/time change) → keep the
+  // photographer's calendar in sync. The reschedule block above already re-pushes
+  // when the main date/time moves, so guard against a double push here.
+  const apptsChanged = update.additionalAppointments !== undefined &&
+    JSON.stringify(update.additionalAppointments) !== JSON.stringify(prev.additionalAppointments || []);
+  if (apptsChanged && !isCancelling && !isPostponing && !(dateChanged || timeChanged)) {
+    const pid = update.photographerId ?? prev.photographerId;
+    if (pid) {
+      import("@/lib/pushGcal").then((m) => m.pushBookingToGcal(ctx.tenantId, params.id))
+        .catch((e) => console.error("[booking/PATCH] gcal appointment re-push failed:", e?.message));
+    }
+  }
+
   // Manual payment recorded from the dashboard — log it to the listing's
   // activity (idempotent key on booking + amount, so a retried request
   // doesn't duplicate but a corrected amount creates a new entry).

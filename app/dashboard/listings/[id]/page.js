@@ -738,23 +738,27 @@ if (loading) return (
     : String(text || "").replace(/\s*\(\+?\$[\d,.]+[^)]*\)/g, "").replace(/\$[\d,.]+/g, "an amount");
 
   // Accurate money tracking: how much has actually been collected, and the real
-  // remaining balance = total - collected (don't trust a stale remainingBalance).
+  // remaining balance. bookingTotal is the pre-discount subtotal; netTotal is
+  // what the client actually owes after any promo — balances derive from netTotal
+  // so a discounted booking doesn't show the full amount as still owed.
   const bookingTotal   = Number(booking.totalPrice) || 0;
+  const promoDiscount  = Number(booking.promoDiscount) || 0;
+  const netTotal       = Math.max(0, bookingTotal - promoDiscount);
   const amountCollected = Number(booking.offlinePaymentAmount)
-    || ((booking.paidInFull || booking.balancePaid) ? bookingTotal
+    || ((booking.paidInFull || booking.balancePaid) ? netTotal
         : booking.depositPaid ? (Number(booking.depositAmount) || 0) : 0);
-  const accurateBalance = Math.max(0, bookingTotal - amountCollected);
+  const accurateBalance = Math.max(0, netTotal - amountCollected);
 
   // Record an exact collected amount (single source of truth for the balance).
   async function setCollectedAmount(amt) {
     const a = Math.max(0, Number(amt) || 0);
     await patchBooking({
       offlinePaymentAmount: a,
-      remainingBalance:     Math.max(0, bookingTotal - a),
+      remainingBalance:     Math.max(0, netTotal - a),
       depositPaid:          a > 0,
-      depositAmount:        a > 0 && a < bookingTotal ? a : (Number(booking.depositAmount) || 0),
-      balancePaid:          a >= bookingTotal && bookingTotal > 0,
-      paidInFull:           a >= bookingTotal && bookingTotal > 0,
+      depositAmount:        a > 0 && a < netTotal ? a : (Number(booking.depositAmount) || 0),
+      balancePaid:          a >= netTotal && netTotal > 0,
+      paidInFull:           a >= netTotal && netTotal > 0,
     });
   }
   const balanceDue = !booking.paidInFull && !booking.balancePaid;
@@ -1465,6 +1469,12 @@ if (loading) return (
                         <span style={{ fontSize: 12.5, color: "#6B7280" }}>Total</span>
                         <span style={{ fontSize: 13, fontWeight: 600, color: "#0F172A" }}>{formatCurrency(bookingTotal, currency, locale)}</span>
                       </div>
+                      {promoDiscount > 0 && (
+                        <div className="flex items-baseline justify-between py-1.5 border-b" style={{ borderColor: "#F4F0E3" }}>
+                          <span style={{ fontSize: 12.5, color: "#6B7280" }}>Discount{booking.promoCode ? ` (${booking.promoCode})` : ""}</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "#059669" }}>−{formatCurrency(promoDiscount, currency, locale)}</span>
+                        </div>
+                      )}
                       {/* Collected — editable single source of truth for the balance */}
                       <div className="flex items-center justify-between py-1.5 border-b" style={{ borderColor: "#F4F0E3" }}>
                         <span style={{ fontSize: 12.5, color: "#6B7280" }}>Collected</span>
