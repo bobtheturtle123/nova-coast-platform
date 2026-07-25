@@ -255,6 +255,7 @@ export default function BookingsPage() {
   const [cursor,      setCursor]      = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [filter,      setFilter]      = useState("all");
+  const [showHidden,  setShowHidden]  = useState(false);
   const [search,      setSearch]      = useState("");
   const [showCreate,  setShowCreate]  = useState(false);
   const [form,        setForm]        = useState(EMPTY_FORM);
@@ -311,6 +312,28 @@ export default function BookingsPage() {
     loadBookings();
     loadCatalog();
   }, []);
+
+  // Reload when the hidden toggle changes (skip the initial mount — already loaded).
+  const didMountRef = useRef(false);
+  useEffect(() => {
+    if (!didMountRef.current) { didMountRef.current = true; return; }
+    setCursor(null);
+    loadBookings();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showHidden]);
+
+  // Unhide a booking so it returns to the normal list.
+  async function unhideBooking(id) {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch(`/api/dashboard/bookings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ hidden: false }),
+      });
+      if (res.ok) setBookings((prev) => prev.map((b) => b.id === id ? { ...b, hidden: false } : b));
+    } catch { /* ignore */ }
+  }
 
   // Debounce zone check on manual address entry
   useEffect(() => {
@@ -410,9 +433,8 @@ export default function BookingsPage() {
       }
       const token = await auth.currentUser?.getIdToken();
       if (!token) { if (!append) setLoading(false); return; }
-      const url = afterCursor
-        ? `/api/dashboard/bookings?limit=50&after=${encodeURIComponent(afterCursor)}`
-        : "/api/dashboard/bookings?limit=50";
+      const base = `/api/dashboard/bookings?limit=50${showHidden ? "&showHidden=true" : ""}`;
+      const url = afterCursor ? `${base}&after=${encodeURIComponent(afterCursor)}` : base;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
@@ -667,7 +689,7 @@ export default function BookingsPage() {
       {/* Filter pills + search — bookings tab only */}
       {activeTab === "bookings" && (
       <div className="flex flex-wrap items-center gap-3 mb-6">
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
           {["all", "requested", "confirmed", "completed", "cancelled"].map((s) => (
             <button key={s} onClick={() => setFilter(s)}
               className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors
@@ -675,6 +697,12 @@ export default function BookingsPage() {
               {s === "all" ? "All" : STATUS_LABELS[s]?.label || s}
             </button>
           ))}
+          {/* Include hidden (cancelled/archived) bookings so they can be found and unhidden. */}
+          <button onClick={() => setShowHidden((v) => !v)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors
+              ${showHidden ? "bg-gray-700 text-white border-gray-700" : "text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700"}`}>
+            {showHidden ? "✓ Showing hidden" : "Show hidden"}
+          </button>
         </div>
         <div className="relative ml-auto">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -779,6 +807,9 @@ export default function BookingsPage() {
                       {b.source === "manual" && (
                         <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded">manual</span>
                       )}
+                      {b.hidden && (
+                        <span className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-500 rounded">hidden</span>
+                      )}
                     </div>
                     <p className="text-xs text-gray-400 truncate">{b.fullAddress || b.address}</p>
                     <p className="text-xs text-gray-300">{dateStr}{timeStr ? ` · ${timeStr}` : ""}</p>
@@ -794,6 +825,12 @@ export default function BookingsPage() {
                       </div>
                     )}
                     <WorkflowStatusBadge status={wfStatus} size="xs" />
+                    {b.hidden && canCreateBookings && (
+                      <button onClick={() => unhideBooking(b.id)}
+                        className="text-sm font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">
+                        Unhide
+                      </button>
+                    )}
                     {canCreateBookings && (
                       <Link href={`/dashboard/bookings/${b.id}/edit`}
                         className="text-sm font-medium text-[#3486cf] border border-[#3486cf]/25 hover:bg-[#3486cf]/5 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors">

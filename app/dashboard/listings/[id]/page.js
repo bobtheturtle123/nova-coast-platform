@@ -1325,7 +1325,7 @@ if (loading) return (
                   <div className="pt-4 mt-2 border-t border-gray-100 flex flex-wrap items-center gap-3">
                     <span className="text-[13px] text-red-500 font-medium">This booking is cancelled.</span>
                     <button type="button"
-                      onClick={async () => { if (!confirm("Reactivate this booking?")) return; await patchBooking({ status: "requested" }); setBooking((b) => ({ ...b, status: "requested" })); }}
+                      onClick={async () => { if (!confirm("Reactivate this booking?")) return; await patchBooking({ status: "requested", hidden: false }); setBooking((b) => ({ ...b, status: "requested", hidden: false })); }}
                       className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2.5 rounded-lg border border-[#3486cf]/30 text-[#3486cf] hover:bg-[#3486cf]/5 transition-colors">
                       Reactivate booking
                     </button>
