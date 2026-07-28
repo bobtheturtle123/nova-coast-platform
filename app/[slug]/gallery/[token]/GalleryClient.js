@@ -99,26 +99,31 @@ function GalleryLightbox({ images, startIndex, unlocked, onClose, token }) {
                 }}
               />
             ) : (
-              // Locked: background image (not <img>) so iOS "Save Image" can't
-              // grab the clean file; callout/selection disabled.
-              <div
-                key={img?.url}
-                role="img"
-                aria-label={img?.fileName || `Photo ${idx + 1}`}
+              // Locked: the preview endpoint already returns a WATERMARKED,
+              // downscaled derivative, so serving it as an <img> is safe (a
+              // "Save Image" only ever grabs the watermarked preview). Unlike a
+              // background <div>, an <img> fires onLoad/onError, so the spinner
+              // actually clears instead of spinning forever.
+              <img
+                key={img?.key || img?.url}
+                src={img?.key && token ? `/api/gallery/preview-image?token=${token}&key=${encodeURIComponent(img.key)}` : img?.url}
+                alt={img?.fileName || `Photo ${idx + 1}`}
+                draggable={false}
+                onLoad={() => setLoaded(true)}
+                onError={() => setLoaded(true)}
                 onContextMenu={(e) => e.preventDefault()}
                 className="block select-none"
                 style={{
-                  width: "min(100%, 1200px)",
-                  height: "calc(100vh - 160px)",
-                  backgroundImage: `url(${img?.key && token ? `/api/gallery/preview-image?token=${token}&key=${encodeURIComponent(img.key)}` : img?.url})`,
-                  backgroundSize: "contain",
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "center",
+                  maxHeight: "calc(100vh - 160px)",
+                  maxWidth: "100%",
+                  objectFit: "contain",
+                  opacity: loaded ? 1 : 0,
+                  transition: "opacity 0.18s ease",
                   pointerEvents: "none",
                   WebkitTouchCallout: "none",
                   WebkitUserSelect: "none",
                   userSelect: "none",
-                  boxShadow: "0 8px 48px rgba(0,0,0,0.6)",
+                  boxShadow: loaded ? "0 8px 48px rgba(0,0,0,0.6)" : "none",
                 }}
               />
             )}
@@ -794,14 +799,16 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                       decoding="async"
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 select-none" />
                   ) : (
-                    // Locked: render as a background image (not an <img>) so iOS
-                    // long-press "Save Image" can't grab the clean full-res file,
-                    // and disable the touch callout / context menu.
-                    <div role="img" aria-label={m.fileName || `Photo ${i + 1}`}
+                    // Locked: the preview endpoint returns a watermarked, downscaled
+                    // derivative, so an <img> is safe (save only grabs the preview)
+                    // and reliably renders — a background <div> silently showed
+                    // nothing when the source needed a moment.
+                    <img src={m.key ? `/api/gallery/preview-image?token=${token}&key=${encodeURIComponent(m.key)}` : m.url}
+                      alt={m.fileName || `Photo ${i + 1}`} draggable={false}
+                      loading={i < 12 ? "eager" : "lazy"} decoding="async"
                       onContextMenu={(e) => e.preventDefault()}
-                      className="w-full h-full transition-transform duration-300 group-hover:scale-105 select-none"
-                      style={{ backgroundImage: `url(${m.key ? `/api/gallery/preview-image?token=${token}&key=${encodeURIComponent(m.key)}` : m.url})`, backgroundSize: "cover", backgroundPosition: "center",
-                        pointerEvents: "none", WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }} />
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 select-none"
+                      style={{ pointerEvents: "none", WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }} />
                   )}
 
                   {previewLocked && (
@@ -810,15 +817,15 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                       {Array.from({ length: 5 }).map((_, row) =>
                         Array.from({ length: 3 }).map((_, col) => (
                           <span key={`${row}-${col}`}
-                            className="absolute text-white/40 font-bold uppercase tracking-widest pointer-events-none select-none"
+                            className="absolute text-white/[0.18] font-bold uppercase tracking-widest pointer-events-none select-none"
                             style={{ fontSize: "9px", top: `${row * 22 + 8}%`, left: `${col * 38 - 8}%`,
                               transform: "rotate(-30deg)", whiteSpace: "nowrap", letterSpacing: "0.2em",
-                              textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}>
+                              textShadow: "0 1px 2px rgba(0,0,0,0.35)" }}>
                             PREVIEW ONLY
                           </span>
                         ))
                       )}
-                      <div className="absolute inset-0 bg-black/10" />
+                      <div className="absolute inset-0 bg-black/[0.04]" />
                     </div>
                   )}
 
