@@ -1251,31 +1251,42 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
               {/* Team plan: availability matrix */}
               {getPlan(tenantPlan).teamSeats !== 1 && form.shootDate && team.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-1">
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
                       Availability — {new Date(form.shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                     </p>
                     {travelLoading && <span className="text-xs text-gray-400 italic">Calculating…</span>}
                   </div>
+                  {/* Make it obvious a photographer must be picked. Highlights until one is chosen. */}
+                  {!form.photographerId && !form.photographerTbd ? (
+                    <p className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-2">
+                      👉 Tap a photographer below to assign them to this shoot.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-400 mb-2">Tap a name to change the primary photographer.</p>
+                  )}
                   <div className="space-y-2">
                     {team.filter((m) => m.active !== false).map((m) => {
                       const avail        = availability[m.id] || "available";
                       const isSelected   = form.photographerId === m.id && !form.photographerTbd;
-                      const canSelect    = avail === "available";
+                      // Unavailable photographers stay selectable — the badge warns
+                      // the tenant, but they can still override and assign.
+                      const isUnavailable = avail !== "available";
                       const travel       = travelInfo[m.id];
                       const isAdditional = form.additionalPhotographers.some((p) => p.id === m.id);
                       return (
                         <div key={m.id}
-                          className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition-all ${
-                            isSelected  ? "border-[#3486cf] bg-[#3486cf]/5"
-                            : canSelect ? "border-gray-200 hover:border-[#3486cf]/40"
-                            : "border-gray-100 bg-gray-50 opacity-60"
-                          }`}>
+                          className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${
+                            isSelected     ? "border-[#3486cf] bg-[#3486cf]/5"
+                            : isUnavailable ? "border-gray-200 bg-gray-50/60 hover:border-amber-300"
+                            : "border-gray-200 hover:border-[#3486cf]/40"
+                          }`}
+                          onClick={() => assignPhotographer(m)}>
                           <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5"
                             style={{ background: m.color || "#3486cf" }}>
                             {m.name?.[0]?.toUpperCase()}
                           </div>
-                          <div className="flex-1 min-w-0 cursor-pointer" onClick={() => canSelect && assignPhotographer(m)}>
+                          <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-[#0F172A] leading-tight">{m.name}</p>
                             {travel?.conflict && <p className="text-xs text-red-500 mt-0.5">Travel conflict — {travel.durationText} away</p>}
                             {travel && !travel.conflict && avail === "booked" && <p className="text-xs text-blue-500 mt-0.5">Another shoot {travel.distanceText} away</p>}
@@ -1297,7 +1308,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                             {isSelected
                               ? <span className="text-[#3486cf] text-[11px] font-semibold">✓ Primary</span>
                               : (
-                                <button type="button" onClick={() => toggleAdditional(m)}
+                                <button type="button" onClick={(e) => { e.stopPropagation(); toggleAdditional(m); }}
                                   className={`text-[11px] px-1.5 py-0.5 rounded-full border font-medium transition-colors ${
                                     isAdditional
                                       ? "bg-[#3486cf]/10 text-[#3486cf] border-[#3486cf]/20"
@@ -1326,6 +1337,17 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                         <p className="text-xs text-green-600">
                           Primary: <strong>{form.photographerName}</strong>
                           {form.photographerTbd && <span className="text-amber-600"> — assign before shoot</span>}
+                        </p>
+                      )}
+                      {/* Warn if the assigned primary is actually blocked/booked on this date. */}
+                      {form.photographerId && !form.photographerTbd && availability[form.photographerId] && availability[form.photographerId] !== "available" && (
+                        <p className="text-xs text-amber-700">
+                          ⚠ {form.photographerName} is marked {
+                            availability[form.photographerId] === "blocked"         ? "unavailable (time off)" :
+                            availability[form.photographerId] === "travel_conflict" ? "with a travel conflict" :
+                            availability[form.photographerId] === "cant_perform"    ? "as unable to perform the selected services" :
+                            "already booked"
+                          } on this date — assigning anyway.
                         </p>
                       )}
                       {form.additionalPhotographers.map((p) => (
