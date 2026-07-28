@@ -829,7 +829,7 @@ export default function AgentsPage() {
 
       {/* ── Body grid: groups rail + table ─────────────────────────────────── */}
       {agents.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 18, alignItems: "flex-start" }}>
+        <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-[18px] items-start">
 
           {/* Groups rail */}
           <div style={{ background: "#fff", border: "1px solid var(--border-subtle)", borderRadius: 14, padding: 14 }}>

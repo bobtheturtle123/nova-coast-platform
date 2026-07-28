@@ -262,6 +262,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   const [manualAmount, setManualAmount] = useState("");
   const [manualMethod, setManualMethod] = useState("card"); // card | check | cash | other
   const [manualMethodOther, setManualMethodOther] = useState("");
+  const [manualNote, setManualNote] = useState("");
   const [editingCollected, setEditingCollected] = useState(false);
   const [collectedDraft, setCollectedDraft] = useState("");
 
@@ -1558,7 +1559,9 @@ if (loading) return (
 
         {/* ── PAYMENTS TAB ─────────────────────────────────────────── */}
         {tab === "orders" && (
-          <div className="grid gap-4" style={{ gridTemplateColumns: "1fr 1fr", alignItems: "start", maxWidth: 900 }}>
+          // One column on mobile, two on sm+ — a fixed 1fr/1fr cramped both
+          // columns on phones so buttons/text got clipped.
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start max-w-[900px]">
             {/* Left col */}
             <div className="space-y-4">
             {/* Appointment Record */}
@@ -1788,20 +1791,25 @@ if (loading) return (
                             <button disabled={saving} onClick={async () => {
                               const amt = Math.max(0, Number(manualAmount) || 0);
                               const method = manualMethod === "other" ? (manualMethodOther.trim() || "other") : manualMethod;
+                              const note = manualNote.trim() || null;
                               if (manualMode === "deposit") {
-                                await patchBooking({ depositPaid: true, depositAmount: amt, remainingBalance: Math.max(0, (booking.totalPrice || 0) - amt), offlinePaymentAmount: amt, offlinePaymentMethod: method });
+                                await patchBooking({ depositPaid: true, depositAmount: amt, remainingBalance: Math.max(0, (booking.totalPrice || 0) - amt), offlinePaymentAmount: amt, offlinePaymentMethod: method, offlinePaymentNote: note });
                               } else {
                                 // Mark paid in full. Record the amount received without
                                 // touching totalPrice (which would trigger a deposit recalc).
-                                await patchBooking({ depositPaid: true, balancePaid: true, paidInFull: true, remainingBalance: 0, offlinePaymentAmount: amt, offlinePaymentMethod: method });
+                                await patchBooking({ depositPaid: true, balancePaid: true, paidInFull: true, remainingBalance: 0, offlinePaymentAmount: amt, offlinePaymentMethod: method, offlinePaymentNote: note });
                               }
-                              setManualMode(null); setManualAmount(""); setManualMethodOther("");
+                              setManualMode(null); setManualAmount(""); setManualMethodOther(""); setManualNote("");
                             }} className="text-xs py-2 px-3 rounded-lg bg-[#3486cf] text-white font-semibold hover:bg-[#2a6dab] transition-colors disabled:opacity-50 whitespace-nowrap">
                               {saving ? "Saving…" : "Save"}
                             </button>
-                            <button onClick={() => { setManualMode(null); setManualAmount(""); setManualMethodOther(""); }}
+                            <button onClick={() => { setManualMode(null); setManualAmount(""); setManualMethodOther(""); setManualNote(""); }}
                               className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
                           </div>
+                          {/* Optional note — captured in the payment's activity-log entry. */}
+                          <input type="text" value={manualNote} onChange={(e) => setManualNote(e.target.value)}
+                            placeholder="Note (optional) — e.g. check #1234, paid at shoot"
+                            className="input-field text-sm w-full mt-2" />
                         </div>
                       )}
                     </div>

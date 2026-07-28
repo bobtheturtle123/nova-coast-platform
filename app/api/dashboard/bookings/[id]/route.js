@@ -355,6 +355,7 @@ export async function PATCH(req, { params }) {
       grossCents: cents,
       feeCents:   0, // recorded outside Stripe — no platform fee
       method:     update.offlinePaymentMethod || prev.offlinePaymentMethod || "manual",
+      note:       update.offlinePaymentNote ?? prev.offlinePaymentNote ?? null,
       source:     "dashboard (recorded manually)",
       address:    prev.fullAddress || prev.address || null,
       idKey:      `manual_${params.id}_${cents}`,

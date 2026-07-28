@@ -40,6 +40,16 @@ describe("buildPaymentEntry — wording", () => {
     expect(doc.title).toBe("A $100.00 refund was issued to Maria Lopez.");
     expect(doc.type).toBe("refund");
   });
+  it("manual payment records method and note in the message + fields", () => {
+    const { doc } = buildPaymentEntry({
+      paymentType: "manual", payerName: "Maria Lopez", grossCents: 20000,
+      method: "check", note: "Check #1234, paid at shoot", idKey: "manual_x_20000",
+    });
+    expect(doc.method).toBe("check");
+    expect(doc.note).toBe("Check #1234, paid at shoot");
+    expect(doc.message).toContain("Method: check");
+    expect(doc.message).toContain("Note: Check #1234, paid at shoot");
+  });
   it("falls back to email, then 'The client'", () => {
     expect(buildPaymentEntry({ paymentType: "deposit", payerEmail: "a@b.com", grossCents: 100, piId: "x" }).doc.title)
       .toContain("a@b.com");
