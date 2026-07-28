@@ -787,6 +787,21 @@ if (loading) return (
       paidInFull:           a >= netTotal && netTotal > 0,
     });
   }
+
+  // The client is charged from the STORED remainingBalance. If it drifted from
+  // the real balance (total − collected) — e.g. a service was added after a
+  // deposit on an older version — the client would owe the wrong amount. Detect
+  // that and let the tenant resync it with one click.
+  const storedBalance   = Number(booking.remainingBalance) || 0;
+  const balanceMismatch = !booking.paidInFull && !booking.balancePaid &&
+    Math.abs(storedBalance - accurateBalance) > 0.01;
+  async function recalcBalance() {
+    await patchBooking({
+      remainingBalance: accurateBalance,
+      ...(accurateBalance > 0 ? { balancePaid: false, paidInFull: false } : {}),
+    });
+  }
+
   const balanceDue = !booking.paidInFull && !booking.balancePaid;
 
   // Stepper state computation
@@ -1543,7 +1558,21 @@ if (loading) return (
                         </div>
                       )}
                     </div>
-                    {balanceDue && booking.remainingBalance > 0 && (
+                    {/* Stored balance drifted from the real one — the client would be
+                        charged the wrong amount. Offer a one-click resync. */}
+                    {balanceMismatch && (
+                      <div className="mt-3 p-2.5 rounded-[10px]" style={{ background: "#FEF2F2", border: "1px solid #FECACA" }}>
+                        <p className="font-bold" style={{ fontSize: 12, color: "#B91C1C" }}>Balance needs updating</p>
+                        <p style={{ fontSize: 11, color: "#B91C1C", marginTop: 2 }}>
+                          The client is currently set to owe {formatCurrency(storedBalance, currency, locale)}, but after payments collected the real balance is {formatCurrency(accurateBalance, currency, locale)}. Update it so they&apos;re charged the correct amount.
+                        </p>
+                        <button onClick={recalcBalance} disabled={saving}
+                          className="mt-2 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#B91C1C] text-white hover:bg-[#991B1B] transition-colors disabled:opacity-50">
+                          {saving ? "Updating…" : `Update balance to ${formatCurrency(accurateBalance, currency, locale)}`}
+                        </button>
+                      </div>
+                    )}
+                    {balanceDue && !balanceMismatch && booking.remainingBalance > 0 && (
                       <div className="mt-3 p-2.5 rounded-[10px]" style={{ background: "#FEF3C7", border: "1px solid #FCD34D" }}>
                         <p className="font-bold" style={{ fontSize: 12, color: "#92400E" }}>Balance outstanding</p>
                         <p style={{ fontSize: 11, color: "#92400E", marginTop: 2 }}>Collected automatically on delivery</p>
