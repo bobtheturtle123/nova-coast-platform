@@ -792,6 +792,7 @@ export default function SettingsPage() {
   const [requestReviewsAfterDelivery,  setRequestReviewsAfterDelivery]  = useState(false);
   const [zapierWebhooks,               setZapierWebhooks]               = useState([]); // string[]
   const [newZapUrl,                    setNewZapUrl]                    = useState("");
+  const [newZapEvent,                  setNewZapEvent]                  = useState("all"); // all | created | paid | delivered
   const [savingIntegrations,           setSavingIntegrations]           = useState(false);
 
   // Dropbox integration
@@ -1002,7 +1003,9 @@ export default function SettingsPage() {
         body: JSON.stringify({ integrations: {
           googleReviewUrl:             googleReviewUrl.trim(),
           requestReviewsAfterDelivery: !!requestReviewsAfterDelivery,
-          zapierWebhooks:              zapierWebhooks.filter((u) => u.trim()),
+          zapierWebhooks:              zapierWebhooks
+            .filter((h) => h.url && h.url.trim())
+            .map((h) => ({ url: h.url.trim(), event: h.event || "all" })),
         } }),
       });
       if (res.ok) showMsg("Integrations saved.");
@@ -1239,7 +1242,13 @@ export default function SettingsPage() {
           const ig = data.tenant.integrations;
           if (ig.googleReviewUrl) setGoogleReviewUrl(ig.googleReviewUrl);
           if (ig.requestReviewsAfterDelivery !== undefined) setRequestReviewsAfterDelivery(ig.requestReviewsAfterDelivery);
-          if (Array.isArray(ig.zapierWebhooks)) setZapierWebhooks(ig.zapierWebhooks);
+          // Normalize legacy plain-string webhooks (which received every event)
+          // into { url, event } objects.
+          if (Array.isArray(ig.zapierWebhooks)) {
+            setZapierWebhooks(ig.zapierWebhooks.map((h) =>
+              typeof h === "string" ? { url: h, event: "all" } : { url: h.url, event: h.event || "all" }
+            ));
+          }
         }
         if (data.tenant.notificationPrefs) setNotifPrefs(data.tenant.notificationPrefs);
         if (data.tenant.gallerySettings?.viewerTracking !== undefined) {
@@ -4142,23 +4151,38 @@ export default function SettingsPage() {
 
         <label className="label-field">Paste your Zapier link here</label>
         <div className="space-y-2 mb-3">
-          {zapierWebhooks.map((url, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <input readOnly value={url} className="input-field flex-1 text-xs font-mono bg-gray-50" />
-              <span className="text-[10px] font-semibold text-green-600 flex items-center gap-1 flex-shrink-0">● Connected</span>
+          {zapierWebhooks.map((h, i) => (
+            <div key={i} className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <input readOnly value={h.url} className="input-field flex-1 min-w-[160px] text-xs font-mono bg-gray-50" />
+              {/* Which event triggers THIS webhook — lets a delivery Zap fire only on delivery. */}
+              <select value={h.event || "all"}
+                onChange={(e) => { const v = e.target.value; setZapierWebhooks((w) => w.map((x, idx) => idx === i ? { ...x, event: v } : x)); }}
+                className="input-field text-xs flex-shrink-0" style={{ width: "auto" }}>
+                <option value="all">Any event</option>
+                <option value="created">When created</option>
+                <option value="paid">When paid</option>
+                <option value="delivered">When delivered</option>
+              </select>
               <button onClick={() => setZapierWebhooks((w) => w.filter((_, idx) => idx !== i))}
                 className="text-xs text-red-400 hover:text-red-600 flex-shrink-0">Remove</button>
             </div>
           ))}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <input type="url" value={newZapUrl} onChange={(e) => setNewZapUrl(e.target.value)}
-            className="input-field flex-1" placeholder="https://hooks.zapier.com/hooks/catch/…" />
+            className="input-field flex-1 min-w-[160px]" placeholder="https://hooks.zapier.com/hooks/catch/…" />
+          <select value={newZapEvent} onChange={(e) => setNewZapEvent(e.target.value)}
+            className="input-field text-xs flex-shrink-0" style={{ width: "auto" }}>
+            <option value="all">Any event</option>
+            <option value="created">When created</option>
+            <option value="paid">When paid</option>
+            <option value="delivered">When delivered</option>
+          </select>
           <button type="button"
-            onClick={() => { const u = newZapUrl.trim(); if (u) { setZapierWebhooks((w) => [...w, u]); setNewZapUrl(""); } }}
+            onClick={() => { const u = newZapUrl.trim(); if (u) { setZapierWebhooks((w) => [...w, { url: u, event: newZapEvent }]); setNewZapUrl(""); setNewZapEvent("all"); } }}
             className="btn-outline px-4 py-2 text-sm flex-shrink-0">Add</button>
         </div>
-        <p className="text-[11px] text-gray-400 mt-1.5">We&apos;ll notify your connected app whenever a booking is created, paid, or delivered.</p>
+        <p className="text-[11px] text-gray-400 mt-1.5">Pick which booking event triggers each link. For a post-delivery feedback email, choose <strong>When delivered</strong>.</p>
         <button onClick={saveIntegrations} disabled={savingIntegrations} className="btn-primary mt-4 px-6 py-2.5">
           {savingIntegrations ? "Saving…" : "Save"}
         </button>
