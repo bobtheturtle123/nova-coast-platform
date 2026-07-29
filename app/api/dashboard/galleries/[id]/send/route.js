@@ -191,11 +191,13 @@ export async function POST(req, { params }) {
     sendMediaDeliveredSms({ booking, tenant, galleryUrl }).catch(() => {});
   }
 
-  // Zapier webhook (fire-and-forget)
+  // Zapier webhook (fire-and-forget). Include the client's gallery link so a
+  // post-delivery feedback Zap can reference their photos.
   (async () => {
     try {
+      const galleryLink = gallery.accessToken ? `${getAppUrl()}/${tenant.slug}/gallery/${gallery.accessToken}` : null;
       const { dispatchZapier, bookingWebhookData } = await import("@/lib/zapier");
-      await dispatchZapier(tenant, "booking.delivered", bookingWebhookData({ ...booking, status: "delivered" }));
+      await dispatchZapier(tenant, "booking.delivered", bookingWebhookData({ ...booking, status: "delivered", galleryLink }));
     } catch {}
   })();
 

@@ -159,6 +159,15 @@ export async function GET(req) {
             console.warn(`[cron/gallery-deliveries] SMS failed for job ${doc.id}:`, e.message);
           });
 
+          // Fire the delivered webhook so scheduled deliveries also trigger Zaps
+          // (e.g. a post-delivery feedback email) — same as immediate delivery.
+          (async () => {
+            try {
+              const { dispatchZapier, bookingWebhookData } = await import("@/lib/zapier");
+              await dispatchZapier(tenant, "booking.delivered", bookingWebhookData({ ...booking, status: "delivered", galleryLink: galleryUrl }));
+            } catch {}
+          })();
+
           sent++;
           console.log(`[cron/gallery-deliveries] Job ${doc.id} complete — sent=${sent}`);
         } catch (err) {

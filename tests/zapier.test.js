@@ -1,5 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { dispatchZapier } from "@/lib/zapier";
+import { dispatchZapier, bookingWebhookData } from "@/lib/zapier";
+
+describe("bookingWebhookData", () => {
+  it("includes client name, email, brokerage and gallery link for a feedback Zap", () => {
+    const d = bookingWebhookData({
+      id: "b1", clientName: "Jane Agent", clientEmail: "jane@brk.com",
+      clientCompany: "Coldwell Banker", fullAddress: "123 Main St",
+      galleryLink: "https://kyoriaos.com/acme/gallery/tok",
+    });
+    expect(d.clientName).toBe("Jane Agent");
+    expect(d.clientEmail).toBe("jane@brk.com");
+    expect(d.clientCompany).toBe("Coldwell Banker");
+    expect(d.galleryLink).toBe("https://kyoriaos.com/acme/gallery/tok");
+  });
+});
 
 const tenant = (hooks) => ({ id: "t1", businessName: "Biz", integrations: { zapierWebhooks: hooks } });
 
