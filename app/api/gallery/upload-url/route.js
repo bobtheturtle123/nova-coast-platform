@@ -11,8 +11,12 @@ const MAX_FILES_PER_GALLERY = 1000;
 const MAX_VIDEO_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB
 const MAX_IMAGE_BYTES = 100 * 1024 * 1024;      // 100 MB
 const MAX_OTHER_BYTES = 100 * 1024 * 1024;      // 100 MB (PDFs / floor plans)
-// Max upload URL requests per tenant per hour
-const UPLOAD_URL_HOURLY_LIMIT = 120;
+// Max upload URL requests per tenant per hour. Must comfortably exceed a real
+// bulk upload: a single gallery holds up to MAX_FILES_PER_GALLERY (1000), and a
+// busy studio uploads several shoots an hour. 120 was far too low and blocked
+// photographers mid-gallery. Storage cost is capped separately (10 TB), so this
+// only needs to stop request hammering, not protect storage.
+const UPLOAD_URL_HOURLY_LIMIT = 5000;
 
 const s3 = new S3Client({
   region:   "auto",
