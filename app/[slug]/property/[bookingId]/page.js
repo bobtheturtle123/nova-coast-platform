@@ -79,10 +79,11 @@ export default async function PropertyWebsitePage({ params, searchParams }) {
   const booking = sanitize(rawBooking);
   const pw = booking.propertyWebsite;
 
-  // An outstanding balance locks the public property website too (neutral
-  // message — don't expose payment status publicly).
-  const balanceDue = (Number(booking.remainingBalance) || 0) > 0 && !booking.paidInFull;
-  if (!pw?.published || balanceDue) {
+  // Publishing is the tenant's explicit decision to make the marketing site
+  // public, so honor it regardless of payment status. (Previously an unpaid
+  // balance also locked it, which silently overrode an explicit "Publish" — the
+  // high-res gallery downloads remain payment-gated separately.)
+  if (!pw?.published) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
