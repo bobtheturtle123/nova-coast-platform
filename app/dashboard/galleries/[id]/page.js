@@ -550,6 +550,20 @@ export default function GalleryDetailPage() {
   }, [dragKey]);
   const handleDragEnd = useCallback(() => setDragKey(null), []);
 
+  // Auto-scroll while dragging a thumbnail near the top/bottom edge. Browsers
+  // suppress mouse-wheel scrolling during a native HTML5 drag, so without this
+  // you can't reach photos off-screen while reordering.
+  useEffect(() => {
+    const EDGE = 90, SPEED = 20;
+    function onWindowDragOver(e) {
+      const h = window.innerHeight;
+      if (e.clientY < EDGE)          window.scrollBy(0, -SPEED);
+      else if (e.clientY > h - EDGE) window.scrollBy(0, SPEED);
+    }
+    window.addEventListener("dragover", onWindowDragOver);
+    return () => window.removeEventListener("dragover", onWindowDragOver);
+  }, []);
+
   async function saveOrder() {
     setSavingOrder(true);
     const token = await auth.currentUser.getIdToken();
