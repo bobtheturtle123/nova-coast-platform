@@ -652,6 +652,26 @@ export default function GalleryDetailPage() {
         const keySet = new Set(keys);
         setGallery((g) => ({ ...g, media: (g.media || []).filter((m) => !keySet.has(m.key)) }));
         setSelectedKeys((prev) => { const next = new Set(prev); keys.forEach((k) => next.delete(k)); return next; });
+        // Strip the deleted keys from every category so counts stay accurate.
+        setCategories((prev) => {
+          const next = {};
+          let changed = false;
+          for (const [cat, ks] of Object.entries(prev)) {
+            const filtered = (ks || []).filter((k) => !keySet.has(k));
+            if (filtered.length !== (ks || []).length) changed = true;
+            next[cat] = filtered;
+          }
+          if (changed) {
+            auth.currentUser?.getIdToken().then((tok) =>
+              fetch(`/api/dashboard/galleries/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+                body: JSON.stringify({ categories: next }),
+              }).catch(() => {})
+            );
+          }
+          return next;
+        });
         toast(`Deleted ${keys.length} item${keys.length !== 1 ? "s" : ""}.`);
       } else {
         const d = await res.json();
@@ -1486,7 +1506,12 @@ export default function GalleryDetailPage() {
               <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
                 {[
                   { id: "all",    label: `Photos (${images.length})` },
-                  ...catNames.map((c) => ({ id: c, label: `${c} (${(categories[c] || []).length})` })),
+                  // Count only photos that STILL exist — a category array can hold
+                  // keys for photos that were later deleted, which inflated the count.
+                  ...catNames.map((c) => {
+                    const keys = new Set(categories[c] || []);
+                    return { id: c, label: `${c} (${images.filter((m) => keys.has(m.key)).length})` };
+                  }),
                 ].map((t) => (
                   <button key={t.id} onClick={() => setActiveTab(t.id)}
                     className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
