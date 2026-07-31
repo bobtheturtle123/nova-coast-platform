@@ -12,6 +12,7 @@ export default function DropboxImportModal({ galleryId, onClose, onImported }) {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState(null); // { done, total } during a batched import
   const [result, setResult]   = useState(null);
   const [needsConnect, setNeedsConnect] = useState(false);
   const [connecting, setConnecting]     = useState(false);
@@ -76,18 +77,42 @@ export default function DropboxImportModal({ galleryId, onClose, onImported }) {
 
   async function doImport() {
     if (selectedList.length === 0) return;
-    setImporting(true); setError(null); setResult(null);
+    setImporting(true); setError(null); setResult(null); setProgress(null);
     try {
       const t = await token();
-      const res = await fetch(`/api/dashboard/galleries/${galleryId}/media/import-dropbox`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
-        body: JSON.stringify({ items: selectedList }),
-      });
-      const d = await res.json();
-      if (!res.ok && !d.imported) { setError(d.error || "Import failed."); return; }
-      setResult(d);
-      if (d.importedCount > 0) onImported?.(d.imported);
+      // Import in small batches so a large selection can't exceed the serverless
+      // time/memory limit (which previously returned a non-JSON 504 → generic
+      // "Import failed"). Results are accumulated across batches.
+      const BATCH = 12;
+      const agg = { imported: [], skipped: [], importedCount: 0, skippedCount: 0, needReconnect: false };
+      for (let i = 0; i < selectedList.length; i += BATCH) {
+        const chunk = selectedList.slice(i, i + BATCH);
+        setProgress({ done: i, total: selectedList.length });
+        let d = null;
+        try {
+          const res = await fetch(`/api/dashboard/galleries/${galleryId}/media/import-dropbox`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+            body: JSON.stringify({ items: chunk }),
+          });
+          d = await res.json().catch(() => null);
+          // Auth/permission failure on the first batch is fatal — surface it.
+          if (!d && i === 0 && !res.ok) { setError(`Import failed (server error ${res.status}).`); return; }
+        } catch { /* network — treat this batch as skipped, keep going */ }
+        if (!d) {
+          chunk.forEach((it) => agg.skipped.push({ name: it.name, reason: "Server error on this batch" }));
+          agg.skippedCount += chunk.length;
+          continue;
+        }
+        agg.imported.push(...(d.imported || []));
+        agg.skipped.push(...(d.skipped || []));
+        agg.importedCount += d.importedCount || 0;
+        agg.skippedCount  += d.skippedCount || 0;
+        if (d.needReconnect) { agg.needReconnect = true; break; }
+      }
+      setProgress(null);
+      setResult(agg);
+      if (agg.importedCount > 0) onImported?.(agg.imported);
       setSelected({});
     } catch { setError("Import failed."); }
     finally { setImporting(false); }
@@ -181,7 +206,9 @@ export default function DropboxImportModal({ galleryId, onClose, onImported }) {
             <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50">Close</button>
             <button onClick={doImport} disabled={importing || selectedList.length === 0}
               className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[#3486cf] hover:opacity-90 disabled:opacity-50">
-              {importing ? "Importing…" : `Import selected${selectedList.length ? ` (${selectedList.length})` : ""}`}
+              {importing
+                ? (progress ? `Importing ${progress.done}/${progress.total}…` : "Importing…")
+                : `Import selected${selectedList.length ? ` (${selectedList.length})` : ""}`}
             </button>
           </div>
         </div>
