@@ -5,7 +5,10 @@ export const metadata = {
   metadataBase: new URL("https://kyoriaos.com"),
   title: "KyoriaOS: Business software for real estate photographers",
   description: "Booking, payments, and media delivery built for real estate photography businesses.",
-  alternates: { canonical: "https://kyoriaos.com" },
+  // No canonical here on purpose: a root-level canonical is INHERITED by every
+  // child route that doesn't set its own, which would point all subpages at the
+  // homepage and deindex them. Each page sets its own self-referencing canonical
+  // (the homepage does so in app/page.js).
   manifest: "/manifest.json",
   // Explicitly mark the site indexable — zero ambiguity for crawlers.
   robots: {
