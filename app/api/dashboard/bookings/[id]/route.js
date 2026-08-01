@@ -226,7 +226,7 @@ export async function PATCH(req, { params }) {
         const tenant  = await getTenantById(ctx.tenantId);
         const bizName = tenant?.branding?.businessName || tenant?.businessName || "KyoriaOS";
         const primary = tenant?.branding?.primaryColor || "#3486cf";
-        const from    = `${bizName} <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`;
+        const from    = `${bizName} <${process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com"}>`;
         const addr    = prev.fullAddress || prev.address || "your property";
         const headline = isCancelling ? "Your shoot has been cancelled" : "Your shoot has been postponed";
         const sub      = isCancelling
@@ -285,7 +285,7 @@ export async function PATCH(req, { params }) {
         const tenant  = await getTenantById(ctx.tenantId);
         const bizName = tenant?.branding?.businessName || tenant?.businessName || "KyoriaOS";
         const primary = tenant?.branding?.primaryColor || "#3486cf";
-        const from    = `${bizName} <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`;
+        const from    = `${bizName} <${process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com"}>`;
         const addr    = update.fullAddress || prev.fullAddress || prev.address || "Property";
         const sDate   = String(update.shootDate ?? prev.shootDate ?? "").split("T")[0];
         const sTime   = update.shootTime ?? prev.shootTime;
@@ -372,7 +372,7 @@ export async function PATCH(req, { params }) {
         if (tenant) {
           const bizName   = tenant.branding?.businessName || tenant.businessName || "KyoriaOS";
           const primary   = tenant.branding?.primaryColor || "#3486cf";
-          const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
+          const fromEmail = process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com";
           const from      = `${bizName} <${fromEmail}>`;
           const address   = update.fullAddress || prev.fullAddress || prev.address || "Property";
           const shootDate = update.shootDate || prev.shootDate;
@@ -468,7 +468,7 @@ export async function PATCH(req, { params }) {
         if (tenant) {
           const bizName   = tenant.branding?.businessName || tenant.businessName || "KyoriaOS";
           const primary   = tenant.branding?.primaryColor || "#3486cf";
-          const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
+          const fromEmail = process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com";
           const from      = `${bizName} <${fromEmail}>`;
           const address   = update.fullAddress || prev.fullAddress || prev.address || "your property";
           const clientName = (update.clientName || prev.clientName || "").split(" ")[0] || "there";

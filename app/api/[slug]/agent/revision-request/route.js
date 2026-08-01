@@ -74,7 +74,7 @@ export async function POST(req, { params }) {
         const resend   = new Resend(resendKey);
         const primary  = tenant.branding?.primaryColor || "#3486cf";
         const bizName  = tenant.branding?.businessName || "KyoriaOS";
-        const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
+        const fromEmail = process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com";
         const from     = `${bizName} <${fromEmail}>`;
         await resend.emails.send({
           from, to: [tenant.email],

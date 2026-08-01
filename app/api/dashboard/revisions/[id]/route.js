@@ -93,7 +93,7 @@ export async function PATCH(req, { params }) {
         const tenant    = tenantDoc.data() || {};
         const primary   = tenant.branding?.primaryColor || "#3486cf";
         const bizName   = tenant.branding?.businessName || tenant.businessName || "Your Photographer";
-        const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
+        const fromEmail = process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com";
         const from      = `${bizName} <${fromEmail}>`;
         const portalUrl = revData.bookingId
           ? `${getAppUrl()}/${tenant.slug}/agent/${revData.bookingId}?token=`

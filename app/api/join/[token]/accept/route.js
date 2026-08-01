@@ -116,7 +116,7 @@ export async function POST(req, { params }) {
       const appUrl   = (await import("@/lib/appUrl")).getAppUrl();
       const { Resend } = await import("resend");
       await new Resend(key).emails.send({
-        from:    `KyoriaOS <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`,
+        from:    `KyoriaOS <${process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com"}>`,
         to:      ownerEmail,
         subject: `${name.trim()} joined ${bizName}`,
         html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">

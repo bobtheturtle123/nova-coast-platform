@@ -64,7 +64,7 @@ export async function POST(req, { params }) {
         : "";
       const { Resend } = await import("resend");
       await new Resend(process.env.RESEND_API_KEY).emails.send({
-        from:    `${biz} <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`,
+        from:    `${biz} <${process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com"}>`,
         to:      booking.clientEmail,
         subject: `Rescheduled: your shoot at ${booking.fullAddress || booking.address || "your property"}`,
         html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:28px 24px">

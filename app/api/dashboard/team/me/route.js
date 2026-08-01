@@ -76,7 +76,7 @@ export async function DELETE(req) {
         if (!ownerEmail) return;
         const { Resend } = await import("resend");
         await new Resend(key).emails.send({
-          from: `KyoriaOS <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`,
+          from: `KyoriaOS <${process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com"}>`,
           to: ownerEmail,
           subject: `${name} deactivated their team profile`,
           html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:28px 24px"><p><strong>${name}</strong> deactivated their own profile. They can reactivate by signing back in, or you can manage them from your Team page.</p></div>`,

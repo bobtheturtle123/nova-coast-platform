@@ -18,7 +18,7 @@ export async function POST(req) {
     return Response.json({ error: "RESEND_API_KEY not set" }, { status: 500 });
   }
 
-  const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
+  const fromEmail = process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com";
   const toEmail = decoded.email;
 
   if (!toEmail) {

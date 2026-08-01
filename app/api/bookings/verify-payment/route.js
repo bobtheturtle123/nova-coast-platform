@@ -218,7 +218,7 @@ async function _notifyBalancePaid(tenantId, bookingId, booking, amount) {
     if (ownerEmail && key) {
       const { Resend } = await import("resend");
       await new Resend(key).emails.send({
-        from: `KyoriaOS <${process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com"}>`,
+        from: `KyoriaOS <${process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com"}>`,
         to: ownerEmail,
         subject: `Payment received — $${Number(amount).toLocaleString()} for ${address}`,
         html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:28px 24px"><h2 style="color:#16a34a;margin:0 0 12px">Balance paid ✓</h2><p style="color:#555"><strong>${who}</strong> just paid the remaining balance of <strong>$${Number(amount).toLocaleString()}</strong> for <strong>${address}</strong>. The gallery is now unlocked.</p></div>`,

@@ -231,8 +231,9 @@ export async function POST(req) {
             const { Resend } = await import("resend");
             const resend = new Resend(resendKey);
             const primary   = tenant.branding?.primaryColor || "#3486cf";
-            const bizName   = tenant.branding?.businessName || tenant.businessName || "KyoriaOS";
-            const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
+            // Client-facing: use the studio's name, never "KyoriaOS".
+            const bizName   = tenant.branding?.businessName || tenant.businessName || "Your Photographer";
+            const fromEmail = process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com";
             const from      = `${bizName} <${fromEmail}>`;
             const adminEmail = tenant.email || adminRecord?.email || null;
 

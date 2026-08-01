@@ -40,7 +40,7 @@ export async function POST(req) {
     const resendKey = process.env.RESEND_API_KEY;
     if (resendKey) {
       const resend     = new Resend(resendKey);
-      const fromEmail  = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
+      const fromEmail  = process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com";
       await resend.emails.send({
         from:    `KyoriaOS <${fromEmail}>`,
         to:      ["complexdesign123@gmail.com"],

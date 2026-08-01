@@ -94,7 +94,7 @@ export async function POST(req) {
     const key = process.env.RESEND_API_KEY;
     if (!key) return Response.json({ ok: true, inviteUrl, emailFailed: true, token });
     await new Resend(key).emails.send({
-      from:    "KyoriaOS <noreply@mail.kyoriaos.com>",
+      from:    "KyoriaOS <no-reply@mail.kyoriaos.com>",
       to:      email.trim(),
       subject: `${company} invited you to join their photography team`,
       html: `

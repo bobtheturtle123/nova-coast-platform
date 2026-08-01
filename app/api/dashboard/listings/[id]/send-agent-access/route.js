@@ -84,7 +84,7 @@ export async function POST(req, { params }) {
   if (sendEmail && process.env.RESEND_API_KEY) {
     const primary   = tenant.branding?.primaryColor || "#3486cf";
     const bizName   = tenant.branding?.businessName || tenant.businessName || "Your Photographer";
-    const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@mail.kyoriaos.com";
+    const fromEmail = process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com";
     const from      = `${bizName} <${fromEmail}>`;
     const address  = booking.fullAddress || booking.address || "your property";
 
