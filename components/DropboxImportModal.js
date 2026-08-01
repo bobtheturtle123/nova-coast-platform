@@ -16,8 +16,16 @@ export default function DropboxImportModal({ galleryId, onClose, onImported }) {
   const [result, setResult]   = useState(null);
   const [needsConnect, setNeedsConnect] = useState(false);
   const [connecting, setConnecting]     = useState(false);
+  const [authToken, setAuthToken]       = useState("");   // for <img> thumbnail URLs
+  const [lastIdx, setLastIdx]           = useState(null); // anchor for shift-click ranges
 
   const token = useCallback(() => auth.currentUser?.getIdToken(), []);
+  useEffect(() => { token().then((t) => setAuthToken(t || "")); }, [token]);
+
+  const isImage = (name) => /\.(jpg|jpeg|png|webp|tiff?|heic)$/i.test(name || "");
+  const thumbUrl = (p) => authToken
+    ? `/api/integrations/dropbox/thumbnail?path=${encodeURIComponent(p)}&token=${encodeURIComponent(authToken)}`
+    : null;
 
   // Connect Dropbox right here via an OAuth popup, then auto-retry the browse —
   // no need to leave the page for Settings.
@@ -69,6 +77,36 @@ export default function DropboxImportModal({ galleryId, onClose, onImported }) {
       const n = { ...s };
       if (n[file.path]) delete n[file.path];
       else n[file.path] = { path: file.path, name: file.name, size: file.size };
+      return n;
+    });
+  }
+
+  // Click a file to toggle it; Shift-click to select the whole range since the
+  // last click (files only) — the fast way to grab a whole shoot at once.
+  function clickFile(file, idx, shiftKey) {
+    if (shiftKey && lastIdx !== null) {
+      const [a, b] = [lastIdx, idx].sort((x, y) => x - y);
+      setSelected((s) => {
+        const n = { ...s };
+        for (let i = a; i <= b; i++) {
+          const it = entries[i];
+          if (it && it.type === "file") n[it.path] = { path: it.path, name: it.name, size: it.size };
+        }
+        return n;
+      });
+    } else {
+      toggle(file);
+    }
+    setLastIdx(idx);
+  }
+
+  const fileEntries = entries.filter((e) => e.type === "file");
+  const allFilesSelected = fileEntries.length > 0 && fileEntries.every((f) => selected[f.path]);
+  function selectAllFiles() {
+    setSelected((s) => {
+      const n = { ...s };
+      if (allFilesSelected) fileEntries.forEach((f) => delete n[f.path]);
+      else fileEntries.forEach((f) => { n[f.path] = { path: f.path, name: f.name, size: f.size }; });
       return n;
     });
   }
@@ -163,27 +201,45 @@ export default function DropboxImportModal({ galleryId, onClose, onImported }) {
           ) : entries.length === 0 ? (
             <div className="text-center py-16 text-gray-400 text-sm">This folder is empty.</div>
           ) : (
-            <ul className="divide-y divide-gray-50">
-              {entries.map((e) => (
-                <li key={e.path}>
-                  {e.type === "folder" ? (
-                    <button onClick={() => browse(e.path)} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 text-left rounded-lg">
-                      <span>{icon(e)}</span>
-                      <span className="text-sm text-gray-800 flex-1 truncate">{e.name}</span>
-                      <span className="text-gray-300">›</span>
-                    </button>
-                  ) : (
-                    <label className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer rounded-lg">
-                      <input type="checkbox" checked={!!selected[e.path]} onChange={() => toggle(e)}
-                        className="accent-[#3486cf]" />
-                      <span>{icon(e)}</span>
-                      <span className="text-sm text-gray-800 flex-1 truncate">{e.name}</span>
-                      <span className="text-xs text-gray-400">{fmtSize(e.size)}</span>
-                    </label>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <>
+              {/* Bulk select — grab a whole shoot without clicking each file. */}
+              {fileEntries.length > 0 && (
+                <div className="flex items-center justify-between px-3 pb-1.5">
+                  <button onClick={selectAllFiles} className="text-xs font-semibold text-[#3486cf] hover:underline">
+                    {allFilesSelected ? "Deselect all" : `Select all ${fileEntries.length} files`}
+                  </button>
+                  <span className="text-[11px] text-gray-400">Tip: Shift-click to select a range</span>
+                </div>
+              )}
+              <ul className="divide-y divide-gray-50">
+                {entries.map((e, idx) => (
+                  <li key={e.path}>
+                    {e.type === "folder" ? (
+                      <button onClick={() => browse(e.path)} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 text-left rounded-lg">
+                        <span className="w-9 text-center">{icon(e)}</span>
+                        <span className="text-sm text-gray-800 flex-1 truncate">{e.name}</span>
+                        <span className="text-gray-300">›</span>
+                      </button>
+                    ) : (
+                      <div onClick={(ev) => clickFile(e, idx, ev.shiftKey)}
+                        className={`flex items-center gap-3 px-3 py-2 cursor-pointer rounded-lg select-none ${selected[e.path] ? "bg-[#3486cf]/10" : "hover:bg-gray-50"}`}>
+                        <input type="checkbox" readOnly checked={!!selected[e.path]}
+                          className="accent-[#3486cf] pointer-events-none" />
+                        {isImage(e.name) && thumbUrl(e.path) ? (
+                          <img src={thumbUrl(e.path)} alt="" loading="lazy"
+                            className="w-9 h-9 rounded object-cover bg-gray-100 flex-shrink-0"
+                            onError={(ev) => { ev.currentTarget.style.visibility = "hidden"; }} />
+                        ) : (
+                          <span className="w-9 text-center">{icon(e)}</span>
+                        )}
+                        <span className="text-sm text-gray-800 flex-1 truncate">{e.name}</span>
+                        <span className="text-xs text-gray-400">{fmtSize(e.size)}</span>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
 
