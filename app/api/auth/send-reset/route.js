@@ -17,9 +17,13 @@ export async function POST(req) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return Response.json({ ok: true });
 
   try {
-    // Point the oobCode's continue URL at our own reset page.
+    // Generate the reset oobCode WITHOUT ActionCodeSettings. We only need the
+    // oobCode — we build our own reset URL below. Passing a `url` (continue URL)
+    // would require that domain to be allowlisted in Firebase Auth → Settings →
+    // Authorized domains; kyoriaos.com is not, so passing it made this throw
+    // auth/unauthorized-continue-uri and NO reset email was ever sent.
     const appUrl = getAppUrl();
-    const link = await adminAuth.generatePasswordResetLink(email, { url: `${appUrl}/auth/login` });
+    const link = await adminAuth.generatePasswordResetLink(email);
 
     // Extract the oobCode so we can host the reset on our own domain.
     const oob = new URL(link).searchParams.get("oobCode");
