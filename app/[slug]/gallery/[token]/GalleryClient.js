@@ -344,6 +344,10 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const coverImg  = images[0]?.url || null;
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [dlStatus, setDlStatus] = useState(null); // null | "preparing" | "ready" | "failed"
+  // The finished ZIP's URL, surfaced as a real click-to-save link. Browsers block
+  // a programmatic download that fires AFTER awaits (outside the click gesture),
+  // so a manual link the client can click is the reliable fallback for every path.
+  const [readyUrl, setReadyUrl] = useState(null);
 
   // Large / video-heavy galleries use the prepared-download buffer: the photo +
   // floor-plan + doc bundle is built server-side, stored in R2, and served via a
@@ -389,7 +393,9 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
     try {
       if (!isHeavy) {
         // Small gallery — stream the photo/docs ZIP straight away.
-        triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
+        const fbUrl = `/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`;
+        setReadyUrl(fbUrl);
+        triggerDownload(fbUrl, "");
         return;
       }
 
@@ -413,18 +419,23 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
       }
 
       if (job.status === "ready" && job.downloadUrl) {
+        setReadyUrl(job.downloadUrl);
         setDlStatus("ready");
         triggerDownload(job.downloadUrl, "");
       } else {
         // The prepared buffer didn't finish — fall back to a direct streamed
         // photo/docs download instead of dead-ending. (Videos already firing.)
+        const fbUrl = `/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`;
+        setReadyUrl(fbUrl);
         setDlStatus("fallback");
-        triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
+        triggerDownload(fbUrl, "");
       }
     } catch {
       // Even on error, stream the photos. (Videos already firing from the top.)
+      const fbUrl = `/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`;
+      setReadyUrl(fbUrl);
       setDlStatus("fallback");
-      try { triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, ""); } catch {}
+      try { triggerDownload(fbUrl, ""); } catch {}
     } finally {
       setDownloadingAll(false);
     }
@@ -733,6 +744,17 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                   <span className="text-xs text-gray-500 max-w-[16rem] text-right">
                     Starting your downloads now. Your browser may ask permission to download multiple files.
                   </span>
+                )}
+                {/* Guaranteed click-to-save link. A real click is a fresh user
+                    gesture, so the browser can't block it the way it blocks a
+                    download fired programmatically after awaits. */}
+                {readyUrl && (
+                  <a
+                    href={readyUrl}
+                    rel="noopener"
+                    className="text-xs font-semibold underline text-gray-600 hover:text-gray-900 text-right">
+                    Didn’t start? Click here to save your files
+                  </a>
                 )}
               </div>
             ) : (
