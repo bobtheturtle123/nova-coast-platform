@@ -34,6 +34,11 @@ const ROWS = [
     competitor: { value: "Yes", positive: true },
   },
   {
+    feature: "Digital contract signing at checkout",
+    kyoria: { value: "Yes, signed during booking", positive: true },
+    competitor: { value: "No", positive: false },
+  },
+  {
     feature: "Gallery delivery for photos, video, floor plans, 3D tours",
     kyoria: { value: "Yes", positive: true },
     competitor: { value: "Yes", positive: true },
