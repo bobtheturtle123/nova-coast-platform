@@ -120,23 +120,25 @@ const BKG_CSS = `
 .bkg .pthumb{border-radius:12px;aspect-ratio:16/9;margin-bottom:13px;overflow:hidden;background:#EFEBE4;}
 .bkg .pthumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .bkg .pkg .pn{font-size:17px;font-weight:800;}
-.bkg .pkg .tg{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px;min-height:34px;}
+.bkg .pkg .tg{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:4px;min-height:34px;white-space:pre-line;}
 .bkg .pkg .price{display:flex;align-items:baseline;gap:7px;margin:8px 0 6px;}
 .bkg .pkg .price b{font-size:24px;font-weight:800;letter-spacing:-0.03em;color:var(--ink);}
 .bkg .save{display:inline-flex;font-size:11px;font-weight:700;color:var(--sage-dark);background:var(--sage-soft);padding:3px 9px;border-radius:99px;align-self:flex-start;margin:0 0 12px;}
 /* keep blurbs short + tidy (max two lines) */
-.bkg .pkg .tg,.bkg .svc .sb,.bkg .uprow .ab{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.bkg .svc .sb,.bkg .uprow .ab{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+/* package description gets more room to read */
+.bkg .pkg .tg{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;}
 /* explicit dark text so nothing inherits a light/white color */
 .bkg h1,.bkg h2,.bkg .pn,.bkg .sn,.bkg .anm,.bkg .ap,.bkg .sp,.bkg .summary h3,.bkg .totrow .v,.bkg .mbar .ml b{color:var(--ink);}
 .bkg .pkg ul{list-style:none;padding:0;margin:2px 0 14px;display:flex;flex-direction:column;gap:7px;flex:1;}
 .bkg .pkg li{font-size:12.6px;display:flex;gap:8px;color:#3C4046;line-height:1.4;}
 .bkg .pkg li svg{width:14px;height:14px;flex-shrink:0;margin-top:1px;color:var(--gold-dark);}
+.bkg .pkg li.more{color:var(--muted);font-weight:600;padding-left:22px;}
 .bkg .detlink{background:#fff;border:1.3px solid var(--line-2);border-radius:9px;font-size:12px;font-weight:600;color:var(--gold-dark);display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;margin-bottom:10px;align-self:flex-start;cursor:pointer;transition:all .14s;}
 .bkg .detlink:hover{border-color:var(--gold);background:var(--gold-soft);}
 .bkg .detlink svg{width:14px;height:14px;}
 .bkg .selbtn{height:43px;border-radius:11px;border:1.5px solid var(--line-2);background:#fff;font-size:13.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;transition:all .14s;}
 .bkg .pkg:hover .selbtn{border-color:var(--brand);}
-.bkg .pkg.featured .selbtn{border-color:var(--brand);background:var(--brand);color:#fff;}
 .bkg .pkg.on .selbtn{background:var(--brand);border-color:var(--brand);color:#fff;}
 .bkg .selbtn svg{width:15px;height:15px;}
 /* upgrades */
@@ -476,18 +478,18 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                 {packages.map((pk) => {
                   const on = packageIds.includes(pk.id);
                   const images = getImages(pk);
-                  const names = pk.includeNames?.length ? pk.includeNames : (pk.includes || []).map((sid) => services.find((s) => s.id === sid)?.name).filter(Boolean);
+                  const names = pk.includeNames?.length ? pk.includeNames : (pk.includes || []).map((sid) => (services.find((s) => s.id === sid) || addons.find((a) => a.id === sid))?.name).filter(Boolean);
                   return (
                     <div key={pk.id} className={`pkg${on ? " on" : ""}${pk.featured ? " featured" : ""}`}>
                       {pk.featured && <span className="ribbon">Recommended for most listings</span>}
                       {images[0] && <div className="pthumb"><img src={images[0]} alt={pk.name} /></div>}
                       <div className="pn">{pk.name}</div>
-                      {(pk.tagline || pk.description) && <div className="tg">{pk.tagline || short(pk.description, 80)}</div>}
+                      {(pk.tagline || pk.description) && <div className="tg">{pk.tagline || short(pk.description, 260)}</div>}
                       <div className="price"><b>{displayPrice(pk)}</b></div>
                       {showSavings && (() => { const sv = savingsFor(pk); return sv > 0 ? <span className="save">Save {fmt(sv)} vs. à la carte</span> : null; })()}
                       <QtyOptionSelect item={pk} />
                       {names.length > 0 && (
-                        <ul>{names.slice(0, 5).map((n, i) => <li key={i}>{CHECK}<span>{n}</span></li>)}</ul>
+                        <ul>{names.slice(0, 3).map((n, i) => <li key={i}>{CHECK}<span>{n}</span></li>)}{names.length > 3 && <li className="more">{`+${names.length - 3} more`}</li>}</ul>
                       )}
                       <button className="detlink" onClick={() => openDetails(pk)}>{INFO}See details</button>
                       <button className="selbtn" onClick={() => togglePackage(pk.id)}>{on ? <>{CHECK}Added</> : "+ Add"}</button>
@@ -601,7 +603,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
       </div>
 
       {lightboxItem && (
-        <ProductLightbox item={lightboxItem.item} images={lightboxItem.images} price={lightboxItem.price} services={services} onClose={() => setLightboxItem(null)} />
+        <ProductLightbox item={lightboxItem.item} images={lightboxItem.images} price={lightboxItem.price} services={[...services, ...addons]} onClose={() => setLightboxItem(null)} />
       )}
     </div>
   );

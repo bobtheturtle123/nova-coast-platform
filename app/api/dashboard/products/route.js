@@ -107,7 +107,7 @@ function sanitizeQuantityOptions(raw) {
 function sanitizeItem(body, type) {
   const base = {
     name:        stripTags(body.name        || "").slice(0, 100),
-    description: stripTags(body.description || "").slice(0, 1000),
+    description: stripTags(body.description || "").slice(0, 20000),
     price:       Number(body.price)  || 0,
     active:      body.active !== false,
     featured:    !!body.featured,

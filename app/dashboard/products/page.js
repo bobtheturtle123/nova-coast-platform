@@ -6,7 +6,7 @@ import { useToast } from "@/components/Toast";
 import { isDemo, getDemoProducts } from "@/lib/demoData";
 import AryeoImport from "@/components/dashboard/AryeoImport";
 import { getActiveTiers } from "@/lib/catalogUtils";
-import { stripMarkdown } from "@/components/RichText";
+import { RichText, stripMarkdown } from "@/components/RichText";
 
 async function uploadProductMedia(file) {
   const token = await auth.currentUser.getIdToken();
@@ -49,7 +49,7 @@ function intervalLabel(v) {
 }
 
 // ─── Product edit form ────────────────────────────────────────────────────────
-function ProductForm({ item, type: initialType, allServices, allPackages, teamMembers, pricingConfig, onSave, onDelete, onClose }) {
+function ProductForm({ item, type: initialType, allServices, allPackages, allAddons, teamMembers, pricingConfig, onSave, onDelete, onClose }) {
   const [type, setType] = useState(initialType);
   const [form, setForm] = useState(() => ({
     name:         item?.name         || "",
@@ -99,25 +99,35 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
     const e = ta.selectionEnd;
     const sel = value.slice(s, e);
     let insert;
-    let selStart = s;
-    if (kind === "bold")   insert = `**${sel || "bold text"}**`;
+    if (kind === "bold")        insert = `**${sel || "bold text"}**`;
     else if (kind === "italic") insert = `*${sel || "italic text"}*`;
-    else { // bullets — one "- " per line, starting on its own line
+    else if (kind === "number") { // numbered list — "1. " per line, its own line
       const atLineStart = s === 0 || value[s - 1] === "\n";
       const body = (sel || "List item")
         .split(/\r?\n/)
-        .map((l) => (l.trim() ? `- ${l.replace(/^[-*]\s+/, "")}` : "- "))
+        .map((l, i) => (l.trim() ? `${i + 1}. ${l.replace(/^(?:[-*]|\d+[.)])\s+/, "")}` : `${i + 1}. `))
         .join("\n");
       insert = (atLineStart ? "" : "\n") + body;
-      if (!atLineStart) selStart = s + 1;
+    } else { // bullets — "- " per line, starting on its own line
+      const atLineStart = s === 0 || value[s - 1] === "\n";
+      const body = (sel || "List item")
+        .split(/\r?\n/)
+        .map((l) => (l.trim() ? `- ${l.replace(/^(?:[-*]|\d+[.)])\s+/, "")}` : "- "))
+        .join("\n");
+      insert = (atLineStart ? "" : "\n") + body;
     }
-    const next = value.slice(0, s) + insert + value.slice(e);
-    setForm((f) => ({ ...f, description: next }));
-    // Re-select the inserted text after React re-renders the textarea.
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(selStart, s + insert.length);
-    });
+    // Use execCommand so the change lands on the browser's native undo stack —
+    // this keeps Ctrl+Z working inside the textarea. Falls back to setState if
+    // execCommand isn't supported.
+    ta.focus();
+    ta.setSelectionRange(s, e);
+    const ok = typeof document !== "undefined" && document.execCommand
+      && document.execCommand("insertText", false, insert);
+    if (!ok) {
+      const next = value.slice(0, s) + insert + value.slice(e);
+      setForm((f) => ({ ...f, description: next }));
+      requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(s, s + insert.length); });
+    }
   }
 
   function tierField(tier) {
@@ -354,12 +364,24 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                 className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">
                 •
               </button>
+              <button type="button" onClick={() => applyDescFormat("number")} title="Numbered list"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-50">
+                1.
+              </button>
               <span className="text-xs text-gray-400 ml-1.5">Select text, then click to format.</span>
             </div>
             <textarea ref={descRef} value={form.description} onChange={field("description")} rows={6}
               className="input-field w-full resize-y leading-relaxed" style={{ minHeight: "8.5rem" }}
               placeholder="Describe what this includes…" />
-            <p className="text-xs text-gray-400 mt-1">Drag the bottom-right corner to make this taller.</p>
+            <p className="text-xs text-gray-400 mt-1">Drag the bottom-right corner to make this taller. Ctrl+Z undoes changes.</p>
+            {form.description.trim() && (
+              <details className="mt-2 border border-gray-200 rounded-lg" open>
+                <summary className="px-3 py-2 cursor-pointer select-none text-xs font-medium text-gray-500 hover:bg-gray-50 rounded-lg">
+                  Preview — how clients will see it
+                </summary>
+                <RichText text={form.description} className="px-3 pb-3 pt-1 text-sm text-[#0F172A]" />
+              </details>
+            )}
           </div>
 
           {/* Retainer: billing interval */}
@@ -383,8 +405,15 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
           )}
 
           {/* Media upload */}
-          <div>
-            <label className="label-field">Photos / Videos</label>
+          <details className="border border-gray-200 rounded-lg" open={form.mediaUrls.length > 0}>
+            <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none hover:bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-[#0F172A]">
+                Photos / Videos
+                {form.mediaUrls.length > 0 && <span className="ml-2 text-xs text-gray-400">{form.mediaUrls.length} added</span>}
+              </span>
+              <span className="text-xs text-gray-400">optional</span>
+            </summary>
+            <div className="px-4 pb-4 pt-2 border-t border-gray-100">
             <input ref={fileInputRef} type="file" multiple
               accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
               className="hidden" onChange={handleMediaUpload} />
@@ -439,7 +468,8 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
             </button>
             <p className="text-xs text-gray-400 mt-1">First image is the cover. Images and videos only.</p>
             {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
-          </div>
+            </div>
+          </details>
 
           {/* Package-specific: included services (collapsed) + featured */}
           {type === "packages" && (
@@ -459,7 +489,10 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                     Optional. Tick the individual services this package bundles together (e.g. Photography + Drone + Twilight).
                     This is just for your reference and to show clients what&apos;s included — it doesn&apos;t change the package price.
                   </p>
-                  <div className="border border-gray-200 rounded-xl divide-y divide-gray-100">
+                  <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
+                    {allServices.length > 0 && (
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide px-4 pt-2.5 pb-1 bg-gray-50">Services</p>
+                    )}
                     {allServices.map((svc) => (
                       <label key={svc.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
                         <input type="checkbox" checked={form.includes.includes(svc.id)}
@@ -467,8 +500,18 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                         <span className="text-sm text-[#0F172A]">{svc.name}</span>
                       </label>
                     ))}
-                    {allServices.length === 0 && (
-                      <p className="text-xs text-gray-400 px-4 py-3">No services yet — add services first to include them.</p>
+                    {allAddons?.length > 0 && (
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide px-4 pt-2.5 pb-1 bg-gray-50">Add-ons</p>
+                    )}
+                    {(allAddons || []).map((ad) => (
+                      <label key={ad.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
+                        <input type="checkbox" checked={form.includes.includes(ad.id)}
+                          onChange={() => toggleService(ad.id)} className="rounded" />
+                        <span className="text-sm text-[#0F172A]">{ad.name}</span>
+                      </label>
+                    ))}
+                    {allServices.length === 0 && (allAddons?.length || 0) === 0 && (
+                      <p className="text-xs text-gray-400 px-4 py-3">No services or add-ons yet — add them first to include them.</p>
                     )}
                   </div>
                 </div>
@@ -672,8 +715,15 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
 
           {/* Photographer assignment */}
           {type !== "retainers" && teamMembers?.length > 0 && (
-            <div>
-              <label className="label-field">Assigned Photographers</label>
+            <details className="border border-gray-200 rounded-lg">
+              <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none hover:bg-gray-50 rounded-lg">
+                <span className="text-sm font-medium text-[#0F172A]">
+                  Assigned Photographers
+                  {form.assignedPhotographers.length > 0 && <span className="ml-2 text-xs text-gray-400">{form.assignedPhotographers.length} selected</span>}
+                </span>
+                <span className="text-xs text-gray-400">optional</span>
+              </summary>
+              <div className="px-4 pb-4 pt-2 border-t border-gray-100">
               <p className="text-xs text-gray-400 mb-2">Only these photographers will be assigned to this service. Leave blank for all.</p>
               <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
                 {teamMembers.map((m) => (
@@ -692,7 +742,8 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
                   </label>
                 ))}
               </div>
-            </div>
+              </div>
+            </details>
           )}
 
           {/* Duration — wrapped in accordion for services and packages */}
@@ -1867,6 +1918,7 @@ export default function ProductsPage() {
           type={editing.type}
           allServices={items.services}
           allPackages={items.packages}
+          allAddons={items.addons}
           teamMembers={assignablePhotographers}
           pricingConfig={pricingConfig}
           onSave={saveItem}

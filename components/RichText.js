@@ -30,13 +30,26 @@ export function RichText({ text, className, style }) {
   let para = [];
   let list = [];
   const flushPara = () => { if (para.length) { blocks.push({ type: "p",  lines: para }); para = []; } };
-  const flushList = () => { if (list.length) { blocks.push({ type: "ul", items: list }); list = []; } };
+  const flushList = () => { if (list.length) { blocks.push({ type: list.ordered ? "ol" : "ul", items: list.slice() }); list = []; list.ordered = false; } };
 
   for (const raw of lines) {
     const t = raw.trim();
-    if (/^[-*]\s+/.test(t)) { flushPara(); list.push(t.replace(/^[-*]\s+/, "")); }
-    else if (t === "")      { flushPara(); flushList(); }
-    else                    { flushList(); para.push(t); }
+    if (/^\d+[.)]\s+/.test(t)) {
+      // Numbered list item ("1. " / "2) ")
+      flushPara();
+      if (list.length && !list.ordered) flushList();
+      list.ordered = true;
+      list.push(t.replace(/^\d+[.)]\s+/, ""));
+    } else if (/^[-*]\s+/.test(t)) {
+      // Bullet list item ("- " / "* ")
+      flushPara();
+      if (list.length && list.ordered) flushList();
+      list.push(t.replace(/^[-*]\s+/, ""));
+    } else if (t === "") {
+      flushPara(); flushList();
+    } else {
+      flushList(); para.push(t);
+    }
   }
   flushPara();
   flushList();
@@ -44,12 +57,14 @@ export function RichText({ text, className, style }) {
   return (
     <div className={className} style={style}>
       {blocks.map((b, i) =>
-        b.type === "ul" ? (
-          <ul key={i} style={{ listStyle: "disc", paddingLeft: "1.25rem", margin: "0.4rem 0" }}>
-            {b.items.map((it, j) => (
+        b.type === "ul" || b.type === "ol" ? (
+          React.createElement(
+            b.type,
+            { key: i, style: { listStyle: b.type === "ol" ? "decimal" : "disc", paddingLeft: "1.25rem", margin: "0.4rem 0" } },
+            b.items.map((it, j) => (
               <li key={j} style={{ marginBottom: 2 }}>{renderInline(it, `${i}-${j}-`)}</li>
-            ))}
-          </ul>
+            ))
+          )
         ) : (
           <p key={i} style={{ margin: "0.4rem 0" }}>
             {b.lines.map((ln, j) => (
@@ -72,7 +87,7 @@ export function stripMarkdown(text) {
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/\*([^*]+)\*/g, "$1")
     .replace(/_([^_]+)_/g, "$1")
-    .replace(/^[\s]*[-*]\s+/gm, "")
+    .replace(/^[\s]*(?:[-*]|\d+[.)])\s+/gm, "")
     .replace(/\s+/g, " ")
     .trim();
 }
