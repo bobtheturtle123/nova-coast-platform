@@ -31,7 +31,7 @@ const ROWS = [
   {
     feature: "Payment-gated gallery delivery",
     kyoria: { value: "Yes, automatic via Stripe", positive: true },
-    competitor: { value: "No", positive: false },
+    competitor: { value: "Yes", positive: true },
   },
   {
     feature: "Gallery delivery for photos, video, floor plans, 3D tours",
@@ -40,7 +40,7 @@ const ROWS = [
   },
   {
     feature: "Property websites",
-    kyoria: { value: "In development", positive: false },
+    kyoria: { value: "Yes", positive: true },
     competitor: { value: "Yes", positive: true },
   },
   {
