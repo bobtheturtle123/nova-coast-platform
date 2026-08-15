@@ -1,90 +1,112 @@
-import sharp from "sharp";
 import { rateLimit } from "@/lib/rateLimit";
+import { webPhotoKey } from "@/lib/webPhoto";
 
 export const dynamic = "force-dynamic";
 
-// Web/MLS spec: max 2048px wide, JPEG quality 85
-const WEB_MAX_PX = 2048;
+// Individual file downloads. These NO LONGER proxy bytes through Vercel — they
+// 302-redirect to a presigned R2 URL (attachment disposition sets the filename),
+// so the bytes stream straight from R2 (free egress) and cost zero Fast Origin
+// Transfer / Fluid CPU.
+//
+//   print / raw → the original object, as-is.
+//   web/MLS     → the PRE-GENERATED 2048px version (webPhotoKey), also from R2.
+//                 Only if that hasn't been generated yet (a brand-new upload the
+//                 web-photo cron hasn't processed) do we resize inline this once,
+//                 as a self-healing stopgap.
+
+const WEB_MAX_PX  = 2048;
 const WEB_QUALITY = 85;
+
+function s3client() {
+  // eslint-disable-next-line global-require
+  const { S3Client } = require("@aws-sdk/client-s3");
+  return new S3Client({
+    region: "auto",
+    endpoint: process.env.R2_ENDPOINT,
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    },
+  });
+}
+
+async function signedDownload(key, fileName) {
+  const { GetObjectCommand } = await import("@aws-sdk/client-s3");
+  const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
+  return getSignedUrl(
+    s3client(),
+    new GetObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: key,
+      ResponseContentDisposition: `attachment; filename="${fileName}"`,
+    }),
+    { expiresIn: 900 }
+  );
+}
+
+async function r2Exists(key) {
+  const r2Url = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+  if (!r2Url) return false;
+  try {
+    const r = await fetch(`${r2Url}/${key}`, { method: "HEAD" });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const key    = searchParams.get("key");
-  const format = searchParams.get("format") || "web"; // "web" | "print"
+  const format = searchParams.get("format") || "web"; // "web" | "print" | "raw"
   const name   = searchParams.get("name") || "image";
 
-  if (!key) {
-    return new Response("Missing key", { status: 400 });
-  }
+  if (!key) return new Response("Missing key", { status: 400 });
 
-  // Individual image downloads per IP per hour. Generous ceilings so a whole
-  // office/household (shared IP) can download full galleries one-by-one without
-  // tripping, while still blocking automated bulk scraping. Print redirects to
-  // R2 directly so allow even more.
+  // Per-IP hourly ceiling. Generous so a whole office/household (shared IP) can
+  // pull a gallery one-by-one; still blocks automated bulk scraping. Everything
+  // now redirects to R2, so these are cheap.
   const dlLimit = format === "print" ? 1000 : 600;
   const rl = await rateLimit(req, "img-dl", dlLimit, 3600);
   if (rl.limited) return new Response("Too many download requests. Please try again later.", { status: 429 });
 
-  const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-  if (!r2PublicUrl) {
-    return new Response("R2 not configured", { status: 500 });
+  if (!process.env.R2_BUCKET_NAME) return new Response("R2 not configured", { status: 500 });
+
+  const baseName = name.replace(/\.[^.]+$/, "");
+
+  // ── print / raw → original object, straight from R2 ──
+  if (format === "print" || format === "raw") {
+    const ext = (key.match(/\.([^.]+)$/) || [])[1] || (format === "raw" ? "" : "jpg");
+    const fileName = ext ? `${baseName}.${ext}` : (name || baseName);
+    const url = await signedDownload(key, fileName);
+    return Response.redirect(url, 302);
   }
 
-  const sourceUrl = `${r2PublicUrl}/${key}`;
+  // ── web/MLS → pre-generated 2048px version, straight from R2 ──
+  const wKey = webPhotoKey(key);
+  if (await r2Exists(wKey)) {
+    const url = await signedDownload(wKey, `${baseName}-MLS.jpg`);
+    return Response.redirect(url, 302);
+  }
 
+  // Stopgap: the web/MLS version hasn't been generated yet (fresh upload). Resize
+  // inline this once; self-heals to the redirect path after the cron runs.
   try {
-    const r2Res = await fetch(sourceUrl);
-    if (!r2Res.ok) {
-      return new Response("Source file not found", { status: 404 });
-    }
+    const sharp = (await import("sharp")).default;
+    const r2Url = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+    const r2Res = await fetch(`${r2Url}/${key}`);
+    if (!r2Res.ok) return new Response("Source file not found", { status: 404 });
 
-    const arrayBuffer = await r2Res.arrayBuffer();
-    const inputBuffer = Buffer.from(arrayBuffer);
-
-    // Raw pass-through for PDFs and non-image files (floor plans, attachments)
-    if (format === "raw") {
-      const contentType = r2Res.headers.get("Content-Type") || "application/octet-stream";
-      return new Response(inputBuffer, {
-        status: 200,
-        headers: {
-          "Content-Type":        contentType,
-          "Content-Disposition": `attachment; filename="${name}"`,
-          "Content-Length":      String(inputBuffer.length),
-          "Cache-Control":       "private, max-age=3600",
-        },
-      });
-    }
-
-    if (format === "print") {
-      // Stream original bytes with attachment header so browser downloads instead of opening
-      const baseName = name.replace(/\.[^.]+$/, "");
-      const ext = (key.match(/\.([^.]+)$/) || [])[1] || "jpg";
-      const fileName = `${baseName}.${ext}`;
-      return new Response(inputBuffer, {
-        status: 200,
-        headers: {
-          "Content-Type":        r2Res.headers.get("Content-Type") || "image/jpeg",
-          "Content-Disposition": `attachment; filename="${fileName}"`,
-          "Content-Length":      String(inputBuffer.length),
-          "Cache-Control":       "private, max-age=3600",
-        },
-      });
-    }
-
-    // Web/MLS quality — resize with Sharp
-    const webBuffer = await sharp(inputBuffer)
+    const webBuffer = await sharp(Buffer.from(await r2Res.arrayBuffer()))
       .resize({ width: WEB_MAX_PX, withoutEnlargement: true })
       .jpeg({ quality: WEB_QUALITY, progressive: true })
       .toBuffer();
-
-    const baseName = name.replace(/\.[^.]+$/, "");
-    const fileName = `${baseName}-MLS.jpg`;
 
     return new Response(webBuffer, {
       status: 200,
       headers: {
         "Content-Type":        "image/jpeg",
-        "Content-Disposition": `attachment; filename="${fileName}"`,
+        "Content-Disposition": `attachment; filename="${baseName}-MLS.jpg"`,
         "Content-Length":      String(webBuffer.length),
         "Cache-Control":       "private, max-age=3600",
       },

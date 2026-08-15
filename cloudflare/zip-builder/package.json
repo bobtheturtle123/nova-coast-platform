@@ -1,0 +1,15 @@
+{
+  "name": "kyoria-zip-builder",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "client-zip": "^2.4.5"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

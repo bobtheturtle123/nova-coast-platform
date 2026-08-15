@@ -345,84 +345,42 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [dlStatus, setDlStatus] = useState(null); // null | "preparing" | "ready" | "failed"
 
-  // Large / video-heavy galleries use the prepared-download buffer: the photo +
-  // floor-plan + doc bundle is built server-side, stored in R2, and served via a
-  // signed URL — so the download never streams back through (or times out on)
-  // our server. Small galleries stream immediately. Videos always download
-  // DIRECTLY from R2 (free egress), regardless of path.
-  const isHeavy = videos.length > 0 || images.length > 250;
-
   function triggerDownload(url, name) {
     const a = document.createElement("a");
     a.href = url; if (name) a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
   }
 
-  // Download EVERY video directly from R2 (free egress). This MUST be fully
-  // synchronous — no awaits — so it runs inside the click's user-gesture window;
-  // browsers silently block downloads triggered after async work (fetch/polling).
-  // We use the same-origin /video-download endpoint, which 302-redirects to a
-  // presigned R2 URL with attachment disposition, and a hidden iframe per file
-  // (immune to popup-blocking; downloads instead of navigating).
-  function triggerVideoDownloads() {
-    for (const v of videos) {
-      if (!v.key) continue;
-      const url =
-        `/api/gallery/video-download?token=${gallery.accessToken}` +
-        `&key=${encodeURIComponent(v.key)}` +
-        `&name=${encodeURIComponent(v.fileName || "video.mp4")}`;
-      const iframe = document.createElement("iframe");
-      iframe.style.display = "none";
-      iframe.src = url;
-      document.body.appendChild(iframe);
-      // Remove once the download has had time to start.
-      setTimeout(() => iframe.remove(), 60000);
-    }
-  }
-
   async function downloadEverything() {
     setDownloadingAll(true);
-    // Fire the video downloads FIRST, synchronously, while we still have the
-    // click gesture — straight from R2, never through this server. The photo
-    // ZIP (which may involve async prepare/polling) follows.
-    triggerVideoDownloads();
+    setDlStatus("preparing");
+    // One button, one ZIP. The complete package (full-res photos, MLS photos,
+    // FULL-RESOLUTION videos, floor plans, documents, links) is built in the
+    // background on Cloudflare and stored in R2. We ask for it and, if it isn't
+    // ready yet (first download of a large listing), poll until it is, then
+    // download it straight from R2. Everything below is invisible to the agent.
     try {
-      if (!isHeavy) {
-        // Small gallery — stream the photo/docs ZIP straight away.
-        triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
-        return;
-      }
-
-      // Heavy gallery — prepare in the background, then serve from R2.
-      setDlStatus("preparing");
-      const start = await fetch(`/api/gallery/prepare-download`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, format: "package" }), // both Print + Web-MLS
-      });
-      let job = await start.json().catch(() => ({}));
-
-      // Poll until ready/failed (the POST usually finishes inline, but poll for
-      // resilience if it returned early as "preparing"/"pending").
-      let tries = 0;
-      while (job.status && ["preparing", "pending"].includes(job.status) && tries < 60) {
+      // Up to ~10 min of polling covers a first-time build of a very large
+      // listing (hundreds of photos + many large videos). Subsequent downloads
+      // return ready immediately.
+      let data = null;
+      for (let tries = 0; tries < 120; tries++) {
+        const res = await fetch(`/api/gallery/zip-url?token=${token}`);
+        data = await res.json().catch(() => ({}));
+        if (data.ready && data.url) {
+          setDlStatus("ready");
+          triggerDownload(data.url, "");
+          return;
+        }
+        if (!data.building) break; // not building and not ready → fall back
         await new Promise((r) => setTimeout(r, 5000));
-        const poll = await fetch(`/api/gallery/prepare-download?jobId=${job.jobId}`);
-        job = await poll.json().catch(() => job);
-        tries++;
       }
 
-      if (job.status === "ready" && job.downloadUrl) {
-        setDlStatus("ready");
-        triggerDownload(job.downloadUrl, "");
-      } else {
-        // The prepared buffer didn't finish — fall back to a direct streamed
-        // photo/docs download instead of dead-ending. (Videos already firing.)
-        setDlStatus("fallback");
-        triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
-      }
+      // Fallback so the button never dead-ends (e.g. the ZIP worker is
+      // temporarily unavailable): the legacy on-demand streamed package.
+      setDlStatus("fallback");
+      triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
     } catch {
-      // Even on error, stream the photos. (Videos already firing from the top.)
       setDlStatus("fallback");
       try { triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, ""); } catch {}
     } finally {
