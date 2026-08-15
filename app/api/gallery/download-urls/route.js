@@ -27,7 +27,7 @@ export async function GET(req) {
 
   if (!token) return Response.json({ error: "Missing token" }, { status: 400 });
 
-  const rl = await rateLimit(req, `dl-urls:${token}`, 20, 3600);
+  const rl = await rateLimit(req, `dl-urls:${token}`, 60, 3600);
   if (rl.limited) return Response.json({ error: "Too many requests" }, { status: 429 });
 
   const tokenDoc = await adminDb.collection("galleryTokens").doc(token).get();

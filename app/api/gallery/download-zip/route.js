@@ -28,7 +28,7 @@ export async function GET(req) {
 
   if (!token) return new Response("Missing token", { status: 400 });
 
-  const rl = await rateLimit(req, `zip-dl:${token}`, 5, 3600);
+  const rl = await rateLimit(req, `zip-dl:${token}`, 40, 3600);
   if (rl.limited) return new Response("Too many download requests. Try again later.", { status: 429 });
 
   const tokenDoc = await adminDb.collection("galleryTokens").doc(token).get();

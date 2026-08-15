@@ -17,9 +17,11 @@ export async function GET(req) {
     return new Response("Missing key", { status: 400 });
   }
 
-  // 100 individual image downloads per IP per hour — allows normal browsing and MLS exports
-  // but blocks automated bulk scraping. Print format redirects to R2 directly so allow more.
-  const dlLimit = format === "print" ? 200 : 100;
+  // Individual image downloads per IP per hour. Generous ceilings so a whole
+  // office/household (shared IP) can download full galleries one-by-one without
+  // tripping, while still blocking automated bulk scraping. Print redirects to
+  // R2 directly so allow even more.
+  const dlLimit = format === "print" ? 1000 : 600;
   const rl = await rateLimit(req, "img-dl", dlLimit, 3600);
   if (rl.limited) return new Response("Too many download requests. Please try again later.", { status: 429 });
 

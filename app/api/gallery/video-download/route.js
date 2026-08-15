@@ -25,7 +25,7 @@ export async function GET(req) {
 
   if (!token || !key) return new Response("Missing params", { status: 400 });
 
-  const rl = await rateLimit(req, `video-dl:${token}`, 20, 3600);
+  const rl = await rateLimit(req, `video-dl:${token}`, 60, 3600);
   if (rl.limited) return new Response("Too many download requests. Please try again later.", { status: 429 });
 
   // Resolve gallery via token index

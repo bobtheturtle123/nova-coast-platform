@@ -96,7 +96,7 @@ export async function POST(req) {
   const { token, format = "web" } = await req.json().catch(() => ({}));
   if (!token) return Response.json({ error: "Missing token" }, { status: 400 });
 
-  const rl = await rateLimit(req, `prepare-dl:${token}`, 10, 3600);
+  const rl = await rateLimit(req, `prepare-dl:${token}`, 40, 3600);
   if (rl.limited) return Response.json({ error: "Too many requests. Try again later." }, { status: 429 });
 
   const resolved = await resolveGallery(token);
