@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { Readable } from "stream";
 import { adminDb } from "@/lib/firebase-admin";
 import { rateLimit } from "@/lib/rateLimit";
-import { buildLinkFiles, seqName } from "@/lib/galleryZip";
+import { buildLinkFiles, seqName, effectiveVideo } from "@/lib/galleryZip";
 
 // Top-level folder so the client gets one tidy package.
 const ROOT = "Listing Media Package";
@@ -25,6 +25,10 @@ export async function GET(req) {
   const token  = searchParams.get("token");
   const format = searchParams.get("format") || "web"; // "web" | "print"
   const extras = searchParams.get("extras") === "true";
+  // "Download Everything" sets videos=true so the videos are bundled INTO this
+  // one ZIP instead of downloading separately from R2. The per-format Print/Web
+  // buttons never set it, so their behavior is unchanged.
+  const includeVideos = searchParams.get("videos") === "true";
 
   if (!token) return new Response("Missing token", { status: 400 });
 
@@ -199,13 +203,32 @@ export async function GET(req) {
         }
 
         // ── Videos ───────────────────────────────────────────────────────────
-        // Videos are intentionally NOT streamed through this function. Routing
-        // heavy video bytes through Vercel would add bandwidth cost and risk the
-        // 300s timeout under load. They download DIRECTLY from R2 on the client
-        // (free egress, unlimited concurrency). The Links file references them.
+        // By default videos download DIRECTLY from R2 on the client (free
+        // egress, no timeout). For "Download Everything" (videos=true) we stream
+        // them INTO this ZIP so the client gets a single file. We STREAM (never
+        // buffer) so memory stays flat, and use store:true to skip pointless
+        // recompression of already-compressed video.
+        if (includeVideos) {
+          for (const v of videos) {
+            try {
+              const { key: vKey } = effectiveVideo(v);
+              if (!vKey) continue;
+              const res = await fetch(`${r2Url}/${vKey}`);
+              if (!res.ok || !res.body) continue;
+              archive.append(toNodeStream(res.body), {
+                name:  `${ROOT}/Videos/${v.fileName || vKey.split("/").pop()}`,
+                store: true,
+              });
+            } catch (e) {
+              console.warn("[download-zip] video failed:", v.key, e?.message);
+            }
+          }
+        }
 
         // ── Links/ (Matterport, 3D tour, property website, gallery, videos) ──
-        for (const lf of buildLinkFiles(gallery, { slug, token, bookingId: gallery.bookingId, separateVideos: videos })) {
+        // When videos ride inside the ZIP, drop the "download videos separately"
+        // note so the package isn't self-contradictory.
+        for (const lf of buildLinkFiles(gallery, { slug, token, bookingId: gallery.bookingId, separateVideos: includeVideos ? [] : videos })) {
           archive.append(Buffer.from(lf.content, "utf8"), { name: lf.name });
         }
 

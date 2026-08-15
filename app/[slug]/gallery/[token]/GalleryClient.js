@@ -342,93 +342,12 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const balance   = booking?.remainingBalance ?? 0;
   const address   = booking?.fullAddress || booking?.address || "Property";
   const coverImg  = images[0]?.url || null;
-  const [downloadingAll, setDownloadingAll] = useState(false);
-  const [dlStatus, setDlStatus] = useState(null); // null | "preparing" | "ready" | "failed"
 
-  // Large / video-heavy galleries use the prepared-download buffer: the photo +
-  // floor-plan + doc bundle is built server-side, stored in R2, and served via a
-  // signed URL — so the download never streams back through (or times out on)
-  // our server. Small galleries stream immediately. Videos always download
-  // DIRECTLY from R2 (free egress), regardless of path.
-  const isHeavy = videos.length > 0 || images.length > 250;
-
-  function triggerDownload(url, name) {
-    const a = document.createElement("a");
-    a.href = url; if (name) a.download = name;
-    document.body.appendChild(a); a.click(); a.remove();
-  }
-
-  // Download EVERY video directly from R2 (free egress). This MUST be fully
-  // synchronous — no awaits — so it runs inside the click's user-gesture window;
-  // browsers silently block downloads triggered after async work (fetch/polling).
-  // We use the same-origin /video-download endpoint, which 302-redirects to a
-  // presigned R2 URL with attachment disposition, and a hidden iframe per file
-  // (immune to popup-blocking; downloads instead of navigating).
-  function triggerVideoDownloads() {
-    for (const v of videos) {
-      if (!v.key) continue;
-      const url =
-        `/api/gallery/video-download?token=${gallery.accessToken}` +
-        `&key=${encodeURIComponent(v.key)}` +
-        `&name=${encodeURIComponent(v.fileName || "video.mp4")}`;
-      const iframe = document.createElement("iframe");
-      iframe.style.display = "none";
-      iframe.src = url;
-      document.body.appendChild(iframe);
-      // Remove once the download has had time to start.
-      setTimeout(() => iframe.remove(), 60000);
-    }
-  }
-
-  async function downloadEverything() {
-    setDownloadingAll(true);
-    // Fire the video downloads FIRST, synchronously, while we still have the
-    // click gesture — straight from R2, never through this server. The photo
-    // ZIP (which may involve async prepare/polling) follows.
-    triggerVideoDownloads();
-    try {
-      if (!isHeavy) {
-        // Small gallery — stream the photo/docs ZIP straight away.
-        triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
-        return;
-      }
-
-      // Heavy gallery — prepare in the background, then serve from R2.
-      setDlStatus("preparing");
-      const start = await fetch(`/api/gallery/prepare-download`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, format: "package" }), // both Print + Web-MLS
-      });
-      let job = await start.json().catch(() => ({}));
-
-      // Poll until ready/failed (the POST usually finishes inline, but poll for
-      // resilience if it returned early as "preparing"/"pending").
-      let tries = 0;
-      while (job.status && ["preparing", "pending"].includes(job.status) && tries < 60) {
-        await new Promise((r) => setTimeout(r, 5000));
-        const poll = await fetch(`/api/gallery/prepare-download?jobId=${job.jobId}`);
-        job = await poll.json().catch(() => job);
-        tries++;
-      }
-
-      if (job.status === "ready" && job.downloadUrl) {
-        setDlStatus("ready");
-        triggerDownload(job.downloadUrl, "");
-      } else {
-        // The prepared buffer didn't finish — fall back to a direct streamed
-        // photo/docs download instead of dead-ending. (Videos already firing.)
-        setDlStatus("fallback");
-        triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
-      }
-    } catch {
-      // Even on error, stream the photos. (Videos already firing from the top.)
-      setDlStatus("fallback");
-      try { triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, ""); } catch {}
-    } finally {
-      setDownloadingAll(false);
-    }
-  }
+  // "Download Everything" is a plain anchor (see the button markup below) that
+  // hits /api/gallery/download-zip with extras=true&videos=true — one streamed
+  // ZIP containing photos, floor plans, documents and videos. A direct anchor
+  // click stays inside the browser's user-gesture window, so unlike a
+  // JS-triggered download it is never silently blocked.
 
   async function startBalancePayment() {
     setLoadingPay(true);
@@ -712,28 +631,20 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             </div>
             {canDownload ? (
               <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                <button
-                  onClick={downloadEverything}
-                  disabled={downloadingAll}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60"
+                {/* A plain anchor download — a direct, in-gesture click the
+                    browser never blocks (same mechanism as the per-format Print/
+                    Web buttons). Points at the one ZIP that now bundles photos,
+                    floor plans, documents AND videos. No JS-fired downloads. */}
+                <a
+                  href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true&videos=true`}
+                  download
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
                   style={{ background: primary }}>
-                  {downloadingAll
-                    ? (dlStatus === "preparing" ? "Preparing your download…" : "Starting downloads…")
-                    : "↓ Download Everything"}
-                </button>
-                {dlStatus === "preparing" && (
-                  <span className="text-xs text-gray-500 max-w-[16rem] text-right">
-                    Preparing your download. Large video-heavy galleries may take a few minutes.
-                  </span>
-                )}
-                {dlStatus === "ready" && (
-                  <span className="text-xs text-green-600">Your download is ready.</span>
-                )}
-                {dlStatus === "fallback" && (
-                  <span className="text-xs text-gray-500 max-w-[16rem] text-right">
-                    Starting your downloads now. Your browser may ask permission to download multiple files.
-                  </span>
-                )}
+                  ↓ Download Everything
+                </a>
+                <span className="text-xs text-gray-400 max-w-[16rem] text-right">
+                  One ZIP with everything. Large video galleries may take a minute to start.
+                </span>
               </div>
             ) : (
               <span className="flex-shrink-0 inline-flex items-center gap-1.5 text-sm font-medium text-gray-400">
