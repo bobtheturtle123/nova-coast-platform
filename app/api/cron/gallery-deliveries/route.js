@@ -111,6 +111,11 @@ export async function GET(req) {
           const existingAuth   = gallery.authorizedEmails || [];
           const mergedAuth     = [...new Set([...existingAuth, ...allRecipients])];
 
+          // Advance the booking to "delivered" and stamp deliveredAt on first
+          // delivery only (so turnaround metrics reflect the original send).
+          const bookingUpdate = { workflowStatus: "delivered" };
+          if (!booking.deliveredAt) bookingUpdate.deliveredAt = now;
+
           await Promise.all([
             galleryRef.update({
               delivered:          true,
@@ -119,6 +124,10 @@ export async function GET(req) {
               authorizedEmails:   mergedAuth,
             }),
             doc.ref.update({ status: "sent", sentAt: now }),
+            adminDb.collection("tenants").doc(tenantId)
+              .collection("bookings").doc(gallery.bookingId)
+              .update(bookingUpdate)
+              .catch((e) => console.error("[cron/gallery-deliveries] booking update failed:", e?.message)),
           ]);
 
           // Log the scheduled delivery in the gallery activity log. The send was

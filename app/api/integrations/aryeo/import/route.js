@@ -1,5 +1,7 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getKey, fetchCategories, fetchProducts, mapProductsToServices } from "@/lib/aryeo";
+import { rateLimitTenant } from "@/lib/rateLimit";
+import { acquireLock } from "@/lib/opLock";
 
 export const dynamic     = "force-dynamic";
 export const maxDuration = 60;
@@ -45,6 +47,20 @@ export async function POST(req) {
 
   const apiKey = await getKey(ctx.tenantId);
   if (!apiKey) return Response.json({ error: "Connect your Aryeo API key first." }, { status: 400 });
+
+  // Throttle: importing is expensive (outbound Aryeo fetch + Firestore batch),
+  // so cap how often a single tenant can run it regardless of double-clicks.
+  const rl = await rateLimitTenant(ctx.tenantId, "aryeo-import", 20, 3600);
+  if (rl.limited) {
+    return Response.json({ error: "Import limit reached. Please wait a bit before importing again." }, { status: 429 });
+  }
+
+  // Serialize heavy imports per tenant so overlapping requests can't fan out
+  // into many concurrent Aryeo fetches + batch writes and crash the site.
+  const lock = await acquireLock(ctx.tenantId, "aryeo-import", 120);
+  if (!lock.ok) return Response.json({ error: lock.error }, { status: 429 });
+
+  try {
 
   const tenantRef = adminDb.collection("tenants").doc(ctx.tenantId);
 
@@ -146,4 +162,8 @@ export async function POST(req) {
 
   await batch.commit();
   return Response.json({ ok: true, ...result });
+
+  } finally {
+    await lock.release();
+  }
 }

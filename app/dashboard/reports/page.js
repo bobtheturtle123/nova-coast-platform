@@ -145,22 +145,25 @@ export default function ReportsPage() {
     if (!user) { setLoading(false); return; }
     user.getIdToken().then(async (token) => {
 
-      const [bookRes, tenantRes] = await Promise.all([
-        fetch("/api/dashboard/bookings?limit=200", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/dashboard/tenant",              { headers: { Authorization: `Bearer ${token}` } }),
+      const h = { headers: { Authorization: `Bearer ${token}` } };
+      // Pull the FULL product lists (including inactive / draft / imported
+      // items) so revenue-by-service and upsell never show raw Firestore IDs
+      // for products that aren't currently on the public booking page.
+      const [bookRes, pkgRes, svcRes, addRes] = await Promise.all([
+        fetch("/api/dashboard/bookings?limit=200", h),
+        fetch("/api/dashboard/products?type=packages", h),
+        fetch("/api/dashboard/products?type=services", h),
+        fetch("/api/dashboard/products?type=addons", h),
       ]);
       if (bookRes.ok) {
         const d = await bookRes.json();
         setBookings(d.bookings || []);
       }
-      if (tenantRes.ok) {
-        const td = await tenantRes.json();
-        const slug = td.tenant?.slug;
-        if (slug) {
-          const catRes = await fetch(`/api/tenant-public/${slug}/catalog`);
-          if (catRes.ok) setCatalog(await catRes.json());
-        }
-      }
+      const cat = { packages: [], services: [], addons: [] };
+      if (pkgRes.ok) cat.packages = (await pkgRes.json()).items || [];
+      if (svcRes.ok) cat.services = (await svcRes.json()).items || [];
+      if (addRes.ok) cat.addons   = (await addRes.json()).items || [];
+      setCatalog(cat);
       setLoading(false);
     });
   }, [canViewReports]);
@@ -260,7 +263,7 @@ export default function ReportsPage() {
     const map = {};
     filtered.forEach((b) => {
       const rawKey = b.packageId || (b.serviceIds?.[0]) || "custom";
-      const label  = nameMap[rawKey] || (rawKey === "custom" ? "Custom / A la carte" : rawKey);
+      const label  = nameMap[rawKey] || (rawKey === "custom" ? "Custom / A la carte" : "Removed product");
       if (!map[rawKey]) map[rawKey] = { label, revenue: 0, count: 0 };
       map[rawKey].revenue += collected(b);
       map[rawKey].count++;
@@ -323,8 +326,11 @@ export default function ReportsPage() {
     Object.entries(coMap).forEach(([a, bMap]) => {
       Object.entries(bMap).forEach(([b, count]) => {
         if (a < b) { // dedupe A+B vs B+A
-          const nameA = nameMap[a] || a;
-          const nameB = nameMap[b] || b;
+          const nameA = nameMap[a];
+          const nameB = nameMap[b];
+          // Skip pairs involving a removed product — a raw ID tells the studio
+          // nothing, so it's clearer to omit the pair than to show gibberish.
+          if (!nameA || !nameB) return;
           pairs.push({ a: nameA, b: nameB, count });
         }
       });

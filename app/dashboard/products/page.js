@@ -6,7 +6,8 @@ import { useToast } from "@/components/Toast";
 import { isDemo, getDemoProducts } from "@/lib/demoData";
 import AryeoImport from "@/components/dashboard/AryeoImport";
 import { getActiveTiers } from "@/lib/catalogUtils";
-import { RichText, stripMarkdown } from "@/components/RichText";
+import { stripMarkdown } from "@/components/RichText";
+import RichTextEditor from "@/components/RichTextEditor";
 
 async function uploadProductMedia(file) {
   const token = await auth.currentUser.getIdToken();
@@ -85,49 +86,6 @@ function ProductForm({ item, type: initialType, allServices, allPackages, allAdd
 
   function field(key) {
     return (e) => setForm((f) => ({ ...f, [key]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
-  }
-
-  // ── Description rich-text toolbar ──────────────────────────────────────────
-  // We store lightweight Markdown (**bold**, *italic*, "- " bullets) which the
-  // booking page renders formatted. These buttons wrap the current selection.
-  const descRef = useRef(null);
-  function applyDescFormat(kind) {
-    const ta = descRef.current;
-    if (!ta) return;
-    const value = ta.value;
-    const s = ta.selectionStart;
-    const e = ta.selectionEnd;
-    const sel = value.slice(s, e);
-    let insert;
-    if (kind === "bold")        insert = `**${sel || "bold text"}**`;
-    else if (kind === "italic") insert = `*${sel || "italic text"}*`;
-    else if (kind === "number") { // numbered list — "1. " per line, its own line
-      const atLineStart = s === 0 || value[s - 1] === "\n";
-      const body = (sel || "List item")
-        .split(/\r?\n/)
-        .map((l, i) => (l.trim() ? `${i + 1}. ${l.replace(/^(?:[-*]|\d+[.)])\s+/, "")}` : `${i + 1}. `))
-        .join("\n");
-      insert = (atLineStart ? "" : "\n") + body;
-    } else { // bullets — "- " per line, starting on its own line
-      const atLineStart = s === 0 || value[s - 1] === "\n";
-      const body = (sel || "List item")
-        .split(/\r?\n/)
-        .map((l) => (l.trim() ? `- ${l.replace(/^(?:[-*]|\d+[.)])\s+/, "")}` : "- "))
-        .join("\n");
-      insert = (atLineStart ? "" : "\n") + body;
-    }
-    // Use execCommand so the change lands on the browser's native undo stack —
-    // this keeps Ctrl+Z working inside the textarea. Falls back to setState if
-    // execCommand isn't supported.
-    ta.focus();
-    ta.setSelectionRange(s, e);
-    const ok = typeof document !== "undefined" && document.execCommand
-      && document.execCommand("insertText", false, insert);
-    if (!ok) {
-      const next = value.slice(0, s) + insert + value.slice(e);
-      setForm((f) => ({ ...f, description: next }));
-      requestAnimationFrame(() => { ta.focus(); ta.setSelectionRange(s, s + insert.length); });
-    }
   }
 
   function tierField(tier) {
@@ -351,37 +309,12 @@ function ProductForm({ item, type: initialType, allServices, allPackages, allAdd
 
           <div>
             <label className="label-field">Description</label>
-            <div className="flex items-center gap-1 mb-1.5">
-              <button type="button" onClick={() => applyDescFormat("bold")} title="Bold"
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-700 font-bold hover:bg-gray-50">
-                B
-              </button>
-              <button type="button" onClick={() => applyDescFormat("italic")} title="Italic"
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-700 italic hover:bg-gray-50">
-                I
-              </button>
-              <button type="button" onClick={() => applyDescFormat("bullet")} title="Bullet list"
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">
-                •
-              </button>
-              <button type="button" onClick={() => applyDescFormat("number")} title="Numbered list"
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-700 text-xs font-semibold hover:bg-gray-50">
-                1.
-              </button>
-              <span className="text-xs text-gray-400 ml-1.5">Select text, then click to format.</span>
-            </div>
-            <textarea ref={descRef} value={form.description} onChange={field("description")} rows={6}
-              className="input-field w-full resize-y leading-relaxed" style={{ minHeight: "8.5rem" }}
-              placeholder="Describe what this includes…" />
-            <p className="text-xs text-gray-400 mt-1">Drag the bottom-right corner to make this taller. Ctrl+Z undoes changes.</p>
-            {form.description.trim() && (
-              <details className="mt-2 border border-gray-200 rounded-lg" open>
-                <summary className="px-3 py-2 cursor-pointer select-none text-xs font-medium text-gray-500 hover:bg-gray-50 rounded-lg">
-                  Preview — how clients will see it
-                </summary>
-                <RichText text={form.description} className="px-3 pb-3 pt-1 text-sm text-[#0F172A]" />
-              </details>
-            )}
+            <RichTextEditor
+              value={form.description}
+              onChange={(md) => setForm((f) => ({ ...f, description: md }))}
+              placeholder="Describe what this includes…"
+            />
+            <p className="text-xs text-gray-400 mt-1">Formatting here is exactly how clients will see it. Ctrl+Z undoes changes.</p>
           </div>
 
           {/* Retainer: billing interval */}

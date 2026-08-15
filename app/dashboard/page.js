@@ -264,9 +264,20 @@ export default function DashboardHome() {
   const weekDelta = prevWeekRev > 0 ? Math.round(((thisWeekRev - prevWeekRev) / prevWeekRev) * 100) : null;
   const avgTurnaround = useMemo(() => {
     const cutoff = new Date(Date.now() - 30 * 86400000);
-    const eligible = listings.filter(l => l.shootDate && l.deliveredAt && new Date(l.deliveredAt) >= cutoff);
-    if (!eligible.length) return null;
-    return Math.round(eligible.reduce((s, l) => s + (new Date(l.deliveredAt) - new Date(l.shootDate + "T12:00:00")) / 3600000, 0) / eligible.length);
+    // shootDate may be a plain "YYYY-MM-DD" (assume noon) or a full ISO string.
+    const shootMs = (sd) => new Date(String(sd).includes("T") ? sd : sd + "T12:00:00").getTime();
+    const hours = [];
+    for (const l of listings) {
+      if (!l.shootDate || !l.deliveredAt) continue;
+      const dAt = new Date(l.deliveredAt);
+      if (isNaN(dAt) || dAt < cutoff) continue;
+      const s = shootMs(l.shootDate);
+      if (isNaN(s)) continue;
+      const h = (dAt.getTime() - s) / 3600000;
+      if (h > 0) hours.push(h); // ignore bad/negative deltas
+    }
+    if (!hours.length) return null;
+    return Math.round(hours.reduce((a, b) => a + b, 0) / hours.length);
   }, [listings]);
 
   // Action items

@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { rateLimitTenant } from "@/lib/rateLimit";
+import { acquireLock } from "@/lib/opLock";
 import { callAI, aiAvailable } from "@/lib/ai";
 
 async function getCtx(req) {
@@ -20,6 +21,13 @@ export async function POST(req) {
 
   const { mode, content, targetType = "services", useTiers = false, preview = false, applyTiers = null } = await req.json();
   if (!content) return Response.json({ error: "content required" }, { status: 400 });
+
+  // Serialize imports per tenant so a double-click (or two tabs) can't run two
+  // concurrent batch writes / AI calls at once and pile resources up.
+  const lock = await acquireLock(ctx.tenantId, "products-import", 120);
+  if (!lock.ok) return Response.json({ error: lock.error }, { status: 429 });
+
+  try {
 
   // AI-backed modes require the key + rate limit; CSV is parsed locally so skip those checks
   if (mode !== "csv") {
@@ -373,5 +381,9 @@ Rules:
   } catch (err) {
     console.error("[products/import] Error:", err);
     return Response.json({ error: "Failed to parse pricing. Try pasting the text manually." }, { status: 500 });
+  }
+
+  } finally {
+    await lock.release();
   }
 }

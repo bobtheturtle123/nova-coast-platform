@@ -150,9 +150,13 @@ export async function POST(req, { params }) {
   // Advance booking workflow status to "delivered" + log to listing activity
   // with the actual message and the (re-copyable) gallery link.
   if (gallery.bookingId) {
+    // deliveredAt is the FIRST-delivery timestamp (used for turnaround metrics),
+    // so only stamp it on the first send — re-sends must not reset it.
+    const bookingUpdate = { workflowStatus: "delivered" };
+    if (!gallery.deliveredAt) bookingUpdate.deliveredAt = new Date();
     adminDb.collection("tenants").doc(ctx.tenantId)
       .collection("bookings").doc(gallery.bookingId)
-      .update({ workflowStatus: "delivered" })
+      .update(bookingUpdate)
       .catch((e) => console.error("[send/gallery] workflowStatus update failed:", e?.message));
 
     const galleryLink = gallery.accessToken ? `${getAppUrl()}/${tenant.slug}/gallery/${gallery.accessToken}` : null;
