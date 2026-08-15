@@ -16,7 +16,7 @@ compatibility_date = "2024-09-23"
 # Bind the SAME R2 bucket the app uses. Replace with your bucket name.
 [[r2_buckets]]
 binding = "BUCKET"
-bucket_name = "REPLACE_WITH_YOUR_R2_BUCKET"
+bucket_name = "nova-coast-media"
 
 # Queue: producer (the /enqueue endpoint) and consumer (the builder) share it.
 [[queues.producers]]
