@@ -348,6 +348,20 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   // ZIP containing photos, floor plans, documents and videos. A direct anchor
   // click stays inside the browser's user-gesture window, so unlike a
   // JS-triggered download it is never silently blocked.
+  //
+  // A streamed ZIP has no known size up front, so we can't show a true % bar
+  // (buffering it all in the browser to measure would risk OOM on video-heavy
+  // galleries). Instead, clicking shows a reassuring "working…" status with an
+  // elapsed timer so a slow, video-heavy download never looks broken.
+  const [dlActive,  setDlActive]  = useState(false);
+  const [dlSeconds, setDlSeconds] = useState(0);
+  useEffect(() => {
+    if (!dlActive) return;
+    setDlSeconds(0);
+    const tick = setInterval(() => setDlSeconds((s) => s + 1), 1000);
+    const auto = setTimeout(() => setDlActive(false), 5 * 60 * 1000); // safety hide
+    return () => { clearInterval(tick); clearTimeout(auto); };
+  }, [dlActive]);
 
   async function startBalancePayment() {
     setLoadingPay(true);
@@ -638,13 +652,41 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 <a
                   href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true&videos=true`}
                   download
+                  onClick={() => setDlActive(true)}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
                   style={{ background: primary }}>
                   ↓ Download Everything
                 </a>
-                <span className="text-xs text-gray-400 max-w-[16rem] text-right">
-                  One ZIP with everything. Large video galleries may take a minute to start.
-                </span>
+                {dlActive ? (
+                  <div className="w-[17rem] text-right">
+                    <div className="flex items-center justify-end gap-2 text-xs font-medium text-gray-600">
+                      <svg className="animate-spin w-3.5 h-3.5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      </svg>
+                      <span>Preparing your download… {dlSeconds}s</span>
+                      <button
+                        type="button"
+                        onClick={() => setDlActive(false)}
+                        className="text-gray-300 hover:text-gray-500 leading-none"
+                        aria-label="Dismiss">
+                        ✕
+                      </button>
+                    </div>
+                    <div className="mt-1.5 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full animate-pulse" style={{ width: "100%", background: primary }} />
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-gray-400 leading-snug">
+                      Packing photos, floor plans, documents and videos into one ZIP.
+                      Video-heavy galleries can take a minute or two — your browser
+                      will save the file once it starts.
+                    </p>
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-400 max-w-[16rem] text-right">
+                    One ZIP with everything. Large video galleries may take a minute to start.
+                  </span>
+                )}
               </div>
             ) : (
               <span className="flex-shrink-0 inline-flex items-center gap-1.5 text-sm font-medium text-gray-400">
