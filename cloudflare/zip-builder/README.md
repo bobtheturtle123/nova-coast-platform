@@ -25,10 +25,19 @@ runs, the app's `zip-complete` handler sees the hash no longer matches, discards
 stale ZIP, and a fresh build is enqueued — the previously-served ZIP stays live the
 whole time, so clients never get a partial or missing download.
 
+## Plans
+
+Deploy on **Workers Free** first — Queues are available on Free (since Feb 2026),
+so the full producer/consumer architecture runs unchanged. The one caveat is the
+Free CPU cap of **10 ms per invocation**; a real ZIP build (CRC32 over many large
+files) will likely exceed it. When it does, upgrade to **Workers Paid** — that is
+a billing change plus uncommenting the two `[limits]` lines in `wrangler.toml` to
+raise the CPU ceiling. The architecture itself does not change between plans.
+
 ## One-time setup
 
-Prereqs: a Cloudflare account with **Workers Paid** (Queues require it) and the R2
-bucket the app already uses. Install deps and log in:
+Prereqs: a Cloudflare account (Free is fine to start) and the R2 bucket the app
+already uses. Install deps and log in:
 
 ```bash
 cd cloudflare/zip-builder
