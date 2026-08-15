@@ -342,27 +342,93 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const balance   = booking?.remainingBalance ?? 0;
   const address   = booking?.fullAddress || booking?.address || "Property";
   const coverImg  = images[0]?.url || null;
+  const [downloadingAll, setDownloadingAll] = useState(false);
+  const [dlStatus, setDlStatus] = useState(null); // null | "preparing" | "ready" | "failed"
 
-  // "Download Everything" is a plain anchor (see the button markup below) that
-  // hits /api/gallery/download-zip with extras=true — one ZIP of photos (print
-  // + web), floor plans and documents. A direct anchor click stays inside the
-  // browser's user-gesture window, so unlike a JS-triggered download it is
-  // never silently blocked.
-  //
-  // Videos are deliberately NOT bundled: streaming ~1GB of video could push the
-  // serverless function past its 300s limit, and the ZIP's central directory is
-  // written last — a timeout mid-stream truncated the file so Windows reported
-  // it "empty" and it was painfully slow. Videos download separately instead
-  // (reliable + fast). The status below is a brief "working…" reassurance.
-  const [dlActive,  setDlActive]  = useState(false);
-  const [dlSeconds, setDlSeconds] = useState(0);
-  useEffect(() => {
-    if (!dlActive) return;
-    setDlSeconds(0);
-    const tick = setInterval(() => setDlSeconds((s) => s + 1), 1000);
-    const auto = setTimeout(() => setDlActive(false), 5 * 60 * 1000); // safety hide
-    return () => { clearInterval(tick); clearTimeout(auto); };
-  }, [dlActive]);
+  // Large / video-heavy galleries use the prepared-download buffer: the photo +
+  // floor-plan + doc bundle is built server-side, stored in R2, and served via a
+  // signed URL — so the download never streams back through (or times out on)
+  // our server. Small galleries stream immediately. Videos always download
+  // DIRECTLY from R2 (free egress), regardless of path.
+  const isHeavy = videos.length > 0 || images.length > 250;
+
+  function triggerDownload(url, name) {
+    const a = document.createElement("a");
+    a.href = url; if (name) a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  // Download EVERY video directly from R2 (free egress). This MUST be fully
+  // synchronous — no awaits — so it runs inside the click's user-gesture window;
+  // browsers silently block downloads triggered after async work (fetch/polling).
+  // We use the same-origin /video-download endpoint, which 302-redirects to a
+  // presigned R2 URL with attachment disposition, and a hidden iframe per file
+  // (immune to popup-blocking; downloads instead of navigating).
+  function triggerVideoDownloads() {
+    for (const v of videos) {
+      if (!v.key) continue;
+      const url =
+        `/api/gallery/video-download?token=${gallery.accessToken}` +
+        `&key=${encodeURIComponent(v.key)}` +
+        `&name=${encodeURIComponent(v.fileName || "video.mp4")}`;
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = url;
+      document.body.appendChild(iframe);
+      // Remove once the download has had time to start.
+      setTimeout(() => iframe.remove(), 60000);
+    }
+  }
+
+  async function downloadEverything() {
+    setDownloadingAll(true);
+    // Fire the video downloads FIRST, synchronously, while we still have the
+    // click gesture — straight from R2, never through this server. The photo
+    // ZIP (which may involve async prepare/polling) follows.
+    triggerVideoDownloads();
+    try {
+      if (!isHeavy) {
+        // Small gallery — stream the photo/docs ZIP straight away.
+        triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
+        return;
+      }
+
+      // Heavy gallery — prepare in the background, then serve from R2.
+      setDlStatus("preparing");
+      const start = await fetch(`/api/gallery/prepare-download`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, format: "package" }), // both Print + Web-MLS
+      });
+      let job = await start.json().catch(() => ({}));
+
+      // Poll until ready/failed (the POST usually finishes inline, but poll for
+      // resilience if it returned early as "preparing"/"pending").
+      let tries = 0;
+      while (job.status && ["preparing", "pending"].includes(job.status) && tries < 60) {
+        await new Promise((r) => setTimeout(r, 5000));
+        const poll = await fetch(`/api/gallery/prepare-download?jobId=${job.jobId}`);
+        job = await poll.json().catch(() => job);
+        tries++;
+      }
+
+      if (job.status === "ready" && job.downloadUrl) {
+        setDlStatus("ready");
+        triggerDownload(job.downloadUrl, "");
+      } else {
+        // The prepared buffer didn't finish — fall back to a direct streamed
+        // photo/docs download instead of dead-ending. (Videos already firing.)
+        setDlStatus("fallback");
+        triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, "");
+      }
+    } catch {
+      // Even on error, stream the photos. (Videos already firing from the top.)
+      setDlStatus("fallback");
+      try { triggerDownload(`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`, ""); } catch {}
+    } finally {
+      setDownloadingAll(false);
+    }
+  }
 
   async function startBalancePayment() {
     setLoadingPay(true);
@@ -646,48 +712,26 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             </div>
             {canDownload ? (
               <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                {/* A plain anchor download — a direct, in-gesture click the
-                    browser never blocks (same mechanism as the per-format Print/
-                    Web buttons). Points at the one ZIP of photos (print + web),
-                    floor plans and documents. Videos are NOT bundled — streaming
-                    them risked a 300s timeout that truncated the ZIP ("empty
-                    folder" in Windows) and was very slow; they download
-                    separately below instead. No JS-fired downloads. */}
-                <a
-                  href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`}
-                  download
-                  onClick={() => setDlActive(true)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
+                <button
+                  onClick={downloadEverything}
+                  disabled={downloadingAll}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60"
                   style={{ background: primary }}>
-                  ↓ Download Everything
-                </a>
-                {dlActive ? (
-                  <div className="w-[17rem] text-right">
-                    <div className="flex items-center justify-end gap-2 text-xs font-medium text-gray-600">
-                      <svg className="animate-spin w-3.5 h-3.5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                      </svg>
-                      <span>Preparing your download… {dlSeconds}s</span>
-                      <button
-                        type="button"
-                        onClick={() => setDlActive(false)}
-                        className="text-gray-300 hover:text-gray-500 leading-none"
-                        aria-label="Dismiss">
-                        ✕
-                      </button>
-                    </div>
-                    <div className="mt-1.5 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full animate-pulse" style={{ width: "100%", background: primary }} />
-                    </div>
-                    <p className="mt-1.5 text-[11px] text-gray-400 leading-snug">
-                      Packing your photos, floor plans and documents into one ZIP.
-                      This only takes a moment.
-                    </p>
-                  </div>
-                ) : (
-                  <span className="text-xs text-gray-400 max-w-[16rem] text-right">
-                    Photos, floor plans &amp; documents in one ZIP. Videos download separately.
+                  {downloadingAll
+                    ? (dlStatus === "preparing" ? "Preparing your download…" : "Starting downloads…")
+                    : "↓ Download Everything"}
+                </button>
+                {dlStatus === "preparing" && (
+                  <span className="text-xs text-gray-500 max-w-[16rem] text-right">
+                    Preparing your download. Large video-heavy galleries may take a few minutes.
+                  </span>
+                )}
+                {dlStatus === "ready" && (
+                  <span className="text-xs text-green-600">Your download is ready.</span>
+                )}
+                {dlStatus === "fallback" && (
+                  <span className="text-xs text-gray-500 max-w-[16rem] text-right">
+                    Starting your downloads now. Your browser may ask permission to download multiple files.
                   </span>
                 )}
               </div>
