@@ -205,6 +205,9 @@ export default function ListingDetailPage() {
   const [booking,    setBooking]   = useState(null);
   const [gallery,    setGallery]   = useState(null);
   const [catalog,    setCatalog]   = useState(null);
+  // id → name for EVERY product (incl. inactive/draft) so ordered items never
+  // render as a raw Firestore id. Deleted products fall back to a friendly label.
+  const [productNames, setProductNames] = useState({});
   const [loading,    setLoading]   = useState(true);
   const [saving,     setSaving]    = useState(false);
   const [teamMembers,   setTeamMembers]   = useState([]);
@@ -378,6 +381,24 @@ const [listingUrl,       setListingUrl]        = useState("");
         const catRes = await fetch(`/api/tenant-public/${tenant.slug}/catalog`);
         if (catRes.ok) setCatalog(await catRes.json());
       }
+      // Build a name index from the FULL product catalog (owner view returns
+      // inactive/draft items too) so "Services Ordered" resolves every id.
+      try {
+        const h = { headers: { Authorization: `Bearer ${token}` } };
+        const [pk, sv, ad] = await Promise.all([
+          fetch("/api/dashboard/products?type=packages", h),
+          fetch("/api/dashboard/products?type=services", h),
+          fetch("/api/dashboard/products?type=addons", h),
+        ]);
+        const names = {};
+        for (const res of [pk, sv, ad]) {
+          if (!res.ok) continue;
+          for (const it of (await res.json()).items || []) {
+            if (it?.id && it?.name) names[it.id] = it.name;
+          }
+        }
+        setProductNames(names);
+      } catch { /* name index is best-effort */ }
       setShowWeather(tenant?.availability?.showWeather ?? true);
     }
 
@@ -919,7 +940,7 @@ if (loading) return (
               {(() => {
                 const allItems = [...(catalog?.packages||[]),...(catalog?.services||[]),...(catalog?.addons||[])];
                 const pkgIds = booking.packageIds?.length > 0 ? booking.packageIds : (booking.packageId ? [booking.packageId] : []);
-                const pkgName = pkgIds[0] ? (allItems.find((x) => x.id === pkgIds[0])?.name || null) : null;
+                const pkgName = pkgIds[0] ? (productNames[pkgIds[0]] || allItems.find((x) => x.id === pkgIds[0])?.name || null) : null;
                 return pkgName ? <><span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(255,255,255,0.5)", display: "inline-block" }} /><span>{pkgName}</span></> : null;
               })()}
             </div>
@@ -1383,7 +1404,7 @@ if (loading) return (
                     ...(catalog?.services  || []),
                     ...(catalog?.addons    || []),
                   ];
-                  const nameOf = (id) => allItems.find((x) => x.id === id)?.name || id;
+                  const nameOf = (id) => productNames[id] || allItems.find((x) => x.id === id)?.name || "Removed product";
                   const pkgIds = booking.packageIds?.length > 0 ? booking.packageIds : (booking.packageId ? [booking.packageId] : []);
                   return (
                     <div className="space-y-1.5">
@@ -1633,7 +1654,7 @@ if (loading) return (
                     ...(catalog?.services  || []),
                     ...(catalog?.addons    || []),
                   ];
-                  const nameOf = (svcId) => allItems.find((x) => x.id === svcId)?.name || svcId;
+                  const nameOf = (svcId) => productNames[svcId] || allItems.find((x) => x.id === svcId)?.name || "Removed product";
                   const pkgIds2 = booking.packageIds?.length > 0 ? booking.packageIds : (booking.packageId ? [booking.packageId] : []);
                   return (
                     <div className="space-y-2 text-sm">

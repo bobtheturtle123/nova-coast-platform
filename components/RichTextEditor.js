@@ -154,7 +154,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         data-empty={isEmpty ? "true" : "false"}
         className="rte-input input-field w-full resize-y leading-relaxed overflow-y-auto
           [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1
-          [&_strong]:font-semibold [&_em]:italic"
+          [&_strong]:font-semibold [&_b]:font-semibold [&_em]:italic [&_i]:italic"
         style={{ minHeight: "8.5rem" }}
       />
       <style jsx global>{`

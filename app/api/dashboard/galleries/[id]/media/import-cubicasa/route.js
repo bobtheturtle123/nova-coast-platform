@@ -1,6 +1,8 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { downloadFile } from "@/lib/cubicasa";
+import { rateLimitTenant } from "@/lib/rateLimit";
+import { acquireLock } from "@/lib/opLock";
 
 export const dynamic     = "force-dynamic";
 export const maxDuration = 120;
@@ -40,6 +42,14 @@ export async function POST(req, { params }) {
     return Response.json({ error: "Storage not configured." }, { status: 500 });
   }
 
+  // Heavy op: floor plans are downloaded server-side then pushed to R2. Throttle
+  // per tenant and take a per-gallery lock so a double-submit can't run twice.
+  const rl = await rateLimitTenant(ctx.tenantId, "gallery-media-import", 60, 3600);
+  if (rl.limited) return Response.json({ error: "Too many imports right now. Please wait a moment and try again." }, { status: 429 });
+  const lock = await acquireLock(ctx.tenantId, `media-import:${params.id}`, 120);
+  if (!lock.ok) return Response.json({ error: lock.error }, { status: 429 });
+
+  try {
   const galleryRef = adminDb
     .collection("tenants").doc(ctx.tenantId)
     .collection("galleries").doc(params.id);
@@ -93,4 +103,7 @@ export async function POST(req, { params }) {
     imported, skipped,
     importedCount: imported.length, skippedCount: skipped.length,
   });
+  } finally {
+    await lock.release();
+  }
 }

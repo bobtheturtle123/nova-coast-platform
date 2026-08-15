@@ -1,6 +1,8 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { downloadVideo } from "@/lib/vimeo";
+import { rateLimitTenant } from "@/lib/rateLimit";
+import { acquireLock } from "@/lib/opLock";
 
 export const dynamic     = "force-dynamic";
 export const maxDuration = 300;
@@ -35,6 +37,15 @@ export async function POST(req, { params }) {
     return Response.json({ error: "Storage not configured." }, { status: 500 });
   }
 
+  // Heavy op: each item is downloaded server-side (up to 500 MB) then pushed to
+  // R2. Throttle per tenant and take a per-gallery lock so a double-submit can't
+  // run two imports at once (which would also double-count the 1000-file budget).
+  const rl = await rateLimitTenant(ctx.tenantId, "gallery-media-import", 60, 3600);
+  if (rl.limited) return Response.json({ error: "Too many imports right now. Please wait a moment and try again." }, { status: 429 });
+  const lock = await acquireLock(ctx.tenantId, `media-import:${params.id}`, 300);
+  if (!lock.ok) return Response.json({ error: lock.error }, { status: 429 });
+
+  try {
   const galleryRef = adminDb
     .collection("tenants").doc(ctx.tenantId)
     .collection("galleries").doc(params.id);
@@ -90,4 +101,7 @@ export async function POST(req, { params }) {
   }
 
   return Response.json({ ok: imported.length > 0, imported, skipped, importedCount: imported.length, skippedCount: skipped.length });
+  } finally {
+    await lock.release();
+  }
 }

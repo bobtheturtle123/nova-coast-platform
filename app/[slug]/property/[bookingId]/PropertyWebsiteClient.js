@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import ClassicTemplate from "./ClassicTemplate";
 import LuxuryTemplate from "./LuxuryTemplate";
 import { resolveTheme } from "./templateConfig";
+import { formatMoney, formatPhone } from "@/lib/format";
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 function Lightbox({ images, startIndex, onClose }) {
@@ -200,7 +201,19 @@ function ContactForm({ pw, address, branding, bookingId, tenantSlug }) {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function PropertyWebsiteClient({ pw, booking, galleryMedia, galleryMatterportUrl, galleryFloorPlans = [], branding, bookingId, tenantSlug }) {
+export default function PropertyWebsiteClient({ pw: pwRaw, booking, galleryMedia, galleryMatterportUrl, galleryFloorPlans = [], branding, bookingId, tenantSlug }) {
+  // Normalize display values once so every template (modern/classic/luxury) and
+  // the details table render a clean asking price ($1,100,200) and a phone number
+  // dashed for its country. tel: links accept the formatted string fine.
+  const country = pwRaw?.country || booking?.country || branding?.country || "US";
+  const pw = {
+    ...pwRaw,
+    price:      formatMoney(pwRaw?.price),
+    agentPhone: formatPhone(pwRaw?.agentPhone, country),
+    coAgents:   Array.isArray(pwRaw?.coAgents)
+      ? pwRaw.coAgents.map((a) => ({ ...a, phone: formatPhone(a?.phone, country) }))
+      : pwRaw?.coAgents,
+  };
   const images    = galleryMedia.filter((m) => !m.fileType?.startsWith("video/"));
   const videos    = galleryMedia.filter((m) =>  m.fileType?.startsWith("video/"));
   const [lightboxIdx, setLightboxIdx] = useState(null);
