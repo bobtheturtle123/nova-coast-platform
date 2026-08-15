@@ -11,7 +11,7 @@ export default function TenantReviewPage() {
   const router = useRouter();
   const store  = useBookingStore();
   const {
-    packageIds, serviceIds, addonIds, address, unit, city, state, zip,
+    packageIds, serviceIds, addonIds, itemOptions, address, unit, city, state, zip,
     squareFootage, propertyType, notes, travelFee, setTravelFee, setPricing, pricing,
     promoCode, discount, setPromo, clearPromo, customFields,
     preferredDate, preferredTime, preferredTimeSpecific,
@@ -33,6 +33,9 @@ export default function TenantReviewPage() {
     .map((f) => ({ label: f.label, value: (customFields || {})[f.id] }))
     .filter((x) => x.value && String(x.value).trim());
   const tier = getSqftTier(Number(squareFootage) || 0);
+  // Quantity-option items price/label by the customer's picked option.
+  const linePrice = (item) => getItemPrice(item, tier, item.quantityOptions?.length ? (itemOptions?.[item.id] ?? 0) : undefined);
+  const lineLabel = (item) => item.quantityOptions?.length ? item.quantityOptions[itemOptions?.[item.id] ?? 0]?.label : "";
 
   async function applyPromo() {
     if (!promoInput.trim()) return;
@@ -76,7 +79,7 @@ export default function TenantReviewPage() {
         setCatalog(catalogRes);
         const fee = travelRes?.travelFee ?? 0;
         setTravelFee(fee);
-        const p = calculateTenantPrice(packageIds, serviceIds, addonIds, fee, catalogRes, Number(squareFootage) || 0);
+        const p = calculateTenantPrice(packageIds, serviceIds, addonIds, fee, catalogRes, Number(squareFootage) || 0, itemOptions);
         setPricing(p);
       } finally {
         setLoading(false);
@@ -186,17 +189,17 @@ export default function TenantReviewPage() {
               <div className="space-y-2">
                 {pkgItems.map((pkg) => (
                   <div key={pkg.id} className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-[#0F172A]">{pkg.name}</p>
+                    <p className="text-sm font-semibold text-[#0F172A]">{pkg.name}{lineLabel(pkg) ? ` · ${lineLabel(pkg)}` : ""}</p>
                     <p className="text-sm font-semibold text-[#3486cf] flex-shrink-0 ml-4">
-                      ${getItemPrice(pkg, tier)?.toLocaleString()}
+                      ${linePrice(pkg)?.toLocaleString()}
                     </p>
                   </div>
                 ))}
                 {svcItems.map((s) => (
                   <div key={s.id} className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-[#0F172A]">{s.name}</p>
+                    <p className="text-sm font-medium text-[#0F172A]">{s.name}{lineLabel(s) ? ` · ${lineLabel(s)}` : ""}</p>
                     <p className="text-sm font-semibold text-[#3486cf] flex-shrink-0 ml-4">
-                      ${getItemPrice(s, tier)?.toLocaleString()}
+                      ${linePrice(s)?.toLocaleString()}
                     </p>
                   </div>
                 ))}
@@ -205,9 +208,9 @@ export default function TenantReviewPage() {
                     <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Add-ons</p>
                     {adnItems.map((a) => (
                       <div key={a.id} className="flex items-center justify-between">
-                        <p className="text-sm text-[#0F172A]">{a.name}</p>
+                        <p className="text-sm text-[#0F172A]">{a.name}{lineLabel(a) ? ` · ${lineLabel(a)}` : ""}</p>
                         <p className="text-sm text-[#3486cf] font-medium flex-shrink-0 ml-4">
-                          +${(a.price || 0).toLocaleString()}
+                          +${linePrice(a).toLocaleString()}
                         </p>
                       </div>
                     ))}

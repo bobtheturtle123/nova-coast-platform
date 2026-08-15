@@ -43,6 +43,7 @@ export async function POST(req, { params }) {
     const body = await req.json();
     const {
       packageIds: rawPkgIds, packageId: rawPkgId, serviceIds, addonIds, retainerIds,
+      itemOptions: rawItemOptions,
       address, city, state, zip, squareFootage, propertyType, notes,
       preferredDate, preferredTime, preferredTimeSpecific, twilightTime,
       clientName, clientEmail, clientPhone, smsConsent,
@@ -51,6 +52,18 @@ export async function POST(req, { params }) {
       contractSignerName,
       unit, promoCode: rawPromoCode, promoId: rawPromoId,
     } = body;
+
+    // Sanitize the selected quantity options: { [itemId]: optionIndex }. Only
+    // keep non-negative integer indices — the price is always recomputed from
+    // the catalog's own quantityOptions, so a bad index just falls back to 0.
+    const itemOptions = (rawItemOptions && typeof rawItemOptions === "object" && !Array.isArray(rawItemOptions))
+      ? Object.fromEntries(
+          Object.entries(rawItemOptions)
+            .filter(([k, v]) => typeof k === "string" && Number.isInteger(Number(v)) && Number(v) >= 0)
+            .map(([k, v]) => [k, Number(v)])
+            .slice(0, 100)
+        )
+      : {};
 
     // Normalize: accept either packageIds array or legacy packageId string
     const packageIds = Array.isArray(rawPkgIds) && rawPkgIds.length > 0
@@ -72,7 +85,7 @@ export async function POST(req, { params }) {
     // Clamp client-supplied money — negative/NaN values must never lower the price.
     const safeTravelFee = clampMoney(travelFee);
     const catalog = await getTenantCatalog(tenant.id);
-    const pricing = calculateTenantPrice(packageIds, serviceIds, addonIds, safeTravelFee, catalog, squareFootage || 0);
+    const pricing = calculateTenantPrice(packageIds, serviceIds, addonIds, safeTravelFee, catalog, squareFootage || 0, itemOptions);
     const tip = clampMoney(rawTip);
 
     // ── Re-validate promo code server-side (never trust client discount) ──────
@@ -203,6 +216,16 @@ export async function POST(req, { params }) {
       if (total > 0) suggestedShooterPay = total;
     }
 
+    // Snapshot the chosen quantity option for each selected item so studio-facing
+    // views / emails can show "3 Photos — $100" without re-deriving from indices.
+    const itemOptionLabels = {};
+    const allCatalogItems = [...(catalog.packages || []), ...(catalog.services || []), ...(catalog.addons || [])];
+    for (const [itemId, idx] of Object.entries(itemOptions)) {
+      const it = allCatalogItems.find((x) => x.id === itemId);
+      const opt = it?.quantityOptions?.[idx];
+      if (opt) itemOptionLabels[itemId] = opt.label;
+    }
+
     // Save booking to tenant subcollection
     await adminDb
       .collection("tenants")
@@ -229,6 +252,9 @@ export async function POST(req, { params }) {
         serviceIds: serviceIds || [],
         addonIds:   addonIds  || [],
         retainerIds: Array.isArray(retainerIds) ? retainerIds.slice(0, 20) : [],
+        // Quantity fixed-price selections: index map + readable labels snapshot.
+        itemOptions,
+        itemOptionLabels,
 
         basePrice:        pricing.base,
         addonPrice:       pricing.addonTotal,

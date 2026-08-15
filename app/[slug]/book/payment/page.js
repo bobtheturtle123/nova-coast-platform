@@ -73,8 +73,12 @@ function formatPhone(raw) {
 }
 
 // ─── Order summary line items ─────────────────────────────────────────────────
-function OrderSummary({ pricing, catalog, packageIds, serviceIds, addonIds, address, city, payFull, tip, partner }) {
+function OrderSummary({ pricing, catalog, packageIds, serviceIds, addonIds, itemOptions, address, city, payFull, tip, partner }) {
   if (!pricing || !catalog) return null;
+  // Items with quantity fixed-price options price by their picked option.
+  const lineOpt   = (item) => item.quantityOptions?.length ? (itemOptions?.[item.id] ?? 0) : undefined;
+  const linePrice = (item) => getItemPrice(item, pricing?.tier, lineOpt(item));
+  const lineLabel = (item) => item.quantityOptions?.length ? item.quantityOptions[itemOptions?.[item.id] ?? 0]?.label : "";
   const depLabel = depositLabel(catalog?.bookingConfig?.deposit);
   const promoDiscount   = pricing.discount || 0;
   // Partner pricing and a promo code don't stack — the better one wins.
@@ -114,20 +118,20 @@ function OrderSummary({ pricing, catalog, packageIds, serviceIds, addonIds, addr
       <div className="space-y-2 text-sm">
         {pkgItems.map((pkg) => (
           <div key={pkg.id} className="flex justify-between gap-2">
-            <span className="text-[#0F172A] font-medium flex-1">{pkg.name}</span>
-            <span className="text-[#3486cf] font-semibold flex-shrink-0">${getItemPrice(pkg, pricing?.tier).toLocaleString()}</span>
+            <span className="text-[#0F172A] font-medium flex-1">{pkg.name}{lineLabel(pkg) ? ` · ${lineLabel(pkg)}` : ""}</span>
+            <span className="text-[#3486cf] font-semibold flex-shrink-0">${linePrice(pkg).toLocaleString()}</span>
           </div>
         ))}
         {services.map((s) => (
           <div key={s.id} className="flex justify-between gap-2">
-            <span className="text-[#0F172A] flex-1">{s.name}</span>
-            <span className="text-[#3486cf] flex-shrink-0">${getItemPrice(s, pricing?.tier).toLocaleString()}</span>
+            <span className="text-[#0F172A] flex-1">{s.name}{lineLabel(s) ? ` · ${lineLabel(s)}` : ""}</span>
+            <span className="text-[#3486cf] flex-shrink-0">${linePrice(s).toLocaleString()}</span>
           </div>
         ))}
         {addons.map((a) => (
           <div key={a.id} className="flex justify-between gap-2 text-gray-600">
-            <span className="flex-1">+ {a.name}</span>
-            <span className="flex-shrink-0">${a.price?.toLocaleString?.() ?? a.price}</span>
+            <span className="flex-1">+ {a.name}{lineLabel(a) ? ` · ${lineLabel(a)}` : ""}</span>
+            <span className="flex-shrink-0">${linePrice(a).toLocaleString()}</span>
           </div>
         ))}
         {pricing.travelFee > 0 && (
@@ -205,7 +209,7 @@ export default function TenantPaymentPage() {
   const store  = useBookingStore();
 
   const {
-    pricing, packageIds, serviceIds, addonIds, retainerIds,
+    pricing, packageIds, serviceIds, addonIds, retainerIds, itemOptions,
     address, unit, city, state, zip, squareFootage, propertyType, notes,
     preferredDate, preferredTime, preferredTimeSpecific, twilightTime, travelFee,
     clientName, clientEmail, clientPhone, customFields,
@@ -319,7 +323,7 @@ export default function TenantPaymentPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          packageIds, packageId: packageIds?.[0] ?? null, serviceIds, addonIds, retainerIds,
+          packageIds, packageId: packageIds?.[0] ?? null, serviceIds, addonIds, retainerIds, itemOptions,
           address, unit, city, state, zip, squareFootage, propertyType, notes,
           preferredDate, preferredTime, preferredTimeSpecific, twilightTime,
           clientName, clientEmail, clientPhone,
@@ -681,6 +685,7 @@ export default function TenantPaymentPage() {
               packageIds={packageIds}
               serviceIds={serviceIds}
               addonIds={addonIds}
+              itemOptions={itemOptions}
               address={address}
               city={city}
               payFull={effectivePayFull}

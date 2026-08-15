@@ -58,8 +58,10 @@ const ADDON_IMAGES = {
 
 export default function TenantAddonsClient({ slug, addons = [], catalog }) {
   const router = useRouter();
-  const { packageIds, serviceIds, addonIds, retainerIds, squareFootage, toggleAddon, toggleRetainer, setPricing, travelFee } =
+  const { packageIds, serviceIds, addonIds, retainerIds, squareFootage, itemOptions, setItemOption, toggleAddon, toggleRetainer, setPricing, travelFee } =
     useBookingStore();
+  const optIndex = (addon) => itemOptions?.[addon.id] ?? 0;
+  const priceOf  = (addon) => getItemPrice(addon, getSqftTier(squareFootage), addon.quantityOptions?.length ? optIndex(addon) : undefined);
   const activeRetainers = (catalog?.retainers || []).filter((r) => r.active !== false);
   const [lightboxAddon, setLightboxAddon] = useState(null);
 
@@ -70,7 +72,7 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
   }
 
   function handleContinue() {
-    const pricing = calculateTenantPrice(packageIds, serviceIds, addonIds, travelFee, catalog, squareFootage);
+    const pricing = calculateTenantPrice(packageIds, serviceIds, addonIds, travelFee, catalog, squareFootage, itemOptions);
     setPricing(pricing);
     router.push(`/${slug}/book/property`);
   }
@@ -111,15 +113,26 @@ export default function TenantAddonsClient({ slug, addons = [], catalog }) {
                         <p className="text-sm text-gray-500 line-clamp-2">{addon.description}</p>
                         {(addon.description?.length > 80 || images.length > 1) && (
                           <button type="button"
-                            onClick={(e) => { e.stopPropagation(); setLightboxAddon({ addon, images, price: `$${getItemPrice(addon, getSqftTier(squareFootage)).toLocaleString()}` }); }}
+                            onClick={(e) => { e.stopPropagation(); setLightboxAddon({ addon, images, price: `$${priceOf(addon).toLocaleString()}` }); }}
                             className="text-xs text-[#3486cf]/50 hover:text-[#3486cf] underline underline-offset-2 mt-0.5">
                             View details
                           </button>
                         )}
+                        {addon.quantityOptions?.length > 0 && (
+                          <select
+                            value={optIndex(addon)}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => { e.stopPropagation(); setItemOption(addon.id, Number(e.target.value)); }}
+                            className="mt-2 w-full max-w-xs px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-[#0F172A] cursor-pointer">
+                            {addon.quantityOptions.map((o, i) => (
+                              <option key={i} value={i}>{o.label} — ${Number(o.price).toLocaleString()}</option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 flex-shrink-0">
                         <span className={clsx("font-display text-xl", selected ? "text-[#3486cf]" : "text-[#0F172A]")}>
-                          +${getItemPrice(addon, getSqftTier(squareFootage)).toLocaleString()}
+                          +${priceOf(addon).toLocaleString()}
                         </span>
                         <div className={clsx("w-12 h-6 rounded-full transition-colors duration-200 relative flex-shrink-0",
                           selected ? "bg-[#3486cf]" : "bg-gray-200")}>

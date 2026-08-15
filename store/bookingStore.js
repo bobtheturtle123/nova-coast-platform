@@ -15,6 +15,9 @@ const INITIAL_STATE = {
   addonIds: [],
   retainerIds: [],
 
+  // Selected quantity fixed-price option per item: { [itemId]: optionIndex }
+  itemOptions: {},
+
   // Step 3 — Property
   address:       "",
   unit:          "",
@@ -98,6 +101,12 @@ export const useBookingStore = create(
           retainerIds: state.retainerIds.includes(retainerId)
             ? state.retainerIds.filter((id) => id !== retainerId)
             : [...state.retainerIds, retainerId],
+        })),
+
+      // Record which quantity fixed-price option the customer picked for an item.
+      setItemOption: (itemId, optionIndex) =>
+        set((state) => ({
+          itemOptions: { ...state.itemOptions, [itemId]: optionIndex },
         })),
 
       setSquareFootage: (squareFootage) => set({ squareFootage }),

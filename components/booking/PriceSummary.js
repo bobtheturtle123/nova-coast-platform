@@ -22,11 +22,16 @@ function formatDate(d) {
 export default function PriceSummary({ showDeposit = false, catalog = null }) {
   const {
     packageIds, serviceIds, addonIds, pricing, travelFee, squareFootage,
+    itemOptions,
     preferredDate, preferredTime, address, city, state,
     clientName, clientEmail, photographerId,
   } = useBookingStore();
   const pkgIds = packageIds || [];
   const tier = getSqftTier(squareFootage);
+  // Quantity fixed-price items price by their selected option; everything else
+  // by sqft tier / flat price.
+  const priceOf = (item) => getItemPrice(item, tier, item.quantityOptions?.length ? (itemOptions?.[item.id] ?? 0) : undefined);
+  const optLabel = (item) => item.quantityOptions?.length ? item.quantityOptions[itemOptions?.[item.id] ?? 0]?.label : "";
 
   const packages = catalog?.packages || PACKAGES;
   const services = catalog?.services || SERVICES;
@@ -84,15 +89,15 @@ export default function PriceSummary({ showDeposit = false, catalog = null }) {
         <div className="space-y-2 text-sm font-body">
           {selectedPkgs.map((pk) => (
             <div key={pk.id} className="flex justify-between">
-              <span style={{ color: "#181B20", fontWeight: 600 }}>{pk.name} Package</span>
-              <span style={{ color: "#181B20" }}>{formatPrice(getItemPrice(pk, tier))}</span>
+              <span style={{ color: "#181B20", fontWeight: 600 }}>{pk.name} Package{optLabel(pk) ? ` · ${optLabel(pk)}` : ""}</span>
+              <span style={{ color: "#181B20" }}>{formatPrice(priceOf(pk))}</span>
             </div>
           ))}
 
           {selectedSvcs.map((s) => (
             <div key={s.id} className="flex justify-between">
-              <span style={{ color: "#52555C" }}>{s.name}</span>
-              <span style={{ color: "#52555C" }}>{formatPrice(getItemPrice(s, tier))}</span>
+              <span style={{ color: "#52555C" }}>{s.name}{optLabel(s) ? ` · ${optLabel(s)}` : ""}</span>
+              <span style={{ color: "#52555C" }}>{formatPrice(priceOf(s))}</span>
             </div>
           ))}
 
@@ -101,8 +106,8 @@ export default function PriceSummary({ showDeposit = false, catalog = null }) {
               <div style={{ borderTop: "1px solid #F1EDE4", paddingTop: 8, marginTop: 6 }} />
               {selectedAddons.map((a) => (
                 <div key={a.id} className="flex justify-between">
-                  <span style={{ color: "#52555C" }}>{a.name}</span>
-                  <span style={{ color: "#52555C" }}>{formatPrice(getItemPrice(a, tier))}</span>
+                  <span style={{ color: "#52555C" }}>{a.name}{optLabel(a) ? ` · ${optLabel(a)}` : ""}</span>
+                  <span style={{ color: "#52555C" }}>{formatPrice(priceOf(a))}</span>
                 </div>
               ))}
             </>

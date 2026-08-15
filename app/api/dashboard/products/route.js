@@ -91,6 +91,19 @@ function stripeInterval(billingInterval) {
   return { interval: "month", interval_count: 1 };
 }
 
+// Whitelist quantity options → [{ label, price }]. Drops empty rows; null if none.
+function sanitizeQuantityOptions(raw) {
+  if (!Array.isArray(raw)) return null;
+  const opts = raw
+    .map((o) => ({
+      label: stripTags(String(o?.label || "")).slice(0, 60),
+      price: Math.max(0, Number(o?.price) || 0),
+    }))
+    .filter((o) => o.label || o.price > 0)
+    .slice(0, 20);
+  return opts.length ? opts : null;
+}
+
 function sanitizeItem(body, type) {
   const base = {
     name:        stripTags(body.name        || "").slice(0, 100),
@@ -131,6 +144,17 @@ function sanitizeItem(body, type) {
       : null,
   };
 
+  // Quantity fixed-price options (e.g. "1 Photo — $40", "3 Photos — $100").
+  // When present, these are the SOLE pricing source (sqft tiers are ignored),
+  // so they're mutually exclusive with priceTiers.
+  base.quantityOptions = sanitizeQuantityOptions(body.quantityOptions);
+  if (base.quantityOptions) {
+    base.priceTiers = null;
+    // Keep flat price synced to the first option so "from" prices / any
+    // non-option-aware path still show a sensible number.
+    base.price = Number(base.quantityOptions[0].price) || base.price || 0;
+  }
+
   base.duration = (body.duration !== null && body.duration !== undefined && body.duration !== "")
     ? Math.max(0, Math.round(Number(body.duration) || 0))
     : null;
@@ -165,6 +189,7 @@ function sanitizeItem(body, type) {
     base.billingInterval = allowed.includes(body.billingInterval) ? body.billingInterval : "month";
     base.recurring = true;
     base.priceTiers = null;
+    base.quantityOptions = null; // recurring plans use a single flat price
   }
 
   return base;

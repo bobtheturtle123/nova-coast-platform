@@ -242,6 +242,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
   const router = useRouter();
   const {
     packageIds, serviceIds, addonIds, retainerIds, squareFootage, travelFee,
+    itemOptions, setItemOption,
     togglePackage, toggleService, toggleAddon, toggleRetainer,
     hasSelections, setTenant, setSquareFootage, setPricing,
   } = useBookingStore();
@@ -285,8 +286,35 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
 
   function confirmSqft() { setSquareFootage(sqftInput); setConfirmed(true); }
   const fmt = (n) => `$${Number(n || 0).toLocaleString()}`;
-  function priceOf(item) { return usesGate ? getItemPrice(item, tier) : Number(item.price || 0); }
+  // For items with quantity fixed-price options, the selected option's price
+  // wins over sqft tiers / flat price. Default to option 0 (the "from" price).
+  function optIndex(item) { return itemOptions?.[item.id] ?? 0; }
+  function priceOf(item) {
+    if (item.quantityOptions?.length) return getItemPrice(item, tier, optIndex(item));
+    return usesGate ? getItemPrice(item, tier) : Number(item.price || 0);
+  }
   function displayPrice(item) { const p = priceOf(item); return p ? fmt(p) : ""; }
+  // Compact dropdown for picking a quantity option. Stops card-click propagation
+  // so choosing an option doesn't also toggle selection / open the lightbox.
+  function QtyOptionSelect({ item }) {
+    if (!item.quantityOptions?.length) return null;
+    return (
+      <select
+        value={optIndex(item)}
+        onClick={(e) => e.stopPropagation()}
+        onChange={(e) => { e.stopPropagation(); setItemOption(item.id, Number(e.target.value)); }}
+        style={{
+          marginTop: 8, width: "100%", padding: "9px 11px", borderRadius: 10,
+          border: "1px solid var(--line, #e2e5ea)", background: "#fff",
+          fontSize: 13.5, fontWeight: 600, color: "#0F172A", cursor: "pointer",
+        }}
+      >
+        {item.quantityOptions.map((o, i) => (
+          <option key={i} value={i}>{o.label} — {fmt(o.price)}</option>
+        ))}
+      </select>
+    );
+  }
   // Resolve the tier's label from the studio's own tiers (never "undefined").
   // For metric studios, build the label from the tier max + unit so it doesn't
   // show the imperial default ("Under 800 sqft").
@@ -325,7 +353,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
     : ["Secure checkout — only a deposit is due today"];
 
   // Live quote
-  const quote = calculateTenantPrice(packageIds, serviceIds, addonIds, travelFee, catalog, usesGate ? (squareFootage || sqftInput) : 0);
+  const quote = calculateTenantPrice(packageIds, serviceIds, addonIds, travelFee, catalog, usesGate ? (squareFootage || sqftInput) : 0, itemOptions);
   const hasAny = packageIds.length + serviceIds.length + addonIds.length > 0;
 
   function buildLines() {
@@ -452,6 +480,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                       {(pk.tagline || pk.description) && <div className="tg">{pk.tagline || short(pk.description, 80)}</div>}
                       <div className="price"><b>{displayPrice(pk)}</b></div>
                       {(() => { const sv = savingsFor(pk); return sv > 0 ? <span className="save">Save {fmt(sv)} vs. à la carte</span> : null; })()}
+                      <QtyOptionSelect item={pk} />
                       {names.length > 0 && (
                         <ul>{names.slice(0, 5).map((n, i) => <li key={i}>{CHECK}<span>{n}</span></li>)}</ul>
                       )}
@@ -485,6 +514,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                         {(a.description || images.length > 0) && (
                           <button className="detbtn" onClick={(e) => { e.stopPropagation(); openDetails(a); }}>{INFO}Details</button>
                         )}
+                        {a.quantityOptions?.length > 0 && <QtyOptionSelect item={a} />}
                       </span>
                       <span className="ap">+{displayPrice(a)}</span>
                     </div>
@@ -514,6 +544,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                             <div className="meta">
                               <div className="top"><span className="sn">{s.name}</span><span className="sp">{displayPrice(s)}</span></div>
                               {s.description && <div className="sb">{s.description}</div>}
+                              {s.quantityOptions?.length > 0 && <QtyOptionSelect item={s} />}
                               <div className="foot">
                                 <button className="detbtn" onClick={(e) => { e.stopPropagation(); openDetails(s); }}>{INFO}Details</button>
                                 <button className="addbtn">{on ? <>{CHECK}Added</> : "+ Add"}</button>

@@ -59,8 +59,13 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
     deliverables: item?.deliverables || "",
     active:       item?.active !== false,
     featured:     item?.featured     || false,
-    tiered:       !!(item?.priceTiers),
+    tiered:       !!(item?.priceTiers) && !(item?.quantityOptions?.length),
     priceTiers:   item?.priceTiers || {},
+    // Quantity fixed-price options mode (mutually exclusive with tiered/flat).
+    quantityMode:    !!(item?.quantityOptions?.length),
+    quantityOptions: item?.quantityOptions?.length
+      ? item.quantityOptions.map((o) => ({ label: o.label || "", price: o.price ?? "" }))
+      : [{ label: "", price: "" }],
     includes:     item?.includes     || [],
     showWith:     item?.showWith     || [],
     isTwilight:   item?.isTwilight   || false,
@@ -85,6 +90,28 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
     return (e) => setForm((f) => ({
       ...f,
       priceTiers: { ...f.priceTiers, [tier]: Number(e.target.value) || 0 },
+    }));
+  }
+
+  // Pricing mode is a three-way choice (non-retainers): flat / by-size tiers /
+  // by-quantity options. tiered + quantityMode are mutually exclusive.
+  function setPriceMode(mode) {
+    setForm((f) => ({ ...f, tiered: mode === "tiers", quantityMode: mode === "quantity" }));
+  }
+
+  function setOption(i, key) {
+    return (e) => setForm((f) => ({
+      ...f,
+      quantityOptions: f.quantityOptions.map((o, n) => (n === i ? { ...o, [key]: e.target.value } : o)),
+    }));
+  }
+  function addOption() {
+    setForm((f) => ({ ...f, quantityOptions: [...f.quantityOptions, { label: "", price: "" }] }));
+  }
+  function removeOption(i) {
+    setForm((f) => ({
+      ...f,
+      quantityOptions: f.quantityOptions.length <= 1 ? f.quantityOptions : f.quantityOptions.filter((_, n) => n !== i),
     }));
   }
 
@@ -175,11 +202,22 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
         billingInterval: form.billingInterval || "month",
         recurring:       true,
         priceTiers:      null,
+        quantityOptions: null,
+      } : form.quantityMode ? {
+        // Quantity fixed-price options — the sole pricing source. Drop blank rows;
+        // sqft tiers are cleared since they're mutually exclusive.
+        quantityOptions: form.quantityOptions
+          .map((o) => ({ label: String(o.label || "").trim(), price: Number(o.price) || 0 }))
+          .filter((o) => o.label || o.price > 0),
+        priceTiers: null,
+        // Keep flat price synced to the first option for "From $" displays.
+        price: Number(form.quantityOptions.find((o) => o.label || Number(o.price) > 0)?.price) || 0,
       } : {
         // Prune to ONLY the currently-configured tiers — drops stale/orphan tier
         // keys left over from imports (e.g. a hidden "$549" under a tier name that
         // no longer exists), which is what made "From $549" stick after editing.
         ...(form.tiered ? { priceTiers: pruneTiers(form.priceTiers) } : { priceTiers: null }),
+        quantityOptions: null,
       }),
       ...(type === "packages" ? { featured: form.featured, includes: form.includes } : {}),
       ...(type === "addons" ? { showWith: form.showWith } : {}),
@@ -207,15 +245,15 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
   return (
     <div className="modal-backdrop">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="modal-card relative w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+      <div className="modal-card relative w-full max-w-3xl max-h-[92vh] overflow-y-auto">
+        <div className="px-8 py-5 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
           <h2 className="font-semibold text-[#0F172A] text-base">
             {item ? `Edit ${TYPE_META[type].singular}` : "New Item"}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="px-8 py-7 space-y-7">
           {/* Type selector — only when creating new */}
           {!item && (
             <div>
@@ -252,9 +290,11 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
               <p className="text-sm font-semibold text-[#0F172A] mt-1">
                 {type === "retainers"
                   ? `${fmtMoney(Number(form.price))} / ${{ month: "month", quarter: "quarter", year: "year" }[form.billingInterval] || "month"}`
-                  : form.tiered
-                    ? (() => { const tv = Object.values(form.priceTiers).filter(v => v > 0); return tv.length > 0 ? `From ${fmtMoney(Math.min(...tv))}` : "Set tier prices below"; })()
-                    : fmtMoney(Number(form.price))}
+                  : form.quantityMode
+                    ? (() => { const pv = form.quantityOptions.map((o) => Number(o.price)).filter((v) => v > 0); return pv.length > 0 ? `From ${fmtMoney(Math.min(...pv))}` : "Set option prices below"; })()
+                    : form.tiered
+                      ? (() => { const tv = Object.values(form.priceTiers).filter(v => v > 0); return tv.length > 0 ? `From ${fmtMoney(Math.min(...tv))}` : "Set tier prices below"; })()
+                      : fmtMoney(Number(form.price))}
               </p>
             </div>
           </div>
@@ -267,8 +307,10 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
 
           <div>
             <label className="label-field">Description</label>
-            <textarea value={form.description} onChange={field("description")} rows={3}
-              className="input-field w-full resize-none" placeholder="Describe what this includes…" />
+            <textarea value={form.description} onChange={field("description")} rows={6}
+              className="input-field w-full resize-y leading-relaxed" style={{ minHeight: "8.5rem" }}
+              placeholder="Describe what this includes…" />
+            <p className="text-xs text-gray-400 mt-1">Drag the bottom-right corner to make this taller.</p>
           </div>
 
           {/* Retainer: billing interval */}
@@ -435,60 +477,104 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
               <span className="text-sm font-medium text-[#0F172A]">
                 Pricing{type === "retainers" ? ` — billed ${intervalLabel(form.billingInterval).toLowerCase()}` : ""}
               </span>
-              {type !== "retainers" && (
-                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  <span className="text-xs text-gray-500">Tier pricing</span>
-                  <div
-                    onClick={() => setForm((f) => ({ ...f, tiered: !f.tiered }))}
-                    className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${form.tiered ? "bg-[#3486cf]" : "bg-gray-300"}`}
-                  >
-                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.tiered ? "translate-x-4" : "translate-x-0.5"}`} />
-                  </div>
-                </div>
-              )}
             </summary>
-            <div className="px-4 pb-4 pt-3 border-t border-gray-100 space-y-4">
-              {/* Retainers are always flat (billed per interval) — never tiered. */}
-              {(!form.tiered || type === "retainers") ? (
-                <div className="flex items-center gap-2">
+            <div className="px-4 pb-5 pt-4 border-t border-gray-100 space-y-4">
+              {/* Pricing mode — retainers are always flat (billed per interval). */}
+              {type !== "retainers" && (() => {
+                const mode = form.quantityMode ? "quantity" : form.tiered ? "tiers" : "flat";
+                const opts = [
+                  ["flat",     "Flat price",  "One set price"],
+                  ["tiers",    "By size",     "Price per sq ft tier"],
+                  ["quantity", "By quantity", "Fixed-price options"],
+                ];
+                return (
+                  <div className="grid grid-cols-3 gap-2">
+                    {opts.map(([m, label, sub]) => (
+                      <button key={m} type="button" onClick={() => setPriceMode(m)}
+                        className={`px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                          mode === m ? "border-[#3486cf] bg-[#3486cf]/5 ring-1 ring-[#3486cf]/20" : "border-gray-200 hover:border-gray-300"
+                        }`}>
+                        <span className={`block text-sm font-semibold ${mode === m ? "text-[#3486cf]" : "text-[#0F172A]"}`}>{label}</span>
+                        <span className="block text-[11px] text-gray-400 mt-0.5 leading-tight">{sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* FLAT (also all retainers) */}
+              {(type === "retainers" || (!form.tiered && !form.quantityMode)) && (
+                <div className="flex items-center gap-2 pt-1">
                   <span className="text-gray-400">$</span>
                   <input type="number" value={form.price} onChange={field("price")} min="0" step="0.01"
                     className="input-field w-40" />
+                  {type === "retainers" && <span className="text-xs text-gray-400">per {intervalLabel(form.billingInterval).toLowerCase().replace("ly", "")}</span>}
                 </div>
-              ) : (
-                (() => {
-                  const tiers = getActiveTiers(pricingConfig);
-                  if (tiers.length === 0) {
-                    return <p className="text-xs text-amber-600">Configure pricing tiers in Settings → Pricing Tiers first.</p>;
-                  }
-                  return (
-                    <div className="space-y-4">
-                      {/* Price per tier */}
-                      <div>
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Price</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {tiers.map((tier) => (
-                            <div key={tier.name}>
-                              <label className="block text-xs text-gray-500 mb-1">
-                                {tier.label || tier.name}
-                                <span className="text-gray-400 ml-1">
-                                  ({(!tier.max || tier.max >= 999999) ? "unlimited" : `to ${Number(tier.max).toLocaleString()}`})
-                                </span>
-                              </label>
-                              <div className="flex items-center gap-1">
-                                <span className="text-gray-400 text-sm">$</span>
-                                <input type="number" value={form.priceTiers[tier.name] || ""}
-                                  onChange={(e) => setForm((f) => ({ ...f, priceTiers: { ...f.priceTiers, [tier.name]: Number(e.target.value) || 0 } }))}
-                                  min="0" step="0.01" className="input-field py-1.5 text-sm w-full" placeholder="0" />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+              )}
 
+              {/* BY SIZE — per-tier prices */}
+              {type !== "retainers" && form.tiered && (() => {
+                const tiers = getActiveTiers(pricingConfig);
+                if (tiers.length === 0) {
+                  return <p className="text-xs text-amber-600">Configure pricing tiers in Settings → Pricing Tiers first.</p>;
+                }
+                return (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Price per tier</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {tiers.map((tier) => (
+                        <div key={tier.name}>
+                          <label className="block text-xs text-gray-500 mb-1">
+                            {tier.label || tier.name}
+                            <span className="text-gray-400 ml-1">
+                              ({(!tier.max || tier.max >= 999999) ? "unlimited" : `to ${Number(tier.max).toLocaleString()}`})
+                            </span>
+                          </label>
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-400 text-sm">$</span>
+                            <input type="number" value={form.priceTiers[tier.name] || ""}
+                              onChange={(e) => setForm((f) => ({ ...f, priceTiers: { ...f.priceTiers, [tier.name]: Number(e.target.value) || 0 } }))}
+                              min="0" step="0.01" className="input-field py-1.5 text-sm w-full" placeholder="0" />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  );
-                })()
+                  </div>
+                );
+              })()}
+
+              {/* BY QUANTITY — discrete fixed-price options */}
+              {type !== "retainers" && form.quantityMode && (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Offer set quantity choices, each with its own total price. Customers pick one on the booking page
+                    (e.g. <span className="font-medium text-gray-600">1 Photo — $40</span>, <span className="font-medium text-gray-600">3 Photos — $100</span>).
+                  </p>
+                  <div className="space-y-2">
+                    {form.quantityOptions.map((opt, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input type="text" value={opt.label} onChange={setOption(i, "label")}
+                          placeholder="Option label — e.g. 3 Photos"
+                          className="input-field flex-1 text-sm" />
+                        <div className="flex items-center gap-1">
+                          <span className="text-gray-400 text-sm">$</span>
+                          <input type="number" value={opt.price} onChange={setOption(i, "price")} min="0" step="0.01"
+                            placeholder="0" className="input-field py-1.5 text-sm w-24" />
+                        </div>
+                        <button type="button" onClick={() => removeOption(i)} disabled={form.quantityOptions.length <= 1}
+                          title="Remove option"
+                          className="text-gray-300 hover:text-red-500 disabled:opacity-30 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-50 text-lg leading-none">
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" onClick={addOption}
+                    className="text-sm font-medium text-[#3486cf] hover:text-[#2a6ba8] flex items-center gap-1">
+                    <span className="text-base leading-none">+</span> Add option
+                  </button>
+                  <p className="text-[11px] text-gray-400">The lowest-priced option shows as the “From” price on your list and booking cards.</p>
+                </div>
               )}
             </div>
           </details>
@@ -671,35 +757,122 @@ function fmtMoney(v) {
   }).format(n);
 }
 
+// Export every product (all types) with its full info to a CSV the studio can
+// keep, edit in a spreadsheet, or re-import. Runs entirely client-side.
+function exportProductsToCsv(items) {
+  const esc = (val) => {
+    const s = String(val ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  // id → name lookup across every type, so "includes" / "show with" export as
+  // human-readable names rather than opaque ids.
+  const nameById = {};
+  ["packages", "services", "addons", "retainers"].forEach((t) =>
+    (items[t] || []).forEach((it) => { nameById[it.id] = it.name; })
+  );
+  const nameList = (ids) => (Array.isArray(ids) ? ids.map((id) => nameById[id] || id).join(" | ") : "");
+
+  const headers = [
+    "Type", "Name", "Description", "Active", "Featured", "Twilight",
+    "Pricing Model", "Base Price", "Tier Prices", "Quantity Options",
+    "Duration (min)", "Pay Rate", "Tagline", "Included Services", "Show With",
+    "Billing Interval", "Media URLs",
+  ];
+
+  const singular = { packages: "Package", services: "Service", addons: "Add-on", retainers: "Retainer" };
+  const rows = [];
+  ["packages", "services", "addons", "retainers"].forEach((type) => {
+    (items[type] || []).forEach((it) => {
+      const model = it.quantityOptions?.length ? "Quantity options" : it.priceTiers ? "Tiered (by size)" : "Flat";
+      const tierPrices = it.priceTiers
+        ? Object.entries(it.priceTiers).filter(([, v]) => Number(v) > 0).map(([k, v]) => `${k}=$${v}`).join(" | ")
+        : "";
+      const qtyOptions = it.quantityOptions?.length
+        ? it.quantityOptions.map((o) => `${o.label}=$${o.price}`).join(" | ")
+        : "";
+      rows.push([
+        singular[type], it.name || "", it.description || "",
+        it.active === false ? "No" : "Yes",
+        it.featured ? "Yes" : "No",
+        it.isTwilight ? "Yes" : "No",
+        model,
+        it.price != null ? `$${it.price}` : "",
+        tierPrices, qtyOptions,
+        it.duration != null ? it.duration : "",
+        it.payRate != null ? `$${it.payRate}` : "",
+        it.tagline || "",
+        nameList(it.includes),
+        nameList(it.showWith),
+        type === "retainers" ? (it.billingInterval || "month") : "",
+        Array.isArray(it.mediaUrls) ? it.mediaUrls.join(" | ") : "",
+      ].map(esc).join(","));
+    });
+  });
+
+  const csv  = [headers.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url;
+  a.download = `products-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Product row ──────────────────────────────────────────────────────────────
-function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate, selectable, selected, onSelectToggle, reorderable, canMoveUp, canMoveDown, onMoveUp, onMoveDown }) {
+function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate, selectable, selected, onSelectToggle, reorderable, canMoveUp, canMoveDown, onMoveUp, onMoveDown, dragging, dropTarget, onDragStart, onDragEnterRow, onDropRow, onDragEndRow }) {
   const tierVals = item.priceTiers ? Object.values(item.priceTiers).filter(v => v > 0) : [];
+  const optVals  = item.quantityOptions?.length ? item.quantityOptions.map((o) => Number(o.price)).filter((v) => v > 0) : [];
   const intervalSuffix = type === "retainers"
     ? { month: "/mo", quarter: "/qtr", year: "/yr" }[item.billingInterval || "month"]
     : "";
   const fromPrice = type === "retainers"
     ? `${fmtMoney(item.price || 0)}${intervalSuffix}`
-    : item.priceTiers
-      ? tierVals.length > 0 ? `From ${fmtMoney(Math.min(...tierVals))}` : "Tier pricing"
-      : fmtMoney(item.price || 0);
+    : optVals.length > 0
+      ? `From ${fmtMoney(Math.min(...optVals))}`
+      : item.priceTiers
+        ? tierVals.length > 0 ? `From ${fmtMoney(Math.min(...tierVals))}` : "Tier pricing"
+        : fmtMoney(item.price || 0);
 
   const [hovered, setHovered] = useState(false);
   return (
     <div className="flex items-center gap-4 px-4 py-3 transition-colors"
-      style={{ borderBottom: "1px solid var(--border-subtle)", background: hovered ? "rgb(15 23 42 / 0.022)" : "transparent" }}
-      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      style={{
+        borderBottom: "1px solid var(--border-subtle)",
+        background: dropTarget ? "rgb(52 134 207 / 0.08)" : hovered ? "rgb(15 23 42 / 0.022)" : "transparent",
+        opacity: dragging ? 0.4 : 1,
+        borderTop: dropTarget ? "2px solid #3486cf" : "2px solid transparent",
+      }}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      onDragOver={reorderable ? (e) => { e.preventDefault(); onDragEnterRow?.(); } : undefined}
+      onDrop={reorderable ? (e) => { e.preventDefault(); onDropRow?.(); } : undefined}>
       {/* Bulk-select checkbox */}
       {selectable && (
         <input type="checkbox" checked={!!selected} onChange={onSelectToggle}
           className="rounded border-gray-300 text-[#3486cf] flex-shrink-0 w-4 h-4 cursor-pointer" />
       )}
-      {/* Reorder controls */}
+      {/* Reorder controls — drag handle + up/down arrows */}
       {reorderable && (
-        <div className="flex flex-col flex-shrink-0 -my-1" title="Reorder">
-          <button onClick={() => onMoveUp?.()} disabled={!canMoveUp}
-            className="text-gray-300 hover:text-gray-600 disabled:opacity-20 leading-none text-[11px] px-1">▲</button>
-          <button onClick={() => onMoveDown?.()} disabled={!canMoveDown}
-            className="text-gray-300 hover:text-gray-600 disabled:opacity-20 leading-none text-[11px] px-1">▼</button>
+        <div className="flex items-center flex-shrink-0 -my-1">
+          <div
+            draggable
+            onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; onDragStart?.(); }}
+            onDragEnd={() => onDragEndRow?.()}
+            title="Drag to reorder"
+            className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 px-1 select-none leading-none"
+            style={{ touchAction: "none" }}>
+            <svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor" aria-hidden="true">
+              <circle cx="3" cy="3" r="1.4" /><circle cx="9" cy="3" r="1.4" />
+              <circle cx="3" cy="9" r="1.4" /><circle cx="9" cy="9" r="1.4" />
+              <circle cx="3" cy="15" r="1.4" /><circle cx="9" cy="15" r="1.4" />
+            </svg>
+          </div>
+          <div className="flex flex-col" title="Reorder">
+            <button onClick={() => onMoveUp?.()} disabled={!canMoveUp}
+              className="text-gray-300 hover:text-gray-600 disabled:opacity-20 leading-none text-[11px] px-1">▲</button>
+            <button onClick={() => onMoveDown?.()} disabled={!canMoveDown}
+              className="text-gray-300 hover:text-gray-600 disabled:opacity-20 leading-none text-[11px] px-1">▼</button>
+          </div>
         </div>
       )}
       {/* Thumb */}
@@ -1116,6 +1289,8 @@ export default function ProductsPage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [dragId,     setDragId]     = useState(null); // item being dragged
+  const [dragOverId, setDragOverId] = useState(null); // row currently under the cursor
 
   // When the owner personally shoots, they're an assignable photographer too —
   // same "__owner__" identity used everywhere else (schedule, service areas).
@@ -1265,6 +1440,28 @@ export default function ProductsPage() {
     } catch { toast("Couldn't save the new order.", "error"); }
   }
 
+  // Drag-and-drop reorder: drop the dragged item into the target's slot and
+  // persist the whole new order.
+  async function reorderByDrag(fromId, toId) {
+    if (!fromId || fromId === toId) return;
+    const type = activeType;
+    const ordered = [...(items[type] || [])].sort((a, b) => (a.sortOrder ?? 1e9) - (b.sortOrder ?? 1e9));
+    const from = ordered.findIndex((i) => i.id === fromId);
+    const to   = ordered.findIndex((i) => i.id === toId);
+    if (from < 0 || to < 0) return;
+    const [moved] = ordered.splice(from, 1);
+    ordered.splice(to, 0, moved);
+    const withOrder = ordered.map((i, n) => ({ ...i, sortOrder: n }));
+    setItems((prev) => ({ ...prev, [type]: withOrder }));
+    try {
+      const token = await getToken();
+      await fetch("/api/dashboard/products/reorder", {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ type, orderedIds: withOrder.map((i) => i.id) }),
+      });
+    } catch { toast("Couldn't save the new order.", "error"); }
+  }
+
   async function duplicateItem(item, type) {
     const token = await getToken();
     const { id: _id, ...rest } = item;
@@ -1395,6 +1592,19 @@ export default function ProductsPage() {
                 Select
               </button>
             )
+          )}
+          {(items.packages.length + items.services.length + items.addons.length + items.retainers.length) > 0 && (
+            <button
+              onClick={() => exportProductsToCsv(items)}
+              title="Download every product (all types) as a CSV"
+              className="text-sm px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 transition-colors flex items-center gap-2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export
+            </button>
           )}
           <ImportPricingButton
             onImport={(imported) => {
@@ -1551,6 +1761,12 @@ export default function ProductsPage() {
               canMoveDown={idx < current.length - 1}
               onMoveUp={() => moveItem(item, -1)}
               onMoveDown={() => moveItem(item, 1)}
+              dragging={dragId === item.id}
+              dropTarget={dragOverId === item.id && dragId !== item.id}
+              onDragStart={() => setDragId(item.id)}
+              onDragEnterRow={() => setDragOverId(item.id)}
+              onDropRow={() => { reorderByDrag(dragId, item.id); setDragId(null); setDragOverId(null); }}
+              onDragEndRow={() => { setDragId(null); setDragOverId(null); }}
             />
           ))
         )}
