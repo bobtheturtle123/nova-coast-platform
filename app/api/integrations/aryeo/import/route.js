@@ -112,7 +112,7 @@ export async function POST(req) {
       const chosenType = ["packages", "services", "addons"].includes(it.type) ? it.type : "services";
       const base = {
         name:           String(it.name || "Untitled").slice(0, 100),
-        description:    String(it.description || "").slice(0, 500),
+        description:    String(it.description || "").slice(0, 20000),
         price:          hasTiers ? 0 : (Number(it.price) || 0),
         ...(hasTiers ? { priceTiers: it.priceTiers } : {}),
         ...(Number(it.duration) ? { duration: Number(it.duration) } : {}),

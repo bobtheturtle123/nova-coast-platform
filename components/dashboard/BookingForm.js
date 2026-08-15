@@ -9,6 +9,7 @@ import PlacesAutocomplete from "@/components/PlacesAutocomplete";
 import { getPlan, getEffectivePlan } from "@/lib/plans";
 import WeatherWidget from "@/components/dashboard/WeatherWidget";
 import { useTenantSettings } from "@/lib/TenantSettingsContext";
+import { normalizeRole, NON_SHOOTING } from "@/lib/roles";
 
 const TIME_SLOTS = [
   { label: "7:00 AM",  value: "07:00" }, { label: "7:30 AM",  value: "07:30" },
@@ -231,17 +232,12 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
           showWeather:   tenantDoc.availability?.showWeather ?? true,
         });
         // Who appears in the photographer picker:
-        //  - Shooting roles (anything other than admin/manager — e.g.
-        //    photographer/editor/assistant) ALWAYS appear. This avoids the bug
-        //    where a stale showInScheduling:false (e.g. carried over from a
-        //    manager→photographer promotion) silently hid a real photographer.
-        //  - Non-shooting roles (admin/manager) appear only when explicitly
-        //    enabled for scheduling.
-        const NON_SHOOTING_ROLES = ["admin", "manager"];
+        //  - Managers and Admins are dashboard roles — they NEVER appear in the
+        //    photographer picker, matching the customer-facing booking page.
+        //    (normalizeRole folds legacy titles like "coordinator" into these.)
+        //  - Everyone else (photographer + custom shooting roles) appears.
         const shooters = (teamData.members || []).filter((m) => {
-          const role = String(m.role || "").toLowerCase();
-          const shootingRole = !NON_SHOOTING_ROLES.includes(role);
-          return shootingRole || m.showInScheduling === true;
+          return !NON_SHOOTING.includes(normalizeRole(m.role));
         });
         // The owner is a selectable photographer too when "I personally shoot"
         // is on (ownerShoots !== false), using the same "__owner__" identity the

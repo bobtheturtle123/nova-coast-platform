@@ -883,6 +883,17 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
         ? tierVals.length > 0 ? `From ${fmtMoney(Math.min(...tierVals))}` : "Tier pricing"
         : fmtMoney(item.price || 0);
 
+  // Per-tier / per-option price breakdown shown on hover over the price cell.
+  const priceBreakdown = optVals.length > 0 && item.quantityOptions?.length
+    ? item.quantityOptions
+        .filter((o) => Number(o.price) > 0)
+        .map((o) => ({ label: o.label || "Option", price: Number(o.price) }))
+    : (item.priceTiers
+        ? Object.entries(item.priceTiers)
+            .filter(([, v]) => Number(v) > 0)
+            .map(([name, v]) => ({ label: name, price: Number(v) }))
+        : []);
+
   const [hovered, setHovered] = useState(false);
   return (
     <div className="flex items-center gap-4 px-4 py-3 transition-colors"
@@ -961,8 +972,25 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
         )}
       </div>
 
-      {/* Price */}
-      <p className="text-sm font-semibold text-[#3486cf] flex-shrink-0 w-28 text-right">{fromPrice}</p>
+      {/* Price — hover to see each tier / option price */}
+      <div className="relative flex-shrink-0 w-28 text-right group/price">
+        <p className={`text-sm font-semibold text-[#3486cf] ${priceBreakdown.length > 0 ? "cursor-help border-b border-dashed border-[#3486cf]/30 inline-block" : ""}`}>
+          {fromPrice}
+        </p>
+        {priceBreakdown.length > 0 && (
+          <div className="pointer-events-none absolute right-0 top-full mt-1.5 z-20 hidden group-hover/price:block text-left bg-white border border-gray-200 rounded-xl shadow-lg px-3 py-2 min-w-[10rem]">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">
+              {optVals.length > 0 && item.quantityOptions?.length ? "Options" : "Tier pricing"}
+            </p>
+            {priceBreakdown.map((b, i) => (
+              <div key={i} className="flex items-center justify-between gap-4 text-xs py-0.5">
+                <span className="text-gray-600 truncate">{b.label}</span>
+                <span className="font-semibold text-[#0F172A]">{fmtMoney(b.price)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Active toggle */}
       <div

@@ -1037,6 +1037,7 @@ export default function SettingsPage() {
   const [showSqftField,    setShowSqftField]    = useState(true);
   const [showNotesField,   setShowNotesField]   = useState(true);
   const [servicesExpanded, setServicesExpanded] = useState(false);
+  const [showSavings,      setShowSavings]      = useState(true);
 
   // Cancel / reschedule fee state
   const [cancelFeeEnabled,    setCancelFeeEnabled]    = useState(false);
@@ -1228,6 +1229,7 @@ export default function SettingsPage() {
             if (bc.fields.notes         !== undefined) setShowNotesField(bc.fields.notes);
           }
           if (bc.servicesExpanded !== undefined) setServicesExpanded(bc.servicesExpanded);
+          if (bc.showSavings !== undefined) setShowSavings(bc.showSavings);
           if (bc.cancellation) {
             const c = bc.cancellation;
             if (c.feeEnabled    !== undefined) setCancelFeeEnabled(c.feeEnabled);
@@ -1463,6 +1465,7 @@ export default function SettingsPage() {
       trustBadges: trustBadges.map((t) => String(t || "").trim()).filter(Boolean),
       fields: { propertyType: showPropertyType, squareFootage: showSqftField, notes: showNotesField },
       servicesExpanded,
+      showSavings,
       enableApn,
       requireServiceArea,
       autoConvertToListing,
@@ -2478,6 +2481,22 @@ export default function SettingsPage() {
             <button type="button" onClick={() => setServicesExpanded((v) => !v)}
               className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${servicesExpanded ? "bg-[#3486cf]" : "bg-gray-200"}`}>
               <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${servicesExpanded ? "translate-x-4" : "translate-x-0"}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Package step: savings callout */}
+        <div className="pt-4 border-t border-gray-100 mt-2">
+          <div className="flex items-center justify-between">
+            <div className="pr-4">
+              <span className="text-sm text-[#0F172A]">Show “Save $X vs. à la carte” callout</span>
+              <p className="text-xs text-gray-400 mt-0.5">
+                When on, package cards highlight how much a client saves versus buying the services individually. Turn off if you’d rather not draw attention to the discount.
+              </p>
+            </div>
+            <button type="button" onClick={() => setShowSavings((v) => !v)}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${showSavings ? "bg-[#3486cf]" : "bg-gray-200"}`}>
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${showSavings ? "translate-x-4" : "translate-x-0"}`} />
             </button>
           </div>
         </div>

@@ -347,6 +347,10 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
     ? addons.filter((a) => Array.isArray(a.showWith) && a.showWith.some((id) => selectedIds.has(id)))
     : [];
   const activeRetainers = (catalog.retainers || []).filter((r) => r.active !== false);
+  // Whether to surface the "Save $X vs. à la carte" callout on package cards.
+  // Opt-out per studio — some prefer not to draw attention to the discount.
+  // Defaults on to preserve existing behavior.
+  const showSavings = catalog.bookingConfig?.showSavings !== false;
   // Trust badges are tenant-controlled. If they've configured a list (even empty),
   // use it verbatim; otherwise show a single safe, always-true default.
   const trustLines = Array.isArray(catalog.bookingConfig?.trustBadges)
@@ -480,13 +484,13 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                       <div className="pn">{pk.name}</div>
                       {(pk.tagline || pk.description) && <div className="tg">{pk.tagline || short(pk.description, 80)}</div>}
                       <div className="price"><b>{displayPrice(pk)}</b></div>
-                      {(() => { const sv = savingsFor(pk); return sv > 0 ? <span className="save">Save {fmt(sv)} vs. à la carte</span> : null; })()}
+                      {showSavings && (() => { const sv = savingsFor(pk); return sv > 0 ? <span className="save">Save {fmt(sv)} vs. à la carte</span> : null; })()}
                       <QtyOptionSelect item={pk} />
                       {names.length > 0 && (
                         <ul>{names.slice(0, 5).map((n, i) => <li key={i}>{CHECK}<span>{n}</span></li>)}</ul>
                       )}
-                      <button className="detlink" onClick={() => openDetails(pk)}>{INFO}See what&apos;s included</button>
-                      <button className="selbtn" onClick={() => togglePackage(pk.id)}>{on ? <>{CHECK}Selected</> : "Select package"}</button>
+                      <button className="detlink" onClick={() => openDetails(pk)}>{INFO}See details</button>
+                      <button className="selbtn" onClick={() => togglePackage(pk.id)}>{on ? <>{CHECK}Added</> : "+ Add"}</button>
                     </div>
                   );
                 })}
