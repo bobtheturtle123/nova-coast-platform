@@ -11,7 +11,7 @@ export default function TenantReviewPage() {
   const router = useRouter();
   const store  = useBookingStore();
   const {
-    packageIds, serviceIds, addonIds, itemOptions, address, unit, city, state, zip,
+    packageIds, serviceIds, addonIds, itemOptions, address, unit, city, state, zip, lat, lng,
     squareFootage, propertyType, notes, travelFee, setTravelFee, setPricing, pricing,
     promoCode, discount, setPromo, clearPromo, customFields,
     preferredDate, preferredTime, preferredTimeSpecific,
@@ -72,7 +72,7 @@ export default function TenantReviewPage() {
             ? fetch(`/api/${params.slug}/travel-fee`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ address: fullAddress }),
+                body: JSON.stringify({ address: fullAddress, lat, lng }),
               }).then((r) => r.json()).catch(() => ({ travelFee: 0 }))
             : Promise.resolve({ travelFee: 0 }),
         ]);

@@ -6,6 +6,7 @@ import { useToast } from "@/components/Toast";
 import { isDemo, getDemoProducts } from "@/lib/demoData";
 import AryeoImport from "@/components/dashboard/AryeoImport";
 import { getActiveTiers } from "@/lib/catalogUtils";
+import { stripMarkdown } from "@/components/RichText";
 
 async function uploadProductMedia(file) {
   const token = await auth.currentUser.getIdToken();
@@ -84,6 +85,39 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
 
   function field(key) {
     return (e) => setForm((f) => ({ ...f, [key]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
+  }
+
+  // ── Description rich-text toolbar ──────────────────────────────────────────
+  // We store lightweight Markdown (**bold**, *italic*, "- " bullets) which the
+  // booking page renders formatted. These buttons wrap the current selection.
+  const descRef = useRef(null);
+  function applyDescFormat(kind) {
+    const ta = descRef.current;
+    if (!ta) return;
+    const value = ta.value;
+    const s = ta.selectionStart;
+    const e = ta.selectionEnd;
+    const sel = value.slice(s, e);
+    let insert;
+    let selStart = s;
+    if (kind === "bold")   insert = `**${sel || "bold text"}**`;
+    else if (kind === "italic") insert = `*${sel || "italic text"}*`;
+    else { // bullets — one "- " per line, starting on its own line
+      const atLineStart = s === 0 || value[s - 1] === "\n";
+      const body = (sel || "List item")
+        .split(/\r?\n/)
+        .map((l) => (l.trim() ? `- ${l.replace(/^[-*]\s+/, "")}` : "- "))
+        .join("\n");
+      insert = (atLineStart ? "" : "\n") + body;
+      if (!atLineStart) selStart = s + 1;
+    }
+    const next = value.slice(0, s) + insert + value.slice(e);
+    setForm((f) => ({ ...f, description: next }));
+    // Re-select the inserted text after React re-renders the textarea.
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(selStart, s + insert.length);
+    });
   }
 
   function tierField(tier) {
@@ -307,7 +341,22 @@ function ProductForm({ item, type: initialType, allServices, allPackages, teamMe
 
           <div>
             <label className="label-field">Description</label>
-            <textarea value={form.description} onChange={field("description")} rows={6}
+            <div className="flex items-center gap-1 mb-1.5">
+              <button type="button" onClick={() => applyDescFormat("bold")} title="Bold"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-700 font-bold hover:bg-gray-50">
+                B
+              </button>
+              <button type="button" onClick={() => applyDescFormat("italic")} title="Italic"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-700 italic hover:bg-gray-50">
+                I
+              </button>
+              <button type="button" onClick={() => applyDescFormat("bullet")} title="Bullet list"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">
+                •
+              </button>
+              <span className="text-xs text-gray-400 ml-1.5">Select text, then click to format.</span>
+            </div>
+            <textarea ref={descRef} value={form.description} onChange={field("description")} rows={6}
               className="input-field w-full resize-y leading-relaxed" style={{ minHeight: "8.5rem" }}
               placeholder="Describe what this includes…" />
             <p className="text-xs text-gray-400 mt-1">Drag the bottom-right corner to make this taller.</p>
@@ -875,28 +924,35 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
           </div>
         </div>
       )}
-      {/* Thumb */}
-      <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
-        {item.thumbnailUrl
-          ? <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover" />
-          : <div className="w-full h-full flex items-center justify-center text-lg opacity-20">🏠</div>
-        }
-      </div>
+      {/* Thumb + Name — click anywhere here to edit (or select in bulk mode) */}
+      <button
+        type="button"
+        onClick={() => (selectable ? onSelectToggle?.() : onEdit(item))}
+        title={selectable ? "Select" : "Click to edit"}
+        className="flex items-center gap-4 flex-1 min-w-0 text-left group cursor-pointer">
+        {/* Thumb */}
+        <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
+          {item.thumbnailUrl
+            ? <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+            : <div className="w-full h-full flex items-center justify-center text-lg opacity-20">🏠</div>
+          }
+        </div>
 
-      {/* Name */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-[#0F172A] truncate">{item.name}</p>
-          {type === "packages" && item.featured && (
-            <span className="text-xs px-1.5 py-0.5 bg-gold/20 text-gold-dark rounded-xl font-medium flex-shrink-0">
-              Featured
-            </span>
+        {/* Name */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-[#0F172A] truncate group-hover:text-[#3486cf] transition-colors">{item.name}</p>
+            {type === "packages" && item.featured && (
+              <span className="text-xs px-1.5 py-0.5 bg-gold/20 text-gold-dark rounded-xl font-medium flex-shrink-0">
+                Featured
+              </span>
+            )}
+          </div>
+          {item.description && (
+            <p className="text-xs text-gray-400 truncate mt-0.5">{stripMarkdown(item.description)}</p>
           )}
         </div>
-        {item.description && (
-          <p className="text-xs text-gray-400 truncate mt-0.5">{item.description}</p>
-        )}
-      </div>
+      </button>
 
       {/* Extra info column */}
       <div className="w-32 flex-shrink-0 text-right">
@@ -920,7 +976,7 @@ function ProductRow({ item, type, extraInfo, onEdit, onToggleActive, onDuplicate
       <div className="flex gap-1.5 flex-shrink-0">
         <button onClick={() => onDuplicate(item)}
           title="Duplicate"
-          className="text-xs text-gray-400 border border-gray-200 px-2.5 py-1.5 rounded-xl hover:bg-gray-50">
+          className="text-xs font-medium text-[#0F172A] border border-gray-300 px-2.5 py-1.5 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-colors">
           Copy
         </button>
         <button onClick={() => onEdit(item)}

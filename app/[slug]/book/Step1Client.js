@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
 import StepProgress from "@/components/booking/StepProgress";
+import { RichText, stripMarkdown } from "@/components/RichText";
 import {
   getSqftTier, getItemPrice, SQFT_TIERS, getPricingLabel, getMeasurementUnitLabel,
   calculateTenantPrice, depositLabel,
@@ -49,7 +50,7 @@ function ProductLightbox({ item, images, price, services, onClose }) {
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
           </div>
           {price && <p className="text-2xl font-extrabold text-[#181B20] mb-3">{price}</p>}
-          {item.description && <p className="text-[#3C4046] leading-relaxed mb-4">{item.description}</p>}
+          {item.description && <RichText text={item.description} className="text-[#3C4046] leading-relaxed mb-4" />}
           {includeNames.length > 0 && (
             <div className="mb-2">
               <p className="text-[11px] font-extrabold text-gray-400 uppercase tracking-wider mb-2">What&apos;s included</p>
@@ -325,7 +326,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
     : "";
   // Keep card copy tidy — short, single-line-ish blurbs.
   function short(text, n = 96) {
-    const t = String(text || "").replace(/\s+/g, " ").trim();
+    const t = stripMarkdown(text).replace(/\s+/g, " ").trim();
     return t.length > n ? t.slice(0, n).replace(/\s+\S*$/, "") + "…" : t;
   }
   // Savings vs. à la carte: sum the package's included services, minus its price.
@@ -543,7 +544,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                             {images[0] && <div className="sthumb"><img src={images[0]} alt={s.name} /></div>}
                             <div className="meta">
                               <div className="top"><span className="sn">{s.name}</span><span className="sp">{displayPrice(s)}</span></div>
-                              {s.description && <div className="sb">{s.description}</div>}
+                              {s.description && <div className="sb">{short(s.description, 120)}</div>}
                               {s.quantityOptions?.length > 0 && <QtyOptionSelect item={s} />}
                               <div className="foot">
                                 <button className="detbtn" onClick={(e) => { e.stopPropagation(); openDetails(s); }}>{INFO}Details</button>
@@ -573,7 +574,7 @@ export default function TenantBookStep1Client({ slug, tenantId, tenantName, cata
                       <span className="box">{CHECK}</span>
                       <span className="mid">
                         <span className="anm">{r.name}</span>
-                        {r.description && <span className="ab" style={{ display: "block", fontSize: 11.8, color: "var(--muted)", marginTop: 2 }}>{r.description}</span>}
+                        {r.description && <span className="ab" style={{ display: "block", fontSize: 11.8, color: "var(--muted)", marginTop: 2 }}>{short(r.description, 120)}</span>}
                       </span>
                       {Number(r.price) > 0 && <span className="ap">${Number(r.price).toLocaleString()}/{per}</span>}
                     </div>

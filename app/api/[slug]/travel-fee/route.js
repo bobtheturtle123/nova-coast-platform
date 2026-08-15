@@ -24,7 +24,13 @@ export async function POST(req, { params }) {
       return Response.json({ travelFee: zone.fee, miles: 0, withinRange: true, zoneName: zone.zoneName });
     }
 
-    const result = await getTravelFee(fromZip, address, config);
+    // Pass the already-geocoded property coordinates (captured on the property
+    // step) so per-mile mode never has to re-geocode — a geocode miss here was
+    // silently returning a $0 travel fee.
+    const result = await getTravelFee(fromZip, address, {
+      ...config,
+      ...(lat != null && lng != null ? { destLat: Number(lat), destLng: Number(lng) } : {}),
+    });
 
     return Response.json({ travelFee: result.fee, miles: result.miles, withinRange: result.withinRange });
   } catch (err) {
