@@ -344,15 +344,16 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const coverImg  = images[0]?.url || null;
 
   // "Download Everything" is a plain anchor (see the button markup below) that
-  // hits /api/gallery/download-zip with extras=true&videos=true — one streamed
-  // ZIP containing photos, floor plans, documents and videos. A direct anchor
-  // click stays inside the browser's user-gesture window, so unlike a
-  // JS-triggered download it is never silently blocked.
+  // hits /api/gallery/download-zip with extras=true — one ZIP of photos (print
+  // + web), floor plans and documents. A direct anchor click stays inside the
+  // browser's user-gesture window, so unlike a JS-triggered download it is
+  // never silently blocked.
   //
-  // A streamed ZIP has no known size up front, so we can't show a true % bar
-  // (buffering it all in the browser to measure would risk OOM on video-heavy
-  // galleries). Instead, clicking shows a reassuring "working…" status with an
-  // elapsed timer so a slow, video-heavy download never looks broken.
+  // Videos are deliberately NOT bundled: streaming ~1GB of video could push the
+  // serverless function past its 300s limit, and the ZIP's central directory is
+  // written last — a timeout mid-stream truncated the file so Windows reported
+  // it "empty" and it was painfully slow. Videos download separately instead
+  // (reliable + fast). The status below is a brief "working…" reassurance.
   const [dlActive,  setDlActive]  = useState(false);
   const [dlSeconds, setDlSeconds] = useState(0);
   useEffect(() => {
@@ -647,10 +648,13 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
               <div className="flex-shrink-0 flex flex-col items-end gap-1">
                 {/* A plain anchor download — a direct, in-gesture click the
                     browser never blocks (same mechanism as the per-format Print/
-                    Web buttons). Points at the one ZIP that now bundles photos,
-                    floor plans, documents AND videos. No JS-fired downloads. */}
+                    Web buttons). Points at the one ZIP of photos (print + web),
+                    floor plans and documents. Videos are NOT bundled — streaming
+                    them risked a 300s timeout that truncated the ZIP ("empty
+                    folder" in Windows) and was very slow; they download
+                    separately below instead. No JS-fired downloads. */}
                 <a
-                  href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true&videos=true`}
+                  href={`/api/gallery/download-zip?token=${token}&slug=${slug}&format=web&extras=true`}
                   download
                   onClick={() => setDlActive(true)}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
@@ -677,14 +681,13 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                       <div className="h-full rounded-full animate-pulse" style={{ width: "100%", background: primary }} />
                     </div>
                     <p className="mt-1.5 text-[11px] text-gray-400 leading-snug">
-                      Packing photos, floor plans, documents and videos into one ZIP.
-                      Video-heavy galleries can take a minute or two — your browser
-                      will save the file once it starts.
+                      Packing your photos, floor plans and documents into one ZIP.
+                      This only takes a moment.
                     </p>
                   </div>
                 ) : (
                   <span className="text-xs text-gray-400 max-w-[16rem] text-right">
-                    One ZIP with everything. Large video galleries may take a minute to start.
+                    Photos, floor plans &amp; documents in one ZIP. Videos download separately.
                   </span>
                 )}
               </div>
