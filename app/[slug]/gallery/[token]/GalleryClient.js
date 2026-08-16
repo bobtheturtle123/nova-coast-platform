@@ -344,6 +344,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const coverImg  = images[0]?.url || null;
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [dlStatus, setDlStatus] = useState(null); // null | "preparing" | "ready" | "failed"
+  const [dlDetail, setDlDetail] = useState(""); // human-readable progress while preparing
 
   function triggerDownload(url, name) {
     const a = document.createElement("a");
@@ -369,10 +370,17 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
         data = await res.json().catch(() => ({}));
         if (data.ready && data.url) {
           setDlStatus("ready");
+          setDlDetail("");
           triggerDownload(data.url, "");
           return;
         }
         if (!data.building) break; // not building and not ready → fall back
+        // Show what's happening: generating the web/MLS photos vs. zipping.
+        if (data.phase === "processing-web" && data.web?.total) {
+          setDlDetail(`Preparing web-ready photos (${data.web.ready}/${data.web.total})…`);
+        } else {
+          setDlDetail("Building your download…");
+        }
         await new Promise((r) => setTimeout(r, 5000));
       }
 
@@ -681,7 +689,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 </button>
                 {dlStatus === "preparing" && (
                   <span className="text-xs text-gray-500 max-w-[16rem] text-right">
-                    Preparing your download. Large video-heavy galleries may take a few minutes.
+                    {dlDetail || "Preparing your download. Large video-heavy galleries may take a few minutes."}
                   </span>
                 )}
                 {dlStatus === "ready" && (

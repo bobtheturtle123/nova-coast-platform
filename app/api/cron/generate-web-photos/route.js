@@ -1,7 +1,13 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { addStorage } from "@/lib/storage";
-import { generateWebPhoto, webPhotoKey } from "@/lib/webPhoto";
-import { isVideo } from "@/lib/retention";
+import {
+  generateWebPhoto,
+  webPhotoKey,
+  photoWebPending,
+  webPhotoProgress,
+  MAX_WEB_ATTEMPTS,
+} from "@/lib/webPhoto";
+import { enqueueZipBuild } from "@/lib/zipJobs";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -11,11 +17,30 @@ export const maxDuration = 300;
 // this pre-made file instead of running Sharp on every request — which is what
 // keeps Fluid Active CPU flat and lets photo downloads redirect straight to R2.
 //
-// Mirrors transcode-web-videos: process a bounded number per run and let the cron
-// work through the backlog. Idempotent — a photo that already has m.webKey (or is
-// itself already web-sized / a video) is skipped.
+// THROUGHPUT: we work against a wall-clock DEADLINE (not a tiny fixed count), so a
+// single run resizes as many photos as fit in the function's budget and can clear
+// an entire large listing in one pass instead of trickling 40/day. The old global
+// cap starved big galleries behind every other one; that's why 11533 Big Canyon
+// had only 22 of 198 Web Ready versions.
+//
+// RETRY: a photo that throws is stamped webStatus:"failed" with an incremented
+// webAttempts and is retried on later runs until MAX_WEB_ATTEMPTS, then left alone
+// so one bad file never blocks a gallery forever. Idempotent — a photo that
+// already has m.webKey (or is a video / already web-sized / retention-stripped) is
+// skipped (photoWebPending() is the single source of truth for both).
+//
+// CLOSING THE LOOP: when a gallery's LAST pending Web Ready version finishes, we
+// immediately enqueue its "Download Everything" ZIP build so the complete package
+// is ready to deliver without waiting for the next reconciliation cron.
+//
+// SCOPING: pass ?tenantId=&galleryId= to process just one gallery (used to prepare
+// a single listing promptly); omit both to sweep everything.
 
-const PER_RUN = 40;
+// Leave headroom under maxDuration so in-flight work and the final Firestore
+// writes complete before the platform kills the function.
+const DEADLINE_MS = 270 * 1000;
+// Hard safety cap on resizes per run regardless of the clock.
+const MAX_PER_RUN = 800;
 
 export async function GET(req) {
   const authHeader = req.headers.get("authorization");
@@ -27,6 +52,10 @@ export async function GET(req) {
   const bucket = process.env.R2_BUCKET_NAME;
   if (!r2Url || !bucket) return Response.json({ error: "Storage not configured" }, { status: 500 });
 
+  const { searchParams } = new URL(req.url);
+  const onlyTenant  = searchParams.get("tenantId");
+  const onlyGallery = searchParams.get("galleryId");
+
   const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
   const s3 = new S3Client({
     region: "auto",
@@ -37,28 +66,40 @@ export async function GET(req) {
     },
   });
 
-  const report = { scanned: 0, generated: 0, failed: 0, processed: [] };
+  const started = Date.now();
+  const timeLeft = () => Date.now() - started < DEADLINE_MS;
+  const report = { scanned: 0, generated: 0, failed: 0, galleriesCompleted: 0, zipsEnqueued: 0, timedOut: false };
 
-  const tenantsSnap = await adminDb.collection("tenants").get();
+  // Resolve the tenant set (scoped or all).
+  const tenantDocs = onlyTenant
+    ? [await adminDb.collection("tenants").doc(onlyTenant).get()].filter((d) => d.exists)
+    : (await adminDb.collection("tenants").get()).docs;
+
   outer:
-  for (const tenantDoc of tenantsSnap.docs) {
-    const tenantId = tenantDoc.id;
-    const galSnap = await adminDb
-      .collection("tenants").doc(tenantId).collection("galleries").get();
+  for (const tenantDoc of tenantDocs) {
+    const tenantId   = tenantDoc.id;
+    const autoRename = tenantDoc.data()?.gallerySettings?.autoRenameDownloads === true;
 
-    for (const galDoc of galSnap.docs) {
+    const galDocs = onlyGallery
+      ? [await adminDb.collection("tenants").doc(tenantId).collection("galleries").doc(onlyGallery).get()].filter((d) => d.exists)
+      : (await adminDb.collection("tenants").doc(tenantId).collection("galleries").get()).docs;
+
+    for (const galDoc of galDocs) {
+      if (!timeLeft() || report.generated >= MAX_PER_RUN) { report.timedOut = true; break outer; }
+
       const gallery = galDoc.data();
       const media = [...(gallery.media || [])];
       let changed = false;
 
       for (let i = 0; i < media.length; i++) {
+        if (!timeLeft() || report.generated >= MAX_PER_RUN) {
+          report.timedOut = true;
+          if (changed) await galDoc.ref.update({ media });
+          break outer;
+        }
+
         const m = media[i];
-        if (!m.key) continue;
-        // Photos only. Skip videos, already-generated, already-web-sized, or
-        // originals removed by retention (nothing full-res left to resize).
-        if (isVideo(m)) continue;
-        if (m.webKey || m.webStatus === "ready" || m.webStatus === "failed") continue;
-        if (m.originalRemoved || m.webSized) continue;
+        if (!photoWebPending(m)) continue; // ready, exhausted, video, web-sized, or no original
         report.scanned++;
 
         try {
@@ -83,21 +124,41 @@ export async function GET(req) {
           changed = true;
           try { await addStorage(tenantId, bytes, "image"); } catch {}
           report.generated++;
-          report.processed.push({ tenantId, galleryId: galDoc.id, key: m.key, webBytes: bytes });
         } catch (e) {
-          media[i] = { ...m, webStatus: "failed", webError: e?.message || "resize failed" };
+          const attempts = (Number(m.webAttempts) || 0) + 1;
+          media[i] = {
+            ...m,
+            webStatus:   "failed",
+            webAttempts: attempts,
+            webError:    e?.message || "resize failed",
+          };
           changed = true;
           report.failed++;
-          console.error(`[generate-web-photos] ${tenantId}/${galDoc.id} ${m.key}: ${e?.message}`);
-        }
-
-        if (report.generated >= PER_RUN) {
-          if (changed) await galDoc.ref.update({ media });
-          break outer;
+          console.error(
+            `[generate-web-photos] ${tenantId}/${galDoc.id} ${m.key}: ${e?.message} (attempt ${attempts}/${MAX_WEB_ATTEMPTS})`
+          );
         }
       }
 
-      if (changed) await galDoc.ref.update({ media });
+      if (changed) {
+        await galDoc.ref.update({ media });
+
+        // If this gallery now has every required Web Ready version (nothing left
+        // pending), the complete package can be built. Enqueue it right away so
+        // it's ready to deliver — enqueueZipBuild is idempotent and itself gated
+        // on web-readiness, so this is safe to call whenever a gallery changes.
+        const updated = { ...gallery, media };
+        const prog = webPhotoProgress(updated);
+        const buildable =
+          updated.unlocked === true || updated.delivered === true || updated.status === "delivered";
+        if (prog.done && buildable) {
+          report.galleriesCompleted++;
+          try {
+            const r = await enqueueZipBuild(tenantId, galDoc.id, updated, autoRename);
+            if (r.enqueued) report.zipsEnqueued++;
+          } catch { /* reconciliation cron will retry */ }
+        }
+      }
     }
   }
 

@@ -67,7 +67,7 @@
     },
     {
       "path": "/api/cron/generate-web-photos",
-      "schedule": "0 6 * * *"
+      "schedule": "0 */2 * * *"
     },
     {
       "path": "/api/cron/build-zip-jobs",

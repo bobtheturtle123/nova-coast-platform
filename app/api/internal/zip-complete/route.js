@@ -1,5 +1,6 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { fileSetHash } from "@/lib/galleryZip";
+import { webPhotoProgress } from "@/lib/webPhoto";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,27 @@ export async function POST(req) {
     await deleteKey(key);
     await ref.update({ zipPending: null });
     return Response.json({ ok: true, stale: true });
+  }
+
+  // Defense in depth for requirement "don't mark Ready while Web Ready versions
+  // are still missing": the enqueue gate should have prevented a build from
+  // starting before every MLS derivative existed, but if a required Web Ready
+  // version is still pending at completion, do NOT flip the served pointer.
+  // Discard this ZIP and leave a waiting-web marker so it rebuilds once ready.
+  const prog = webPhotoProgress(gallery);
+  if (!prog.done) {
+    await deleteKey(key);
+    await ref.update({
+      zipPending: {
+        hash,
+        status: "waiting-web",
+        webPending: prog.pending,
+        webReady: prog.ready,
+        webTotal: prog.total,
+        enqueuedAt: new Date().toISOString(),
+      },
+    });
+    return Response.json({ ok: true, stale: true, reason: "waiting-web" });
   }
 
   const prevKey = gallery.zipPackage?.key || null;

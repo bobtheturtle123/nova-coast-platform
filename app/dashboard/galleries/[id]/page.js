@@ -320,6 +320,7 @@ export default function GalleryDetailPage() {
   const { id }   = useParams();
   const toast    = useToast();
   const [gallery,      setGallery]      = useState(null);
+  const [deliveryStatus, setDeliveryStatus] = useState(null); // { phase, ready, label, web, zip }
   const [loading,      setLoading]      = useState(true);
   const [uploading,    setUploading]    = useState(false);
   const [activity,     setActivity]     = useState([]);
@@ -405,6 +406,7 @@ export default function GalleryDetailPage() {
       if (galleryRes.ok) {
         const data = await galleryRes.json();
         setGallery(data.gallery);
+        setDeliveryStatus(data.deliveryStatus || null);
         setCategories(data.gallery.categories || {});
 
         // Pre-populate email from template if available, fall back to default subject
@@ -455,6 +457,25 @@ export default function GalleryDetailPage() {
       setLoading(false);
     });
   }, [id]);
+
+  // Poll the delivery-readiness status (Web Ready photos + package ZIP) while the
+  // package is still preparing, so the tenant sees it flip to "Ready to deliver"
+  // without a manual refresh. Status-only: never touches gallery/editor state.
+  useEffect(() => {
+    if (!deliveryStatus || deliveryStatus.ready) return;
+    let cancelled = false;
+    const t = setInterval(async () => {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        if (!token) return;
+        const res = await fetch(`/api/dashboard/galleries/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.deliveryStatus) setDeliveryStatus(data.deliveryStatus);
+      } catch { /* keep polling */ }
+    }, 15000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [id, deliveryStatus?.phase, deliveryStatus?.ready]);
 
   // ─── Upload ──────────────────────────────────────────────────────────────
   async function uploadFiles(files) {
@@ -1176,6 +1197,28 @@ export default function GalleryDetailPage() {
             <button onClick={toggleUnlock} className="btn-outline text-xs px-3 py-1.5">
               {gallery.unlocked ? "🔓 Unlocked" : "🔒 Locked"}
             </button>
+            {deliveryStatus && (
+              <span
+                title={
+                  deliveryStatus.ready
+                    ? "Every web-ready photo is generated and the complete download package is built — safe to deliver."
+                    : "The complete download package is still being prepared. It will be ready shortly."
+                }
+                className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-medium ${
+                  deliveryStatus.ready
+                    ? "bg-green-100 text-green-700"
+                    : "bg-amber-100 text-amber-700"
+                }`}>
+                {deliveryStatus.ready ? (
+                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                )}
+                {deliveryStatus.ready ? "Package ready to deliver" : deliveryStatus.label}
+              </span>
+            )}
             <button onClick={() => { setDeliveryMode("now"); setScheduledAt(""); setShowDeliver(true); }}
               className="btn-primary text-sm px-5 py-2">
               Deliver to Client

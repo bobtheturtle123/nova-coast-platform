@@ -1,6 +1,6 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { rateLimit } from "@/lib/rateLimit";
-import { enqueueZipBuild } from "@/lib/zipJobs";
+import { enqueueZipBuild, galleryDeliveryStatus } from "@/lib/zipJobs";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +86,15 @@ export async function GET(req) {
   }
 
   // Nothing built yet — ensure a job is queued and tell the client to keep polling.
+  // Surface whether we're still generating Web Ready photos vs. building the ZIP so
+  // the button can show accurate progress ("Preparing web-ready versions…").
   const r = await enqueueZipBuild(tenantId, galleryId, gallery, autoRename);
-  return Response.json({ ready: false, building: true, status: r.reason || "queued" });
+  const ds = galleryDeliveryStatus(gallery, autoRename);
+  return Response.json({
+    ready: false,
+    building: true,
+    status: r.reason || "queued",
+    phase: ds.phase,          // "processing-web" | "building"
+    web: ds.web,              // { total, ready, pending, failed, done }
+  });
 }

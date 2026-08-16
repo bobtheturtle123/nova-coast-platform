@@ -1,4 +1,5 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { galleryDeliveryStatus } from "@/lib/zipJobs";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -14,13 +15,20 @@ export async function GET(req, { params }) {
   const ctx = await getCtx(req);
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const doc = await adminDb
-    .collection("tenants").doc(ctx.tenantId)
-    .collection("galleries").doc(params.id)
-    .get();
+  const [doc, tenantDoc] = await Promise.all([
+    adminDb.collection("tenants").doc(ctx.tenantId).collection("galleries").doc(params.id).get(),
+    adminDb.collection("tenants").doc(ctx.tenantId).get(),
+  ]);
 
   if (!doc.exists) return Response.json({ error: "Not found" }, { status: 404 });
-  return Response.json({ gallery: { id: doc.id, ...doc.data() } });
+  const gallery = doc.data();
+  const autoRename = tenantDoc.data()?.gallerySettings?.autoRenameDownloads === true;
+
+  // Single "ready to deliver?" answer (Web Ready photos done + package ZIP built).
+  return Response.json({
+    gallery: { id: doc.id, ...gallery },
+    deliveryStatus: galleryDeliveryStatus(gallery, autoRename),
+  });
 }
 
 export async function PATCH(req, { params }) {
