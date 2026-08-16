@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { galleryDeliveryStatus } from "@/lib/zipJobs";
+import { maybeKickWebPhotoGeneration } from "@/lib/webPhotoKick";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -46,6 +47,13 @@ export async function PATCH(req, { params }) {
     .collection("tenants").doc(ctx.tenantId)
     .collection("galleries").doc(params.id)
     .update(update);
+
+  // Preparing a gallery for download (unlocking it, or saving an edited media
+  // set) kicks Web Ready/MLS generation right away — don't wait for the cron.
+  // Read fresh (gallery=null) since a media save just changed the set.
+  if (update.unlocked === true || update.media !== undefined) {
+    await maybeKickWebPhotoGeneration(ctx.tenantId, params.id, null);
+  }
 
   return Response.json({ ok: true });
 }

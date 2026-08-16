@@ -1,6 +1,7 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { rateLimit } from "@/lib/rateLimit";
 import { enqueueZipBuild, galleryDeliveryStatus } from "@/lib/zipJobs";
+import { maybeKickWebPhotoGeneration } from "@/lib/webPhotoKick";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,12 @@ export async function GET(req) {
   const resolved = await resolveGallery(token);
   if (!resolved) return Response.json({ error: "Gallery not found or locked" }, { status: 404 });
   const { tenantId, galleryId, gallery, autoRename } = resolved;
+
+  // Opening the download is itself a trigger to finish any missing Web Ready/MLS
+  // versions — this is what makes already-delivered galleries (built before the
+  // full set existed) self-heal without waiting for the fallback cron. No-op when
+  // the set is already complete; debounced so repeated polls coalesce onto one run.
+  await maybeKickWebPhotoGeneration(tenantId, galleryId, gallery);
 
   const pkg = gallery.zipPackage;
   if (pkg && pkg.status === "ready" && pkg.key) {

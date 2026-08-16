@@ -8,6 +8,7 @@ import {
   MAX_WEB_ATTEMPTS,
 } from "@/lib/webPhoto";
 import { enqueueZipBuild } from "@/lib/zipJobs";
+import { kickWebPhotoGeneration } from "@/lib/webPhotoKick";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -94,7 +95,7 @@ export async function GET(req) {
       for (let i = 0; i < media.length; i++) {
         if (!timeLeft() || report.generated >= MAX_PER_RUN) {
           report.timedOut = true;
-          if (changed) await galDoc.ref.update({ media });
+          if (changed) await galDoc.ref.update({ media, "webGen.kickAt": new Date().toISOString() });
           break outer;
         }
 
@@ -141,7 +142,10 @@ export async function GET(req) {
       }
 
       if (changed) {
-        await galDoc.ref.update({ media });
+        // Refresh the on-demand generation lease (webGen.kickAt) alongside the
+        // media write so, while this chain is actively working, entry triggers
+        // (download polls, saves) stay debounced and can't start a second run.
+        await galDoc.ref.update({ media, "webGen.kickAt": new Date().toISOString() });
 
         // If this gallery now has every required Web Ready version (nothing left
         // pending), the complete package can be built. Enqueue it right away so
@@ -160,6 +164,16 @@ export async function GET(req) {
         }
       }
     }
+  }
+
+  // On-demand continuation: when a single-gallery run ran out of clock while it
+  // was still making progress, immediately chain the next run so the listing
+  // finishes NOW instead of trickling behind the every-2h fallback cron. Bounded
+  // naturally — it only re-fires while real resizes are landing (generated > 0),
+  // so a gallery stuck on transient fetch failures falls back to the cron rather
+  // than hot-looping.
+  if (onlyTenant && onlyGallery && report.timedOut && report.generated > 0) {
+    try { await kickWebPhotoGeneration(onlyTenant, onlyGallery); } catch {}
   }
 
   return Response.json(report);

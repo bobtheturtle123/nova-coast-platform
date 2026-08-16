@@ -6,6 +6,7 @@ import { getAppUrl } from "@/lib/appUrl";
 import { safeDate } from "@/lib/dateUtils";
 import { getEffectivePlan } from "@/lib/plans";
 import { resolveActor } from "@/lib/actor";
+import { maybeKickWebPhotoGeneration } from "@/lib/webPhotoKick";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -77,6 +78,9 @@ export async function POST(req, { params }) {
     });
     await batch.commit();
     await galleryRef.update({ scheduledDelivery: { scheduledAt: schedTime, status: "pending" } });
+    // Start Web Ready generation now so the complete package is built before the
+    // scheduled send fires — not two hours later on the cron.
+    await maybeKickWebPhotoGeneration(ctx.tenantId, params.id, gallery);
     return Response.json({ ok: true, scheduled: true, scheduledAt: schedTime.toISOString() });
   }
 
@@ -204,6 +208,11 @@ export async function POST(req, { params }) {
       await dispatchZapier(tenant, "booking.delivered", bookingWebhookData({ ...booking, status: "delivered", galleryLink }));
     } catch {}
   })();
+
+  // A just-delivered gallery must have its full Web Ready set + package ZIP ready
+  // to hand off. Kick generation now (idempotent, debounced) so the download is
+  // complete when the client clicks it.
+  await maybeKickWebPhotoGeneration(ctx.tenantId, params.id, gallery);
 
   return Response.json({ ok: true });
 }
