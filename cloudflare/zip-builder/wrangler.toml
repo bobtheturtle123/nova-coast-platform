@@ -10,8 +10,10 @@ compatibility_date = "2024-09-23"
 # is the ONE plan-gated knob — the Queue architecture below is identical on both
 # plans. When you upgrade to Paid, uncomment these two lines and redeploy; that is
 # the whole "code" side of the upgrade (everything else is a billing change).
-# [limits]
-# cpu_ms = 300000
+# ENABLED 2026-08-15 (Workers Paid): 300000 ms = 5 min (Paid max) for CRC32
+# over multi-GB archives.
+[limits]
+cpu_ms = 300000
 
 # Bind the SAME R2 bucket the app uses. Replace with your bucket name.
 [[r2_buckets]]
