@@ -69,17 +69,24 @@ async function buildOne(job, env) {
     const reader = zipStream.getReader();
     const parts = [];
     let partNumber = 1;
-    let buffered = [];
+    let buffered = [];     // pending chunks not yet uploaded
     let bufferedLen = 0;
 
-    const flush = async () => {
-      if (bufferedLen === 0) return;
-      const body = concatChunks(buffered, bufferedLen);
-      buffered = [];
-      bufferedLen = 0;
-      const part = await mpu.uploadPart(partNumber, body);
-      parts.push(part);
-      partNumber += 1;
+    // R2 (unlike S3) requires every non-final multipart part to be EXACTLY the same
+    // size. So we must slice parts to a fixed PART_SIZE and carry the remainder
+    // forward — NOT flush opportunistically whenever the buffer crosses PART_SIZE
+    // (that produces parts of varying length and R2 rejects completeMultipartUpload
+    // with "All non-trailing parts must have the same length").
+    const uploadFixedParts = async () => {
+      while (bufferedLen >= PART_SIZE) {
+        const merged = concatChunks(buffered, bufferedLen);
+        const part = await mpu.uploadPart(partNumber, merged.subarray(0, PART_SIZE));
+        parts.push(part);
+        partNumber += 1;
+        const rest = merged.subarray(PART_SIZE);
+        buffered = rest.byteLength ? [rest] : [];
+        bufferedLen = rest.byteLength;
+      }
     };
 
     while (true) {
@@ -88,9 +95,16 @@ async function buildOne(job, env) {
       buffered.push(value);
       bufferedLen += value.byteLength;
       bytes += value.byteLength;
-      if (bufferedLen >= PART_SIZE) await flush();
+      if (bufferedLen >= PART_SIZE) await uploadFixedParts();
     }
-    await flush();
+
+    // Trailing part — may be any size (< PART_SIZE), or the sole part of a tiny ZIP.
+    if (bufferedLen > 0) {
+      const body = concatChunks(buffered, bufferedLen);
+      const part = await mpu.uploadPart(partNumber, body);
+      parts.push(part);
+      partNumber += 1;
+    }
 
     if (parts.length === 0) {
       // Empty archive — complete needs at least one part.
