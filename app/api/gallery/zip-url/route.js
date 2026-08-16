@@ -82,21 +82,28 @@ export async function GET(req) {
   // the set is already complete; debounced so repeated polls coalesce onto one run.
   await maybeKickWebPhotoGeneration(tenantId, galleryId, gallery);
 
+  // Serve immediately ONLY when the built package matches the CURRENT file set.
+  // ds.zip.current is true exactly when a ready ZIP exists whose hash equals the
+  // gallery's current fileSetHash. A ready-but-stale package — gallery content
+  // changed since it was built — must NEVER be handed to the agent, or they'd
+  // silently receive a ZIP missing newly uploaded or changed content. In that case
+  // we fall through to the prepare/poll path below and rebuild the current package.
+  // The stale ZIP stays in R2 as an internal rollback until the fresh build is
+  // promoted (zip-complete only deletes it after the pointer flip) — it's simply no
+  // longer exposed through Download Everything.
+  const ds  = galleryDeliveryStatus(gallery, autoRename);
   const pkg = gallery.zipPackage;
-  if (pkg && pkg.status === "ready" && pkg.key) {
+  if (ds.zip.current && pkg?.key) {
     const address = (gallery.bookingAddress || "listing").replace(/[^a-z0-9]/gi, "-").toLowerCase();
     const url = await signedUrlFor(pkg.key, `${address}-media.zip`);
-    // If the file set changed since this ZIP was built, kick a rebuild in the
-    // background (no-op if already current / in flight). Don't block the download.
-    enqueueZipBuild(tenantId, galleryId, gallery, autoRename).catch(() => {});
     return Response.json({ ready: true, url, sizeBytes: pkg.sizeBytes || 0 });
   }
 
-  // Nothing built yet — ensure a job is queued and tell the client to keep polling.
-  // Surface whether we're still generating Web Ready photos vs. building the ZIP so
-  // the button can show accurate progress ("Preparing web-ready versions…").
+  // Not current (nothing built yet, or the current ZIP is for an older file set) —
+  // ensure a build is queued for the CURRENT set and tell the client to keep
+  // polling. The agent sees the calm "Preparing your download…" state and the
+  // download starts automatically the moment the fresh package is ready.
   const r = await enqueueZipBuild(tenantId, galleryId, gallery, autoRename);
-  const ds = galleryDeliveryStatus(gallery, autoRename);
   return Response.json({
     ready: false,
     building: true,
