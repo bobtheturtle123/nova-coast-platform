@@ -375,12 +375,9 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           return;
         }
         if (!data.building) break; // not building and not ready → fall back
-        // Show what's happening: generating the web/MLS photos vs. zipping.
-        if (data.phase === "processing-web" && data.web?.total) {
-          setDlDetail(`Preparing web-ready photos (${data.web.ready}/${data.web.total})…`);
-        } else {
-          setDlDetail("Building your download…");
-        }
+        // The agent never needs to know about web-ready photos, queues, or ZIPs.
+        // One calm, honest message while the package finishes — no fake percentage.
+        setDlDetail("Your files are being packaged. This may take a few minutes for large deliveries.");
         await new Promise((r) => setTimeout(r, 5000));
       }
 
@@ -689,7 +686,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
                 </button>
                 {dlStatus === "preparing" && (
                   <span className="text-xs text-gray-500 max-w-[16rem] text-right">
-                    {dlDetail || "Preparing your download. Large video-heavy galleries may take a few minutes."}
+                    {dlDetail || "Your files are being packaged. This may take a few minutes for large deliveries."}
                   </span>
                 )}
                 {dlStatus === "ready" && (

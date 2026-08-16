@@ -142,17 +142,23 @@ export async function GET(req) {
       }
 
       if (changed) {
-        // Refresh the on-demand generation lease (webGen.kickAt) alongside the
-        // media write so, while this chain is actively working, entry triggers
-        // (download polls, saves) stay debounced and can't start a second run.
-        await galDoc.ref.update({ media, "webGen.kickAt": new Date().toISOString() });
+        const updated = { ...gallery, media };
+        const prog = webPhotoProgress(updated);
+
+        // Manage the on-demand generation lease alongside the media write:
+        //  • work remaining → refresh kickAt so entry triggers (upload, download
+        //    polls, saves) stay debounced and can't start a second parallel run;
+        //  • set complete → clear kickAt so the NEXT photo uploaded to this gallery
+        //    re-triggers generation immediately instead of waiting out the debounce.
+        await galDoc.ref.update({
+          media,
+          "webGen.kickAt": prog.done ? null : new Date().toISOString(),
+        });
 
         // If this gallery now has every required Web Ready version (nothing left
         // pending), the complete package can be built. Enqueue it right away so
         // it's ready to deliver — enqueueZipBuild is idempotent and itself gated
         // on web-readiness, so this is safe to call whenever a gallery changes.
-        const updated = { ...gallery, media };
-        const prog = webPhotoProgress(updated);
         const buildable =
           updated.unlocked === true || updated.delivered === true || updated.status === "delivered";
         if (prog.done && buildable) {

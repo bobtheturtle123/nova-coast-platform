@@ -458,12 +458,26 @@ export default function GalleryDetailPage() {
     });
   }, [id]);
 
-  // Poll the delivery-readiness status (Web Ready photos + package ZIP) while the
-  // package is still preparing, so the tenant sees it flip to "Ready to deliver"
-  // without a manual refresh. Status-only: never touches gallery/editor state.
+  // Optimistically drop "Ready to deliver" the instant the tenant changes anything
+  // that goes into the download — a photo, its order, a category, a linked video, a
+  // floor plan, an attached file. "Ready" must never linger while the package no
+  // longer matches what's on screen. The poll below then reconciles to the true
+  // state: back to Ready once the fresh package finishes, or an honest
+  // "Preparing delivery…" until it does. Purely a status hint — never blocks edits.
+  const invalidateDelivery = useCallback(() => {
+    setDeliveryStatus((s) =>
+      s && s.ready ? { ...s, ready: false, phase: "building", label: "Preparing delivery…" } : s
+    );
+  }, []);
+
+  // Poll the delivery-readiness status so the tenant sees it flip to
+  // "Ready to deliver" — or away from it — without a manual refresh. It keeps
+  // polling even while ready (slower) so a change made elsewhere, or a rebuild
+  // finishing, is always reflected. Status-only: never touches gallery/editor state.
   useEffect(() => {
-    if (!deliveryStatus || deliveryStatus.ready) return;
+    if (!deliveryStatus) return;
     let cancelled = false;
+    const period = deliveryStatus.ready ? 45000 : 12000;
     const t = setInterval(async () => {
       try {
         const token = await auth.currentUser?.getIdToken();
@@ -473,7 +487,7 @@ export default function GalleryDetailPage() {
         const data = await res.json();
         if (!cancelled && data.deliveryStatus) setDeliveryStatus(data.deliveryStatus);
       } catch { /* keep polling */ }
-    }, 15000);
+    }, period);
     return () => { cancelled = true; clearInterval(t); };
   }, [id, deliveryStatus?.phase, deliveryStatus?.ready]);
 
@@ -539,6 +553,7 @@ export default function GalleryDetailPage() {
     }
 
     setUploading(false);
+    if (done > 0) invalidateDelivery();
 
     if (done > 0 && errors.length === 0) {
       toast(`${done} file${done !== 1 ? "s" : ""} uploaded.`);
@@ -587,6 +602,7 @@ export default function GalleryDetailPage() {
 
   async function saveOrder() {
     setSavingOrder(true);
+    invalidateDelivery();
     const token = await auth.currentUser.getIdToken();
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
@@ -614,6 +630,7 @@ export default function GalleryDetailPage() {
       next[catName] = [...(next[catName] || []), mediaKey];
     }
     setCategories(next);
+    invalidateDelivery();
     const token = await auth.currentUser.getIdToken();
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
@@ -684,6 +701,7 @@ export default function GalleryDetailPage() {
         body: JSON.stringify({ keys }),
       });
       if (res.ok) {
+        invalidateDelivery();
         const keySet = new Set(keys);
         setGallery((g) => ({ ...g, media: (g.media || []).filter((m) => !keySet.has(m.key)) }));
         setSelectedKeys((prev) => { const next = new Set(prev); keys.forEach((k) => next.delete(k)); return next; });
@@ -720,6 +738,7 @@ export default function GalleryDetailPage() {
   }
 
   async function toggleHideMedia(key) {
+    invalidateDelivery();
     let updatedMedia;
     setGallery((g) => {
       updatedMedia = (g.media || []).map((m) =>
@@ -744,6 +763,7 @@ export default function GalleryDetailPage() {
     }
     next[cat] = [...(next[cat] || []), ...Array.from(selectedKeys)];
     setCategories(next);
+    invalidateDelivery();
     clearSelection();
     toast(`Assigned ${selectedKeys.size} photos to "${cat}".`);
     const token = await auth.currentUser.getIdToken();
@@ -763,6 +783,7 @@ export default function GalleryDetailPage() {
     }
     next[cat] = [...new Set([...(next[cat] || []), ...keysToAssign])];
     setCategories(next);
+    invalidateDelivery();
     const token = await auth.currentUser.getIdToken();
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
@@ -804,6 +825,7 @@ export default function GalleryDetailPage() {
 
   async function saveCategories() {
     setSavingCats(true);
+    invalidateDelivery();
     const token = await auth.currentUser.getIdToken();
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
@@ -894,6 +916,7 @@ export default function GalleryDetailPage() {
   }
 
   async function toggleUnlock() {
+    invalidateDelivery();
     const token = await auth.currentUser.getIdToken();
     const newVal = !gallery.unlocked;
     await fetch(`/api/dashboard/galleries/${id}`, {
@@ -906,6 +929,7 @@ export default function GalleryDetailPage() {
 
   async function saveExtras(overrides = {}) {
     setSavingExtras(true);
+    invalidateDelivery();
     try {
       const token = await auth.currentUser.getIdToken();
       const res = await fetch(`/api/dashboard/galleries/${id}`, {
@@ -925,6 +949,7 @@ export default function GalleryDetailPage() {
 
   async function saveMatterport() {
     setSavingMatterport(true);
+    invalidateDelivery();
     try {
       const token = await auth.currentUser.getIdToken();
       const res = await fetch(`/api/dashboard/galleries/${id}`, {
@@ -1201,8 +1226,8 @@ export default function GalleryDetailPage() {
               <span
                 title={
                   deliveryStatus.ready
-                    ? "Every web-ready photo is generated and the complete download package is built — safe to deliver."
-                    : "The complete download package is still being prepared. It will be ready shortly."
+                    ? "This delivery is fully prepared — the agent's download is ready to go."
+                    : "We're preparing this delivery. It'll be ready shortly — no action needed."
                 }
                 className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-medium ${
                   deliveryStatus.ready
@@ -1216,7 +1241,7 @@ export default function GalleryDetailPage() {
                 ) : (
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
                 )}
-                {deliveryStatus.ready ? "Package ready to deliver" : deliveryStatus.label}
+                {deliveryStatus.ready ? "Ready to deliver" : (deliveryStatus.label || "Preparing delivery…")}
               </span>
             )}
             <button onClick={() => { setDeliveryMode("now"); setScheduledAt(""); setShowDeliver(true); }}

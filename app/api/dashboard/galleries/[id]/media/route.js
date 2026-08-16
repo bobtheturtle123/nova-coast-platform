@@ -40,6 +40,18 @@ export async function POST(req, { params }) {
     } catch (e) { console.error("[media] storage track failed:", e?.message); }
   }
 
+  // Start generating the Web Ready/MLS version of this photo in the background as
+  // it uploads — don't wait for delivery. Self-debounced via a Firestore lease, so
+  // a 1,000-photo upload spawns ONE generation chain (which picks up new photos as
+  // they land) rather than a thousand overlapping runs. Photos only — videos have
+  // no Web Ready photo step, and maybeKick would be a no-op there anyway.
+  if (String(fileType || "").startsWith("image/")) {
+    try {
+      const { maybeKickWebPhotoGeneration } = await import("@/lib/webPhotoKick");
+      await maybeKickWebPhotoGeneration(ctx.tenantId, params.id, null);
+    } catch { /* fallback cron still reconciles */ }
+  }
+
   return Response.json({ ok: true });
 }
 
