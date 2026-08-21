@@ -277,6 +277,11 @@ const [listingUrl,       setListingUrl]        = useState("");
   const [userRole, setUserRole] = useState("owner"); // "owner" | "admin" | "manager"
   const [convertingToListing, setConvertingToListing] = useState(false);
 
+  // Service agreement (unsigned) — send / resend / remind from the listing.
+  const [agreementConfigured, setAgreementConfigured] = useState(false);
+  const [agreementSending,    setAgreementSending]    = useState(false);
+  const [agreementMsg,        setAgreementMsg]        = useState("");
+
   // Autofill (MLS / Redfin)
   const [autofillSource, setAutofillSource] = useState("");
   const [autofilling,    setAutofilling]    = useState(false);
@@ -400,6 +405,7 @@ const [listingUrl,       setListingUrl]        = useState("");
         setProductNames(names);
       } catch { /* name index is best-effort */ }
       setShowWeather(tenant?.availability?.showWeather ?? true);
+      setAgreementConfigured(!!tenant?.bookingConfig?.serviceAgreement?.text);
     }
 
     if (bRes.ok) {
@@ -527,6 +533,38 @@ const [listingUrl,       setListingUrl]        = useState("");
       setAgentAccessMsg("Something went wrong");
     } finally {
       setSendingAgentAccess(false);
+    }
+  }
+
+  // Send / resend the agreement for signing, or send a reminder. The server mints
+  // the signing link, emails the client, and logs it to Activity.
+  async function sendAgreement(action) {
+    setAgreementSending(true);
+    setAgreementMsg("");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/bookings/${id}/agreement`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const nowIso = new Date().toISOString();
+        setBooking((b) => ({
+          ...b,
+          agreementSentAt:     action === "remind" ? b?.agreementSentAt : nowIso,
+          agreementRemindedAt: action === "remind" ? nowIso : b?.agreementRemindedAt,
+        }));
+        setAgreementMsg(action === "remind" ? "Reminder sent." : "Agreement sent for signing.");
+        loadActivity();
+      } else {
+        setAgreementMsg(data.error || "Failed to send.");
+      }
+    } catch {
+      setAgreementMsg("Failed to send.");
+    } finally {
+      setAgreementSending(false);
     }
   }
 
@@ -1876,6 +1914,40 @@ if (loading) return (
                 </div>
               )}
 
+              {/* Service Agreement — unsigned: send / resend / remind */}
+              {agreementConfigured && !booking.contractSigned && booking.clientEmail && (
+                <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
+                  <div className="px-[17px] py-3 border-b border-gray-100"><span className="text-[13px] font-bold text-[#0F172A]">Service Agreement</span></div>
+                  <div className="px-[17px] py-3.5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${booking.agreementSentAt ? "bg-amber-400" : "bg-gray-300"}`} />
+                      <p className="text-[13px] text-gray-600">
+                        {booking.agreementSentAt ? "Sent — awaiting client signature" : "Not sent yet"}
+                      </p>
+                    </div>
+                    {booking.agreementSentAt && (
+                      <p className="text-[11px] text-gray-400">
+                        Sent {new Date(booking.agreementSentAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+                        {booking.agreementRemindedAt ? ` · Reminded ${new Date(booking.agreementRemindedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}` : ""}
+                      </p>
+                    )}
+                    <div className="flex gap-2">
+                      <button onClick={() => sendAgreement(booking.agreementSentAt ? "resend" : "send")} disabled={agreementSending}
+                        className="flex-1 text-sm py-2 rounded-lg bg-[#3486cf] text-white hover:bg-[#2f78ba] disabled:opacity-50 transition-colors">
+                        {agreementSending ? "Sending…" : booking.agreementSentAt ? "Resend agreement" : "Send agreement"}
+                      </button>
+                      {booking.agreementSentAt && (
+                        <button onClick={() => sendAgreement("remind")} disabled={agreementSending}
+                          className="flex-1 text-sm py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                          Send reminder
+                        </button>
+                      )}
+                    </div>
+                    {agreementMsg && <p className="text-xs text-green-600 break-words">{agreementMsg}</p>}
+                  </div>
+                </div>
+              )}
+
               {/* Signed Agreement (legal copy) */}
               {booking.contractSigned && (
                 <div className="bg-white border border-gray-200 rounded-[14px] overflow-hidden">
@@ -2895,6 +2967,9 @@ if (loading) return (
                       reschedule_notice:{ icon: "📅", label: "Reschedule notice sent", color: "text-blue-600 bg-blue-50" },
                       status:           { icon: "🔄", label: `Status: ${String(ev.status || "").replace(/_/g, " ")}`, color: "text-gray-600 bg-gray-50" },
                       note:             { icon: "📝", label: "Note",                  color: "text-gray-600 bg-gray-50" },
+                      agreement_sent:          { icon: "✍️", label: "Agreement sent",     color: "text-violet-700 bg-violet-50" },
+                      agreement_reminder_sent: { icon: "✍️", label: "Agreement reminder", color: "text-violet-700 bg-violet-50" },
+                      agreement_signed:        { icon: "✅", label: "Agreement signed",   color: "text-emerald-700 bg-emerald-50" },
                     };
                     const meta = icons[ev.type] || { icon: "·", label: ev.title || ev.type, color: "text-gray-500 bg-gray-50" };
                     const who  = ev.recipient || ev.viewerEmail || ev.email;

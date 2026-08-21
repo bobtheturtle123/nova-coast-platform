@@ -1,7 +1,8 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { getTenantById } from "@/lib/tenants";
-import { sendBookingCreatedNotifications, generateCalendarICS, sendServiceAgreementEmail } from "@/lib/email";
+import { sendBookingCreatedNotifications, generateCalendarICS } from "@/lib/email";
+import { sendAgreementForSigning } from "@/lib/agreement";
 import { sendAgentPortalEmail } from "@/lib/sendAgentPortal";
 import { sendBookingConfirmedSms } from "@/lib/sms";
 import { tenantHasActivePlan, paymentRequired } from "@/lib/requireSubscription";
@@ -377,13 +378,18 @@ export async function POST(req) {
             reason: "booking",
           }).catch((err) => console.error("[agent-portal] email FAILED:", err?.message || err));
 
-          // ── Service agreement email ───────────────────────────────────────
+          // ── Service agreement — send for signing ──────────────────────────
+          // Sends a "Review & Sign" link (not just "reply I agree"), mints the
+          // signing token, and logs the send to the booking's Activity so the
+          // tenant can see it went out and later resend / remind from the listing.
           const agreementText = tenantData.bookingConfig?.serviceAgreement?.text;
           if (sendAgreementEmail && agreementText && clientEmail) {
-            sendServiceAgreementEmail({
-              booking: { ...bookingData, fullAddress },
-              agreementText,
+            sendAgreementForSigning({
+              tenantId: ctx.tenantId,
               tenant,
+              booking: { ...bookingData, fullAddress },
+              bookingId,
+              agreementText,
             }).catch((err) => console.error("[agreement-email] FAILED:", err?.message || err));
           }
 
