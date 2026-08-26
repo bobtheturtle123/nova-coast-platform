@@ -36,17 +36,26 @@ export async function GET(req) {
   console.log(`[cron/gallery-deliveries] Starting run at ${now.toISOString()}`);
 
   try {
-    const snap = await adminDb
+    // Query by status only — a single-field index Firestore maintains
+    // automatically. Combining status "==" with a scheduledAt "<=" range on a
+    // different field would require a composite index (which wasn't deployed and
+    // made every run throw FAILED_PRECONDITION, so nothing ever sent). Pending
+    // jobs are few, so we filter "due" in memory instead.
+    const pendingSnap = await adminDb
       .collection("scheduledDeliveries")
       .where("status", "==", "pending")
-      .where("scheduledAt", "<=", now)
       .get();
 
-    console.log(`[cron/gallery-deliveries] Found ${snap.size} pending deliveries due`);
+    const dueDocs = pendingSnap.docs.filter((d) => {
+      const at = safeDate(d.data().scheduledAt);
+      return at && at <= now;
+    });
 
-    console.log(`[cron/gallery-deliveries] Processing ${snap.size} jobs in batches of 10`);
+    console.log(`[cron/gallery-deliveries] ${pendingSnap.size} pending, ${dueDocs.length} due`);
 
-    await batchedSettled(snap.docs, async (doc) => {
+    console.log(`[cron/gallery-deliveries] Processing ${dueDocs.length} jobs in batches of 10`);
+
+    await batchedSettled(dueDocs, async (doc) => {
         const job = doc.data();
         const { tenantId, galleryId, subject, note, to, cc } = job;
 
