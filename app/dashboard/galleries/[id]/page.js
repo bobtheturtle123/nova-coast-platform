@@ -357,6 +357,8 @@ export default function GalleryDetailPage() {
   const [categories,      setCategories]      = useState({});
   const [savingCats,      setSavingCats]      = useState(false);
   const [pastCatNames,    setPastCatNames]    = useState([]);
+  // Categories hidden from the public property website (still delivered to client)
+  const [websiteHiddenCats, setWebsiteHiddenCats] = useState([]);
 
   // Bulk selection state
   const [selectedKeys,    setSelectedKeys]    = useState(new Set());
@@ -407,7 +409,19 @@ export default function GalleryDetailPage() {
         const data = await galleryRes.json();
         setGallery(data.gallery);
         setDeliveryStatus(data.deliveryStatus || null);
-        setCategories(data.gallery.categories || {});
+        // Firestore returns map keys in lexicographic order, not insertion order,
+        // so we re-apply the saved categoryOrder to restore the user's intended order.
+        const rawCats = data.gallery.categories || {};
+        const savedOrder = Array.isArray(data.gallery.categoryOrder) ? data.gallery.categoryOrder : [];
+        if (savedOrder.length) {
+          const ordered = {};
+          for (const c of savedOrder) if (c in rawCats) ordered[c] = rawCats[c];
+          for (const c of Object.keys(rawCats)) if (!(c in ordered)) ordered[c] = rawCats[c];
+          setCategories(ordered);
+        } else {
+          setCategories(rawCats);
+        }
+        setWebsiteHiddenCats(Array.isArray(data.gallery.websiteHiddenCategories) ? data.gallery.websiteHiddenCategories : []);
 
         // Pre-populate email from template if available, fall back to default subject
         let defaultSubject = `Your listing media is ready — ${data.gallery.bookingAddress || ""}`;
@@ -635,7 +649,7 @@ export default function GalleryDetailPage() {
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ categories: next }),
+      body: JSON.stringify({ categories: next, categoryOrder: Object.keys(next) }),
     });
   }
 
@@ -719,7 +733,7 @@ export default function GalleryDetailPage() {
               fetch(`/api/dashboard/galleries/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
-                body: JSON.stringify({ categories: next }),
+                body: JSON.stringify({ categories: next, categoryOrder: Object.keys(next) }),
               }).catch(() => {})
             );
           }
@@ -770,7 +784,7 @@ export default function GalleryDetailPage() {
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ categories: next }),
+      body: JSON.stringify({ categories: next, categoryOrder: Object.keys(next) }),
     });
   }
 
@@ -788,7 +802,7 @@ export default function GalleryDetailPage() {
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ categories: next }),
+      body: JSON.stringify({ categories: next, categoryOrder: Object.keys(next) }),
     });
   }
 
@@ -823,6 +837,22 @@ export default function GalleryDetailPage() {
     });
   }
 
+  // Toggle whether a category is shown on the public property website.
+  // Persists immediately so the change sticks even without opening "Save".
+  async function toggleWebsiteHidden(cat) {
+    const next = websiteHiddenCats.includes(cat)
+      ? websiteHiddenCats.filter((c) => c !== cat)
+      : [...websiteHiddenCats, cat];
+    setWebsiteHiddenCats(next);
+    setGallery((g) => ({ ...g, websiteHiddenCategories: next }));
+    const token = await auth.currentUser.getIdToken();
+    await fetch(`/api/dashboard/galleries/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ websiteHiddenCategories: next }),
+    });
+  }
+
   async function saveCategories() {
     setSavingCats(true);
     invalidateDelivery();
@@ -830,10 +860,10 @@ export default function GalleryDetailPage() {
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ categories }),
+      body: JSON.stringify({ categories, categoryOrder: Object.keys(categories), websiteHiddenCategories: websiteHiddenCats }),
     });
     setSavingCats(false);
-    setGallery((g) => ({ ...g, categories }));
+    setGallery((g) => ({ ...g, categories, categoryOrder: Object.keys(categories), websiteHiddenCategories: websiteHiddenCats }));
     toast("Categories saved.");
     setShowCatPanel(false);
   }
@@ -2235,8 +2265,10 @@ export default function GalleryDetailPage() {
                 <p className="text-sm text-gray-400 text-center py-4">No categories yet.</p>
               ) : (
                 <div className="space-y-1">
-                  <p className="text-xs text-gray-400">Order sets how folders appear to clients and in the download. Use the arrows to reorder.</p>
-                  {catNames.map((cat, idx) => (
+                  <p className="text-xs text-gray-400">Order sets how folders appear to clients and in the download. Use the arrows to reorder. Toggle the eye to hide a category from the public property website — hidden categories are still delivered to the client.</p>
+                  {catNames.map((cat, idx) => {
+                    const hidden = websiteHiddenCats.includes(cat);
+                    return (
                     <div key={cat} className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-xl">
                       <div className="flex flex-col">
                         <button onClick={() => moveCategory(cat, -1)} disabled={idx === 0}
@@ -2246,11 +2278,13 @@ export default function GalleryDetailPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-[#0F172A] truncate">{cat}</p>
-                        <p className="text-xs text-gray-400">{(categories[cat] || []).length} photos</p>
+                        <p className="text-xs text-gray-400">{(categories[cat] || []).length} photos{hidden ? " · hidden on website" : ""}</p>
                       </div>
+                      <button onClick={() => toggleWebsiteHidden(cat)} className={`text-lg flex-shrink-0 leading-none ${hidden ? "text-gray-300 hover:text-gray-500" : "text-[#3486cf] hover:text-[#256bb0]"}`} title={hidden ? "Hidden on website — click to show" : "Shown on website — click to hide"}>{hidden ? "🚫" : "👁"}</button>
                       <button onClick={() => deleteCategory(cat)} className="text-xs text-red-500 hover:text-red-700 flex-shrink-0">Remove</button>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

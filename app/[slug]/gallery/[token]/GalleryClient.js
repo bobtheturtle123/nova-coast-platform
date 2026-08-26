@@ -321,7 +321,12 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   // payment) while preserving each photo's global index for the lightbox.
   const photoGroups = (() => {
     const catMap   = gallery.categories || {};
-    const catOrder = Object.keys(catMap);
+    // Firestore returns map keys lexicographically, so honor the saved
+    // categoryOrder when present to preserve the studio's intended folder order.
+    const savedOrder = Array.isArray(gallery.categoryOrder) ? gallery.categoryOrder.filter((c) => c in catMap) : [];
+    const catOrder = savedOrder.length
+      ? [...savedOrder, ...Object.keys(catMap).filter((c) => !savedOrder.includes(c))]
+      : Object.keys(catMap);
     const keyToCat = {};
     catOrder.forEach((c) => (catMap[c] || []).forEach((k) => { keyToCat[k] = c; }));
     const byName = new Map();

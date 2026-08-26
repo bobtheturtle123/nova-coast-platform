@@ -107,8 +107,18 @@ export default async function PropertyWebsitePage({ params, searchParams }) {
       const gallery = galleryDoc.data();
       const showAll = gallery.unlocked || pw.showUnlocked;
       const allMedia = gallery.media || [];
-      const images = allMedia.filter((m) => !m.fileType?.startsWith("video/"));
-      const videos = allMedia.filter((m) => m.fileType?.startsWith("video/"));
+      // Categories the studio marked "hide on website" are excluded from the
+      // public property site (they're still delivered to the client gallery).
+      const hiddenCats = Array.isArray(gallery.websiteHiddenCategories) ? gallery.websiteHiddenCategories : [];
+      const keyToCat = {};
+      if (hiddenCats.length) {
+        for (const [cat, keys] of Object.entries(gallery.categories || {})) {
+          for (const k of (keys || [])) keyToCat[k] = cat;
+        }
+      }
+      const isHidden = (m) => hiddenCats.length > 0 && m.key && hiddenCats.includes(keyToCat[m.key]);
+      const images = allMedia.filter((m) => !m.fileType?.startsWith("video/") && !isHidden(m));
+      const videos = allMedia.filter((m) => m.fileType?.startsWith("video/") && !isHidden(m));
       const previewCount = pw.previewCount || 12;
       galleryMedia = [
         ...(showAll ? images : images.slice(0, previewCount)),
