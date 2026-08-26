@@ -8,6 +8,23 @@ import { isDemo, getDemoReports } from "@/lib/demoData";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
+// Revenue actually COLLECTED on a booking — the single source of truth, identical
+// to the per-listing "Payment collected" figure (see listings/[id] amountCollected)
+// so report totals reconcile exactly with what each listing shows. Priority:
+//   1. offlinePaymentAmount — an exact amount the studio recorded (manual/offline)
+//   2. paid in full / balance paid → net total (price minus promo discount)
+//   3. deposit only → the deposit amount
+// Unpaid money is never counted, so reports can't inflate revenue with amounts owed.
+function collectedRevenue(b) {
+  const disc     = Number(b.promoDiscount) || 0;
+  const netTotal = Math.max(0, (Number(b.totalPrice) || 0) - disc);
+  const offline  = Number(b.offlinePaymentAmount) || 0;
+  if (offline) return offline;
+  if (b.paidInFull || b.balancePaid) return netTotal;
+  if (b.depositPaid) return Number(b.depositAmount) || 0;
+  return 0;
+}
+
 const STATUS_COLORS = {
   pending_payment: "bg-gray-200 text-gray-600",
   requested:       "bg-amber-100 text-amber-700",
@@ -87,12 +104,7 @@ function exportCSV(bookings, period) {
     ["Booking ID","Client","Address","Status","Total Price","Deposit Paid","Balance Paid","Revenue Collected","Total Cost","Net Profit","Margin %","Created At","Shoot Date"],
     ...bookings.map((b) => {
       // Profit/margin are computed on collected revenue only — never money still owed.
-      // remainingBalance is zeroed once the balance is paid, so a fully-paid
-      // booking must count its full price (minus any discount), not the balance.
-      const disc      = b.promoDiscount || 0;
-      const revenue   = (b.paidInFull || (b.depositPaid && b.balancePaid))
-        ? Math.max(0, (b.totalPrice || 0) - disc)
-        : (b.depositPaid ? (b.depositAmount || 0) : 0);
+      const revenue   = collectedRevenue(b);
       const totalCost = b.costs?.totalCost || 0;
       const profit    = revenue - totalCost;
       const margin    = revenue > 0 ? Math.round((profit / revenue) * 100) : "";
@@ -131,6 +143,9 @@ export default function ReportsPage() {
   const [catalog,   setCatalog]   = useState(null);
   const [loading,   setLoading]   = useState(true);
   const [period,    setPeriod]    = useState("12");
+  // Specific-month filter ("YYYY-MM"). When set it overrides the rolling period
+  // and scopes everything to that single calendar month (1st → last day).
+  const [monthFilter, setMonthFilter] = useState("");
 
   useEffect(() => {
     if (isDemo()) {
@@ -149,16 +164,28 @@ export default function ReportsPage() {
       // Pull the FULL product lists (including inactive / draft / imported
       // items) so revenue-by-service and upsell never show raw Firestore IDs
       // for products that aren't currently on the public booking page.
-      const [bookRes, pkgRes, svcRes, addRes] = await Promise.all([
-        fetch("/api/dashboard/bookings?limit=200", h),
+      const [pkgRes, svcRes, addRes] = await Promise.all([
         fetch("/api/dashboard/products?type=packages", h),
         fetch("/api/dashboard/products?type=services", h),
         fetch("/api/dashboard/products?type=addons", h),
       ]);
-      if (bookRes.ok) {
-        const d = await bookRes.json();
-        setBookings(d.bookings || []);
+
+      // Fetch EVERY booking, not just the latest page. The bookings API caps a
+      // page at 200, so a studio with more than that would have older months
+      // silently undercounted (or missing) in the per-month charts. Page through
+      // with the cursor until there are no more, with a hard safety cap.
+      const allBookings = [];
+      let cursor = null;
+      for (let page = 0; page < 50; page++) {
+        const url = `/api/dashboard/bookings?limit=200${cursor ? `&after=${encodeURIComponent(cursor)}` : ""}`;
+        const res = await fetch(url, h);
+        if (!res.ok) break;
+        const d = await res.json();
+        allBookings.push(...(d.bookings || []));
+        if (!d.hasMore || !d.nextCursor) break;
+        cursor = d.nextCursor;
       }
+      setBookings(allBookings);
       const cat = { packages: [], services: [], addons: [] };
       if (pkgRes.ok) cat.packages = (await pkgRes.json()).items || [];
       if (svcRes.ok) cat.services = (await svcRes.json()).items || [];
@@ -168,32 +195,45 @@ export default function ReportsPage() {
     });
   }, [canViewReports]);
 
-  const cutoff = useMemo(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - Number(period));
-    return d;
-  }, [period]);
+  // Active date window. A specific month → exactly [1st 00:00 … last day 23:59:59]
+  // of that month, in the viewer's local time. Otherwise the rolling "last N
+  // months" window (end = null means "up to now").
+  const range = useMemo(() => {
+    if (monthFilter) {
+      const [y, m] = monthFilter.split("-").map(Number);
+      if (y && m) {
+        return {
+          start: new Date(y, m - 1, 1, 0, 0, 0, 0),
+          end:   new Date(y, m, 0, 23, 59, 59, 999),
+        };
+      }
+    }
+    const start = new Date();
+    start.setMonth(start.getMonth() - Number(period));
+    return { start, end: null };
+  }, [monthFilter, period]);
 
   const filtered = useMemo(
-    () => bookings.filter((b) => b.status !== "cancelled" && new Date(b.createdAt) >= cutoff),
-    [bookings, cutoff]
+    () => bookings.filter((b) => {
+      if (b.status === "cancelled") return false;
+      const t = new Date(b.createdAt);
+      if (isNaN(t.getTime()) || t < range.start) return false;
+      if (range.end && t > range.end) return false;
+      return true;
+    }),
+    [bookings, range]
   );
 
+  // Human label for the active window (shown next to the filters).
+  const rangeLabel = monthFilter
+    ? new Date(range.start).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : (period === "120" ? "All time" : `Last ${period} months`);
+
   // ── Revenue stats ─────────────────────────────────────────────────────────
-  // collected() = money actually paid by the client. We never count unpaid amounts
-  // so reports never inflate revenue with money that may never come.
-  function collected(b) {
-    const disc = b.promoDiscount || 0;
-    // Fully paid (paid in full, or both deposit + balance settled): the client
-    // paid the whole price. We must NOT read remainingBalance here — it is set
-    // to 0 the moment the balance is paid, which previously zeroed the revenue.
-    if (b.paidInFull || (b.depositPaid && b.balancePaid)) {
-      return Math.max(0, (b.totalPrice || 0) - disc);
-    }
-    // Deposit-only so far: count just the deposit collected.
-    if (b.depositPaid) return b.depositAmount || 0;
-    return 0;
-  }
+  // collected() = money actually paid by the client (shared source of truth that
+  // matches each listing's "Payment collected" figure). Unpaid amounts are never
+  // counted so reports never inflate revenue with money that may never come.
+  const collected = collectedRevenue;
   const totalRevenue  = filtered.reduce((s, b) => s + collected(b), 0);
   const totalBookings = filtered.length;
   const paidDeposit   = filtered.filter((b) => b.depositPaid || b.balancePaid || b.paidInFull).length;
@@ -376,16 +416,41 @@ export default function ReportsPage() {
       <div className="flex items-center justify-between mb-6 print:mb-4">
         <div>
           <h1 className="page-title">Reports</h1>
-          <p className="page-subtitle">Financial and booking performance overview</p>
+          <p className="page-subtitle">
+            Financial and booking performance overview
+            <span className="text-gray-400"> · {rangeLabel}</span>
+          </p>
         </div>
         <div className="flex items-center gap-2 print:hidden">
           <Link href="/dashboard/reports/earnings" className="btn-outline text-sm px-4 py-2">
             Earnings &amp; Payroll
           </Link>
+          {/* Specific month — overrides the rolling window below when set. */}
+          <div className="flex items-center gap-1.5">
+            <input
+              type="month"
+              value={monthFilter}
+              max={new Date().toISOString().slice(0, 7)}
+              onChange={(e) => setMonthFilter(e.target.value)}
+              className="input-field text-sm py-2 w-40"
+              title="Filter to a single calendar month"
+            />
+            {monthFilter && (
+              <button
+                onClick={() => setMonthFilter("")}
+                className="text-xs text-gray-400 hover:text-gray-600 px-1"
+                title="Clear month filter"
+              >
+                Clear
+              </button>
+            )}
+          </div>
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            className="input-field text-sm py-2 w-44"
+            disabled={!!monthFilter}
+            className={`input-field text-sm py-2 w-44 ${monthFilter ? "opacity-40 cursor-not-allowed" : ""}`}
+            title={monthFilter ? "Clear the month filter to use a rolling window" : "Rolling window"}
           >
             <option value="3">Last 3 months</option>
             <option value="6">Last 6 months</option>
