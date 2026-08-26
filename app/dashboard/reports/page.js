@@ -74,23 +74,28 @@ function BarChart({ data, valueKey, labelKey, color = "bg-[#3486cf]", prefix = "
   return (
     <div className="flex items-end gap-1 h-32 w-full">
       {data.map((d, i) => {
-        const pct  = ((d[valueKey] || 0) / max) * 100;
-        const pct2 = secondaryKey ? ((d[secondaryKey] || 0) / max) * 100 : null;
-        const val  = d[valueKey] || 0;
-        const label = formatVal ? formatVal(val) : `${prefix}${val.toLocaleString()}`;
+        const val    = d[valueKey] || 0;
+        const val2   = secondaryKey ? (d[secondaryKey] || 0) : 0;
+        // Floor any non-zero bar at ~3% so small-but-real values stay visible
+        // instead of collapsing to an invisible sliver.
+        const pct    = val  > 0 ? Math.max((val  / max) * 100, 3) : 0;
+        const pct2   = secondaryKey ? (val2 > 0 ? Math.max((val2 / max) * 100, 3) : 0) : null;
+        const label  = formatVal ? formatVal(val) : `${prefix}${val.toLocaleString()}`;
         return (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
+          // h-full gives each column a definite height so the percentage-height
+          // bars below actually resolve (without it they collapse to a flat line).
+          <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1 group relative h-full">
             <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-[#0F172A] text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
               {d[labelKey]}: {label}
               {secondaryKey && d[secondaryKey] != null && ` · cost $${d[secondaryKey].toLocaleString()}`}
             </div>
-            <div className="w-full flex items-end gap-0.5" style={{ height: "100%" }}>
-              <div className={`flex-1 rounded-t-sm ${color} transition-all duration-300 min-h-0.5`} style={{ height: `${pct}%` }} />
+            <div className="w-full flex-1 min-h-0 flex items-end justify-center gap-0.5">
+              <div className={`flex-1 max-w-[32px] rounded-t-sm ${color} transition-all duration-300`} style={{ height: `${pct}%` }} />
               {pct2 !== null && (
-                <div className={`flex-1 rounded-t-sm ${secondaryColor} transition-all duration-300 min-h-0.5`} style={{ height: `${pct2}%` }} />
+                <div className={`flex-1 max-w-[32px] rounded-t-sm ${secondaryColor} transition-all duration-300`} style={{ height: `${pct2}%` }} />
               )}
             </div>
-            <span className="text-xs text-gray-400 truncate w-full text-center">{d[labelKey]}</span>
+            <span className="text-xs text-gray-400 truncate w-full text-center flex-shrink-0">{d[labelKey]}</span>
           </div>
         );
       })}
@@ -142,10 +147,12 @@ export default function ReportsPage() {
   const [bookings,  setBookings]  = useState([]);
   const [catalog,   setCatalog]   = useState(null);
   const [loading,   setLoading]   = useState(true);
+  // period drives the date window. Numeric strings = rolling "last N months".
+  // "month" = the current calendar month. "custom" = the [customStart, customEnd]
+  // range selected in the date pickers that appear when "Custom range…" is chosen.
   const [period,    setPeriod]    = useState("12");
-  // Specific-month filter ("YYYY-MM"). When set it overrides the rolling period
-  // and scopes everything to that single calendar month (1st → last day).
-  const [monthFilter, setMonthFilter] = useState("");
+  const [customStart, setCustomStart] = useState(""); // "YYYY-MM-DD"
+  const [customEnd,   setCustomEnd]   = useState(""); // "YYYY-MM-DD"
 
   useEffect(() => {
     if (isDemo()) {
@@ -199,19 +206,23 @@ export default function ReportsPage() {
   // of that month, in the viewer's local time. Otherwise the rolling "last N
   // months" window (end = null means "up to now").
   const range = useMemo(() => {
-    if (monthFilter) {
-      const [y, m] = monthFilter.split("-").map(Number);
-      if (y && m) {
-        return {
-          start: new Date(y, m - 1, 1, 0, 0, 0, 0),
-          end:   new Date(y, m, 0, 23, 59, 59, 999),
-        };
-      }
+    const now = new Date();
+    if (period === "month") {
+      return {
+        start: new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0),
+        end:   new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
+      };
+    }
+    if (period === "custom") {
+      return {
+        start: customStart ? new Date(`${customStart}T00:00:00`)     : new Date(0),
+        end:   customEnd   ? new Date(`${customEnd}T23:59:59.999`)   : null,
+      };
     }
     const start = new Date();
     start.setMonth(start.getMonth() - Number(period));
     return { start, end: null };
-  }, [monthFilter, period]);
+  }, [period, customStart, customEnd]);
 
   const filtered = useMemo(
     () => bookings.filter((b) => {
@@ -225,9 +236,16 @@ export default function ReportsPage() {
   );
 
   // Human label for the active window (shown next to the filters).
-  const rangeLabel = monthFilter
-    ? new Date(range.start).toLocaleDateString("en-US", { month: "long", year: "numeric" })
-    : (period === "120" ? "All time" : `Last ${period} months`);
+  const rangeLabel = (() => {
+    if (period === "month") return new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    if (period === "custom") {
+      if (!customStart && !customEnd) return "Custom range";
+      const s = customStart ? new Date(`${customStart}T00:00:00`).toLocaleDateString() : "start";
+      const e = customEnd   ? new Date(`${customEnd}T00:00:00`).toLocaleDateString()   : "now";
+      return `${s} – ${e}`;
+    }
+    return period === "120" ? "All time" : `Last ${period} months`;
+  })();
 
   // ── Revenue stats ─────────────────────────────────────────────────────────
   // collected() = money actually paid by the client (shared source of truth that
@@ -425,38 +443,42 @@ export default function ReportsPage() {
           <Link href="/dashboard/reports/earnings" className="btn-outline text-sm px-4 py-2">
             Earnings &amp; Payroll
           </Link>
-          {/* Specific month — overrides the rolling window below when set. */}
-          <div className="flex items-center gap-1.5">
-            <input
-              type="month"
-              value={monthFilter}
-              max={new Date().toISOString().slice(0, 7)}
-              onChange={(e) => setMonthFilter(e.target.value)}
-              className="input-field text-sm py-2 w-40"
-              title="Filter to a single calendar month"
-            />
-            {monthFilter && (
-              <button
-                onClick={() => setMonthFilter("")}
-                className="text-xs text-gray-400 hover:text-gray-600 px-1"
-                title="Clear month filter"
-              >
-                Clear
-              </button>
-            )}
-          </div>
+          {/* Custom-range date pickers — only shown when "Custom range…" is picked. */}
+          {period === "custom" && (
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                value={customStart}
+                max={customEnd || new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="input-field text-sm py-2"
+                title="Start date"
+              />
+              <span className="text-xs text-gray-400">to</span>
+              <input
+                type="date"
+                value={customEnd}
+                min={customStart || undefined}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="input-field text-sm py-2"
+                title="End date"
+              />
+            </div>
+          )}
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            disabled={!!monthFilter}
-            className={`input-field text-sm py-2 w-44 ${monthFilter ? "opacity-40 cursor-not-allowed" : ""}`}
-            title={monthFilter ? "Clear the month filter to use a rolling window" : "Rolling window"}
+            className="input-field text-sm py-2 w-44"
+            title="Date range"
           >
+            <option value="month">This month</option>
             <option value="3">Last 3 months</option>
             <option value="6">Last 6 months</option>
             <option value="12">Last 12 months</option>
             <option value="24">Last 24 months</option>
             <option value="120">All time</option>
+            <option value="custom">Custom range…</option>
           </select>
           <button
             onClick={() => exportCSV(filtered, period)}
