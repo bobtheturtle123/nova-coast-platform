@@ -2186,6 +2186,13 @@ export default function GalleryDetailPage() {
                   let label = "Viewed gallery";
                   let detail = "";
 
+                  const fmtSched = (iso) => {
+                    const d = iso ? new Date(iso) : null;
+                    return d && !isNaN(d.getTime())
+                      ? d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })
+                      : null;
+                  };
+
                   if (e.event === "download_zip") {
                     icon = "📦";
                     label = `Downloaded all photos (${e.format === "print" ? "print quality" : "web/MLS quality"})`;
@@ -2194,6 +2201,17 @@ export default function GalleryDetailPage() {
                     icon = "🎬";
                     label = "Downloaded video";
                     if (e.fileName) detail = e.fileName;
+                  } else if (e.event === "delivered") {
+                    icon = "📬";
+                    label = e.scheduled ? "Scheduled delivery sent" : "Gallery delivered";
+                    const recips = e.recipients?.length ? e.recipients.join(", ") : null;
+                    const schedStr = e.scheduled ? fmtSched(e.scheduledAt) : null;
+                    detail = [recips ? `to ${recips}` : null, schedStr ? `scheduled for ${schedStr}` : null].filter(Boolean).join(" · ");
+                  } else if (e.event === "scheduled") {
+                    icon = "🕐";
+                    const schedStr = fmtSched(e.scheduledAt);
+                    label = schedStr ? `Delivery scheduled for ${schedStr}` : "Delivery scheduled";
+                    if (e.recipients?.length) detail = `to ${e.recipients.join(", ")}`;
                   } else if (e.event === "note") {
                     icon = "📝";
                     label = e.note || "Admin note";

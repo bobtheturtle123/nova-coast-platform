@@ -1,5 +1,5 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
-import { galleryDeliveryStatus, prepareGalleryPackage } from "@/lib/zipJobs";
+import { galleryDeliveryStatus, prepareGalleryPackage, enqueueZipBuild } from "@/lib/zipJobs";
 import { maybeKickWebPhotoGeneration } from "@/lib/webPhotoKick";
 
 async function getCtx(req) {
@@ -68,6 +68,22 @@ export async function PATCH(req, { params }) {
   const snap = await ref.get();
   const tenantDoc = await adminDb.collection("tenants").doc(ctx.tenantId).get();
   const autoRename = tenantDoc.data()?.gallerySettings?.autoRenameDownloads === true;
+  const fresh = snap.data() || {};
+
+  // If a gallery that's ALREADY delivered/unlocked gets edited (photos, categories,
+  // order, floor plans, links…), those change fileSetHash — the built package goes
+  // stale and the badge would sit on "Preparing delivery…" until the once-a-day
+  // reconcile cron happens to reach it. Re-queue a build now so it self-heals
+  // immediately. Skipped for the unlock action (prepareGalleryPackage already ran)
+  // and during pre-delivery uploads (delivered/unlocked both false), preserving the
+  // "don't build once per edit while uploading" behavior. enqueueZipBuild is
+  // hash-deduped + web-gated, so this never double-builds or builds prematurely.
+  const PACKAGE_FIELDS = ["media", "categories", "categoryOrder", "floorPlans", "attachedFiles", "virtualLinks", "matterportUrl", "matterportHidden", "videoUrl", "videoUrlHidden", "mlsUrl"];
+  const affectsPackage = PACKAGE_FIELDS.some((k) => update[k] !== undefined);
+  if (affectsPackage && update.unlocked !== true && (fresh.delivered === true || fresh.unlocked === true)) {
+    await enqueueZipBuild(ctx.tenantId, params.id, fresh, autoRename).catch(() => {});
+  }
+
   return Response.json({
     ok: true,
     deliveryStatus: galleryDeliveryStatus(snap.data() || {}, autoRename),

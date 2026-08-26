@@ -149,6 +149,7 @@ export async function GET(req) {
             event:      "delivered",
             timestamp:  now,
             recipients: allRecipients,
+            scheduledAt: schedAt || null,
             note:       (allRecipients.length ? `Scheduled delivery sent to ${allRecipients.join(", ")}` : "Scheduled delivery sent") + by,
             actorId:    job.scheduledById   || null,
             actorName:  job.scheduledByName || null,

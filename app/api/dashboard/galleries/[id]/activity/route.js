@@ -27,6 +27,7 @@ export async function GET(req, { params }) {
   const events = snap.docs.map((d) => {
     const data = d.data();
     const ts   = data.timestamp?.toDate?.() || null;
+    const schedTs = data.scheduledAt?.toDate?.() || (data.scheduledAt ? new Date(data.scheduledAt) : null);
     return {
       id:          d.id,
       event:       data.event,
@@ -41,6 +42,9 @@ export async function GET(req, { params }) {
       userAgent:   data.userAgent   || null,
       actorName:   data.actorName   || null,
       actorRole:   data.actorRole   || null,
+      recipients:  Array.isArray(data.recipients) ? data.recipients : null,
+      scheduled:   data.scheduled   || false,
+      scheduledAt: schedTs && !isNaN(schedTs.getTime()) ? schedTs.toISOString() : null,
       timestamp:   ts ? ts.toISOString() : null,
     };
   });

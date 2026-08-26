@@ -78,6 +78,17 @@ export async function POST(req, { params }) {
     });
     await batch.commit();
     await galleryRef.update({ scheduledDelivery: { scheduledAt: schedTime, status: "pending" } });
+    // Record the scheduling in the gallery activity log so the scheduled time is
+    // visible right away (before the cron actually sends it).
+    galleryRef.collection("activityLog").add({
+      event:       "scheduled",
+      timestamp:   new Date(),
+      scheduledAt: schedTime,
+      recipients:  [...new Set([...(to || []), ...(cc || [])])],
+      actorId:     actor.id,
+      actorName:   actor.name,
+      actorRole:   actor.role,
+    }).catch(() => {});
     // Prepare the package now (Web Ready generation + queued ZIP build) so the
     // complete download is waiting when the scheduled send fires — not built two
     // hours later on the fallback cron.

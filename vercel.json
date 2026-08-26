@@ -34,7 +34,7 @@
       "maxDuration": 300
     },
     "app/api/cron/build-zip-jobs/route.js": {
-      "maxDuration": 60
+      "maxDuration": 300
     },
     "app/api/dashboard/galleries/[id]/media/import-dropbox/route.js": {
       "maxDuration": 300

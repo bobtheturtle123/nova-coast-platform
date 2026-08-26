@@ -2,7 +2,7 @@ import { adminDb } from "@/lib/firebase-admin";
 import { enqueueZipBuild } from "@/lib/zipJobs";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 // Reconciliation cron for the background ZIP builds. It does NO heavy work — it
 // only enqueues jobs on the Cloudflare Worker for any deliverable gallery whose
