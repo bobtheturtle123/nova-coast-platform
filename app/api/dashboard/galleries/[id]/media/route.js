@@ -1,5 +1,6 @@
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
+import { enqueueZipBuild } from "@/lib/zipJobs";
 
 async function getCtx(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -9,6 +10,26 @@ async function getCtx(req) {
     if (!decoded.tenantId) return null;
     return { tenantId: decoded.tenantId };
   } catch { return null; }
+}
+
+// A media add/remove changes the file set, which changes fileSetHash. For a
+// gallery that's ALREADY delivered/unlocked, the built package silently goes
+// stale and the badge sits on "Preparing delivery…" until the once-a-day
+// reconcile cron reaches it — this is exactly what strands a video/photo
+// uploaded to an already-delivered listing (the PATCH edit route re-queues, but
+// uploads and deletes come through here). Re-queue a build so it self-heals now.
+// Skipped while a gallery is still pre-delivery (delivered & unlocked both false)
+// so a fresh upload doesn't build once per file. enqueueZipBuild is hash-deduped
+// and web-gated (it only stamps a waiting-web marker until the last Web Ready
+// photo lands, then the generator fires ONE build), so this never double-builds
+// or builds prematurely mid-upload.
+async function maybeRebuildPackage(tenantId, galleryId, gallery) {
+  try {
+    if (!(gallery.delivered === true || gallery.unlocked === true)) return;
+    const tenantDoc = await adminDb.collection("tenants").doc(tenantId).get();
+    const autoRename = tenantDoc.data()?.gallerySettings?.autoRenameDownloads === true;
+    await enqueueZipBuild(tenantId, galleryId, gallery, autoRename);
+  } catch { /* fallback cron still reconciles */ }
 }
 
 export async function POST(req, { params }) {
@@ -25,12 +46,13 @@ export async function POST(req, { params }) {
     return Response.json({ error: "Invalid media key" }, { status: 400 });
   }
 
-  await adminDb
+  const galleryRef = adminDb
     .collection("tenants").doc(ctx.tenantId)
-    .collection("galleries").doc(params.id)
-    .update({
-      media: FieldValue.arrayUnion({ url: publicUrl, key: key || "", fileName, fileType, size: bytes, uploadedAt: new Date().toISOString() }),
-    });
+    .collection("galleries").doc(params.id);
+
+  await galleryRef.update({
+    media: FieldValue.arrayUnion({ url: publicUrl, key: key || "", fileName, fileType, size: bytes, uploadedAt: new Date().toISOString() }),
+  });
 
   // Track account storage usage by file type.
   if (bytes > 0) {
@@ -51,6 +73,11 @@ export async function POST(req, { params }) {
       await maybeKickWebPhotoGeneration(ctx.tenantId, params.id, null);
     } catch { /* fallback cron still reconciles */ }
   }
+
+  // Read fresh so the rebuild hash reflects the file we just added, then re-queue
+  // the package build if this gallery is already delivered/unlocked.
+  const fresh = await galleryRef.get();
+  if (fresh.exists) await maybeRebuildPackage(ctx.tenantId, params.id, fresh.data());
 
   return Response.json({ ok: true });
 }
@@ -106,6 +133,10 @@ export async function DELETE(req, { params }) {
   } catch {
     // Non-fatal — media removed from gallery even if R2 cleanup fails
   }
+
+  // Removing files changes the set too — re-queue the package for an already
+  // delivered/unlocked gallery so the download no longer contains the deleted media.
+  await maybeRebuildPackage(ctx.tenantId, params.id, { ...gallery, media: updated });
 
   return Response.json({ ok: true, remaining: updated.length });
 }

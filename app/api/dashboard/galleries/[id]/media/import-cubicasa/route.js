@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { downloadFile } from "@/lib/cubicasa";
 import { rateLimitTenant } from "@/lib/rateLimit";
 import { acquireLock } from "@/lib/opLock";
+import { enqueueZipBuild } from "@/lib/zipJobs";
 
 export const dynamic     = "force-dynamic";
 export const maxDuration = 120;
@@ -96,6 +97,21 @@ export async function POST(req, { params }) {
       console.error("[import-cubicasa]", name, e?.message);
       skipped.push({ name, reason: "Import failed" });
     }
+  }
+
+  // A new floor plan changes fileSetHash too — re-queue the package for an already
+  // delivered/unlocked gallery so the download includes it. Floor plans need no Web
+  // Ready step, so this build fires right away. enqueueZipBuild is hash-deduped.
+  if (imported.length > 0) {
+    try {
+      const fresh = await galleryRef.get();
+      const g = fresh.data() || {};
+      if (g.delivered === true || g.unlocked === true) {
+        const tSnap = await adminDb.collection("tenants").doc(ctx.tenantId).get();
+        const autoRename = tSnap.data()?.gallerySettings?.autoRenameDownloads === true;
+        await enqueueZipBuild(ctx.tenantId, params.id, g, autoRename);
+      }
+    } catch { /* fallback cron still reconciles */ }
   }
 
   return Response.json({

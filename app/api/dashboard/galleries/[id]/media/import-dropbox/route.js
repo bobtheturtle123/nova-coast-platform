@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { downloadFile } from "@/lib/dropbox";
 import { rateLimitTenant } from "@/lib/rateLimit";
 import { acquireLock } from "@/lib/opLock";
+import { enqueueZipBuild } from "@/lib/zipJobs";
 
 export const dynamic     = "force-dynamic";
 export const maxDuration = 300;
@@ -164,6 +165,23 @@ export async function POST(req, { params }) {
       console.error("[import-dropbox]", name, e?.message);
       skipped.push({ name, reason: "Import failed" });
     }
+  }
+
+  // If anything landed in an already delivered/unlocked gallery, its file set
+  // changed — re-queue the package build so the download includes the imports and
+  // the badge doesn't strand on "Preparing delivery…". Read fresh for the hash;
+  // enqueueZipBuild is hash-deduped + web-gated (imported photos still needing a
+  // Web Ready version hold the build until they're generated), so this is safe.
+  if (imported.length > 0) {
+    try {
+      const fresh = await galleryRef.get();
+      const g = fresh.data() || {};
+      if (g.delivered === true || g.unlocked === true) {
+        const tSnap = await adminDb.collection("tenants").doc(ctx.tenantId).get();
+        const autoRename = tSnap.data()?.gallerySettings?.autoRenameDownloads === true;
+        await enqueueZipBuild(ctx.tenantId, params.id, g, autoRename);
+      }
+    } catch { /* fallback cron still reconciles */ }
   }
 
   return Response.json({
