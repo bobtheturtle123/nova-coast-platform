@@ -595,10 +595,13 @@ const [listingUrl,       setListingUrl]        = useState("");
       <div class="agreement">${esc(booking.contractText || "No agreement text was stored for this booking.")}</div>
       <div class="sig">
         <div>
-          <h3>Client Signature</h3>
+          <h3>Client Acceptance</h3>
           <div class="name">${esc(booking.contractSignerName || booking.clientName || "")}</div>
-          <div class="meta">Signed: ${fmt(booking.contractSignedAt)}</div>
+          <div class="meta">${booking.contractAcceptanceMethod === "checkbox" ? "Agreed to Service Agreement" : "Signed"}: ${fmt(booking.contractSignedAt)}</div>
+          ${booking.clientEmail ? `<div class="meta">Email: ${esc(booking.clientEmail)}</div>` : ""}
+          ${booking.contractAgreementVersion ? `<div class="meta">Agreement version: ${esc(booking.contractAgreementVersion)}</div>` : ""}
           ${booking.contractSignerIp ? `<div class="meta">IP: ${esc(booking.contractSignerIp)}</div>` : ""}
+          ${booking.contractUserAgent ? `<div class="meta">Device: ${esc(booking.contractUserAgent)}</div>` : ""}
         </div>
         <div>
           <h3>Business</h3>
@@ -1955,11 +1958,24 @@ if (loading) return (
                   <div className="px-[17px] py-3.5">
                     <div className="flex items-center gap-2 mb-2.5">
                       <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="text-green-600 flex-shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      <div>
-                        <p className="text-[13px] font-semibold text-[#0F172A]">Signed by {booking.contractSignerName || booking.clientName}</p>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-[#0F172A]">
+                          {booking.contractAcceptanceMethod === "checkbox" ? "Agreed to" : "Signed by"} {booking.contractSignerName || booking.clientName}
+                        </p>
                         {booking.contractSignedAt && (
                           <p className="text-[11px] text-gray-400">{new Date(booking.contractSignedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</p>
                         )}
+                        <div className="mt-1 space-y-0.5">
+                          {booking.contractAgreementVersion && (
+                            <p className="text-[11px] text-gray-400">Version {booking.contractAgreementVersion}</p>
+                          )}
+                          {booking.contractSignerIp && (
+                            <p className="text-[11px] text-gray-400">IP {booking.contractSignerIp}</p>
+                          )}
+                          {booking.contractUserAgent && (
+                            <p className="text-[11px] text-gray-400 truncate" title={booking.contractUserAgent}>{booking.contractUserAgent}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <button onClick={downloadAgreement}

@@ -233,9 +233,10 @@ export default function TenantPaymentPage() {
   const [customTip,    setCustomTip]     = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [smsConsent,    setSmsConsent]    = useState(false);
-  // Service agreement signing
-  const [contractSignerName, setContractSignerName] = useState("");
-  const [contractSigned,     setContractSigned]     = useState(false);
+  // Service agreement acceptance — a single subtle checkbox; the full text opens
+  // in a modal. No typed name or separate signature is required.
+  const [agreementAccepted, setAgreementAccepted] = useState(false);
+  const [showAgreement,     setShowAgreement]     = useState(false);
   const initLoadingRef = useRef(false);
 
   const depositConfig = catalog?.bookingConfig?.deposit;
@@ -311,10 +312,10 @@ export default function TenantPaymentPage() {
     if (hasTerms && !agreedToTerms) {
       setFieldErrors((e) => ({ ...e, terms: "You must agree to the Terms of Service to continue." }));
     }
-    if (hasAgreement && !contractSigned) {
-      setFieldErrors((e) => ({ ...e, contract: "Please read and sign the Service Agreement below to continue." }));
+    if (hasAgreement && !agreementAccepted) {
+      setFieldErrors((e) => ({ ...e, contract: "Please read and agree to the Service Agreement to continue." }));
     }
-    if (!valid || (hasTerms && !agreedToTerms) || (hasAgreement && !contractSigned) || clientSecret || initLoadingRef.current) return;
+    if (!valid || (hasTerms && !agreedToTerms) || (hasAgreement && !agreementAccepted) || clientSecret || initLoadingRef.current) return;
     initLoadingRef.current = true;
     setInitLoading(true);
     setInitError(null);
@@ -334,7 +335,12 @@ export default function TenantPaymentPage() {
           customFields: customFields || {},
           photographerId: photographerId || null,
           promoCode: promoCode || null, promoId: promoId || null, discount: discount || 0,
-          contractSignerName: contractSigned ? contractSignerName.trim() : null,
+          // Service agreement acceptance (checkbox). The server captures the
+          // canonical text/version, IP, and timestamp; we pass the browser's
+          // user-agent so the acceptance record can note the device used.
+          agreementAccepted: hasAgreement ? agreementAccepted : false,
+          agreementUserAgent: (hasAgreement && agreementAccepted && typeof navigator !== "undefined")
+            ? navigator.userAgent : null,
         }),
       });
       const data = await res.json();
@@ -382,6 +388,48 @@ export default function TenantPaymentPage() {
 
   return (
     <>
+      {/* Service Agreement modal — opened from the checkout checkbox. The full
+          text lives here, never inline on the checkout page. */}
+      {showAgreement && catalog?.bookingConfig?.serviceAgreement?.enabled && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowAgreement(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+              <p className="font-semibold text-[#0F172A]">Service Agreement</p>
+              <button
+                type="button"
+                onClick={() => setShowAgreement(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                aria-label="Close"
+              >×</button>
+            </div>
+            <div className="overflow-y-auto px-5 py-4 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+              {catalog.bookingConfig.serviceAgreement.text}
+            </div>
+            <div className="px-5 py-4 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowAgreement(false)}
+                className="btn-outline"
+              >Close</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAgreementAccepted(true);
+                  setFieldErrors((err) => { const n = { ...err }; delete n.contract; return n; });
+                  setShowAgreement(false);
+                }}
+                className="btn-primary"
+              >I Agree</button>
+            </div>
+          </div>
+        </div>
+      )}
       <StepProgress current={6} />
       <div className="max-w-6xl mx-auto px-6 py-10 animate-fade-up">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-10 items-start">
@@ -573,52 +621,29 @@ export default function TenantPaymentPage() {
                     </div>
                   )}
 
-                  {/* Service Agreement signing */}
+                  {/* Service Agreement — subtle acceptance checkbox; full text opens in a modal */}
                   {catalog?.bookingConfig?.serviceAgreement?.enabled && (
-                    <div className="space-y-3 border border-gray-200 rounded-xl p-4">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Service Agreement</p>
-                      {!contractSigned ? (
-                        <>
-                          <div className="h-48 overflow-y-auto bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-600 font-mono leading-relaxed whitespace-pre-wrap">
-                            {catalog.bookingConfig.serviceAgreement.text}
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
-                              Type your full name to sign <span className="text-red-400">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={contractSignerName}
-                              onChange={(e) => setContractSignerName(e.target.value)}
-                              placeholder="Your full legal name"
-                              className="input-field"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            disabled={!contractSignerName.trim()}
-                            onClick={() => {
-                              if (!contractSignerName.trim()) return;
-                              setContractSigned(true);
-                              setFieldErrors((e) => { const n = {...e}; delete n.contract; return n; });
-                            }}
-                            className="btn-primary w-full py-2.5">
-                            I agree and electronically sign this agreement
-                          </button>
-                          {fieldErrors.contract && (
-                            <p className="text-xs text-red-500">{fieldErrors.contract}</p>
-                          )}
-                        </>
-                      ) : (
-                        <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl p-3">
-                          <span className="text-green-600 text-lg leading-none">✓</span>
-                          <div>
-                            <p className="text-sm font-medium text-green-800">Agreement signed</p>
-                            <p className="text-xs text-green-700 mt-0.5">Signed as: <strong>{contractSignerName}</strong></p>
-                            <button type="button" onClick={() => { setContractSigned(false); }}
-                              className="text-xs text-green-600 underline mt-1">Undo</button>
-                          </div>
-                        </div>
+                    <div className="space-y-1">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={agreementAccepted}
+                          onChange={(e) => {
+                            setAgreementAccepted(e.target.checked);
+                            if (e.target.checked) setFieldErrors((err) => { const n = { ...err }; delete n.contract; return n; });
+                          }}
+                          className="mt-0.5 flex-shrink-0 w-4 h-4 rounded border-gray-300 text-[#3486cf] focus:ring-navy"
+                        />
+                        <span className="text-sm text-gray-600">
+                          I have read and agree to the{" "}
+                          <button type="button" onClick={() => setShowAgreement(true)}
+                            className="text-[#3486cf] underline underline-offset-2 hover:opacity-70">
+                            Service Agreement
+                          </button>.
+                        </span>
+                      </label>
+                      {fieldErrors.contract && (
+                        <p className="text-xs text-red-500 ml-7">{fieldErrors.contract}</p>
                       )}
                     </div>
                   )}
@@ -669,7 +694,7 @@ export default function TenantPaymentPage() {
                 }}>
                   <PaymentForm
                     chargeAmount={chargeAmount}
-                    payLabel={effectivePayFull ? "Pay in full" : depositLabel(depositConfig)}
+                    payLabel={effectivePayFull ? "Pay in full" : "Pay 50% Deposit"}
                     onSuccess={handleSuccess}
                   />
                 </Elements>

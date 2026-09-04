@@ -50,6 +50,7 @@ export async function POST(req, { params }) {
       travelFee, tipAmount: rawTip, payFull, customFields,
       photographerId: preferredPhotographerId,
       contractSignerName,
+      agreementAccepted, agreementUserAgent,
       unit, promoCode: rawPromoCode, promoId: rawPromoId,
     } = body;
 
@@ -226,6 +227,34 @@ export async function POST(req, { params }) {
       if (opt) itemOptionLabels[itemId] = opt.label;
     }
 
+    // Service agreement acceptance. Checkout now uses a single "I agree" checkbox
+    // (no typed name/signature). Acceptance is true when the client checked the
+    // box AND the tenant actually has an agreement enabled. We snapshot the exact
+    // text and derive a stable version hash from it, plus capture IP, timestamp,
+    // and the browser's user-agent so the order keeps a full acceptance record.
+    // Legacy typed-name signing (contractSignerName) is still honored if present.
+    const agreementText   = catalog.bookingConfig?.serviceAgreement?.text || null;
+    const agreementOn      = catalog.bookingConfig?.serviceAgreement?.enabled === true;
+    const acceptedViaCheck = agreementOn && agreementAccepted === true;
+    const accepted         = acceptedViaCheck || !!contractSignerName;
+    const acceptanceIp     = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null;
+    const agreementVersion = (accepted && agreementText)
+      ? require("crypto").createHash("sha1").update(agreementText).digest("hex").slice(0, 12)
+      : null;
+    const acceptedAt       = accepted ? new Date() : null;
+    // Full acceptance record kept with the order for later reference.
+    const contractAcceptance = accepted ? {
+      clientName:       clientName || null,
+      clientEmail:      clientEmail || null,
+      acceptedAt,
+      agreementVersion,
+      bookingId,
+      ip:               acceptanceIp,
+      userAgent:        agreementUserAgent || null,
+      method:           acceptedViaCheck ? "checkbox" : "typed-signature",
+      agreementText,
+    } : null;
+
     // Save booking to tenant subcollection
     await adminDb
       .collection("tenants")
@@ -291,15 +320,22 @@ export async function POST(req, { params }) {
         galleryId:             null,
         galleryUnlocked:       false,
 
-        // Service agreement
-        contractSigned:            !!contractSignerName,
-        contractSignerName:        contractSignerName || null,
-        contractSignedAt:          contractSignerName ? new Date() : null,
-        contractSignerIp:          contractSignerName ? (req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null) : null,
-        contractText:              contractSignerName ? (catalog.bookingConfig?.serviceAgreement?.text || null) : null,
-        contractCounterSigned:     !!contractSignerName,
-        contractCounterSignedAt:   contractSignerName ? new Date() : null,
-        contractCounterSignedBy:   contractSignerName ? (tenant.businessName || "Business") : null,
+        // Service agreement — legacy fields kept populated so the order card and
+        // the downloadable signed copy keep working. The client "signs" by
+        // accepting the checkbox; we record the client's own name as the signer.
+        contractSigned:            accepted,
+        contractSignerName:        accepted ? (contractSignerName || clientName || null) : null,
+        contractSignedAt:          acceptedAt,
+        contractSignerIp:          accepted ? acceptanceIp : null,
+        contractText:              accepted ? agreementText : null,
+        contractCounterSigned:     accepted,
+        contractCounterSignedAt:   acceptedAt,
+        contractCounterSignedBy:   accepted ? (tenant.businessName || "Business") : null,
+        // New acceptance metadata + full record.
+        contractAgreementVersion:  agreementVersion,
+        contractUserAgent:         accepted ? (agreementUserAgent || null) : null,
+        contractAcceptanceMethod:  accepted ? (acceptedViaCheck ? "checkbox" : "typed-signature") : null,
+        contractAcceptance:        contractAcceptance,
       });
 
     // Increment promo usage now that the booking exists (only if a valid promo applied).
