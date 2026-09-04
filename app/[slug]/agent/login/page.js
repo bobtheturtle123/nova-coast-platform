@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged } from "firebase/auth";
 
 function LoginInner() {
   const { slug }      = useParams();
   const searchParams  = useSearchParams();
-  const router        = useRouter();
   const returnTo      = searchParams.get("returnTo");
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
@@ -27,13 +26,15 @@ function LoginInner() {
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
             body:    JSON.stringify({}),
           });
-          if (res.ok) { router.replace(returnTo || `/${slug}/agent`); return; }
+          // Hard navigation so the App Router cache doesn't serve a previous
+          // agent's server-rendered portal after an account switch.
+          if (res.ok) { window.location.assign(returnTo || `/${slug}/agent`); return; }
         } catch {}
       }
       setLoading(false);
     });
     return unsub;
-  }, [slug, router]);
+  }, [slug, returnTo]);
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -53,7 +54,8 @@ function LoginInner() {
         setLoading(false);
         return;
       }
-      router.replace(returnTo || `/${slug}/agent`);
+      // Hard navigation (see note above) so the portal renders for THIS agent.
+      window.location.assign(returnTo || `/${slug}/agent`);
     } catch (err) {
       const msg = err.code === "auth/invalid-credential" || err.code === "auth/wrong-password"
         ? "Invalid email or password."

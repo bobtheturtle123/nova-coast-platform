@@ -50,15 +50,41 @@ export async function POST(req, { params }) {
     return `${getAppUrl()}/${tenant.slug || ""}/pay/${params.id}?t=${agreementToken}`;
   };
 
-  // Return the existing checkout URL if one was recently generated (within 4 hours)
-  // rather than creating a new Stripe session every time the button is clicked.
+  // If a checkout session was recently generated (within 4 hours) reuse it rather
+  // than creating a new Stripe session every time the button is clicked — BUT we
+  // must still email the client. Clicking "send" is an explicit request to notify
+  // the client, so reusing the Stripe session must never suppress the email
+  // (previously the cached branch returned early and no email was ever sent).
   const lastSent = safeDate(booking.emailCooldowns?.deposit);
-  if (lastSent && Date.now() - lastSent.getTime() < 4 * 60 * 60 * 1000 && booking.depositCheckoutUrl) {
+  const canReuseSession =
+    !!lastSent &&
+    Date.now() - lastSent.getTime() < 4 * 60 * 60 * 1000 &&
+    !!booking.depositCheckoutUrl &&
     // When an agreement is required, an existing token must already be present for
-    // the gated link to work; if it somehow isn't, fall through to regenerate.
-    if (!needsAgreement || agreementToken) {
-      return Response.json({ url: buildClientUrl(booking.depositCheckoutUrl), cached: true });
+    // the gated link to work; if it somehow isn't, regenerate instead.
+    (!needsAgreement || !!agreementToken);
+
+  if (canReuseSession) {
+    const cachedClientUrl = buildClientUrl(booking.depositCheckoutUrl);
+    let cachedEmailSent = false;
+    if (booking.clientEmail) {
+      try {
+        await sendDepositRequestEmail({ booking, depositUrl: cachedClientUrl, tenant });
+        cachedEmailSent = true;
+      } catch (e) {
+        console.error("[send-deposit] email failed (non-fatal, cached session):", e?.message);
+      }
     }
+    const { logBookingActivity } = await import("@/lib/activityLog");
+    await logBookingActivity(ctx.tenantId, params.id, {
+      type:      "deposit_link",
+      title:     cachedEmailSent ? "Deposit request emailed" : "Deposit link generated",
+      channel:   cachedEmailSent ? "email" : null,
+      recipient: cachedEmailSent ? (booking.clientEmail || null) : null,
+      link:      cachedClientUrl,
+      message:   `Deposit request for ${booking.fullAddress || booking.address || "property"}.\nPay deposit: ${cachedClientUrl}`,
+    }).catch(() => {});
+    return Response.json({ url: cachedClientUrl, cached: true, emailSent: cachedEmailSent });
   }
 
   // Use the booking's stored deposit amount. A stored 0 means "no deposit" — do

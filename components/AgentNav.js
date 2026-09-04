@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 export default function AgentNav({ slug }) {
   const pathname = usePathname();
-  const router   = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
 
   // Hide the Dashboard/Settings nav on the auth screens (login / sign-up /
@@ -25,7 +24,11 @@ export default function AgentNav({ slug }) {
     } catch {}
     // Clear server-side session cookie
     await fetch(`/api/${slug}/agent/session`, { method: "DELETE" }).catch(() => {});
-    router.replace(`/${slug}/agent/login`);
+    // Hard navigation (not router.replace) — a soft client nav reuses the App
+    // Router cache, which can keep serving the previous agent's server-rendered
+    // portal (and leave the button stuck on "Signing out…"). A full load forces a
+    // fresh render against the now-cleared cookie.
+    window.location.replace(`/${slug}/agent/login`);
   }
 
   const navItems = [
