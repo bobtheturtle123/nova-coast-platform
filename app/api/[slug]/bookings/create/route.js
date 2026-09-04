@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug, getTenantCatalog } from "@/lib/tenants";
 import { calculateTenantPrice, getSqftTier, clampMoney } from "@/lib/catalogUtils";
@@ -239,7 +240,7 @@ export async function POST(req, { params }) {
     const accepted         = acceptedViaCheck || !!contractSignerName;
     const acceptanceIp     = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null;
     const agreementVersion = (accepted && agreementText)
-      ? require("crypto").createHash("sha1").update(agreementText).digest("hex").slice(0, 12)
+      ? crypto.createHash("sha1").update(agreementText).digest("hex").slice(0, 12)
       : null;
     const acceptedAt       = accepted ? new Date() : null;
     // Full acceptance record kept with the order for later reference.

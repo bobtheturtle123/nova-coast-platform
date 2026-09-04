@@ -218,7 +218,10 @@ export default function ListingDetailPage() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailNote,    setEmailNote]   = useState("");
   const [deliveryMode, setDeliveryMode] = useState("now"); // "now" | "later"
-  const [scheduledAt,  setScheduledAt]  = useState("");
+  const [scheduledAt,  setScheduledAt]  = useState("");     // local "YYYY-MM-DDTHH:MM"
+  const [deliverDate,  setDeliverDate]  = useState("");
+  const [deliverTime,  setDeliverTime]  = useState("");
+  const [showDeliverDtPicker, setShowDeliverDtPicker] = useState(false);
   const [showReschedModal,    setShowReschedModal]    = useState(false);
   const [reschedDate,         setReschedDate]         = useState("");
   const [reschedTime,         setReschedTime]         = useState("");
@@ -1513,14 +1516,30 @@ if (loading) return (
                     </div>
                   ))}
                 </div>
-                <button onClick={() => setShowDeliver(true)}
-                  className="w-full btn-primary text-sm font-semibold py-2 rounded-xl mb-2">
-                  Deliver Gallery →
-                </button>
-                <button onClick={() => { setDeliveryMode("later"); setShowDeliver(true); }}
-                  className="w-full text-xs text-[#3486cf] font-semibold py-1.5 rounded-xl border border-[#3486cf]/20 hover:bg-[#3486cf]/5 transition-colors">
-                  Schedule for later
-                </button>
+                {/* Three actions, one place: upload media, deliver (scheduling
+                    lives inside the deliver dialog), and view the live gallery. */}
+                <div className="space-y-2">
+                  <button onClick={openGalleryEditor}
+                    className="w-full text-sm font-semibold py-2 rounded-xl border border-[#3486cf]/30 text-[#3486cf] hover:bg-[#3486cf]/5 transition-colors">
+                    Upload Media
+                  </button>
+                  <button onClick={() => setShowDeliver(true)}
+                    className="w-full btn-primary text-sm font-semibold py-2 rounded-xl">
+                    Deliver Gallery →
+                  </button>
+                  {gallery?.accessToken && tenantSlug ? (
+                    <a href={`/${tenantSlug}/gallery/${gallery.accessToken}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="block w-full text-center text-sm font-semibold py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+                      View Gallery
+                    </a>
+                  ) : (
+                    <button onClick={() => setTab("gallery")}
+                      className="w-full text-sm font-semibold py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+                      View Gallery
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Gallery Summary */}
@@ -1548,21 +1567,6 @@ if (loading) return (
                     <span className={`text-xs font-semibold ${gallery?.delivered ? "text-green-700" : gallery?.unlocked ? "text-blue-700" : "text-amber-700"}`}>
                       {gallery?.delivered ? "Delivered to client" : gallery?.unlocked ? "Unlocked for preview" : "Ready, not yet delivered"}
                     </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={openGalleryEditor}
-                      className="flex-1 text-xs font-semibold py-1.5 rounded-lg bg-[#3486cf] text-white hover:bg-[#2a6dab] transition-colors">
-                      Open editor
-                    </button>
-                    {gallery?.accessToken && tenantSlug && (
-                      // Opens the real client-facing gallery so a broken link is
-                      // obvious here rather than after it's been sent out.
-                      <a href={`/${tenantSlug}/gallery/${gallery.accessToken}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="flex-1 text-xs font-semibold py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors text-center">
-                        View gallery
-                      </a>
-                    )}
                   </div>
                 </div>
               </div>
@@ -2046,7 +2050,7 @@ if (loading) return (
                   <div className="flex gap-2 flex-shrink-0">
                     <button onClick={openGalleryEditor}
                       className="btn-primary text-sm px-4 py-2">
-                      Open Editor
+                      Upload Media
                     </button>
                     {tenantSlug && gallery.accessToken && (
                       <a href={`/${tenantSlug}/gallery/${gallery.accessToken}`}
@@ -3231,13 +3235,17 @@ if (loading) return (
                 </div>
                 {deliveryMode === "later" && (
                   <div className="mt-3">
-                    <input
-                      type="datetime-local"
-                      value={scheduledAt}
-                      min={(() => { const d = new Date(); d.setMinutes(d.getMinutes() + 15); return d.toISOString().slice(0,16); })()}
-                      onChange={(e) => setScheduledAt(e.target.value)}
-                      className="input-field w-full"
-                    />
+                    <button type="button" onClick={() => setShowDeliverDtPicker(true)}
+                      className="input-field w-full text-left flex items-center gap-2">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
+                        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                      </svg>
+                      <span className={deliverDate ? "text-[#0F172A] text-sm" : "text-gray-400 text-sm"}>
+                        {deliverDate
+                          ? `${new Date(deliverDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}${deliverTime ? ` · ${valToLabel(deliverTime)}` : ""}`
+                          : "Pick date & time"}
+                      </span>
+                    </button>
                     <p className="text-xs text-gray-400 mt-1">Email delivers automatically at this time. You can cancel it before then.</p>
                   </div>
                 )}
@@ -3275,6 +3283,23 @@ if (loading) return (
               </button>
             </div>
           </div>
+          {showDeliverDtPicker && (
+            <DateTimePicker
+              date={deliverDate}
+              time={deliverTime}
+              onConfirm={(d, t) => {
+                setDeliverDate(d);
+                setDeliverTime(t);
+                // Store as a local "YYYY-MM-DDTHH:MM" string; deliverGallery
+                // converts to UTC with new Date(...).toISOString(). Defaults to
+                // noon when no time is chosen. This picker allows any near-future
+                // time (e.g. 5 minutes out) — the handler blocks only past times.
+                setScheduledAt(d ? `${d}T${t || "12:00"}` : "");
+                setShowDeliverDtPicker(false);
+              }}
+              onClose={() => setShowDeliverDtPicker(false)}
+            />
+          )}
         </div>
       )}
 

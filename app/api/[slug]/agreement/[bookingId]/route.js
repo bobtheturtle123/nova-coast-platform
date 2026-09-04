@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
 import { logBookingActivity } from "@/lib/activityLog";
@@ -41,17 +42,26 @@ export async function GET(req, { params }) {
 
   const { tenant, booking } = r;
   const agreementText = booking.contractText || tenant.bookingConfig?.serviceAgreement?.text || "";
+  // The deposit pay page needs the amount + the Stripe checkout URL so it can
+  // gate payment behind agreement acceptance, then hand the client off to Stripe.
+  const depositAmount = booking.depositAmount ?? Math.round((booking.totalPrice || 0) * 0.5);
 
   return Response.json({
     businessName: tenant.branding?.businessName || tenant.businessName || tenant.name || "",
     primaryColor: tenant.branding?.primaryColor || "#3486cf",
     logoUrl:      tenant.branding?.logoUrl || null,
     clientName:   booking.clientName || "",
+    clientEmail:  booking.clientEmail || "",
     address:      booking.fullAddress || booking.address || "",
     agreementText,
+    agreementEnabled: !!tenant.bookingConfig?.serviceAgreement?.enabled,
     signed:       !!booking.contractSigned,
     signerName:   booking.contractSignerName || null,
     signedAt:     toIso(booking.contractSignedAt),
+    // Deposit context (only meaningful on the pay page).
+    depositAmount,
+    depositPaid:  !!booking.depositPaid,
+    depositCheckoutUrl: booking.depositCheckoutUrl || null,
   });
 }
 
@@ -62,6 +72,9 @@ export async function POST(req, { params }) {
   const body       = await req.json().catch(() => ({}));
   const token      = body.token;
   const signerName = (body.signerName || "").trim();
+  // Checkbox acceptance (deposit pay page): the client ticks "I agree" — no typed
+  // name. We record the client's own name as the acceptor.
+  const acceptedViaCheckbox = body.accepted === true && !signerName;
 
   const r = await resolve(params.slug, params.bookingId, token);
   if (!r) return Response.json({ error: "Not found" }, { status: 404 });
@@ -71,7 +84,7 @@ export async function POST(req, { params }) {
   if (booking.contractSigned) {
     return Response.json({ ok: true, alreadySigned: true, signerName: booking.contractSignerName || null });
   }
-  if (!signerName || signerName.length < 2) {
+  if (!acceptedViaCheckbox && (!signerName || signerName.length < 2)) {
     return Response.json({ error: "Please type your full name to sign." }, { status: 400 });
   }
 
@@ -79,26 +92,47 @@ export async function POST(req, { params }) {
   const now = new Date();
   const businessName = tenant.branding?.businessName || tenant.businessName || tenant.name || "Business";
   const text = booking.contractText || tenant.bookingConfig?.serviceAgreement?.text || null;
+  const acceptorName = acceptedViaCheckbox ? (booking.clientName || "Client") : signerName;
+  const method = acceptedViaCheckbox ? "checkbox" : "typed-signature";
+  const userAgent = typeof body.userAgent === "string" ? body.userAgent.slice(0, 400) : null;
+  const agreementVersion = text
+    ? crypto.createHash("sha1").update(text).digest("hex").slice(0, 12)
+    : null;
 
   await ref.update({
-    contractSigned:          true,
-    contractSignerName:      signerName,
-    contractSignedAt:        now,
-    contractSignerIp:        ip,
-    contractText:            text,
-    contractCounterSigned:   true,
-    contractCounterSignedAt: now,
-    contractCounterSignedBy: businessName,
-    agreementSignedAt:       now,
+    contractSigned:            true,
+    contractSignerName:        acceptorName,
+    contractSignedAt:          now,
+    contractSignerIp:          ip,
+    contractText:              text,
+    contractCounterSigned:     true,
+    contractCounterSignedAt:   now,
+    contractCounterSignedBy:   businessName,
+    agreementSignedAt:         now,
+    // Acceptance metadata + full record (parity with the self-serve checkout).
+    contractAgreementVersion:  agreementVersion,
+    contractUserAgent:         userAgent,
+    contractAcceptanceMethod:  method,
+    contractAcceptance: {
+      clientName:       acceptorName,
+      clientEmail:      booking.clientEmail || null,
+      acceptedAt:       now,
+      agreementVersion,
+      bookingId:        params.bookingId,
+      ip,
+      userAgent,
+      method,
+      agreementText:    text,
+    },
   });
 
   await logBookingActivity(tenant.id, params.bookingId, {
     type:      "agreement_signed",
-    title:     `Agreement signed by ${signerName}`,
+    title:     acceptedViaCheckbox ? `Agreement accepted by ${acceptorName}` : `Agreement signed by ${acceptorName}`,
     channel:   null,
     recipient: booking.clientEmail || null,
-    message:   `${signerName} reviewed and signed the service agreement${ip ? ` (IP ${ip})` : ""}.`,
+    message:   `${acceptorName} ${acceptedViaCheckbox ? "accepted" : "reviewed and signed"} the service agreement${ip ? ` (IP ${ip})` : ""}.`,
   }).catch(() => {});
 
-  return Response.json({ ok: true, signerName, signedAt: now.toISOString() });
+  return Response.json({ ok: true, signerName: acceptorName, signedAt: now.toISOString() });
 }
