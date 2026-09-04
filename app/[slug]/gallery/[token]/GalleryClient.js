@@ -536,7 +536,11 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-5">
 
         {/* ── Agent portal signup callout (top) ───────────────────────── */}
-        {showSignupCallout && (
+        {/* Only when the studio REQUIRES the agent portal — otherwise clients can
+            download/pay without signing in, so a "sign in to unlock & pay" prompt
+            would be misleading. The optional "Sign Up Free" upsell lives at the
+            bottom of the page and still shows regardless. */}
+        {showSignupCallout && requireAgentPortal && (
           <div className={`rounded-2xl border px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between ${
             requireAgentPortal
               ? "bg-blue-50 border-blue-200"
