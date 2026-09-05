@@ -57,7 +57,7 @@ export default function BestSoftwarePage() {
 
           <h3 className="font-semibold text-navy text-base mt-6 mb-2">Payments and invoicing</h3>
           <p className="text-gray-600 leading-relaxed mb-4">
-            Wave, QuickBooks, and HoneyBook are the common choices here. They generate invoices and collect payments, but they have no connection to the shoot or the delivery. That disconnect means you are still manually tracking who has paid before releasing a gallery. <Link href="/features/payments-automation" className="text-navy underline underline-offset-2 hover:text-navy/70">Payments automation</Link> that ties directly to delivery removes that manual step entirely.
+            Wave and HoneyBook are the common choices here. They generate invoices and collect payments, but they have no connection to the shoot or the delivery. That disconnect means you are still manually tracking who has paid before releasing a gallery. <Link href="/features/payments-automation" className="text-navy underline underline-offset-2 hover:text-navy/70">Payments automation</Link> that ties directly to delivery removes that manual step entirely.
           </p>
 
           <h3 className="font-semibold text-navy text-base mt-6 mb-2">Team management</h3>

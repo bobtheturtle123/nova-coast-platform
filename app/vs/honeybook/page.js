@@ -171,7 +171,7 @@ export default function VsHoneybookPage() {
       <section className="py-14 px-6 bg-white border-y border-gray-100">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="font-serif text-2xl text-navy font-normal mb-3">
-            KyoriaOS starts at $79/mo for solo photographers.
+            KyoriaOS starts at $49/mo for solo photographers.
           </h2>
           <p className="text-gray-500 text-sm mb-6 leading-relaxed">
             Solo, Studio, Pro, and Scale plans available. No seat fees for your basic team. No surprise charges per form or project.

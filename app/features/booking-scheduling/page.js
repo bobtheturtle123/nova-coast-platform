@@ -67,7 +67,7 @@ export default function BookingSchedulingPage() {
               Sign in to your account
             </Link>
           </div>
-          <p className="text-white/25 text-xs mt-4">From $79/month &middot; No contracts &middot; Cancel anytime</p>
+          <p className="text-white/25 text-xs mt-4">From $49/month &middot; No contracts &middot; Cancel anytime</p>
         </div>
       </section>
 

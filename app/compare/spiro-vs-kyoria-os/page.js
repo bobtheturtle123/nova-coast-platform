@@ -60,7 +60,7 @@ const ROWS = [
   },
   {
     feature: "Starts at",
-    kyoria: { value: "$79/month", positive: true },
+    kyoria: { value: "$49/month", positive: true },
     competitor: { value: "Varies", positive: false },
   },
 ];

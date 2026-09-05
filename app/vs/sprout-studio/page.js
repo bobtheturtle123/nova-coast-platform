@@ -172,7 +172,7 @@ export default function VsSproutStudioPage() {
       <section className="py-14 px-6 bg-white border-y border-gray-100">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="font-serif text-2xl text-navy font-normal mb-3">
-            KyoriaOS starts at $79/mo for solo photographers.
+            KyoriaOS starts at $49/mo for solo photographers.
           </h2>
           <p className="text-gray-500 text-sm mb-6 leading-relaxed">
             Solo, Studio, Pro, and Scale plans available. Built for photographers running one-person operations all the way up to multi-photographer companies.
