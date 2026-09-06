@@ -11,6 +11,7 @@ import { getAppUrl } from "@/lib/appUrl";
 import WeatherWidget from "@/components/dashboard/WeatherWidget";
 import { useTenantSettings, formatCurrency } from "@/lib/TenantSettingsContext";
 import { useDashboardPermissions } from "@/lib/dashboardPermissions";
+import { isDemo, getDemoListingDetail, DEMO_VIEW_ONLY_MESSAGE } from "@/lib/demoData";
 
 // ─── Agent Image Field (upload file OR paste URL) ────────────────────────────
 function AgentImageField({ label, value, onChange, folder, placeholder, hint, preview }) {
@@ -202,6 +203,15 @@ export default function ListingDetailPage() {
   const { tempUnit, locale, currency } = useTenantSettings();
   const { permissions } = useDashboardPermissions();
 
+  // View-only demo: there's no signed-in user, so every write action would throw.
+  // demoGuard() intercepts them and shows a friendly "not available in the demo"
+  // message instead of silently failing (which looks broken).
+  const demo = isDemo();
+  const demoGuard = () => {
+    if (demo) { toast(DEMO_VIEW_ONLY_MESSAGE); return true; }
+    return false;
+  };
+
   const [booking,    setBooking]   = useState(null);
   const [gallery,    setGallery]   = useState(null);
   const [catalog,    setCatalog]   = useState(null);
@@ -291,6 +301,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   const [autofillMsg,    setAutofillMsg]    = useState("");
 
   async function convertToListing() {
+    if (demoGuard()) return;
     setConvertingToListing(true);
     try {
       const token = await auth.currentUser?.getIdToken(true);
@@ -329,6 +340,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   }, [id]);
 
   async function loadActivity() {
+    if (demo) { setActivityLog([]); return; }
     setActivityLoading(true);
     try {
       const token = await auth.currentUser?.getIdToken();
@@ -343,6 +355,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   }
 
   async function loadRevisions() {
+    if (demo) { setRevisions([]); return; }
     setRevisionsLoading(true);
     try {
       const token = await auth.currentUser?.getIdToken();
@@ -368,6 +381,25 @@ const [listingUrl,       setListingUrl]        = useState("");
   }
 
   async function load() {
+    // Demo mode: populate the one openable example entirely from local sample
+    // data — there is no signed-in user or backend to call.
+    if (demo) {
+      const d = getDemoListingDetail(id);
+      if (d) {
+        setBooking(d.booking);
+        setGallery(d.gallery);
+        setCatalog(d.catalog);
+        setProductNames(d.productNames || {});
+        setTeamMembers(d.team || []);
+        setTenantSlug("aperture");
+        setListingUrl(`${getAppUrl()}/aperture/property/${id}`);
+        if (d.booking?.propertyWebsite) setPropSite(d.booking.propertyWebsite);
+        setRevisions([]);
+      }
+      setLoading(false);
+      return;
+    }
+
     const token = await auth.currentUser?.getIdToken(true);
     if (!token) return;
 
@@ -451,6 +483,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   // Re-fetch the booking when returning to this tab, so a date/appointment set
   // elsewhere (e.g. the booking edit form) shows up without a manual refresh.
   async function refreshBooking() {
+    if (demo) return;
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) return;
@@ -467,6 +500,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   }, [id]);
 
   async function patchBooking(fields) {
+    if (demoGuard()) return;
     setSaving(true);
     try {
       const token = await auth.currentUser.getIdToken();
@@ -491,6 +525,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   // photographer's Google Calendar. Fixes bookings whose extra appointments
   // never landed on the calendar.
   async function syncToCalendar() {
+    if (demoGuard()) return;
     setSyncingGcal(true);
     try {
       const token = await auth.currentUser.getIdToken();
@@ -505,18 +540,21 @@ const [listingUrl,       setListingUrl]        = useState("");
   }
 
   async function postponeBooking() {
+    if (demoGuard()) return;
     if (!confirm("Postpone this shoot? The date/time will be cleared and it's marked as awaiting a new date. The calendar event is removed and the client & photographer are notified.")) return;
     await patchBooking({ workflowStatus: "postponed", shootDate: "", shootTime: "" });
     setBooking((b) => ({ ...b, workflowStatus: "postponed", shootDate: "", shootTime: "" }));
   }
 
   async function cancelBooking() {
+    if (demoGuard()) return;
     if (!confirm("Cancel this booking? This marks it cancelled, removes the calendar event, and notifies the client & photographer. This does not automatically refund any payment.")) return;
     await patchBooking({ status: "cancelled" });
     setBooking((b) => ({ ...b, status: "cancelled" }));
   }
 
   async function sendAgentAccess(sendEmail = true) {
+    if (demoGuard()) return;
     setSendingAgentAccess(true);
     setAgentAccessMsg("");
     try {
@@ -542,6 +580,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   // Send / resend the agreement for signing, or send a reminder. The server mints
   // the signing link, emails the client, and logs it to Activity.
   async function sendAgreement(action) {
+    if (demoGuard()) return;
     setAgreementSending(true);
     setAgreementMsg("");
     try {
@@ -618,6 +657,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   }
 
   async function openGalleryEditor() {
+    if (demoGuard()) return;
     if (gallery) {
       router.push(`/dashboard/galleries/${gallery.id}`);
       return;
@@ -634,6 +674,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   }
 
   async function deliverGallery() {
+    if (demoGuard()) return;
     if (!gallery) return;
     if (deliveryMode === "later" && !scheduledAt) { toast("Pick a date and time.", "error"); return; }
     if (deliveryMode === "later" && new Date(scheduledAt) <= new Date()) {
@@ -667,6 +708,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   }
 
   async function cancelScheduledDelivery() {
+    if (demoGuard()) return;
     if (!gallery) return;
     const token = await auth.currentUser.getIdToken();
     const res = await fetch(`/api/dashboard/galleries/${gallery.id}/send`, {
@@ -682,6 +724,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   }
 
   async function retryScheduledDelivery() {
+    if (demoGuard()) return;
     if (!gallery) return;
     const token = await auth.currentUser.getIdToken();
     const res = await fetch(`/api/dashboard/galleries/${gallery.id}/send`, {
@@ -701,6 +744,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   }
 
   async function toggleUnlock() {
+    if (demoGuard()) return;
     if (!gallery) return;
     const token = await auth.currentUser.getIdToken();
     const newVal = !gallery.unlocked;
@@ -713,6 +757,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   }
 
   async function savePropSite() {
+    if (demoGuard()) return;
     setSavingPropSite(true);
     setPropSiteMsg({ text: "", type: "" });
     try {
@@ -738,6 +783,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   }
 
   async function handleAutofill() {
+    if (demoGuard()) return;
     if (!autofillSource.trim()) return;
     setAutofilling(true);
     setAutofillMsg("");
@@ -763,6 +809,7 @@ const [listingUrl,       setListingUrl]        = useState("");
   }
 
   async function loadAnalytics() {
+    if (demo) { setAnalyticsLoading(false); return; }
     setAnalyticsLoading(true);
     try {
       const token = await auth.currentUser.getIdToken();
@@ -927,6 +974,20 @@ if (loading) return (
         <span style={{ color: "#D1D5DB" }}>/</span>
         <span className="text-[#0F172A] font-medium truncate max-w-xs">{address}</span>
       </div>
+
+      {/* Demo notice — sets expectations that this is a sample, view-only listing */}
+      {demo && (
+        <div className="mx-7 mt-3 rounded-xl px-4 py-3 flex items-start gap-2.5"
+          style={{ background: "#EAF3FB", border: "1px solid #C9E0F3" }}>
+          <span aria-hidden style={{ fontSize: 15, lineHeight: "20px" }}>👁️</span>
+          <p className="text-[13px] leading-snug" style={{ color: "#215681" }}>
+            <strong>Demo listing.</strong> This is a fully populated example so you can explore
+            what a live listing looks like. It's view-only — buttons and actions are disabled here,
+            but this is exactly where you'd manage delivery, payments, and the property website in
+            your real KyoriaOS workspace.
+          </p>
+        </div>
+      )}
 
       {/* Hero */}
       <div className="mx-7 mt-3.5 rounded-[18px] overflow-hidden relative" style={{ height: 240, background: "#1f2733" }}>
@@ -2243,6 +2304,7 @@ if (loading) return (
               </div>
               <button
                 onClick={async () => {
+                  if (demoGuard()) return;
                   const next = { ...propSite, published: !propSite.published };
                   setPropSite(next);
                   setSavingPropSite(true);

@@ -1405,6 +1405,9 @@ export default function ProductsPage() {
       setTenant(tenantData.tenant || null);
       setLoading(false);
     }
+    // In demo mode there's no signed-in user, so the auth-gated call below never
+    // fires — run load() directly so the demo's sample products still render.
+    if (isDemo()) { load(); return; }
     auth.currentUser?.getIdToken().then(() => load());
   }, []);
 

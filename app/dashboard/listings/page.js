@@ -111,12 +111,37 @@ function ListingCard({ listing, revCount = 0 }) {
   const photogFirst     = photogName.split(" ")[0];
   const photogColor     = photogName ? avatarColor(photogName) : null;
 
+  // In the demo, only the flagged example opens a working detail page; the other
+  // cards are there for visual completeness, so they don't link anywhere.
+  const demo      = isDemo();
+  const clickable = !demo || listing.demoExample;
+  const wrapProps = {
+    className: "group relative flex flex-col overflow-hidden transition-all duration-200",
+    style: { background: "#fff", borderRadius: 18, border: "1px solid #E9ECF0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", cursor: clickable ? "pointer" : "default" },
+    onMouseEnter: (e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 28px rgba(0,0,0,0.10)"; e.currentTarget.style.borderColor = "#E5E7EB"; },
+    onMouseLeave: (e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)"; e.currentTarget.style.borderColor = "#E9ECF0"; },
+  };
+  const CardWrap = clickable
+    ? (props) => <Link href={`/dashboard/listings/${listing.id}`} {...props} />
+    : (props) => <div {...props} />;
+
   return (
-    <Link href={`/dashboard/listings/${listing.id}`}
-      className="group relative flex flex-col overflow-hidden transition-all duration-200"
-      style={{ background: "#fff", borderRadius: 18, border: "1px solid #E9ECF0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
-      onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 28px rgba(0,0,0,0.10)"; e.currentTarget.style.borderColor = "#E5E7EB"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)"; e.currentTarget.style.borderColor = "#E9ECF0"; }}>
+    <CardWrap {...wrapProps}>
+
+      {/* Demo badges: the openable example vs. a look-only sample */}
+      {demo && (
+        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-10">
+          {listing.demoExample ? (
+            <span className="px-2.5 py-1 rounded-full text-[10.5px] font-bold text-white shadow" style={{ background: "#3486cf" }}>
+              Demo listing — click to open
+            </span>
+          ) : (
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold" style={{ background: "rgba(255,255,255,0.92)", color: "#6B7280", border: "1px solid rgba(15,23,42,0.08)" }}>
+              Sample
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Cover — 4:3 ratio */}
       <div className="relative w-full overflow-hidden flex-shrink-0" style={{ aspectRatio: "4/3" }}>
@@ -206,7 +231,7 @@ function ListingCard({ listing, revCount = 0 }) {
           )}
         </div>
       </div>
-    </Link>
+    </CardWrap>
   );
 }
 
@@ -572,12 +597,19 @@ export default function ListingsPage() {
                     ? `${listing.city}${listing.state ? `, ${listing.state}` : ""}`
                     : listing.address?.split(",").slice(1, 2).join("").trim();
 
+                  // In the demo only the flagged example row opens a detail page.
+                  const rowClickable = !isDemo() || listing.demoExample;
+                  const RowWrap = rowClickable
+                    ? (props) => <Link href={`/dashboard/listings/${listing.id}`} {...props} />
+                    : (props) => <div {...props} />;
+
                   return (
-                    <Link key={listing.id} href={`/dashboard/listings/${listing.id}`}
+                    <RowWrap key={listing.id}
                       className="group grid items-center px-5 py-3.5 gap-4 transition-colors"
                       style={{
                         gridTemplateColumns: COLS,
                         borderBottom: idx < filtered.length - 1 ? "1px solid #E9ECF0" : "none",
+                        cursor: rowClickable ? "pointer" : "default",
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.background = "rgb(15 23 42 / 0.022)"}
                       onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
@@ -600,6 +632,18 @@ export default function ListingsPage() {
                           <p className="text-[14px] font-semibold text-[#0F172A] truncate leading-snug group-hover:text-[#374151] transition-colors">
                             {streetAddr}
                           </p>
+                          {isDemo() && listing.demoExample && (
+                            <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
+                              style={{ background: "#3486cf" }}>
+                              Demo listing
+                            </span>
+                          )}
+                          {isDemo() && !listing.demoExample && (
+                            <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                              style={{ background: "#F1F5F9", color: "#94A3B8" }}>
+                              Sample
+                            </span>
+                          )}
                           {(pendingRevCounts[listing.id] || 0) > 0 && (
                             <span className="flex-shrink-0 text-[11px] font-bold px-1.5 py-0.5 rounded-full"
                               style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
@@ -633,7 +677,7 @@ export default function ListingsPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
-                    </Link>
+                    </RowWrap>
                   );
                 })}
               </div>
