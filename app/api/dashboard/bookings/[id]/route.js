@@ -31,7 +31,12 @@ export async function GET(req, { params }) {
 
   if (!doc.exists) return Response.json({ error: "Not found" }, { status: 404 });
   const data = doc.data();
-  for (const key of ["createdAt", "updatedAt", "preferredDate", "shootDate"]) {
+  for (const key of [
+    "createdAt", "updatedAt", "preferredDate", "shootDate",
+    // Contract/agreement timestamps — needed so the client can render a valid
+    // "Agreed to Service Agreement" date on screen and in the downloaded PDF.
+    "contractSignedAt", "contractCounterSignedAt", "agreementSignedAt",
+  ]) {
     if (data[key]?._seconds) data[key] = new Date(data[key]._seconds * 1000).toISOString();
     else if (data[key]?.toDate) data[key] = data[key].toDate().toISOString();
   }
