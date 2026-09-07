@@ -2,6 +2,18 @@ const { withSentryConfig } = require("@sentry/nextjs");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Legacy /legal/* policy URLs -> canonical short paths. Done here (not via a
+  // page-level permanentRedirect) because Next's App Router redirect() gets
+  // cached by Vercel as an HTML body with NO Location header, which crawlers
+  // cannot reliably follow. next.config redirects emit true edge 308s.
+  async redirects() {
+    return [
+      { source: "/legal/privacy",     destination: "/privacy",     permanent: true },
+      { source: "/legal/terms",       destination: "/terms",       permanent: true },
+      { source: "/legal/cookies",     destination: "/cookies",     permanent: true },
+      { source: "/legal/sms-consent", destination: "/sms-consent", permanent: true },
+    ];
+  },
   images: {
     remotePatterns: [
       {
