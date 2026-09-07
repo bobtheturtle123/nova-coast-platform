@@ -43,16 +43,18 @@ export default function DemoProvider({ children }) {
   const [demo, setDemo]       = useState(false);
   const [toast, setToast]     = useState(false);
 
-  // Demo mode ONLY applies when no real user is signed in AND no real session has
-  // ended in this tab. A real user (or a just-ended real session, e.g. sign-out /
-  // account deletion) forces demo off and clears the flag, so a stale ky_demo can
-  // never hijack a real login.
+  // An EXPLICIT demo entry (visiting /demo or a ?demo=1 URL) wins for this tab,
+  // even over a signed-in session, so an owner can preview the public demo and
+  // writes still get blocked. A lingering flag can't hijack a real login because
+  // every sign-in / sign-up path calls exitDemo() first, and a just-ended real
+  // session (sign-out / account deletion) also clears it here.
   const hadRealUser = useRef(false);
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
+      if (isDemo()) { if (u) hadRealUser.current = true; setDemo(true); return; }
       if (u) { hadRealUser.current = true; exitDemo(); setDemo(false); }
       else if (hadRealUser.current) { exitDemo(); setDemo(false); }
-      else { setDemo(isDemo()); }
+      else { setDemo(false); }
     });
     return unsub;
   }, []);

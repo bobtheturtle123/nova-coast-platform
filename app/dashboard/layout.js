@@ -171,24 +171,27 @@ export default function DashboardLayout({ children }) {
   const hadRealUser = useRef(false);
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
+      // View-only demo wins for this tab — even over a signed-in session — so an
+      // owner can preview the public demo. It's fully sandboxed: a fake demo user,
+      // the sample tenant, and no real-account gating (subscription/onboarding).
+      // Writes are blocked by DemoProvider, so the real account is never touched.
+      // (A fresh sign-in / sign-up clears the flag first, so this can't linger.)
+      if (isDemo()) {
+        if (u) hadRealUser.current = true;
+        setUser({ email: "demo@aperturemedia.co", getIdToken: async () => "demo-token" });
+        setUserRole("owner");
+        setTenantName(DEMO_TENANT.businessName);
+        setTenantPlan(DEMO_TENANT.subscriptionPlan);
+        return;
+      }
       if (!u) {
         // If a REAL session just ended in this tab (sign-out / account deletion),
         // never fall into demo — clear the flag and go to login.
         if (hadRealUser.current) { exitDemo(); router.push("/auth/login"); return; }
-        // No real user. If this is a genuine view-only demo visit, render the
-        // shell with a sample tenant and skip auth/subscription gating.
-        if (isDemo()) {
-          setUser({ email: "demo@aperturemedia.co", getIdToken: async () => "demo-token" });
-          setUserRole("owner");
-          setTenantName(DEMO_TENANT.businessName);
-          setTenantPlan(DEMO_TENANT.subscriptionPlan);
-          return;
-        }
         router.push("/auth/login"); return;
       }
-      // A real user is signed in — make sure demo mode can't linger in this tab.
+      // A real user is signed in.
       hadRealUser.current = true;
-      if (isDemo()) exitDemo();
       // Force-refresh so custom claims (tenantId, role) are always current
       await u.getIdToken(true);
       const tokenResult = await u.getIdTokenResult();

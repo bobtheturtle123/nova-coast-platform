@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { exitDemo } from "@/lib/demoData";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -76,7 +77,9 @@ export default function RegisterPage() {
     try {
       // 0. Ensure no prior session lingers (shared-device safety) before we create
       //    the new account. If anything below throws, the user is NOT left signed
-      //    in as whoever was here before.
+      //    in as whoever was here before. Also clear any demo flag so a new signup
+      //    never inherits view-only demo mode from an earlier /demo visit.
+      exitDemo();
       if (auth.currentUser) await signOut(auth).catch(() => {});
 
       // 1. Create Firebase Auth user
