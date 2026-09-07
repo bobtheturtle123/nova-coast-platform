@@ -128,21 +128,6 @@ function ListingCard({ listing, revCount = 0 }) {
   return (
     <CardWrap {...wrapProps}>
 
-      {/* Demo badges: the openable example vs. a look-only sample */}
-      {demo && (
-        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-10">
-          {listing.demoExample ? (
-            <span className="px-2.5 py-1 rounded-full text-[10.5px] font-bold text-white shadow" style={{ background: "#3486cf" }}>
-              Demo listing — click to open
-            </span>
-          ) : (
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold" style={{ background: "rgba(255,255,255,0.92)", color: "#6B7280", border: "1px solid rgba(15,23,42,0.08)" }}>
-              Sample
-            </span>
-          )}
-        </div>
-      )}
-
       {/* Cover — 4:3 ratio */}
       <div className="relative w-full overflow-hidden flex-shrink-0" style={{ aspectRatio: "4/3" }}>
         {coverUrl ? (
@@ -182,6 +167,25 @@ function ListingCard({ listing, revCount = 0 }) {
             </svg>
             {listing.gallery.mediaCount}
           </div>
+        )}
+
+        {/* Demo badge — anchored to the bottom of the cover so it clears the
+            top-corner status/media pills and never gets cropped between them.
+            whitespace-nowrap keeps it on one legible line on narrow cards. */}
+        {demo && (
+          listing.demoExample ? (
+            <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-10">
+              <span className="whitespace-nowrap px-3 py-1 rounded-full text-[11px] font-bold text-white shadow-md" style={{ background: "#3486cf" }}>
+                Demo listing — click to open
+              </span>
+            </div>
+          ) : (
+            <div className="absolute bottom-2.5 left-2.5 z-10">
+              <span className="whitespace-nowrap px-2.5 py-1 rounded-full text-[10px] font-semibold" style={{ background: "rgba(255,255,255,0.92)", color: "#6B7280", border: "1px solid rgba(15,23,42,0.08)" }}>
+                Sample
+              </span>
+            </div>
+          )
         )}
       </div>
 

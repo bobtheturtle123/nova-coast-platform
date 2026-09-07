@@ -1342,7 +1342,9 @@ function ImportPricingButton({ onImport, activeType, pricingConfig }) {
 
 export default function ProductsPage() {
   const toast = useToast();
-  const [activeType,  setActiveType]  = useState("packages");
+  // The demo only populates Services (a small generic set), so land there rather
+  // than on an empty Packages tab. Real users always start on Packages.
+  const [activeType,  setActiveType]  = useState(isDemo() ? "services" : "packages");
   const [bulkOpen,    setBulkOpen]    = useState(false);
   const [bulkPhotogs, setBulkPhotogs] = useState([]);
   const [bulkMode,    setBulkMode]    = useState("add"); // "add" | "remove" | "set"

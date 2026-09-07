@@ -207,8 +207,16 @@ export default function ListingDetailPage() {
   // demoGuard() intercepts them and shows a friendly "not available in the demo"
   // message instead of silently failing (which looks broken).
   const demo = isDemo();
+  // Throttle the "view-only" toast so clicking several disabled actions in a row
+  // doesn't stack a pile of identical popups — one reminder every few seconds is
+  // plenty. The action is still blocked every time.
+  const demoToastAt = useRef(0);
   const demoGuard = () => {
-    if (demo) { toast(DEMO_VIEW_ONLY_MESSAGE); return true; }
+    if (demo) {
+      const now = Date.now();
+      if (now - demoToastAt.current > 6000) { toast(DEMO_VIEW_ONLY_MESSAGE); demoToastAt.current = now; }
+      return true;
+    }
     return false;
   };
 
