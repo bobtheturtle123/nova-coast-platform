@@ -9,13 +9,13 @@ export default function LegalLayout({ children }) {
             KyoriaOS
           </Link>
           <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap justify-end">
-            <Link href="/legal/privacy" className="hover:text-gray-600 transition-colors">Privacy</Link>
-            <Link href="/legal/terms" className="hover:text-gray-600 transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-gray-600 transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-gray-600 transition-colors">Terms</Link>
             <Link href="/legal/media-policy" className="hover:text-gray-600 transition-colors">Media Policy</Link>
             <Link href="/legal/dpa" className="hover:text-gray-600 transition-colors">DPA</Link>
             <Link href="/legal/acceptable-use" className="hover:text-gray-600 transition-colors">Acceptable Use</Link>
-            <Link href="/legal/sms-consent" className="hover:text-gray-600 transition-colors">SMS Consent</Link>
-            <Link href="/legal/cookies" className="hover:text-gray-600 transition-colors">Cookies</Link>
+            <Link href="/sms-consent" className="hover:text-gray-600 transition-colors">SMS Consent</Link>
+            <Link href="/cookies" className="hover:text-gray-600 transition-colors">Cookies</Link>
           </div>
         </div>
       </header>
@@ -26,9 +26,9 @@ export default function LegalLayout({ children }) {
         <div className="max-w-3xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400">
           <span>© {new Date().getFullYear()} KyoriaOS · Rick Ryan Photography LLC</span>
           <div className="flex items-center gap-4">
-            <Link href="/legal/privacy" className="hover:text-gray-600 transition-colors">Privacy Policy</Link>
-            <Link href="/legal/terms" className="hover:text-gray-600 transition-colors">Terms of Service</Link>
-            <Link href="/legal/sms-consent" className="hover:text-gray-600 transition-colors">SMS Consent</Link>
+            <Link href="/privacy" className="hover:text-gray-600 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-gray-600 transition-colors">Terms of Service</Link>
+            <Link href="/sms-consent" className="hover:text-gray-600 transition-colors">SMS Consent</Link>
           </div>
         </div>
       </footer>

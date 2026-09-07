@@ -1,6 +1,8 @@
 export const metadata = {
   title: "Media Storage & Retention Policy - KyoriaOS",
   description: "How KyoriaOS stores media, the storage limit, and how long full-resolution photo files are retained.",
+  alternates: { canonical: "https://kyoriaos.com/legal/media-policy" },
+  robots: { index: true, follow: true },
 };
 
 export default function MediaPolicyPage() {

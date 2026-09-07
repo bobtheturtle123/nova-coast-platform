@@ -4,9 +4,9 @@ import LandingMobileNav from "@/components/LandingMobileNav";
 import { PLANS } from "@/lib/plans";
 
 export const metadata = {
-  title: "Kyoria OS: The Complete System for Real Estate Media Businesses",
+  title: "KyoriaOS | Real Estate Media Business Software",
   description:
-    "Booking, scheduling, gallery delivery, and client portals, all connected. Kyoria OS replaces the tools real estate photographers patch together.",
+    "KyoriaOS is the all-in-one business software for real estate photographers: booking, scheduling, gallery delivery, contracts, payments, and client portals, all connected.",
   alternates: { canonical: "https://kyoriaos.com/" },
 };
 
@@ -282,20 +282,41 @@ const PRICE_PLANS = [
   },
 ];
 
+// Only properties that are verifiably true are declared here — no ratings,
+// reviews, founders, or social profiles that we cannot substantiate.
 const JSON_LD = {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  name: "KyoriaOS",
-  applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
-  url: "https://kyoriaos.com",
-  description: "The complete system for real estate media businesses: booking, scheduling, gallery delivery, payments, property websites, and an agent portal — all connected.",
-  offers: {
-    "@type": "Offer",
-    price: String(PLANS.solo.monthlyPrice),
-    priceCurrency: "USD",
-  },
-  publisher: { "@type": "Organization", name: "KyoriaOS", url: "https://kyoriaos.com", logo: "https://kyoriaos.com/kyoriaos-logo.png" },
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://kyoriaos.com/#organization",
+      name: "KyoriaOS",
+      legalName: "Rick Ryan Photography LLC",
+      url: "https://kyoriaos.com",
+      logo: "https://kyoriaos.com/kyoriaos-logo.png",
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://kyoriaos.com/#website",
+      name: "KyoriaOS",
+      url: "https://kyoriaos.com",
+      publisher: { "@id": "https://kyoriaos.com/#organization" },
+    },
+    {
+      "@type": "SoftwareApplication",
+      name: "KyoriaOS",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      url: "https://kyoriaos.com",
+      description: "The complete business software for real estate media companies: booking, scheduling, gallery delivery, payments, property websites, and an agent portal — all connected.",
+      offers: {
+        "@type": "Offer",
+        price: String(PLANS.solo.monthlyPrice),
+        priceCurrency: "USD",
+      },
+      publisher: { "@id": "https://kyoriaos.com/#organization" },
+    },
+  ],
 };
 
 export default function MarketingPage() {
@@ -316,7 +337,7 @@ export default function MarketingPage() {
         <header className="nav">
           <div className="wrap row">
             <Link className="logo" href="/">
-              <img src="/kyoriaos-logo.png" alt="Kyoria OS" className="logo-img" />
+              <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="logo-img" />
             </Link>
             <nav>
               <a href="#how-it-works">How it works</a>
@@ -359,7 +380,7 @@ export default function MarketingPage() {
                 <i></i><i></i><i></i>
                 <span className="url">app.kyoriaos.com/dashboard</span>
               </div>
-              <div className="img"><img src="/screenshots/Dashboard.png" alt="Kyoria OS dashboard" /></div>
+              <div className="img"><img src="/screenshots/Dashboard.png" alt="KyoriaOS dashboard" /></div>
             </div>
           </div>
         </section>
@@ -384,7 +405,7 @@ export default function MarketingPage() {
                 <li><i>✕</i>Chase paperwork and signatures by email</li>
               </div>
               <div className="col after">
-                <span className="tag">With Kyoria OS</span>
+                <span className="tag">With KyoriaOS</span>
                 <li><i>✓</i>Deposit collected the moment they book</li>
                 <li><i>✓</i>Gallery delivered in one click, locked until paid</li>
                 <li><i>✓</i>Balance auto-collected before downloads unlock</li>
@@ -419,7 +440,7 @@ export default function MarketingPage() {
           <div className="wrap">
             <div className="rule" style={{ marginBottom: "clamp(64px,8vw,96px)" }}></div>
             <div className="sec-head">
-              <span className="eyebrow center">Why Kyoria OS</span>
+              <span className="eyebrow center">Why KyoriaOS</span>
               <h2>Built to <em>grow</em> your business, not just manage it.</h2>
             </div>
             <div className="bens">
@@ -555,7 +576,7 @@ export default function MarketingPage() {
             <div className="cols">
               <div>
                 <Link className="logo" href="/" style={{ marginBottom: 16, display: "inline-flex" }}>
-                  <img src="/kyoriaos-logo.png" alt="Kyoria OS" className="logo-img" />
+                  <img src="/kyoriaos-logo.png" alt="KyoriaOS" className="logo-img" />
                 </Link>
                 <p style={{ maxWidth: 270, fontSize: 13.5, lineHeight: 1.75, color: "var(--muted-2)" }}>The complete system for real estate photography businesses.</p>
               </div>
@@ -582,7 +603,7 @@ export default function MarketingPage() {
               </div>
             </div>
             <div className="base">
-              <span>© 2026 Kyoria OS. All rights reserved.</span>
+              <span>© 2026 KyoriaOS. All rights reserved.</span>
               <span>Made for real estate media teams</span>
             </div>
           </div>

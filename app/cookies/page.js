@@ -3,6 +3,8 @@ import LegalLayout, { Section, Sub, Ul, Callout } from "@/components/LegalLayout
 export const metadata = {
   title: "Cookie Policy — KyoriaOS",
   description: "How KyoriaOS uses cookies and similar tracking technologies.",
+  alternates: { canonical: "https://kyoriaos.com/cookies" },
+  robots: { index: true, follow: true },
 };
 
 export default function CookiesPage() {

@@ -1,6 +1,8 @@
 export const metadata = {
   title: "Data Processing Addendum — KyoriaOS",
   description: "How KyoriaOS processes personal data on behalf of its customers, including sub-processors, security, and data subject rights.",
+  alternates: { canonical: "https://kyoriaos.com/legal/dpa" },
+  robots: { index: true, follow: true },
 };
 
 export default function DPAPage() {

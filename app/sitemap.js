@@ -8,9 +8,10 @@ export default async function sitemap() {
 
   const staticPages = [
     { url: BASE,                    lastModified: new Date(), changeFrequency: "monthly", priority: 1.0 },
-    { url: `${BASE}/legal/privacy`, lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
-    { url: `${BASE}/legal/terms`,   lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
-    { url: `${BASE}/legal/cookies`, lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${BASE}/privacy`,       lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${BASE}/terms`,         lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${BASE}/cookies`,       lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${BASE}/sms-consent`,   lastModified: new Date(), changeFrequency: "yearly",  priority: 0.3 },
     { url: `${BASE}/legal/dpa`,             lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
     { url: `${BASE}/legal/acceptable-use`,  lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
     { url: `${BASE}/legal/media-policy`,    lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },
@@ -30,20 +31,9 @@ export default async function sitemap() {
     { url: `${BASE}/guides/3d-tours`,          lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
   ];
 
-  // Tenant booking pages — canonical URL is /{slug}/book, NOT /{slug} which redirects
-  let tenantPages = [];
-  try {
-    const snap = await adminDb.collection("tenants").get();
-    tenantPages = snap.docs
-      .map((doc) => doc.data().slug)
-      .filter(Boolean)
-      .map((slug) => ({
-        url: `${BASE}/${slug}/book`,
-        lastModified: new Date(),
-        changeFrequency: "weekly",
-        priority: 0.8,
-      }));
-  } catch {}
+  // Tenant booking pages (/{slug}/book) are intentionally EXCLUDED from the sitemap.
+  // They are near-duplicate templates marked noindex,follow (see app/[slug]/book/layout.js),
+  // so listing them would tell Google to index pages we are asking it not to index.
 
   // Published property listing pages
   let propertyPages = [];
@@ -80,5 +70,5 @@ export default async function sitemap() {
       .filter(Boolean);
   } catch {}
 
-  return [...staticPages, ...tenantPages, ...propertyPages];
+  return [...staticPages, ...propertyPages];
 }

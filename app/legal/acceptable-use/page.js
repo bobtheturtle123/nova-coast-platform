@@ -1,6 +1,8 @@
 export const metadata = {
   title: "Acceptable Use Policy — KyoriaOS",
   description: "Rules for acceptable use of the KyoriaOS platform, including prohibited content and conduct.",
+  alternates: { canonical: "https://kyoriaos.com/legal/acceptable-use" },
+  robots: { index: true, follow: true },
 };
 
 export default function AcceptableUsePage() {

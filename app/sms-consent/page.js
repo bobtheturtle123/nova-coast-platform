@@ -1,6 +1,8 @@
 export const metadata = {
   title: "SMS Consent — KyoriaOS",
   description: "How KyoriaOS handles SMS opt-in and transactional notifications.",
+  alternates: { canonical: "https://kyoriaos.com/sms-consent" },
+  robots: { index: true, follow: true },
 };
 
 export default function SmsConsentPage() {

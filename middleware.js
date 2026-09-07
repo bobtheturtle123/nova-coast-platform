@@ -12,11 +12,44 @@ import { NextResponse } from "next/server";
 
 const PLATFORM_HOST = process.env.NEXT_PUBLIC_APP_DOMAIN || "";
 
+// Paths that must keep working on app.kyoriaos.com and must NOT be redirected
+// to the apex. Firebase auth is per-origin (no shared cookie domain), so
+// redirecting an authenticated app surface to the apex would silently sign the
+// user out. Webhooks/callbacks may also target app.* — never bounce /api.
+const APP_ALIAS_KEEP_PREFIXES = [
+  "/api/",
+  "/_next/",
+  "/auth",
+  "/dashboard",
+  "/superadmin",
+  "/admin",
+  "/onboarding",
+];
+
 export function middleware(request) {
   const host = request.headers.get("host") || "";
 
   // Strip port for local dev
   const hostname = host.split(":")[0];
+
+  // --- Canonicalize the app.* alias to the apex for PUBLIC pages only ---
+  // app.kyoriaos.com is a secondary alias; the canonical origin is
+  // https://kyoriaos.com (see lib/appUrl.js). Google flagged the public pages
+  // served on app.* ("/" alternate-page, "/privacy" redirect error), so we send
+  // those to the apex in a single 308 preserving path + query. We deliberately
+  // leave authenticated/functional surfaces (auth, dashboard, admin, api) on
+  // app.* alone to avoid breaking per-origin sessions — those paths are
+  // noindex/robots-disallowed and never in the sitemap, so they need no redirect.
+  if (hostname === "app.kyoriaos.com") {
+    const { pathname, search } = request.nextUrl;
+    const isKeep =
+      APP_ALIAS_KEEP_PREFIXES.some((p) => pathname === p || pathname.startsWith(p)) ||
+      pathname.includes("."); // static assets
+    if (!isKeep) {
+      return NextResponse.redirect(`https://kyoriaos.com${pathname}${search}`, 308);
+    }
+    return NextResponse.next();
+  }
 
   // Always pass through localhost, Vercel preview/deployment domains,
   // and the configured platform domain.
