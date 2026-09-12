@@ -299,13 +299,19 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
   const name    = tenant.branding?.businessName || tenant.businessName;
 
   const requireAgentPortal = !!tenant.bookingConfig?.requireAgentPortal;
-  // Any outstanding balance re-locks everything (gallery, brochure, website) —
-  // a partial/manual payment must not grant full access.
   const balanceDue         = (booking?.remainingBalance ?? 0) > 0;
-  const canDownload        = unlocked && !balanceDue && (!requireAgentPortal || isAgentSignedIn);
-  // Images are watermarked + save-protected whenever the media isn't fully paid
-  // for (not just when the unlocked flag is false) — a balance due re-protects.
-  const previewLocked      = !unlocked || balanceDue;
+  // The `unlocked` flag is authoritative: it's set either by a full online
+  // payment (balance → 0) or by the studio's deliberate "Unlock" toggle (e.g.
+  // the client paid offline, or is being comped). Once unlocked, downloads are
+  // truly enabled regardless of any remaining balance still on the books — a
+  // deliberate unlock must not be silently re-locked by an unpaid balance.
+  const canDownload        = unlocked && (!requireAgentPortal || isAgentSignedIn);
+  // Photos are watermarked + save-protected only while the gallery is still
+  // locked (pre-payment/pre-unlock preview).
+  const previewLocked      = !unlocked;
+  // The balance pay-gate only blocks access while the gallery is NOT yet
+  // unlocked. After an unlock it disappears (nothing left to gate).
+  const mustPayToAccess    = balanceDue && !unlocked;
   // Wait for the session check before showing the callout — avoids a flash for signed-in agents.
   const showSignupCallout  = agentCheckDone && !isAgentSignedIn;
 
@@ -548,10 +554,10 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           }`}>
             <div className="min-w-0">
               <p className="font-semibold text-gray-900 text-sm">
-                {balanceDue ? "Sign in to unlock & pay for your media" : "Sign in to download your media"}
+                {mustPayToAccess ? "Sign in to unlock & pay for your media" : "Sign in to download your media"}
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
-                {balanceDue
+                {mustPayToAccess
                   ? "Sign in or create a free account to pay your balance and download your full-resolution files."
                   : "Sign in or create a free account to download your full-resolution photos, floor plans, and marketing files."}
               </p>
@@ -562,7 +568,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
               <a href={`/${slug}/agent/login?returnTo=/${slug}/gallery/${token}`}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white whitespace-nowrap transition-opacity hover:opacity-90"
                 style={{ background: primary }}>
-                {balanceDue ? "Sign in or sign up to unlock & pay →" : "Sign in or sign up to download →"}
+                {mustPayToAccess ? "Sign in or sign up to unlock & pay →" : "Sign in or sign up to download →"}
               </a>
             </div>
           </div>
@@ -579,9 +585,10 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
           </div>
         )}
 
-        {/* Balance gate — any outstanding balance shows the pay prompt, even if
-            the gallery was previously unlocked (e.g. a partial manual payment). */}
-        {balanceDue && (
+        {/* Balance gate — shows the pay prompt only while the gallery is still
+            locked. A deliberate unlock (studio toggle or full payment) removes
+            it, so an unlocked gallery is never re-locked by a leftover balance. */}
+        {mustPayToAccess && (
           <div className="bg-white rounded-2xl border border-gray-200 p-6 max-w-lg">
             <h2 className="font-display text-xl text-gray-900 mb-2">Unlock your media</h2>
             <p className="text-gray-500 text-sm mb-4">
@@ -657,7 +664,7 @@ export default function GalleryClient({ gallery, booking, tenant, slug, token })
             </svg>
             <div>
               <p className="font-semibold text-amber-800 text-sm">Marketing materials unlock after payment</p>
-              <p className="text-xs text-amber-700">Pay the remaining balance above to download the brochure and listing materials.</p>
+              <p className="text-xs text-amber-700">The remaining balance of ${balance} must be settled before the brochure and listing materials unlock. Contact the studio if you&apos;ve already paid.</p>
             </div>
           </div>
         )}

@@ -42,16 +42,9 @@ export async function GET(req) {
 
   const gallery = galleryDoc.data();
   if (gallery.accessToken !== token) return new Response("Gallery not found", { status: 404 });
-  if (!gallery.unlocked) return new Response("Gallery is locked. Please pay the balance first.", { status: 403 });
-
-  // Any outstanding balance keeps downloads locked (matches the gallery UI).
-  if (gallery.bookingId) {
-    const bSnap = await adminDb.collection("tenants").doc(tenantId).collection("bookings").doc(gallery.bookingId).get();
-    const bk = bSnap.exists ? bSnap.data() : null;
-    if (bk && (Number(bk.remainingBalance) || 0) > 0 && !bk.paidInFull && !bk.balancePaid) {
-      return new Response("Balance due — downloads are locked until the balance is paid", { status: 403 });
-    }
-  }
+  // `unlocked` is authoritative (full payment or the studio's deliberate Unlock
+  // toggle); a remaining balance no longer re-locks an unlocked gallery.
+  if (!gallery.unlocked) return new Response("Gallery is locked.", { status: 403 });
 
   // Verify the requested key belongs to this gallery's media
   const item = (gallery.media || []).find((m) => m.key === key);

@@ -53,13 +53,9 @@ async function resolveGallery(token) {
   ]);
   if (!galleryDoc.exists) return null;
   const gallery = galleryDoc.data();
+  // `unlocked` is authoritative (full payment or the studio's deliberate Unlock
+  // toggle); a remaining balance no longer re-locks an unlocked gallery.
   if (gallery.accessToken !== token || !gallery.unlocked) return null;
-  // Any outstanding balance keeps downloads locked (matches the gallery UI).
-  if (gallery.bookingId) {
-    const bSnap = await adminDb.collection("tenants").doc(tenantId).collection("bookings").doc(gallery.bookingId).get();
-    const bk = bSnap.exists ? bSnap.data() : null;
-    if (bk && (Number(bk.remainingBalance) || 0) > 0 && !bk.paidInFull && !bk.balancePaid) return null;
-  }
   const autoRename = tenantDoc.data()?.gallerySettings?.autoRenameDownloads === true;
   return { tenantId, galleryId, gallery, autoRename };
 }

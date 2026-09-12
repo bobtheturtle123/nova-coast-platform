@@ -40,16 +40,9 @@ export async function GET(req) {
 
   const gallery = galleryDoc.data();
   if (gallery.accessToken !== token) return Response.json({ error: "Gallery not found" }, { status: 404 });
+  // `unlocked` is authoritative (full payment or the studio's deliberate Unlock
+  // toggle); a remaining balance no longer re-locks an unlocked gallery.
   if (!gallery.unlocked) return Response.json({ error: "Gallery is locked" }, { status: 403 });
-
-  // Any outstanding balance keeps downloads locked (matches the gallery UI).
-  if (gallery.bookingId) {
-    const bSnap = await adminDb.collection("tenants").doc(tenantId).collection("bookings").doc(gallery.bookingId).get();
-    const bk = bSnap.exists ? bSnap.data() : null;
-    if (bk && (Number(bk.remainingBalance) || 0) > 0 && !bk.paidInFull && !bk.balancePaid) {
-      return Response.json({ error: "Balance due" }, { status: 403 });
-    }
-  }
 
   const bucket = process.env.R2_BUCKET_NAME;
   if (!bucket) return Response.json({ error: "Storage not configured" }, { status: 500 });
