@@ -96,6 +96,7 @@ export default async function PropertyWebsitePage({ params, searchParams }) {
 
   // Fetch gallery
   let galleryMedia = [];
+  let galleryCoverUrl = null;
   let galleryMatterportUrl = null;
   let galleryFloorPlans = [];
   if (booking.galleryId) {
@@ -105,7 +106,6 @@ export default async function PropertyWebsitePage({ params, searchParams }) {
       .get();
     if (galleryDoc.exists) {
       const gallery = galleryDoc.data();
-      const showAll = gallery.unlocked || pw.showUnlocked;
       const allMedia = gallery.media || [];
       // Categories the studio marked "hide on website" are excluded from the
       // public property site (they're still delivered to the client gallery).
@@ -119,11 +119,13 @@ export default async function PropertyWebsitePage({ params, searchParams }) {
       const isHidden = (m) => hiddenCats.length > 0 && m.key && hiddenCats.includes(keyToCat[m.key]);
       const images = allMedia.filter((m) => !m.fileType?.startsWith("video/") && !isHidden(m));
       const videos = allMedia.filter((m) => m.fileType?.startsWith("video/") && !isHidden(m));
-      const previewCount = pw.previewCount || 12;
-      galleryMedia = [
-        ...(showAll ? images : images.slice(0, previewCount)),
-        ...(showAll ? videos : videos.slice(0, 1)),
-      ];
+      // Send the FULL visible photo set — the client shows 12 first and reveals
+      // the rest 12-at-a-time via "Load More" (no server-side preview cap here).
+      galleryMedia = [...images, ...videos];
+      // The cover is whatever photo is first in the gallery editor's order
+      // (drag-to-reorder → first = cover). Pass it explicitly so the hero always
+      // tracks the live cover instead of any stale pw.heroImageUrl snapshot.
+      galleryCoverUrl = images[0]?.url || null;
       if (gallery.matterportUrl && !gallery.matterportHidden) {
         galleryMatterportUrl = gallery.matterportUrl;
       }
@@ -153,6 +155,7 @@ export default async function PropertyWebsitePage({ params, searchParams }) {
         clientEmail: booking.clientEmail,
       }}
       galleryMedia={galleryMedia}
+      galleryCoverUrl={galleryCoverUrl}
       galleryMatterportUrl={galleryMatterportUrl}
       galleryFloorPlans={galleryFloorPlans}
       branding={branding}

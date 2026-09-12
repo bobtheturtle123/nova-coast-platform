@@ -7,7 +7,7 @@
 
 export default function LuxuryTemplate({
   pw, booking, images, videos, address, heroImg, stats, details,
-  mapEmbedUrl, displayImages, showAllPhotos, setShowAllPhotos,
+  mapEmbedUrl, displayImages, hasMorePhotos, loadMorePhotos,
   setLightboxIdx, branding, theme,
   ContactFormComponent, galleryMatterportUrl,
 }) {
@@ -125,13 +125,13 @@ export default function LuxuryTemplate({
                 </div>
               ))}
             </div>
-            {images.length > 9 && !showAllPhotos && (
-              <button onClick={() => setShowAllPhotos(true)}
+            {hasMorePhotos && (
+              <button onClick={loadMorePhotos}
                 className="mt-6 px-8 py-3 text-sm font-bold uppercase tracking-widest border-2 transition-colors hover:text-white"
                 style={{ borderColor: theme.primary, color: theme.primary }}
                 onMouseEnter={e => { e.currentTarget.style.background = theme.primary; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
-                View All {images.length} Photos
+                Load More Photos ({images.length - displayImages.length} Remaining)
               </button>
             )}
           </div>

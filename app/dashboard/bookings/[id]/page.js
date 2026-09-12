@@ -7,10 +7,16 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
 import { resolveWorkflowStatus } from "@/lib/workflowStatus";
+import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 
 export default function BookingDetailPage() {
   const { id }   = useParams();
   const router   = useRouter();
+
+  // Financials are hidden unless the member has "View Revenue & Pricing"
+  // (owners/admins always; managers/custom only when the owner grants it).
+  const { permissions, userRole } = useDashboardPermissions();
+  const canViewRevenue = userRole === "owner" || userRole === "admin" || !!permissions?.canViewRevenue;
 
   const [booking,     setBooking]     = useState(null);
   const [catalog,     setCatalog]     = useState(null);
@@ -249,22 +255,24 @@ export default function BookingDetailPage() {
             )}
           </InfoBlock>
 
-          {/* Payment */}
-          <InfoBlock label="Payment">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-lg border ${payStatus.cls}`}>
-                {payStatus.label}
-              </span>
-            </div>
-            {booking.totalPrice > 0     && <InfoRow label="Total"   v={`$${Number(booking.totalPrice).toLocaleString()}`} />}
-            {booking.promoCode && booking.promoDiscount > 0 && (
-              <InfoRow label="Promo" v={<span className="text-emerald-600">−${Number(booking.promoDiscount).toFixed(2)} ({booking.promoCode})</span>} />
-            )}
-            {booking.depositAmount > 0  && <InfoRow label="Deposit" v={`$${Number(booking.depositAmount).toLocaleString()} ${booking.depositPaid ? "✓" : "—"}`} />}
-            {!booking.paidInFull && !booking.balancePaid && (booking.remainingBalance || 0) > 0 && (
-              <InfoRow label="Balance" v={`$${Number(booking.remainingBalance).toLocaleString()} due`} />
-            )}
-          </InfoBlock>
+          {/* Payment — only for members allowed to see pricing/revenue */}
+          {canViewRevenue && (
+            <InfoBlock label="Payment">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-lg border ${payStatus.cls}`}>
+                  {payStatus.label}
+                </span>
+              </div>
+              {booking.totalPrice > 0     && <InfoRow label="Total"   v={`$${Number(booking.totalPrice).toLocaleString()}`} />}
+              {booking.promoCode && booking.promoDiscount > 0 && (
+                <InfoRow label="Promo" v={<span className="text-emerald-600">−${Number(booking.promoDiscount).toFixed(2)} ({booking.promoCode})</span>} />
+              )}
+              {booking.depositAmount > 0  && <InfoRow label="Deposit" v={`$${Number(booking.depositAmount).toLocaleString()} ${booking.depositPaid ? "✓" : "—"}`} />}
+              {!booking.paidInFull && !booking.balancePaid && (booking.remainingBalance || 0) > 0 && (
+                <InfoRow label="Balance" v={`$${Number(booking.remainingBalance).toLocaleString()} due`} />
+              )}
+            </InfoBlock>
+          )}
 
         </div>
 
@@ -303,7 +311,8 @@ export default function BookingDetailPage() {
         </Link>
       </div>
 
-      {/* Promo code */}
+      {/* Promo code — pricing/discounts are revenue info */}
+      {canViewRevenue && (
       <div className="card p-5">
         <p className="text-xs uppercase tracking-wide text-gray-400 mb-3 font-semibold">Promo Code</p>
         {booking.promoCode ? (
@@ -352,6 +361,7 @@ export default function BookingDetailPage() {
           </p>
         )}
       </div>
+      )}
 
       {/* Cancel */}
       {booking.status !== "cancelled" && (

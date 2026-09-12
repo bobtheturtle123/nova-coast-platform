@@ -6,7 +6,7 @@
 
 export default function ClassicTemplate({
   pw, booking, images, videos, address, heroImg, stats, details,
-  mapEmbedUrl, displayImages, showAllPhotos, setShowAllPhotos,
+  mapEmbedUrl, displayImages, hasMorePhotos, loadMorePhotos,
   setLightboxIdx, branding, theme, tenantSlug,
   ContactFormComponent, galleryMatterportUrl,
 }) {
@@ -122,10 +122,10 @@ export default function ClassicTemplate({
                     </div>
                   ))}
                 </div>
-                {images.length > 9 && !showAllPhotos && (
-                  <button onClick={() => setShowAllPhotos(true)}
+                {hasMorePhotos && (
+                  <button onClick={loadMorePhotos}
                     className="mt-4 w-full py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                    Show all {images.length} photos
+                    Load more photos ({images.length - displayImages.length} remaining)
                   </button>
                 )}
               </div>

@@ -201,7 +201,7 @@ function ContactForm({ pw, address, branding, bookingId, tenantSlug }) {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function PropertyWebsiteClient({ pw: pwRaw, booking, galleryMedia, galleryMatterportUrl, galleryFloorPlans = [], branding, bookingId, tenantSlug }) {
+export default function PropertyWebsiteClient({ pw: pwRaw, booking, galleryMedia, galleryCoverUrl, galleryMatterportUrl, galleryFloorPlans = [], branding, bookingId, tenantSlug }) {
   // Normalize display values once so every template (modern/classic/luxury) and
   // the details table render a clean asking price ($1,100,200) and a phone number
   // dashed for its country. tel: links accept the formatted string fine.
@@ -217,7 +217,10 @@ export default function PropertyWebsiteClient({ pw: pwRaw, booking, galleryMedia
   const images    = galleryMedia.filter((m) => !m.fileType?.startsWith("video/"));
   const videos    = galleryMedia.filter((m) =>  m.fileType?.startsWith("video/"));
   const [lightboxIdx, setLightboxIdx] = useState(null);
-  const [showAllPhotos, setShowAllPhotos] = useState(false);
+
+  // Photos load 12 at a time; "Load More" reveals the next 12 in one grid.
+  const PHOTOS_PER_PAGE = 12;
+  const [visiblePhotos, setVisiblePhotos] = useState(PHOTOS_PER_PAGE);
 
   // Track page view (fire-and-forget)
   useEffect(() => {
@@ -229,10 +232,14 @@ export default function PropertyWebsiteClient({ pw: pwRaw, booking, galleryMedia
   }, [tenantSlug, bookingId]);
 
   const address   = pw.customName || pw.address || booking.fullAddress || booking.address || "Property";
-  const heroImg   = pw.heroImageUrl || images[0]?.url || null;
+  // Hero tracks the LIVE gallery cover (first photo in the editor's order).
+  // Fall back to the first image, then any legacy pw.heroImageUrl snapshot.
+  const heroImg   = galleryCoverUrl || images[0]?.url || pw.heroImageUrl || null;
   const branded   = pw.branded !== false; // default branded
 
-  const displayImages = showAllPhotos ? images : images.slice(0, 9);
+  const displayImages = images.slice(0, visiblePhotos);
+  const hasMorePhotos = visiblePhotos < images.length;
+  const loadMorePhotos = () => setVisiblePhotos((n) => n + PHOTOS_PER_PAGE);
 
   const statusColors = {
     "For Sale": { bg: "bg-green-500", text: "text-white" },
@@ -284,7 +291,7 @@ export default function PropertyWebsiteClient({ pw: pwRaw, booking, galleryMedia
   // Shared props for all templates
   const templateProps = {
     pw, booking, images, videos, address, heroImg, stats, details,
-    mapEmbedUrl, displayImages, showAllPhotos, setShowAllPhotos,
+    mapEmbedUrl, displayImages, hasMorePhotos, loadMorePhotos,
     setLightboxIdx, branding, theme, tenantSlug,
     ContactFormComponent,
     galleryMatterportUrl, galleryFloorPlans,
@@ -436,10 +443,10 @@ export default function PropertyWebsiteClient({ pw: pwRaw, booking, galleryMedia
                     </div>
                   ))}
                 </div>
-                {images.length > 9 && !showAllPhotos && (
-                  <button onClick={() => setShowAllPhotos(true)}
+                {hasMorePhotos && (
+                  <button onClick={loadMorePhotos}
                     className="mt-4 w-full py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                    Show all {images.length} photos
+                    Load more photos ({images.length - displayImages.length} remaining)
                   </button>
                 )}
               </section>
