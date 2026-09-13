@@ -12,6 +12,7 @@ import WeatherWidget from "@/components/dashboard/WeatherWidget";
 import { useTenantSettings, formatCurrency } from "@/lib/TenantSettingsContext";
 import { useDashboardPermissions } from "@/lib/dashboardPermissions";
 import { isDemo, getDemoListingDetail, DEMO_VIEW_ONLY_MESSAGE } from "@/lib/demoData";
+import BrochureImagePicker from "@/components/brochure/BrochureImagePicker";
 
 // ─── Agent Image Field (upload file OR paste URL) ────────────────────────────
 function AgentImageField({ label, value, onChange, folder, placeholder, hint, preview }) {
@@ -2976,6 +2977,30 @@ if (loading) return (
                   </a>
                 ) : (
                   <p className="text-xs text-gray-400">Save the property website first to generate a brochure.</p>
+                )}
+
+                {tenantSlug && images.length > 0 && (
+                  <div className="mt-5 pt-5 border-t border-gray-100">
+                    <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Brochure Photos</p>
+                    <BrochureImagePicker
+                      photos={images.filter((m) => !m.hidden).map((m) => ({ key: m.key, url: m.url }))}
+                      selectedKeys={propSite.brochureImageKeys || []}
+                      onChange={(keys) => setPropField("brochureImageKeys", keys)}
+                    />
+                    <div className="mt-3 flex items-center gap-3">
+                      <button
+                        onClick={savePropSite}
+                        disabled={savingPropSite}
+                        className="text-xs font-semibold px-4 py-2 rounded-lg bg-[#3486cf] text-white hover:bg-[#3486cf]/90 transition-colors disabled:opacity-50">
+                        {savingPropSite ? "Saving…" : "Save brochure photos"}
+                      </button>
+                      {propSiteMsg.text && (
+                        <span className={`text-xs ${propSiteMsg.type === "success" ? "text-emerald-600" : "text-red-500"}`}>
+                          {propSiteMsg.text}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

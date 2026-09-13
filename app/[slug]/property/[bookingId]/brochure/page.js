@@ -59,8 +59,20 @@ export default async function BrochurePage({ params }) {
           .collection("galleries").doc(booking.galleryId)
           .get();
         if (galleryDoc.exists) {
-          images = (galleryDoc.data().media || [])
-            .filter((m) => !m.fileType?.startsWith("video/") && m.url)
+          const photos = (galleryDoc.data().media || [])
+            .filter((m) => !m.fileType?.startsWith("video/") && m.url);
+          // Honor the agent/studio's hand-picked, ordered brochure selection
+          // (pw.brochureImageKeys). The first key is the brochure hero, the next
+          // four fill the grid. Fall back to the first photos in gallery order
+          // when nothing is selected or the saved keys no longer resolve.
+          const selectedKeys = Array.isArray(pw.brochureImageKeys) ? pw.brochureImageKeys : [];
+          let chosen = [];
+          if (selectedKeys.length) {
+            const byKey = new Map(photos.map((m) => [m.key, m]));
+            chosen = selectedKeys.map((k) => byKey.get(k)).filter(Boolean);
+          }
+          if (!chosen.length) chosen = photos.slice(0, 9);
+          images = chosen
             .slice(0, 9)
             .map((m) => ({ url: String(m.url) })); // strip Firestore Timestamps / non-serializable fields
         }

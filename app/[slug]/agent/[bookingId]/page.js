@@ -143,6 +143,7 @@ export default async function AgentBookingPage({ params, searchParams }) {
         coverUrl:              images[0]?.url            || null,
         // Thumbnails so the agent can flag specific photos in a revision request.
         images:                images.filter((m) => !m.hidden).slice(0, 60).map((m, i) => ({
+          key:  m.key || null,
           url:  m.url || null,
           name: m.fileName || m.name || `Photo ${i + 1}`,
         })),

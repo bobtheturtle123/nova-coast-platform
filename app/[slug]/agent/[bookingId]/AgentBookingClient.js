@@ -8,6 +8,7 @@ import { useBookingStore } from "@/store/bookingStore";
 import { getAppUrl } from "@/lib/appUrl";
 
 const MarketingStudio = dynamic(() => import("@/components/marketing/MarketingStudio"), { ssr: false });
+import BrochureImagePicker from "@/components/brochure/BrochureImagePicker";
 
 const REVISION_STATUS = {
   pending:      { label: "Pending",      cls: "bg-amber-100 text-amber-700" },
@@ -26,6 +27,29 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
   const [revSending,   setRevSending]   = useState(false);
   const [revText,      setRevText]      = useState("");
   const [revImages,    setRevImages]    = useState([]); // selected image urls to flag
+  const [brochureKeys,   setBrochureKeys]   = useState(booking.propertyWebsite?.brochureImageKeys || []);
+  const [savingBrochure, setSavingBrochure] = useState(false);
+  const [brochureMsg,    setBrochureMsg]    = useState("");
+
+  async function saveBrochurePhotos() {
+    setSavingBrochure(true);
+    setBrochureMsg("");
+    try {
+      const res = await fetch(`/api/${slug}/agent/brochure`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ token, bookingId: booking.id, brochureImageKeys: brochureKeys }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setBrochureKeys(data.brochureImageKeys || []);
+        setBrochureMsg("Brochure photos saved.");
+      } else {
+        setBrochureMsg(data.error || "Failed to save.");
+      }
+    } catch { setBrochureMsg("Something went wrong."); }
+    finally { setSavingBrochure(false); }
+  }
 
   const pw             = booking.propertyWebsite || {};
   const listingUrl     = `${getAppUrl()}/${slug}/property/${booking.id}`;
@@ -529,6 +553,35 @@ export default function AgentBookingClient({ booking, gallery, branding, slug, t
               </a>
             </div>
           </div>
+
+          {(gallery?.images?.length || 0) > 0 && (
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Brochure Photos</p>
+              <p className="text-sm text-gray-500 mb-3 leading-snug">
+                Choose which photos appear on your print brochure and in what order.
+              </p>
+              <BrochureImagePicker
+                photos={(gallery.images || []).map((m) => ({ key: m.key, url: m.url }))}
+                selectedKeys={brochureKeys}
+                onChange={setBrochureKeys}
+                accent={branding.primary}
+              />
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  onClick={saveBrochurePhotos}
+                  disabled={savingBrochure}
+                  className="text-sm font-semibold px-5 py-2 rounded-lg text-white transition-colors disabled:opacity-50"
+                  style={{ background: branding.primary }}>
+                  {savingBrochure ? "Saving…" : "Save Brochure Photos"}
+                </button>
+                {brochureMsg && (
+                  <span className={`text-sm ${brochureMsg.includes("saved") ? "text-emerald-600" : "text-red-500"}`}>
+                    {brochureMsg}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">QR Code</p>
