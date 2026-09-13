@@ -791,6 +791,33 @@ const [listingUrl,       setListingUrl]        = useState("");
     setPropSite((p) => ({ ...p, [field]: value }));
   }
 
+  // Saves the brochure photo selection specifically (uses the same
+  // propertyWebsite PATCH) with a brochure-specific status message so it's clear
+  // what was saved.
+  const [savingBrochure, setSavingBrochure] = useState(false);
+  const [brochureMsg,    setBrochureMsg]    = useState({ text: "", type: "" });
+  async function saveBrochurePhotos() {
+    if (demoGuard()) return;
+    setSavingBrochure(true);
+    setBrochureMsg({ text: "", type: "" });
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/dashboard/bookings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ propertyWebsite: { ...propSite, features: (propSite.features || []).filter((f) => f.trim()) } }),
+      });
+      if (res.ok) {
+        setBooking((b) => ({ ...b, propertyWebsite: propSite }));
+        setBrochureMsg({ text: "Brochure photos saved.", type: "success" });
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setBrochureMsg({ text: d.error || "Failed to save.", type: "error" });
+      }
+    } catch { setBrochureMsg({ text: "Something went wrong.", type: "error" }); }
+    finally { setSavingBrochure(false); }
+  }
+
   async function handleAutofill() {
     if (demoGuard()) return;
     if (!autofillSource.trim()) return;
@@ -2981,22 +3008,25 @@ if (loading) return (
 
                 {tenantSlug && images.length > 0 && (
                   <div className="mt-5 pt-5 border-t border-gray-100">
-                    <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Brochure Photos</p>
+                    <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Brochure Photos</p>
+                    <p className="text-xs text-gray-500 mb-3 leading-snug">
+                      Pick the photos for this brochure and the order they appear. The first is the large cover; the next four fill the grid.
+                    </p>
                     <BrochureImagePicker
                       photos={images.filter((m) => !m.hidden).map((m) => ({ key: m.key, url: m.url }))}
                       selectedKeys={propSite.brochureImageKeys || []}
                       onChange={(keys) => setPropField("brochureImageKeys", keys)}
                     />
-                    <div className="mt-3 flex items-center gap-3">
+                    <div className="mt-4 flex items-center gap-3">
                       <button
-                        onClick={savePropSite}
-                        disabled={savingPropSite}
+                        onClick={saveBrochurePhotos}
+                        disabled={savingBrochure}
                         className="text-xs font-semibold px-4 py-2 rounded-lg bg-[#3486cf] text-white hover:bg-[#3486cf]/90 transition-colors disabled:opacity-50">
-                        {savingPropSite ? "Saving…" : "Save brochure photos"}
+                        {savingBrochure ? "Saving…" : "Save brochure photos"}
                       </button>
-                      {propSiteMsg.text && (
-                        <span className={`text-xs ${propSiteMsg.type === "success" ? "text-emerald-600" : "text-red-500"}`}>
-                          {propSiteMsg.text}
+                      {brochureMsg.text && (
+                        <span className={`text-xs ${brochureMsg.type === "success" ? "text-emerald-600" : "text-red-500"}`}>
+                          {brochureMsg.text}
                         </span>
                       )}
                     </div>

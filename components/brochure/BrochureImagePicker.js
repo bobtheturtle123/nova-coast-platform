@@ -47,7 +47,7 @@ export default function BrochureImagePicker({ photos = [], selectedKeys = [], on
           </button>
         )}
       </div>
-      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
         {usable.map((p) => {
           const idx = selected.indexOf(p.key);
           const isSel = idx !== -1;
@@ -56,25 +56,37 @@ export default function BrochureImagePicker({ photos = [], selectedKeys = [], on
               type="button"
               key={p.key}
               onClick={() => toggle(p.key)}
-              className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                isSel ? "ring-2 ring-offset-1" : "border-transparent hover:opacity-90"
-              }`}
-              style={isSel ? { borderColor: accent, boxShadow: `0 0 0 2px ${accent}` } : { borderColor: "#e5e7eb" }}>
-              <img src={p.url} alt="" className="w-full h-full object-cover" />
+              title={isSel ? (idx === 0 ? "Cover photo — click to remove" : "Click to remove") : "Click to add to the brochure"}
+              className="relative aspect-[4/3] rounded-lg overflow-hidden transition-all focus:outline-none"
+              style={{
+                outline: isSel ? `3px solid ${accent}` : "1px solid #e5e7eb",
+                outlineOffset: isSel ? "-1px" : "0",
+              }}>
+              <img
+                src={p.url}
+                alt=""
+                className={`w-full h-full object-cover transition ${isSel ? "" : "opacity-95 hover:opacity-100"}`}
+              />
+              {/* Order badge — number for every selected photo */}
               {isSel && (
-                <>
-                  <span className="absolute inset-0 bg-black/25" />
-                  <span
-                    className="absolute top-1 left-1 w-5 h-5 rounded-full text-white text-[11px] font-bold flex items-center justify-center"
-                    style={{ background: accent }}>
-                    {idx + 1}
-                  </span>
-                  {idx === 0 && (
-                    <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] font-semibold text-center py-0.5">
-                      COVER
-                    </span>
-                  )}
-                </>
+                <span
+                  className="absolute top-1.5 left-1.5 w-7 h-7 rounded-full text-white text-sm font-bold flex items-center justify-center shadow-md ring-2 ring-white"
+                  style={{ background: accent }}>
+                  {idx + 1}
+                </span>
+              )}
+              {/* Unselected: a faint "+" hint so it reads as clickable */}
+              {!isSel && (
+                <span className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white/85 text-gray-500 text-base font-semibold flex items-center justify-center shadow-sm">
+                  +
+                </span>
+              )}
+              {idx === 0 && (
+                <span
+                  className="absolute bottom-0 inset-x-0 text-white text-[11px] font-bold tracking-wide text-center py-1"
+                  style={{ background: accent }}>
+                  ★ COVER
+                </span>
               )}
             </button>
           );

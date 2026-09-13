@@ -43,40 +43,46 @@ export default async function BrochurePage({ params }) {
       return <ErrorPage message="Property website not set up yet. Go to the listing's Property Site tab to add details first." />;
     }
 
-    // Lock the brochure while a balance is owed (marketing materials require
-    // full payment).
-    const balanceDue = (Number(booking.remainingBalance) || 0) > 0 && !booking.paidInFull;
-    if (balanceDue) {
-      return <ErrorPage message="This brochure isn't available yet." />;
-    }
-
-    // Fetch all gallery images for the brochure
-    let images = [];
+    // Fetch the gallery once — needed both for the unlock check and the photos.
+    let galleryData = null;
     if (booking.galleryId) {
       try {
         const galleryDoc = await adminDb
           .collection("tenants").doc(tenant.id)
           .collection("galleries").doc(booking.galleryId)
           .get();
-        if (galleryDoc.exists) {
-          const photos = (galleryDoc.data().media || [])
-            .filter((m) => !m.fileType?.startsWith("video/") && m.url);
-          // Honor the agent/studio's hand-picked, ordered brochure selection
-          // (pw.brochureImageKeys). The first key is the brochure hero, the next
-          // four fill the grid. Fall back to the first photos in gallery order
-          // when nothing is selected or the saved keys no longer resolve.
-          const selectedKeys = Array.isArray(pw.brochureImageKeys) ? pw.brochureImageKeys : [];
-          let chosen = [];
-          if (selectedKeys.length) {
-            const byKey = new Map(photos.map((m) => [m.key, m]));
-            chosen = selectedKeys.map((k) => byKey.get(k)).filter(Boolean);
-          }
-          if (!chosen.length) chosen = photos.slice(0, 9);
-          images = chosen
-            .slice(0, 9)
-            .map((m) => ({ url: String(m.url) })); // strip Firestore Timestamps / non-serializable fields
-        }
+        if (galleryDoc.exists) galleryData = galleryDoc.data();
       } catch {}
+    }
+
+    // Lock the brochure while a balance is owed — UNLESS the gallery has been
+    // unlocked (full payment or a deliberate studio unlock). `unlocked` is
+    // authoritative, matching the photo-download behavior: an explicit unlock
+    // truly unlocks everything, including marketing materials.
+    const balanceDue = (Number(booking.remainingBalance) || 0) > 0 && !booking.paidInFull;
+    if (balanceDue && !galleryData?.unlocked) {
+      return <ErrorPage message="This brochure isn't available yet. It unlocks once the balance is paid — or once the studio unlocks the gallery." />;
+    }
+
+    // Build the brochure images from the gallery.
+    let images = [];
+    if (galleryData) {
+      const photos = (galleryData.media || [])
+        .filter((m) => !m.fileType?.startsWith("video/") && m.url);
+      // Honor the agent/studio's hand-picked, ordered brochure selection
+      // (pw.brochureImageKeys). The first key is the brochure hero, the next
+      // four fill the grid. Fall back to the first photos in gallery order
+      // when nothing is selected or the saved keys no longer resolve.
+      const selectedKeys = Array.isArray(pw.brochureImageKeys) ? pw.brochureImageKeys : [];
+      let chosen = [];
+      if (selectedKeys.length) {
+        const byKey = new Map(photos.map((m) => [m.key, m]));
+        chosen = selectedKeys.map((k) => byKey.get(k)).filter(Boolean);
+      }
+      if (!chosen.length) chosen = photos.slice(0, 9);
+      images = chosen
+        .slice(0, 9)
+        .map((m) => ({ url: String(m.url) })); // strip Firestore Timestamps / non-serializable fields
     }
 
     // Sanitize pw — strip any Firestore Timestamp fields that would fail Next.js serialization
