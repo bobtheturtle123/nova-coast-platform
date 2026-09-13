@@ -946,9 +946,20 @@ export default function GalleryDetailPage() {
   }
 
   async function toggleUnlock() {
+    const newVal = !gallery.unlocked;
+    // Guard the unlock direction — it's easy to assume you must "unlock" before
+    // sending, but delivery handles access on its own and unlocking hands over
+    // full-resolution downloads even if the client hasn't paid.
+    if (newVal) {
+      const ok = window.confirm(
+        "Unlock downloads for this gallery?\n\n" +
+        "You do NOT need to unlock before sending — delivering the gallery lets the client pay to unlock automatically.\n\n" +
+        "Unlocking now makes full-resolution downloads available immediately, even if the balance hasn't been paid. Only do this if you've collected payment another way or are intentionally giving free access."
+      );
+      if (!ok) return;
+    }
     invalidateDelivery();
     const token = await auth.currentUser.getIdToken();
-    const newVal = !gallery.unlocked;
     await fetch(`/api/dashboard/galleries/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -1249,7 +1260,10 @@ export default function GalleryDetailPage() {
             }} className="btn-outline text-xs px-3 py-1.5">
               📁 Categories ({catNames.length})
             </button>
-            <button onClick={toggleUnlock} className="btn-outline text-xs px-3 py-1.5">
+            <button onClick={toggleUnlock} className="btn-outline text-xs px-3 py-1.5"
+              title={gallery.unlocked
+                ? "Downloads are unlocked — the client can download full-resolution files without paying. Click to re-lock."
+                : "Locked: the client pays to unlock downloads. You don't need to unlock to send — delivery handles that automatically. Only unlock to grant free/offline-paid access."}>
               {gallery.unlocked ? "🔓 Unlocked" : "🔒 Locked"}
             </button>
             {deliveryStatus && (
