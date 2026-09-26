@@ -1685,19 +1685,26 @@ if (loading) return (
                       View Gallery
                     </button>
                   )}
-                  {/* Manual fulfillment — the studio's final say that the order is
-                      truly done, independent of paid/delivered auto-status. */}
-                  {wfStatus === "fulfilled" ? (
+                </div>
+                {/* Manual fulfillment — a quiet secondary control, not a 4th
+                    action button. The studio's final say that the order is truly
+                    done, independent of paid/delivered auto-status. */}
+                <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100">
+                  <span className="text-xs font-medium text-gray-500">Order fulfillment</span>
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
                     <button onClick={() => setFulfilled(false)} disabled={markingFulfilled}
-                      className="w-full text-sm font-semibold py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-60">
-                      ✓ Fulfilled — Reopen order
+                      className={`px-2.5 py-1 font-medium transition-colors disabled:opacity-60 ${
+                        wfStatus === "fulfilled" ? "bg-white text-gray-500 hover:bg-gray-50" : "bg-gray-100 text-gray-700"
+                      }`}>
+                      In progress
                     </button>
-                  ) : (
                     <button onClick={() => setFulfilled(true)} disabled={markingFulfilled}
-                      className="w-full text-sm font-semibold py-2 rounded-xl border border-emerald-500/40 text-emerald-700 hover:bg-emerald-50 transition-colors disabled:opacity-60">
-                      Mark as Fulfilled
+                      className={`px-2.5 py-1 font-medium transition-colors disabled:opacity-60 ${
+                        wfStatus === "fulfilled" ? "bg-emerald-500 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
+                      }`}>
+                      Fulfilled
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
 
