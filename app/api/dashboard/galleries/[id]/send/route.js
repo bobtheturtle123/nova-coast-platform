@@ -119,6 +119,20 @@ export async function POST(req, { params }) {
   const booking = bookingDoc.data();
   const tenant  = await getTenantById(ctx.tenantId);
 
+  // Resolve the actual recipient list up front. Callers outside the gallery
+  // editor (e.g. the listing page) may not pass `to`, so we fall back to the
+  // booking's client email. If that's ALSO empty we must NOT report success:
+  // previously a blank recipient produced a "delivered" response while no email
+  // ever went out ("says it sent but it doesn't"). Fail loudly instead.
+  const resolvedTo = ((to && to.length ? to : [booking.clientEmail]) || []).filter(Boolean);
+  const resolvedCc = (cc || []).filter(Boolean);
+  if (resolvedTo.length === 0) {
+    return Response.json(
+      { error: "No recipient email on file for this listing. Add the client's email, then deliver again." },
+      { status: 400 },
+    );
+  }
+
   // Auto-include website and 3D tour links from booking if not overridden
   const resolvedWebsiteUrl = websiteUrl || (booking.propertyWebsite?.published
     ? `${getAppUrl()}/${tenant.slug}/property/${gallery.bookingId}`
@@ -127,7 +141,7 @@ export async function POST(req, { params }) {
 
   let deliveryError = null;
   try {
-    await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken, tenant, subject, note, to, cc, websiteUrl: resolvedWebsiteUrl, tourUrl: resolvedTourUrl });
+    await sendGalleryDelivery({ booking, galleryToken: gallery.accessToken, tenant, subject, note, to: resolvedTo, cc: resolvedCc, websiteUrl: resolvedWebsiteUrl, tourUrl: resolvedTourUrl });
   } catch (err) {
     deliveryError = err?.message || "Unknown delivery error";
     console.error("[send/gallery] sendGalleryDelivery failed:", deliveryError);
@@ -140,7 +154,7 @@ export async function POST(req, { params }) {
     return Response.json({ error: `Gallery delivery failed: ${deliveryError}` }, { status: 500 });
   }
 
-  const allRecipients = [...new Set([...(to || []), ...(cc || [])])];
+  const allRecipients = [...new Set([...resolvedTo, ...resolvedCc])];
   const existingAuth  = gallery.authorizedEmails || [];
   const mergedAuth    = [...new Set([...existingAuth, ...allRecipients])];
   await galleryRef.update({

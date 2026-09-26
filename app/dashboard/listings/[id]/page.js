@@ -236,6 +236,7 @@ export default function ListingDetailPage() {
   const [delivering,   setDelivering]  = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailNote,    setEmailNote]   = useState("");
+  const [emailTo,      setEmailTo]     = useState(""); // delivery recipient(s), comma-separated
   const [deliveryMode, setDeliveryMode] = useState("now"); // "now" | "later"
   const [scheduledAt,  setScheduledAt]  = useState("");     // local "YYYY-MM-DDTHH:MM"
   const [deliverDate,  setDeliverDate]  = useState("");
@@ -456,6 +457,7 @@ const [listingUrl,       setListingUrl]        = useState("");
       const { booking: b } = await bRes.json();
       setBooking(b);
       setEmailSubject(`Your listing media is ready | ${b.fullAddress || b.address || ""}`);
+      setEmailTo(b.clientEmail || "");
       // Auto-fill the listing agent from the customer who booked (in real estate
       // media the client IS the listing agent). Only fills blanks so manual
       // edits are preserved.
@@ -684,16 +686,26 @@ const [listingUrl,       setListingUrl]        = useState("");
 
   async function deliverGallery() {
     if (demoGuard()) return;
-    if (!gallery) return;
+    if (!gallery) { toast("No gallery to deliver yet — upload media first.", "error"); return; }
     if (deliveryMode === "later" && !scheduledAt) { toast("Pick a date and time.", "error"); return; }
     if (deliveryMode === "later" && new Date(scheduledAt) <= new Date()) {
       toast("Scheduled time must be in the future.", "error"); return;
+    }
+    // Parse the recipient field (comma/semicolon/space separated). Require at
+    // least one — otherwise a blank client email would silently deliver nothing.
+    const recipients = (emailTo || "")
+      .split(/[,;\s]+/)
+      .map((e) => e.trim())
+      .filter(Boolean);
+    if (recipients.length === 0) {
+      toast("Add a recipient email address.", "error"); return;
     }
     setDelivering(true);
     const token = await auth.currentUser.getIdToken();
     const body  = {
       subject: emailSubject,
       note:    emailNote,
+      to:      recipients,
       ...(deliveryMode === "later" ? { scheduledAt: new Date(scheduledAt).toISOString() } : {}),
     };
     const res = await fetch(`/api/dashboard/galleries/${gallery.id}/send`, {
@@ -702,17 +714,19 @@ const [listingUrl,       setListingUrl]        = useState("");
       body: JSON.stringify(body),
     });
     setDelivering(false);
-    setShowDeliver(false);
     if (res.ok) {
+      setShowDeliver(false);
+      const mergedAuth = [...new Set([...(gallery.authorizedEmails || []), ...recipients])];
       if (deliveryMode === "later") {
         toast(`Delivery scheduled for ${new Date(scheduledAt).toLocaleString()}.`);
-        setGallery((g) => ({ ...g, scheduledDelivery: { scheduledAt: new Date(scheduledAt), status: "pending" } }));
+        setGallery((g) => ({ ...g, authorizedEmails: mergedAuth, scheduledDelivery: { scheduledAt: new Date(scheduledAt), status: "pending" } }));
       } else {
-        setGallery((g) => ({ ...g, delivered: true, scheduledDelivery: null }));
+        setGallery((g) => ({ ...g, delivered: true, authorizedEmails: mergedAuth, scheduledDelivery: null }));
         toast("Gallery delivered to client.");
       }
     } else {
-      toast("Failed to deliver.", "error");
+      const d = await res.json().catch(() => ({}));
+      toast(d.error || "Failed to deliver.", "error");
     }
   }
 
@@ -1054,7 +1068,7 @@ if (loading) return (
             <div className="flex items-center gap-2 flex-shrink-0">
               <button onClick={() => setShowDeliver(true)}
                 style={{ height: 36, padding: "0 16px", background: "#fff", color: "#0F172A", border: "none", borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}>
-                Deliver →
+                {isDelivered ? "Re-Deliver →" : "Deliver →"}
               </button>
               <a href={`mailto:${booking.clientEmail}`} title="Message client" target="_blank" rel="noopener noreferrer"
                 className="w-9 h-9 rounded-[9px] flex items-center justify-center border border-white/20 text-white hover:bg-white/20 transition-colors" style={{ background: "rgba(255,255,255,0.14)", backdropFilter: "blur(8px)" }}>
@@ -1622,7 +1636,7 @@ if (loading) return (
                   </button>
                   <button onClick={() => setShowDeliver(true)}
                     className="w-full btn-primary text-sm font-semibold py-2 rounded-xl">
-                    Deliver Gallery →
+                    {isDelivered ? "Re-Deliver Gallery →" : "Deliver Gallery →"}
                   </button>
                   {gallery?.accessToken && tenantSlug ? (
                     <a href={`/${tenantSlug}/gallery/${gallery.accessToken}`}
@@ -3324,10 +3338,18 @@ if (loading) return (
           <div className="absolute inset-0" onClick={() => setShowDeliver(false)} />
           <div className="modal-card relative w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-              <h2 className="font-semibold text-[#0F172A] text-base">Deliver Gallery</h2>
+              <h2 className="font-semibold text-[#0F172A] text-base">{isDelivered ? "Re-Deliver Gallery" : "Deliver Gallery"}</h2>
               <button onClick={() => setShowDeliver(false)} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
             </div>
             <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">To</label>
+                <input type="text" value={emailTo}
+                  onChange={(e) => setEmailTo(e.target.value)}
+                  placeholder="client@email.com"
+                  className="input-field w-full" />
+                <p className="text-xs text-gray-400 mt-1">Separate multiple recipients with commas.</p>
+              </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Subject</label>
                 <input type="text" value={emailSubject}
@@ -3400,11 +3422,13 @@ if (loading) return (
               <button onClick={() => setShowDeliver(false)} className="btn-outline px-4 py-2 text-sm">Cancel</button>
               <button
                 onClick={deliverGallery}
-                disabled={delivering || (deliveryMode === "later" && !scheduledAt)}
+                disabled={delivering || !emailTo.trim() || (deliveryMode === "later" && !scheduledAt)}
                 className="btn-primary px-6 py-2 text-sm">
                 {delivering
                   ? (deliveryMode === "later" ? "Scheduling…" : "Sending…")
-                  : deliveryMode === "later" ? "Schedule Delivery →" : "Deliver →"}
+                  : deliveryMode === "later"
+                    ? "Schedule Delivery →"
+                    : isDelivered ? "Re-Deliver →" : "Deliver →"}
               </button>
             </div>
           </div>
