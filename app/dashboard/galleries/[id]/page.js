@@ -1290,7 +1290,7 @@ export default function GalleryDetailPage() {
             )}
             <button onClick={() => { setDeliveryMode("now"); setScheduledAt(""); setShowDeliver(true); }}
               className="btn-primary text-sm px-5 py-2">
-              Deliver to Client
+              {gallery.delivered ? "Re-Deliver to Client" : "Deliver to Client"}
             </button>
           </div>
         </div>
@@ -2336,7 +2336,7 @@ export default function GalleryDetailPage() {
           <div className="absolute inset-0" onClick={() => setShowDeliver(false)} />
           <div className="modal-card relative w-full max-w-lg max-h-[92vh] overflow-y-auto">
             <div className="px-6 py-4 flex items-center justify-between sticky top-0 bg-white z-10" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-              <h2 className="font-semibold text-[#0F172A] text-base">Deliver Gallery</h2>
+              <h2 className="font-semibold text-[#0F172A] text-base">{gallery.delivered ? "Re-Deliver Gallery" : "Deliver Gallery"}</h2>
               <button onClick={() => setShowDeliver(false)} className="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-xl leading-none transition-colors">×</button>
             </div>
             <div className="p-6 space-y-4">
@@ -2421,7 +2421,7 @@ export default function GalleryDetailPage() {
                   ? (deliveryMode === "later" ? "Scheduling…" : "Sending…")
                   : deliveryMode === "later"
                     ? "Schedule Delivery →"
-                    : `Deliver to ${emailTo.length + emailCc.length} →`}
+                    : `${gallery.delivered ? "Re-Deliver" : "Deliver"} to ${emailTo.length + emailCc.length} →`}
               </button>
             </div>
           </div>
