@@ -28,7 +28,7 @@ export async function POST(req, { params }) {
   if (!ctx) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const { subject, note, to, cc, scheduledAt, websiteUrl, tourUrl, agentCanShare } = body;
+  const { subject, note, to, cc, scheduledAt, websiteUrl, tourUrl, agentCanShare, markFulfilled } = body;
 
   // Who is sending — recorded on every activity entry below so the Activity tab
   // shows which team member delivered, not just that a delivery happened.
@@ -182,7 +182,9 @@ export async function POST(req, { params }) {
   if (gallery.bookingId) {
     // deliveredAt is the FIRST-delivery timestamp (used for turnaround metrics),
     // so only stamp it on the first send — re-sends must not reset it.
-    const bookingUpdate = { workflowStatus: "delivered" };
+    // When the sender ticked "mark as fulfilled" in the deliver dialog, record
+    // the order as fulfilled outright instead of just delivered.
+    const bookingUpdate = { workflowStatus: markFulfilled ? "fulfilled" : "delivered" };
     if (!gallery.deliveredAt) bookingUpdate.deliveredAt = new Date();
     adminDb.collection("tenants").doc(ctx.tenantId)
       .collection("bookings").doc(gallery.bookingId)

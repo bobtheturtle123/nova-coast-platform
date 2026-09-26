@@ -237,6 +237,8 @@ export default function ListingDetailPage() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailNote,    setEmailNote]   = useState("");
   const [emailTo,      setEmailTo]     = useState(""); // delivery recipient(s), comma-separated
+  const [markFulfilled, setMarkFulfilled] = useState(true); // "mark order fulfilled" on delivery — default on
+  const [markingFulfilled, setMarkingFulfilled] = useState(false);
   const [deliveryMode, setDeliveryMode] = useState("now"); // "now" | "later"
   const [scheduledAt,  setScheduledAt]  = useState("");     // local "YYYY-MM-DDTHH:MM"
   const [deliverDate,  setDeliverDate]  = useState("");
@@ -702,10 +704,14 @@ const [listingUrl,       setListingUrl]        = useState("");
     }
     setDelivering(true);
     const token = await auth.currentUser.getIdToken();
+    // Only mark fulfilled on an immediate send (a scheduled delivery hasn't
+    // actually gone out yet, so it can't be "fulfilled" now).
+    const willMarkFulfilled = deliveryMode === "now" && markFulfilled;
     const body  = {
       subject: emailSubject,
       note:    emailNote,
       to:      recipients,
+      ...(willMarkFulfilled ? { markFulfilled: true } : {}),
       ...(deliveryMode === "later" ? { scheduledAt: new Date(scheduledAt).toISOString() } : {}),
     };
     const res = await fetch(`/api/dashboard/galleries/${gallery.id}/send`, {
@@ -722,12 +728,41 @@ const [listingUrl,       setListingUrl]        = useState("");
         setGallery((g) => ({ ...g, authorizedEmails: mergedAuth, scheduledDelivery: { scheduledAt: new Date(scheduledAt), status: "pending" } }));
       } else {
         setGallery((g) => ({ ...g, delivered: true, authorizedEmails: mergedAuth, scheduledDelivery: null }));
-        toast("Gallery delivered to client.");
+        // Mirror the server's workflow advance so the badge updates immediately.
+        setBooking((b) => ({ ...b, workflowStatus: willMarkFulfilled ? "fulfilled" : "delivered" }));
+        toast(willMarkFulfilled ? "Gallery delivered — order marked fulfilled." : "Gallery delivered to client.");
       }
     } else {
       const d = await res.json().catch(() => ({}));
       toast(d.error || "Failed to deliver.", "error");
     }
+  }
+
+  // Manually mark the order fulfilled (or reopen it). Fulfilled is a deliberate
+  // studio decision that outranks the auto-computed "delivered/completed" status —
+  // for the case where paid + delivered still isn't truly done.
+  async function setFulfilled(fulfill) {
+    if (demoGuard()) return;
+    setMarkingFulfilled(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const nextStatus = fulfill
+        ? "fulfilled"
+        : resolveWorkflowStatus({ ...booking, workflowStatus: null }, { gallery, revisions: revisions ?? undefined });
+      const res = await fetch(`/api/dashboard/bookings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ workflowStatus: nextStatus }),
+      });
+      if (res.ok) {
+        setBooking((b) => ({ ...b, workflowStatus: nextStatus }));
+        toast(fulfill ? "Order marked fulfilled." : "Order reopened.");
+      } else {
+        const d = await res.json().catch(() => ({}));
+        toast(d.error || "Failed to update status.", "error");
+      }
+    } catch { toast("Something went wrong.", "error"); }
+    finally { setMarkingFulfilled(false); }
   }
 
   async function cancelScheduledDelivery() {
@@ -1648,6 +1683,19 @@ if (loading) return (
                     <button onClick={() => setTab("gallery")}
                       className="w-full text-sm font-semibold py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
                       View Gallery
+                    </button>
+                  )}
+                  {/* Manual fulfillment — the studio's final say that the order is
+                      truly done, independent of paid/delivered auto-status. */}
+                  {wfStatus === "fulfilled" ? (
+                    <button onClick={() => setFulfilled(false)} disabled={markingFulfilled}
+                      className="w-full text-sm font-semibold py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-60">
+                      ✓ Fulfilled — Reopen order
+                    </button>
+                  ) : (
+                    <button onClick={() => setFulfilled(true)} disabled={markingFulfilled}
+                      className="w-full text-sm font-semibold py-2 rounded-xl border border-emerald-500/40 text-emerald-700 hover:bg-emerald-50 transition-colors disabled:opacity-60">
+                      Mark as Fulfilled
                     </button>
                   )}
                 </div>
@@ -3407,6 +3455,20 @@ if (loading) return (
                   <p>Your media for <strong>{address}</strong> is ready to view and download.</p>
                   <p className="text-[#3486cf] underline text-xs">[ View Gallery → ]</p>
                 </div>
+              )}
+
+              {/* Mark fulfilled — on an immediate send, let the studio close the
+                  order out in the same step. Checked by default. */}
+              {deliveryMode === "now" && wfStatus !== "fulfilled" && (
+                <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-xl border border-gray-200 px-3.5 py-3">
+                  <input type="checkbox" checked={markFulfilled}
+                    onChange={(e) => setMarkFulfilled(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded accent-[#3486cf]" />
+                  <span className="text-sm text-gray-700">
+                    Mark this order as <strong>fulfilled</strong>
+                    <span className="block text-xs text-gray-400 mt-0.5">Closes the listing out as done. Leave unchecked if there's still work to finish.</span>
+                  </span>
+                </label>
               )}
             </div>
             <div className="px-6 pb-2">
