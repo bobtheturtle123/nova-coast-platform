@@ -352,7 +352,13 @@ export default function ListingsPage() {
     cancelled: listings.filter(l => l.status === "cancelled" || resolveWorkflowStatus(l) === "cancelled").length,
   }), [listings]);
 
-  const pendingCount = useMemo(() => listings.filter(l => l.status === "requested").length, [listings]);
+  // "Pending review" = a new booking still awaiting the studio's first review,
+  // i.e. it resolves to the "booked" stage. The raw `status === "requested"`
+  // field is NOT a reliable signal: the Stripe webhook sets status "requested"
+  // on deposit/full payment and it persists through confirmed → shot → delivered
+  // (only flipping off on balance payment or cancellation), so keying off it
+  // wrongly counts active/confirmed/delivered listings as pending review.
+  const pendingCount = useMemo(() => listings.filter(l => resolveWorkflowStatus(l) === "booked").length, [listings]);
 
   const revenue = useMemo(() =>
     listings.reduce((s, l) => {
