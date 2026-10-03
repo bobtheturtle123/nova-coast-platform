@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
 import WorkflowStatusBadge from "@/components/WorkflowStatusBadge";
@@ -101,7 +101,12 @@ function ListingCard({ listing, revCount = 0 }) {
   const coverUrl        = listing.gallery?.coverUrl;
   const shootDate       = listing.shootDate || listing.preferredDate;
   const aColor          = avatarColor(listing.clientName || "");
-  const wfStatus        = resolveWorkflowStatus(listing);
+  // Resolve with the gallery + revision context on the row so delivered /
+  // scheduled listings don't fall back to the raw "requested" → "booked" mapping.
+  const wfStatus        = resolveWorkflowStatus(listing, {
+    gallery:   listing.gallery || undefined,
+    revisions: revCount > 0 ? [{ status: "pending" }] : undefined,
+  });
   const streetAddr      = listing.address?.split(",")[0] || listing.fullAddress?.split(",")[0];
   const cityLine        = listing.city
     ? `${listing.city}${listing.state ? `, ${listing.state}` : ""}`
@@ -312,16 +317,31 @@ export default function ListingsPage() {
     setLoadingMore(false);
   }
 
+  // Resolve a listing's workflow status using the gallery + pending-revision
+  // context already attached to each row. resolveWorkflowStatus only inspects
+  // that context when it's passed; without it, a delivered listing whose
+  // workflowStatus was never persisted falls back to mapping the raw
+  // status ("requested" → "booked") and is misclassified. Routing every status
+  // read on this page through this helper keeps the counts, filters, and badges
+  // consistent with the live gallery state.
+  const wfOf = useCallback(
+    (l) => resolveWorkflowStatus(l, {
+      gallery:   l.gallery || undefined,
+      revisions: (pendingRevCounts[l.id] || 0) > 0 ? [{ status: "pending" }] : undefined,
+    }),
+    [pendingRevCounts]
+  );
+
   const filtered = useMemo(() => {
     let list = listings;
     if (filter === "active") {
-      list = list.filter((l) => ACTIVE_STAGES.includes(resolveWorkflowStatus(l)));
+      list = list.filter((l) => ACTIVE_STAGES.includes(wfOf(l)));
     } else if (filter === "delivered") {
-      list = list.filter((l) => ["delivered", "paid"].includes(resolveWorkflowStatus(l)));
+      list = list.filter((l) => ["delivered", "paid", "completed"].includes(wfOf(l)));
     } else if (filter === "paid") {
-      list = list.filter((l) => l.paidInFull || l.balancePaid || resolveWorkflowStatus(l) === "paid");
+      list = list.filter((l) => l.paidInFull || l.balancePaid || wfOf(l) === "paid");
     } else if (filter === "cancelled") {
-      list = list.filter((l) => l.status === "cancelled" || resolveWorkflowStatus(l) === "cancelled");
+      list = list.filter((l) => l.status === "cancelled" || wfOf(l) === "cancelled");
     }
     if (payFilter === "paid")         list = list.filter((l) => l.paidInFull || l.balancePaid);
     else if (payFilter === "deposit") list = list.filter((l) => l.depositPaid && !l.paidInFull && !l.balancePaid);
@@ -342,23 +362,26 @@ export default function ListingsPage() {
     else if (sortBy === "price_lo") list.sort((a, b) => (a.totalPrice || 0) - (b.totalPrice || 0));
     else if (sortBy === "alpha")    list.sort((a, b) => (a.address || a.fullAddress || "").localeCompare(b.address || b.fullAddress || ""));
     return list;
-  }, [listings, filter, payFilter, sortBy, search]);
+  }, [listings, filter, payFilter, sortBy, search, wfOf]);
 
   const counts = useMemo(() => ({
     all:       listings.length,
-    active:    listings.filter(l => ACTIVE_STAGES.includes(resolveWorkflowStatus(l))).length,
-    delivered: listings.filter(l => ["delivered","paid"].includes(resolveWorkflowStatus(l))).length,
-    paid:      listings.filter(l => l.paidInFull || l.balancePaid || resolveWorkflowStatus(l) === "paid").length,
-    cancelled: listings.filter(l => l.status === "cancelled" || resolveWorkflowStatus(l) === "cancelled").length,
-  }), [listings]);
+    active:    listings.filter(l => ACTIVE_STAGES.includes(wfOf(l))).length,
+    delivered: listings.filter(l => ["delivered","paid","completed"].includes(wfOf(l))).length,
+    paid:      listings.filter(l => l.paidInFull || l.balancePaid || wfOf(l) === "paid").length,
+    cancelled: listings.filter(l => l.status === "cancelled" || wfOf(l) === "cancelled").length,
+  }), [listings, wfOf]);
 
   // "Pending review" = a new booking still awaiting the studio's first review,
-  // i.e. it resolves to the "booked" stage. The raw `status === "requested"`
-  // field is NOT a reliable signal: the Stripe webhook sets status "requested"
-  // on deposit/full payment and it persists through confirmed → shot → delivered
-  // (only flipping off on balance payment or cancellation), so keying off it
-  // wrongly counts active/confirmed/delivered listings as pending review.
-  const pendingCount = useMemo(() => listings.filter(l => resolveWorkflowStatus(l) === "booked").length, [listings]);
+  // i.e. it resolves to the "booked" stage. The Stripe webhook sets status
+  // "requested" on deposit/full payment and it persists through confirmed →
+  // shot → delivered, so the raw status is not a reliable signal; wfOf resolves
+  // from live gallery/revision context instead. A genuinely new booking has no
+  // gallery, so it still counts; delivered / scheduled / fulfilled ones don't.
+  const pendingCount = useMemo(
+    () => listings.filter((l) => wfOf(l) === "booked").length,
+    [listings, wfOf]
+  );
 
   const revenue = useMemo(() =>
     listings.reduce((s, l) => {
@@ -378,7 +401,7 @@ export default function ListingsPage() {
       l.clientName || "",
       l.clientEmail || "",
       l.shootDate || l.preferredDate || "",
-      resolveWorkflowStatus(l),
+      wfOf(l),
       l.paidInFull || l.balancePaid ? "Paid in full" : l.depositPaid ? "Deposit paid" : "Unpaid",
       l.totalPrice || "",
       l.photographerName || "",
@@ -672,7 +695,7 @@ export default function ListingsPage() {
                       </div>
 
                       <div><DateChip d={shootDate} /></div>
-                      <div><WorkflowStatusBadge status={resolveWorkflowStatus(listing)} size="xs" /></div>
+                      <div><WorkflowStatusBadge status={wfOf(listing)} size="xs" /></div>
                       <div><PayBadge listing={listing} /></div>
 
                       {canViewPricing && (
