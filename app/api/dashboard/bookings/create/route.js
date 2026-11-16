@@ -168,6 +168,17 @@ export async function POST(req) {
         .catch((e) => console.error("[booking/create] promo usage increment failed:", e?.message));
     }
 
+    // Outbound webhook for manual/phone bookings — same "booking.created" event
+    // as the public page, tagged source "manual" so receivers can tell them apart.
+    // Fire-and-forget; no-ops when the tenant has no webhooks configured.
+    (async () => {
+      try {
+        const { dispatchZapier, bookingWebhookData } = await import("@/lib/zapier");
+        await dispatchZapier({ id: ctx.tenantId, ...tenantData }, "booking.created",
+          bookingWebhookData({ ...bookingData, source: source || "manual", subtotal, netTotal: finalPrice }));
+      } catch (e) { console.error("[booking/create] webhook dispatch failed:", e?.message); }
+    })();
+
     // Push to the assigned photographer's Google Calendar (main + any additional
     // appointments). Fire-and-forget — never block booking creation on it, and
     // it no-ops cleanly when no photographer is assigned or Calendar isn't linked.

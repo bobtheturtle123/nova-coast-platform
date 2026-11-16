@@ -395,6 +395,11 @@ export async function POST(req, { params }) {
           fullAddress, status: isFreeBooking ? "requested" : "pending_payment",
           totalPrice: effectiveTotal, depositPaid: isFreeBooking, paidInFull: fullyFree,
           remainingBalance, shootDate: null, preferredDate, preferredTime,
+          source: "online",
+          subtotal: pricing.subtotal, netTotal: effectiveTotal,
+          promoCode: appliedPromo?.code || null, promoDiscount,
+          partnerDiscount: appliedPartner ? partnerDiscount : 0,
+          packageIds, serviceIds, addonIds,
         }));
       } catch {}
     })();
