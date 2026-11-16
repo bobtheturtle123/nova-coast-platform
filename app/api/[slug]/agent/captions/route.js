@@ -2,6 +2,7 @@ import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
 import { callAI, aiAvailable } from "@/lib/ai";
 import { rateLimit } from "@/lib/rateLimit";
+import { bookingBelongsToAgent } from "@/lib/bookingContacts";
 
 export async function GET(req, { params }) {
   const { searchParams } = new URL(req.url);
@@ -39,7 +40,7 @@ export async function GET(req, { params }) {
   if (!bookingDoc.exists) return Response.json({ error: "Not found" }, { status: 404 });
 
   const booking = bookingDoc.data();
-  if (booking.clientEmail?.toLowerCase() !== agent.email?.toLowerCase()) {
+  if (!bookingBelongsToAgent(booking, agent.email)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 

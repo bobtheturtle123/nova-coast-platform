@@ -1,5 +1,6 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
+import { bookingBelongsToAgent } from "@/lib/bookingContacts";
 
 // Let the agent hand-pick and order the photos used on their listing's print
 // brochure. Stored as propertyWebsite.brochureImageKeys (ordered media keys);
@@ -31,7 +32,7 @@ export async function POST(req, { params }) {
     const bookingDoc = await bookingRef.get();
     if (!bookingDoc.exists) return Response.json({ error: "Booking not found." }, { status: 404 });
     const bookingData = bookingDoc.data();
-    if (bookingData.clientEmail?.toLowerCase() !== agent.email?.toLowerCase()) {
+    if (!bookingBelongsToAgent(bookingData, agent.email)) {
       return Response.json({ error: "Unauthorized." }, { status: 403 });
     }
     if (!bookingData.propertyWebsite) {

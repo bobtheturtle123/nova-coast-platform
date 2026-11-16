@@ -2,6 +2,7 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { sendBookingApproved } from "@/lib/email";
 import { getTenantById } from "@/lib/tenants";
 import { recomputeBalance } from "@/lib/bookingBalance";
+import { sanitizeAdditionalClients, buildClientEmails } from "@/lib/bookingContacts";
 import { v4 as uuidv4 } from "uuid";
 import { Resend } from "resend";
 
@@ -79,6 +80,8 @@ export async function PATCH(req, { params }) {
     "notes", "propertyWebsite",
     // Client info
     "clientName", "clientEmail", "clientPhone",
+    // Additional agents on the same order (co-clients)
+    "additionalClients",
     // Property / address
     "address", "unit", "addressLine", "city", "state", "zip", "fullAddress", "squareFootage", "propertyType",
     // Services
@@ -114,6 +117,39 @@ export async function PATCH(req, { params }) {
     return Response.json({ error: "Your subscription has ended. Reactivate your membership to modify bookings." }, { status: 403 });
   }
   const prev = prevSnap.data() || {};
+
+  // Additional agents / primary email changed → sanitize, drop any duplicate of
+  // the primary, and recompute the denormalized clientEmails array the agent
+  // portal queries. Also upsert each additional agent as a customer so they get
+  // a portal token (best-effort; never blocks the save).
+  const primaryEmail = (update.clientEmail ?? prev.clientEmail ?? "").toLowerCase().trim();
+  if (update.additionalClients !== undefined || update.clientEmail !== undefined) {
+    const sourceList = update.additionalClients !== undefined
+      ? update.additionalClients
+      : prev.additionalClients;
+    const additionalClients = sanitizeAdditionalClients(sourceList)
+      .filter((a) => a.email !== primaryEmail);
+    update.additionalClients = additionalClients;
+    update.clientEmails = buildClientEmails(primaryEmail, additionalClients);
+
+    if (update.additionalClients !== undefined) {
+      for (const ac of additionalClients) {
+        try {
+          const key = Buffer.from(ac.email).toString("base64").replace(/[+/=]/g, "");
+          const ref = tenantRef.collection("agents").doc(key);
+          const snap = await ref.get();
+          if (!snap.exists) {
+            await ref.set({
+              id: key, name: ac.name, email: ac.email, phone: ac.phone,
+              totalOrders: 1, totalSpent: 0, lastOrderAt: new Date(), createdAt: new Date(),
+            });
+          } else {
+            await ref.update({ name: ac.name || snap.data().name, phone: ac.phone || snap.data().phone });
+          }
+        } catch (e) { console.error("[booking/PATCH] additional-agent upsert failed:", e?.message); }
+      }
+    }
+  }
 
   // Auto-compute paidInFull when both deposit and balance are marked paid
   if (update.depositPaid !== undefined || update.balancePaid !== undefined) {
@@ -476,18 +512,15 @@ export async function PATCH(req, { params }) {
           const fromEmail = process.env.RESEND_FROM_EMAIL || "no-reply@mail.kyoriaos.com";
           const from      = `${bizName} <${fromEmail}>`;
           const address   = update.fullAddress || prev.fullAddress || prev.address || "your property";
-          const clientName = (update.clientName || prev.clientName || "").split(" ")[0] || "there";
           const shootDate = update.shootDate ?? prev.shootDate;
           const shootTime = update.shootTime ?? prev.shootTime;
           const shootInfo = shootDate
             ? `${new Date(shootDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}${shootTime ? ` at ${shootTime}` : ""}`
             : null;
-          await new Resend(resendKey).emails.send({
-            from, to: [clientEmail],
-            subject: `Your booking was updated — ${address}`,
-            html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:40px 20px">
+          const resend = new Resend(resendKey);
+          const updateHtml = (greetName) => `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:40px 20px">
               <h2 style="color:${primary};font-family:Georgia,serif;margin:0 0 12px">Booking Updated</h2>
-              <p style="color:#555;margin:0 0 20px">Hi ${clientName}, your booking details for <strong>${address}</strong> have been updated.</p>
+              <p style="color:#555;margin:0 0 20px">Hi ${greetName}, your booking details for <strong>${address}</strong> have been updated.</p>
               <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
                 <tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#888;font-size:13px;width:36%">Property</td>
                     <td style="padding:8px 0;border-bottom:1px solid #eee;font-weight:500">${address}</td></tr>
@@ -496,9 +529,23 @@ export async function PATCH(req, { params }) {
               </table>
               <p style="color:#888;font-size:12px;margin:0">Questions? Just reply to this email.</p>
               <p style="color:#ccc;font-size:11px;margin-top:8px">${bizName}</p>
-            </div>`,
-          }).then(() => console.log("[email] client booking-update sent to", clientEmail))
-            .catch((e) => console.error("[email] client booking-update FAILED:", e?.message));
+            </div>`;
+          const sendUpdate = (to, name) =>
+            resend.emails.send({
+              from, to: [to],
+              subject: `Your booking was updated — ${address}`,
+              html: updateHtml((name || "").split(" ")[0] || "there"),
+            }).then(() => console.log("[email] client booking-update sent to", to))
+              .catch((e) => console.error("[email] client booking-update FAILED:", e?.message));
+
+          // Every agent on the order (primary + additional) is notified.
+          const effectiveAdditional = sanitizeAdditionalClients(
+            update.additionalClients ?? prev.additionalClients
+          ).filter((a) => a.email !== clientEmail.toLowerCase().trim());
+          await Promise.all([
+            sendUpdate(clientEmail, update.clientName || prev.clientName),
+            ...effectiveAdditional.map((ac) => sendUpdate(ac.email, ac.name)),
+          ]);
         }
       } catch (e) {
         console.error("[email] client booking-update error (non-fatal):", e?.message);

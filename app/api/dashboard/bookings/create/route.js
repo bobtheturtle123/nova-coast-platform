@@ -8,6 +8,7 @@ import { sendBookingConfirmedSms } from "@/lib/sms";
 import { tenantHasActivePlan, paymentRequired } from "@/lib/requireSubscription";
 import { calculateDeposit } from "@/lib/catalogUtils";
 import { validatePromo } from "@/lib/promo";
+import { sanitizeAdditionalClients, buildClientEmails } from "@/lib/bookingContacts";
 
 async function getAuthContext(req) {
   const auth = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -37,6 +38,7 @@ export async function POST(req) {
       shootDate = "", shootTime = "",
       additionalAppointments = [],
       additionalPhotographers = [],
+      additionalClients: additionalClientsRaw = [],
       sendNotification = true,
       sendAgreementEmail = false,
       zoneId = null,
@@ -111,12 +113,22 @@ export async function POST(req) {
 
     const normalizedEmail = clientEmail?.toLowerCase().trim() || "";
 
+    // Additional agents on this same order. Each gets full co-client treatment:
+    // stored on the booking, upserted as a customer, and emailed the booking
+    // confirmation + their own agent-portal link below. `clientEmails` lets the
+    // agent portal find this booking for any agent via one array-contains query.
+    const additionalClients = sanitizeAdditionalClients(additionalClientsRaw)
+      .filter((a) => a.email !== normalizedEmail); // never duplicate the primary
+    const clientEmails = buildClientEmails(normalizedEmail, additionalClients);
+
     const bookingData = {
       id:              bookingId,
       tenantId:        ctx.tenantId,
       clientName,
       clientEmail:     normalizedEmail,
       clientPhone,
+      additionalClients,
+      clientEmails,
       address,
       unit:            unit || null,
       city,
@@ -221,6 +233,29 @@ export async function POST(req) {
           lastOrderAt: new Date(),
           name:  clientName,
           phone: clientPhone || prev.phone,
+        });
+      }
+    }
+
+    // Upsert each additional agent as a customer too, so they get an agent-portal
+    // token and show up in the customer list. Order revenue stays attributed to
+    // the primary buyer (no totalSpent added here) to avoid double-counting.
+    for (const ac of additionalClients) {
+      const key = Buffer.from(ac.email).toString("base64").replace(/[+/=]/g, "");
+      const ref = tenantRef.collection("agents").doc(key);
+      const snap = await ref.get();
+      if (!snap.exists) {
+        await ref.set({
+          id: key, name: ac.name, email: ac.email, phone: ac.phone,
+          totalOrders: 1, totalSpent: 0, lastOrderAt: new Date(), createdAt: new Date(),
+        });
+      } else {
+        const prev = snap.data();
+        await ref.update({
+          totalOrders: (prev.totalOrders || 0) + 1,
+          lastOrderAt: new Date(),
+          name:  ac.name  || prev.name,
+          phone: ac.phone || prev.phone,
         });
       }
     }
@@ -336,6 +371,23 @@ export async function POST(req) {
               );
             }
 
+            // Same confirmation to each additional agent on the order.
+            for (const ac of additionalClients) {
+              sends.push(
+                resend.emails.send({
+                  from, to: [ac.email],
+                  subject: `Booking confirmed — ${fullAddress}`,
+                  html: bookingHtml(
+                    "Booking Confirmed",
+                    `Hi ${ac.name || "there"}, the booking for <strong>${fullAddress}</strong> has been created.`,
+                    `<p style="color:#888;font-size:12px;margin:0">Questions? Reply to this email.</p>`
+                  ),
+                  ...(icsAttachment.length ? { attachments: icsAttachment } : {}),
+                }).then(() => console.log("[email] client confirmation sent to", ac.email))
+                  .catch((e) => console.error("[email] client confirmation FAILED:", e?.message || e))
+              );
+            }
+
             // Admin notification
             if (adminEmail) {
               sends.push(
@@ -388,6 +440,17 @@ export async function POST(req) {
             tenant,
             reason: "booking",
           }).catch((err) => console.error("[agent-portal] email FAILED:", err?.message || err));
+
+          // Each additional agent gets their OWN portal link (own access token),
+          // scoped to their own agent record via clientEmails on the booking.
+          for (const ac of additionalClients) {
+            sendAgentPortalEmail({
+              tenantId: ctx.tenantId,
+              booking: { ...bookingData, clientEmail: ac.email, clientName: ac.name, clientPhone: ac.phone },
+              tenant,
+              reason: "booking",
+            }).catch((err) => console.error("[agent-portal] email FAILED:", err?.message || err));
+          }
 
           // ── Service agreement — send for signing ──────────────────────────
           // Sends a "Review & Sign" link (not just "reply I agree"), mints the

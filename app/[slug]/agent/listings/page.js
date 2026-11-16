@@ -28,13 +28,22 @@ export default async function AgentListingsPage({ params, searchParams }) {
   if (agentsSnap.empty) return <ErrorScreen message="Invalid or expired link." />;
   const agent = agentsSnap.docs[0].data();
 
-  const bookingsSnap = await adminDb
+  // Match the primary-client email AND the denormalized clientEmails array, so
+  // this agent sees orders where they're an ADDITIONAL agent. Merged by doc id.
+  const bookingsRef = adminDb
     .collection("tenants").doc(tenant.id)
-    .collection("bookings")
-    .where("clientEmail", "==", agent.email)
-    .get();
+    .collection("bookings");
+  const emailLc = agent.email?.toLowerCase();
+  const [primarySnap, additionalSnap] = await Promise.all([
+    bookingsRef.where("clientEmail", "==", agent.email).get(),
+    emailLc
+      ? bookingsRef.where("clientEmails", "array-contains", emailLc).get()
+      : Promise.resolve({ docs: [] }),
+  ]);
+  const bookingDocsById = new Map();
+  for (const d of [...primarySnap.docs, ...additionalSnap.docs]) bookingDocsById.set(d.id, d);
 
-  const bookings = bookingsSnap.docs
+  const bookings = [...bookingDocsById.values()]
     .sort((a, b) => {
       const aT = a.data().createdAt?.toMillis?.() ?? 0;
       const bT = b.data().createdAt?.toMillis?.() ?? 0;

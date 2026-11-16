@@ -1,6 +1,7 @@
 import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
 import { getAppUrl } from "@/lib/appUrl";
+import { bookingBelongsToAgent } from "@/lib/bookingContacts";
 
 export async function POST(req, { params }) {
   try {
@@ -35,7 +36,7 @@ export async function POST(req, { params }) {
       .get();
     if (!bookingDoc.exists) return Response.json({ error: "Booking not found." }, { status: 404 });
     const bookingData = bookingDoc.data();
-    if (bookingData.clientEmail?.toLowerCase() !== agent.email?.toLowerCase()) {
+    if (!bookingBelongsToAgent(bookingData, agent.email)) {
       return Response.json({ error: "Unauthorized." }, { status: 403 });
     }
 

@@ -94,6 +94,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
     clientName:              init.clientName              || "",
     clientEmail:             init.clientEmail             || "",
     clientPhone:             init.clientPhone             || "",
+    additionalClients:       init.additionalClients       || [],
     address:                 init.address                 || "",
     unit:                    init.unit                    || "",
     city:                    init.city                    || "",
@@ -119,7 +120,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
     photographerPhone:       init.photographerPhone       || "",
     photographerTbd:         isEdit ? (!init.photographerId && !init.photographerName) : false,
     additionalPhotographers: init.additionalPhotographers || [],
-    sendNotification:        !isEdit,
+    sendNotification:        true,
     workflowStatus:          init.workflowStatus          || (isEdit ? "booked" : "booked"),
   });
 
@@ -676,6 +677,7 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
             clientName:              form.clientName,
             clientEmail:             form.clientEmail,
             clientPhone:             form.clientPhone,
+            additionalClients:       form.additionalClients,
             address:                 form.address,
             unit:                    form.unit,
             city:                    form.city,
@@ -827,6 +829,54 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                   )}
                 </div>
               )}
+
+              {/* Additional agents on this order — each gets the booking
+                  confirmation + update emails and their own portal/gallery link. */}
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Additional Agents</label>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, additionalClients: [...(f.additionalClients || []), { name: "", email: "", phone: "" }] }))}
+                    className="text-xs font-semibold text-[#3486cf] hover:underline"
+                  >
+                    + Add agent
+                  </button>
+                </div>
+                {(form.additionalClients || []).length === 0 ? (
+                  <p className="text-xs text-gray-400">Add co-listing agents to share the booking emails and gallery access.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(form.additionalClients || []).map((ac, idx) => (
+                      <div key={idx} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-start">
+                        <input
+                          type="text" value={ac.name}
+                          onChange={(e) => setForm((f) => { const list = [...f.additionalClients]; list[idx] = { ...list[idx], name: e.target.value }; return { ...f, additionalClients: list }; })}
+                          className="input-field w-full" placeholder="Name"
+                        />
+                        <input
+                          type="email" value={ac.email}
+                          onChange={(e) => setForm((f) => { const list = [...f.additionalClients]; list[idx] = { ...list[idx], email: e.target.value }; return { ...f, additionalClients: list }; })}
+                          className="input-field w-full" placeholder="agent@example.com"
+                        />
+                        <input
+                          type="tel" value={ac.phone}
+                          onChange={(e) => setForm((f) => { const list = [...f.additionalClients]; list[idx] = { ...list[idx], phone: e.target.value }; return { ...f, additionalClients: list }; })}
+                          className="input-field w-full" placeholder="Phone"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, additionalClients: f.additionalClients.filter((_, i) => i !== idx) }))}
+                          className="text-gray-400 hover:text-red-500 px-2 py-2 text-sm"
+                          aria-label="Remove agent"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Property */}

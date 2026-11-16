@@ -116,6 +116,90 @@ function AgentImageField({ label, value, onChange, folder, placeholder, hint, pr
   );
 }
 
+// ─── Additional Agents editor (co-clients on the order) ──────────────────────
+// Edits the booking's `additionalClients`. Each saved agent receives the booking
+// update emails and their own portal/gallery access (server-side co-client
+// treatment). Separate from the property-website "Listing Agents" branding card.
+function AdditionalAgentsEditor({ value, onSave, saving, disabled }) {
+  const [editing, setEditing] = useState(false);
+  const [rows,    setRows]    = useState(() => (Array.isArray(value) ? value.map((a) => ({ ...a })) : []));
+
+  function begin() {
+    setRows(Array.isArray(value) ? value.map((a) => ({ ...a })) : []);
+    setEditing(true);
+  }
+  function update(idx, field, v) {
+    setRows((r) => { const next = [...r]; next[idx] = { ...next[idx], [field]: v }; return next; });
+  }
+  function add()    { setRows((r) => [...r, { name: "", email: "", phone: "" }]); }
+  function remove(idx) { setRows((r) => r.filter((_, i) => i !== idx)); }
+  async function save() {
+    const clean = rows
+      .map((r) => ({ name: (r.name || "").trim(), email: (r.email || "").trim(), phone: (r.phone || "").trim() }))
+      .filter((r) => r.email);
+    await onSave(clean);
+    setEditing(false);
+  }
+
+  const saved = Array.isArray(value) ? value.filter((a) => a?.email) : [];
+
+  return (
+    <div className="mt-3.5 pt-3.5 border-t border-gray-100">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Additional Agents</span>
+        {!editing && !disabled && (
+          <button onClick={begin} className="text-xs text-[#3486cf] font-semibold">
+            {saved.length ? "Edit" : "+ Add"}
+          </button>
+        )}
+      </div>
+
+      {!editing ? (
+        saved.length === 0 ? (
+          <p className="text-xs text-gray-400">No additional agents. Add co-listing agents to share booking emails and gallery access.</p>
+        ) : (
+          <div className="space-y-2">
+            {saved.map((a, i) => (
+              <div key={i} className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-[11px]" style={{ background: "#7c93a8" }}>
+                  {(a.name || a.email || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  {a.name && <p className="font-semibold text-[#0F172A] text-[13px] truncate">{a.name}</p>}
+                  <p className="text-gray-500 text-[12px] truncate">{a.email}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      ) : (
+        <div className="space-y-2">
+          {rows.map((r, idx) => (
+            <div key={idx} className="grid grid-cols-[1fr_1fr_auto] gap-1.5 items-center">
+              <input type="text" value={r.name || ""} onChange={(e) => update(idx, "name", e.target.value)}
+                className="input-field w-full text-sm" placeholder="Name" />
+              <input type="email" value={r.email || ""} onChange={(e) => update(idx, "email", e.target.value)}
+                className="input-field w-full text-sm" placeholder="agent@example.com" />
+              <button type="button" onClick={() => remove(idx)} className="text-gray-400 hover:text-red-500 px-1.5 text-sm" aria-label="Remove agent">✕</button>
+            </div>
+          ))}
+          <button type="button" onClick={add} className="text-xs text-[#3486cf] font-semibold">+ Add agent</button>
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={save} disabled={saving}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-[#3486cf] hover:opacity-90 disabled:opacity-50">
+              {saving ? "Saving…" : "Save"}
+            </button>
+            <button type="button" onClick={() => setEditing(false)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Date/Time Picker ────────────────────────────────────────────────────────
 // Admin reschedule: every 30 minutes across the full day — an admin can schedule
 // any time, not just working hours. (The agent-facing booking form keeps its own
@@ -1301,6 +1385,11 @@ if (loading) return (
                   </button>
                 </div>
                 {agentAccessMsg && <p className="text-xs text-green-600 mt-2">{agentAccessMsg}</p>}
+                <AdditionalAgentsEditor
+                  value={booking.additionalClients}
+                  saving={saving}
+                  onSave={(clean) => patchBooking({ additionalClients: clean })}
+                />
                 {booking.notes && (
                   <div className="mt-3.5 p-3 rounded-[10px]" style={{ background: "#FAFAFA", borderLeft: "3px solid #C9A96E" }}>
                     <p className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "#A8843F" }}>Note</p>

@@ -39,13 +39,22 @@ export default async function AgentPortalPage({ params, searchParams }) {
   // Fetch bookings — query with both the stored email and its lowercase form so existing
   // mixed-case bookings (clientEmail entered before normalization was enforced) are found.
   const emailVariants = [...new Set([agent.email, agent.email?.toLowerCase()])].filter(Boolean);
-  const bookingsSnap = await adminDb
+  const bookingsRef = adminDb
     .collection("tenants").doc(tenant.id)
-    .collection("bookings")
-    .where("clientEmail", "in", emailVariants)
-    .get();
+    .collection("bookings");
+  // Match the primary-client email (legacy + current) AND the denormalized
+  // clientEmails array, so this agent sees orders where they're an ADDITIONAL
+  // agent too. Two queries merged by doc id (Firestore can't OR them).
+  const [primarySnap, additionalSnap] = await Promise.all([
+    bookingsRef.where("clientEmail", "in", emailVariants).get(),
+    agent.email
+      ? bookingsRef.where("clientEmails", "array-contains", agent.email.toLowerCase()).get()
+      : Promise.resolve({ docs: [] }),
+  ]);
+  const bookingDocsById = new Map();
+  for (const d of [...primarySnap.docs, ...additionalSnap.docs]) bookingDocsById.set(d.id, d);
 
-  const bookings = bookingsSnap.docs
+  const bookings = [...bookingDocsById.values()]
     .sort((a, b) => {
       const aTime = a.data().createdAt?.toMillis?.() ?? 0;
       const bTime = b.data().createdAt?.toMillis?.() ?? 0;
