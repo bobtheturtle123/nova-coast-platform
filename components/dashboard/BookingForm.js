@@ -570,6 +570,20 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
     }));
   }
 
+  // Autofill one additional-agent row from a known customer, matching the
+  // predictive fill the primary client fields use.
+  function fillAdditionalClient(idx, agent) {
+    setForm((f) => {
+      const list = [...(f.additionalClients || [])];
+      list[idx] = {
+        name:  agent.name  || list[idx]?.name  || "",
+        email: agent.email || list[idx]?.email || "",
+        phone: agent.phone || list[idx]?.phone || "",
+      };
+      return { ...f, additionalClients: list };
+    });
+  }
+
   const [savingClient, setSavingClient] = useState(false);
   const [clientSaved,  setClientSaved]  = useState(false);
 
@@ -849,15 +863,28 @@ export default function BookingForm({ mode = "create", bookingId, initialValues,
                   <div className="space-y-2">
                     {(form.additionalClients || []).map((ac, idx) => (
                       <div key={idx} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-start">
-                        <input
-                          type="text" value={ac.name}
-                          onChange={(e) => setForm((f) => { const list = [...f.additionalClients]; list[idx] = { ...list[idx], name: e.target.value }; return { ...f, additionalClients: list }; })}
-                          className="input-field w-full" placeholder="Name"
+                        <AutocompleteInput
+                          value={ac.name}
+                          onChange={(v) => setForm((f) => { const list = [...f.additionalClients]; list[idx] = { ...list[idx], name: v }; return { ...f, additionalClients: list }; })}
+                          onSelect={(name) => {
+                            const agent = agents.find((a) => a.name === name);
+                            if (agent) fillAdditionalClient(idx, agent);
+                            else setForm((f) => { const list = [...f.additionalClients]; list[idx] = { ...list[idx], name }; return { ...f, additionalClients: list }; });
+                          }}
+                          suggestions={agentNameSuggestions}
+                          placeholder="Name"
                         />
-                        <input
-                          type="email" value={ac.email}
-                          onChange={(e) => setForm((f) => { const list = [...f.additionalClients]; list[idx] = { ...list[idx], email: e.target.value }; return { ...f, additionalClients: list }; })}
-                          className="input-field w-full" placeholder="agent@example.com"
+                        <AutocompleteInput
+                          type="email"
+                          value={ac.email}
+                          onChange={(v) => setForm((f) => { const list = [...f.additionalClients]; list[idx] = { ...list[idx], email: v }; return { ...f, additionalClients: list }; })}
+                          onSelect={(email) => {
+                            const agent = agents.find((a) => a.email === email);
+                            if (agent) fillAdditionalClient(idx, agent);
+                            else setForm((f) => { const list = [...f.additionalClients]; list[idx] = { ...list[idx], email }; return { ...f, additionalClients: list }; });
+                          }}
+                          suggestions={agentEmailSuggestions}
+                          placeholder="agent@example.com"
                         />
                         <input
                           type="tel" value={ac.phone}

@@ -1413,7 +1413,16 @@ if (loading) return (
                   </span>
                   <span className="font-semibold text-[#0F172A] text-[14px] flex items-center gap-2 flex-wrap justify-end">
                     {booking.status === "cancelled"
-                      ? <span className="text-red-500 font-semibold">Cancelled</span>
+                      // Keep the shoot date visible after cancellation — show it
+                      // (struck through) next to a Cancelled tag rather than hiding it.
+                      ? <>
+                          {shootDateDisplay && (
+                            <span className="text-gray-400 line-through font-normal">
+                              {shootDateDisplay}{booking.shootTime ? ` · ${valToLabel(booking.shootTime)}` : ""}
+                            </span>
+                          )}
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-500">Cancelled</span>
+                        </>
                       : booking.workflowStatus === "postponed"
                         ? <span className="text-amber-600 font-semibold">Postponed — awaiting new date</span>
                         : booking.shootDate
