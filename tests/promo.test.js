@@ -75,3 +75,23 @@ describe("apply-promo balance adjustment", () => {
     expect(remove(170, 30)).toBe(200);
   });
 });
+
+import { clientEligibility } from "@/lib/promo";
+
+describe("clientEligibility", () => {
+  it("is a no-op for unrestricted codes", () => {
+    expect(clientEligibility({}, [])).toEqual({ ok: true });
+  });
+  it("defers when the email is not known yet", () => {
+    expect(clientEligibility({ returningOnly: true }, null)).toEqual({ ok: true, pending: true });
+  });
+  it("returningOnly requires a live prior booking", () => {
+    expect(clientEligibility({ returningOnly: true }, []).ok).toBe(false);
+    expect(clientEligibility({ returningOnly: true }, [{ status: "cancelled" }]).ok).toBe(false);
+    expect(clientEligibility({ returningOnly: true }, [{ status: "delivered" }]).ok).toBe(true);
+  });
+  it("firstTimeOnly rejects a returning client", () => {
+    expect(clientEligibility({ firstTimeOnly: true }, [{ status: "confirmed" }]).ok).toBe(false);
+    expect(clientEligibility({ firstTimeOnly: true }, [{ status: "cancelled" }]).ok).toBe(true);
+  });
+});

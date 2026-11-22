@@ -180,7 +180,7 @@ export async function GET(req) {
 
           // Fire the delivered webhook so scheduled deliveries also trigger Zaps
           // (e.g. a post-delivery feedback email) — same as immediate delivery.
-          (async () => {
+          await (async () => {
             try {
               const { dispatchZapier, bookingWebhookData } = await import("@/lib/zapier");
               await dispatchZapier(tenant, "booking.delivered", bookingWebhookData({ ...booking, status: "delivered", galleryLink: galleryUrl }));

@@ -34,7 +34,10 @@ export async function POST(req) {
     if (!tenantId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { code, type, value, usageLimit = 0, minOrder = 0, active = true, expiresAt = null, description = "", firstTimeOnly = false } = body;
+    const { code, type, value, usageLimit = 0, minOrder = 0, active = true, expiresAt = null, description = "", firstTimeOnly = false, returningOnly = false } = body;
+    if (firstTimeOnly && returningOnly) {
+      return Response.json({ error: "A code can be first-time only or existing-clients only, not both" }, { status: 400 });
+    }
 
     if (!code?.trim())         return Response.json({ error: "Code is required" }, { status: 400 });
     if (!["flat", "percent"].includes(type)) return Response.json({ error: "Type must be flat or percent" }, { status: 400 });
@@ -66,6 +69,7 @@ export async function POST(req) {
         description:   description.trim(),
         expiresAt:     expiresAt || null,
         firstTimeOnly: !!firstTimeOnly,
+        returningOnly: !!returningOnly,
         createdAt:     FieldValue.serverTimestamp(),
       });
 

@@ -2,6 +2,7 @@ import { adminDb } from "@/lib/firebase-admin";
 import { getTenantBySlug } from "@/lib/tenants";
 import { rateLimit } from "@/lib/rateLimit";
 import { safeDate } from "@/lib/dateUtils";
+import { clientEligibility, loadPriorBookings } from "@/lib/promo";
 
 // POST /api/[slug]/promo/validate
 // Body: { code: string, subtotal: number }
@@ -59,22 +60,12 @@ export async function POST(req, { params }) {
       return Response.json({ valid: false, message: `Minimum order of $${promo.minOrder} required` });
     }
 
-    // Check first-time client restriction
-    if (promo.firstTimeOnly) {
-      if (clientEmail?.trim()) {
-        const email = clientEmail.trim().toLowerCase();
-        // Check if any booking exists with this email under this tenant
-        const bookingSnap = await adminDb
-          .collection("tenants").doc(tenant.id)
-          .collection("bookings")
-          .where("clientEmail", "==", email)
-          .limit(1)
-          .get();
-        if (!bookingSnap.empty) {
-          return Response.json({ valid: false, message: "This code is valid for first-time clients only" });
-        }
-      }
-      // If no email provided yet, allow but flag it — enforced again at checkout
+    // Client-history restrictions. Before the client has typed an email the
+    // check is deferred; it is enforced again when the booking is created.
+    if (promo.firstTimeOnly || promo.returningOnly) {
+      const prior = await loadPriorBookings(adminDb.collection("tenants").doc(tenant.id), clientEmail);
+      const elig = clientEligibility(promo, prior);
+      if (!elig.ok) return Response.json({ valid: false, message: elig.error });
     }
 
     // Calculate discount
@@ -100,9 +91,12 @@ export async function POST(req, { params }) {
       discount,
       finalTotal,
       firstTimeOnly: !!promo.firstTimeOnly,
+      returningOnly: !!promo.returningOnly,
       message:      promo.firstTimeOnly
         ? `${discountMsg} — first-time clients only`
-        : discountMsg,
+        : promo.returningOnly
+          ? `${discountMsg} — existing clients only, verified at checkout`
+          : discountMsg,
     });
   } catch (err) {
     console.error("Promo validate error:", err);

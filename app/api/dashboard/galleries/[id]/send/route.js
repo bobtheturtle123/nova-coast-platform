@@ -229,7 +229,7 @@ export async function POST(req, { params }) {
 
   // Zapier webhook (fire-and-forget). Include the client's gallery link so a
   // post-delivery feedback Zap can reference their photos.
-  (async () => {
+  await (async () => {
     try {
       const galleryLink = gallery.accessToken ? `${getAppUrl()}/${tenant.slug}/gallery/${gallery.accessToken}` : null;
       const { dispatchZapier, bookingWebhookData } = await import("@/lib/zapier");

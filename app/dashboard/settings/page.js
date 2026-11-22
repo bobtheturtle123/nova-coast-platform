@@ -1100,7 +1100,7 @@ export default function SettingsPage() {
 
   // Promo codes state
   const [promoCodes,    setPromoCodes]    = useState([]);
-  const [promoForm,     setPromoForm]     = useState({ code: "", type: "flat", value: "", description: "", usageLimit: "", minOrder: "", expiresAt: "", firstTimeOnly: false });
+  const [promoForm,     setPromoForm]     = useState({ code: "", type: "flat", value: "", description: "", usageLimit: "", minOrder: "", expiresAt: "", firstTimeOnly: false, returningOnly: false });
   const [showPromoForm, setShowPromoForm] = useState(false);
   const [savingPromo,   setSavingPromo]   = useState(false);
   const [promoError,    setPromoError]    = useState("");
@@ -1746,7 +1746,7 @@ export default function SettingsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create code");
       setPromoCodes((prev) => [{ id: data.id, ...promoForm, code: promoForm.code.trim().toUpperCase(), usageCount: 0, active: true }, ...prev]);
-      setPromoForm({ code: "", type: "flat", value: "", description: "", usageLimit: "", minOrder: "", expiresAt: "", firstTimeOnly: false });
+      setPromoForm({ code: "", type: "flat", value: "", description: "", usageLimit: "", minOrder: "", expiresAt: "", firstTimeOnly: false, returningOnly: false });
       setShowPromoForm(false);
     } catch (err) { setPromoError(err.message); }
     setSavingPromo(false);
@@ -3235,11 +3235,21 @@ export default function SettingsPage() {
             <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
               <input type="checkbox"
                 checked={!!promoForm.firstTimeOnly}
-                onChange={(e) => setPromoForm((f) => ({ ...f, firstTimeOnly: e.target.checked }))}
+                onChange={(e) => setPromoForm((f) => ({ ...f, firstTimeOnly: e.target.checked, returningOnly: e.target.checked ? false : f.returningOnly }))}
                 className="w-4 h-4 accent-[#3486cf]" />
               <span className="text-sm text-gray-700">
                 First-time clients only
                 <span className="text-xs text-gray-400 ml-1">(validates at checkout)</span>
+              </span>
+            </label>
+            <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
+              <input type="checkbox"
+                checked={!!promoForm.returningOnly}
+                onChange={(e) => setPromoForm((f) => ({ ...f, returningOnly: e.target.checked, firstTimeOnly: e.target.checked ? false : f.firstTimeOnly }))}
+                className="w-4 h-4 accent-[#3486cf]" />
+              <span className="text-sm text-gray-700">
+                Existing clients only
+                <span className="text-xs text-gray-400 ml-1">(requires a prior booking, checked at checkout)</span>
               </span>
             </label>
             {promoError && <p className="text-xs text-red-500">{promoError}</p>}
@@ -3266,6 +3276,9 @@ export default function SettingsPage() {
                       {p.type === "flat" ? `$${p.value} off` : `${p.value}% off`}
                       {p.firstTimeOnly && (
                         <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full font-semibold">1st visit</span>
+                      )}
+                      {p.returningOnly && (
+                        <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full font-semibold">Existing clients</span>
                       )}
                     </p>
                     {p.description && <p className="text-xs text-gray-400 truncate">{p.description}</p>}

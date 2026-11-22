@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import { rateLimit } from "@/lib/rateLimit";
 import { getListingLimit, getEffectivePlan } from "@/lib/plans";
 import { resolvePartnerDiscount, partnerDiscountAmount } from "@/lib/partnerDiscount";
+import { clientEligibility, loadPriorBookings } from "@/lib/promo";
 
 export async function POST(req, { params }) {
   // 5 booking attempts per IP per hour
@@ -93,6 +94,7 @@ export async function POST(req, { params }) {
     // ── Re-validate promo code server-side (never trust client discount) ──────
     let promoDiscount = 0;
     let appliedPromo  = null; // { id, code }
+    let promoRejection = null;
     if (rawPromoCode || rawPromoId) {
       try {
         const normalized = String(rawPromoCode || "").trim().toUpperCase();
@@ -105,7 +107,15 @@ export async function POST(req, { params }) {
           const expired = promo.expiresAt && (() => { const e = new Date(promo.expiresAt?.toDate?.() || promo.expiresAt); return isNaN(e) || e < new Date(); })();
           const limitHit = promo.usageLimit > 0 && (promo.usageCount || 0) >= promo.usageLimit;
           const belowMin = promo.minOrder > 0 && pricing.subtotal < promo.minOrder;
-          if (promo.active && !expired && !limitHit && !belowMin) {
+          // Client-history restrictions (first-time only / existing clients
+          // only) are hard rules: reject the booking rather than silently
+          // charging full price, so the client can remove the code.
+          if (promo.active && (promo.firstTimeOnly || promo.returningOnly)) {
+            const prior = await loadPriorBookings(adminDb.collection("tenants").doc(tenant.id), clientEmail);
+            const elig = clientEligibility(promo, prior || []);
+            if (!elig.ok) promoRejection = elig.error;
+          }
+          if (promo.active && !expired && !limitHit && !belowMin && !promoRejection) {
             promoDiscount = promo.type === "flat"
               ? Math.min(promo.value, pricing.subtotal)
               : Math.round((pricing.subtotal * promo.value) / 100 * 100) / 100;
@@ -113,6 +123,9 @@ export async function POST(req, { params }) {
           }
         }
       } catch (e) { console.error("[booking/create] promo validation failed:", e?.message); }
+      if (promoRejection) {
+        return Response.json({ error: `${promoRejection}. Remove the code to continue.` }, { status: 400 });
+      }
     }
 
     // ── Partner pricing ───────────────────────────────────────────────────────
@@ -387,7 +400,7 @@ export async function POST(req, { params }) {
     }
 
     // Fire Zapier webhook (fire-and-forget).
-    (async () => {
+    await (async () => {
       try {
         const { dispatchZapier, bookingWebhookData } = await import("@/lib/zapier");
         await dispatchZapier(tenant, "booking.created", bookingWebhookData({

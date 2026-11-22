@@ -183,7 +183,7 @@ export async function POST(req) {
     // Outbound webhook for manual/phone bookings — same "booking.created" event
     // as the public page, tagged source "manual" so receivers can tell them apart.
     // Fire-and-forget; no-ops when the tenant has no webhooks configured.
-    (async () => {
+    await (async () => {
       try {
         const { dispatchZapier, bookingWebhookData } = await import("@/lib/zapier");
         await dispatchZapier({ id: ctx.tenantId, ...tenantData }, "booking.created",
