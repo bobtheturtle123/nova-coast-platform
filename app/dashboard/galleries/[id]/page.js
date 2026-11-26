@@ -73,14 +73,16 @@ function MediaThumb({ src, alt, isFirst, isDragging, category, categories,
 
   return (
     <div
-      draggable={!selectMode}
-      onDragStart={!selectMode ? onDragStart : undefined}
-      onDragOver={!selectMode ? onDragOver : undefined}
-      onDrop={!selectMode ? onDrop : undefined}
-      onDragEnd={!selectMode ? onDragEnd : undefined}
+      // In select mode, only SELECTED thumbs are drag sources (grabbing one drags
+      // the whole selected group). Every thumb stays a drop target in both modes.
+      draggable={!selectMode || selected}
+      onDragStart={(!selectMode || selected) ? onDragStart : undefined}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
       onClick={selectMode ? (e) => { e.stopPropagation(); onSelect?.(e); } : undefined}
       className={`aspect-square rounded-xl overflow-hidden bg-gray-100 relative group
-        ${selectMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}
+        ${selectMode ? (selected ? "cursor-grab active:cursor-grabbing" : "cursor-pointer") : "cursor-grab active:cursor-grabbing"}
         ${isDragging ? "opacity-40 scale-95" : ""}
         ${selected ? "ring-2 ring-gold ring-offset-1" : ""}
         transition-all duration-150`}
@@ -586,7 +588,35 @@ export default function GalleryDetailPage() {
   const handleDragOver  = useCallback((e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }, []);
   const handleDrop      = useCallback(async (e, toKey) => {
     e.preventDefault();
-    if (!dragKey || dragKey === toKey) { setDragKey(null); return; }
+    if (!dragKey) { setDragKey(null); return; }
+
+    // Bulk reorder: a selected thumb was dragged in select mode → move the whole
+    // selected block (keeping its current relative order) to the drop position,
+    // and persist immediately (the "Save Order" button is hidden in select mode).
+    if (selectMode && selectedKeys.size > 0 && selectedKeys.has(dragKey)) {
+      setDragKey(null);
+      const sel  = selectedKeys;
+      const full = [...(gallery?.media || [])];
+      const moving = full.filter((m) => sel.has(m.key));
+      const rest   = full.filter((m) => !sel.has(m.key));
+      const toIdxFull = full.findIndex((m) => m.key === toKey);
+      // Insert before the drop target, counting only non-moving items ahead of it.
+      let insertAt = rest.length;
+      if (toIdxFull !== -1) {
+        insertAt = 0;
+        for (let j = 0; j < toIdxFull; j++) if (!sel.has(full[j].key)) insertAt++;
+      }
+      const newList = [...rest.slice(0, insertAt), ...moving, ...rest.slice(insertAt)];
+      const changed = newList.some((m, i) => m.key !== full[i]?.key);
+      if (changed) {
+        await persistOrder(newList);
+        toast(`Moved ${moving.length} photo${moving.length > 1 ? "s" : ""}.`);
+      }
+      return;
+    }
+
+    // Single-thumb reorder (existing behavior — still saved via "Save Order").
+    if (dragKey === toKey) { setDragKey(null); return; }
     setGallery((g) => {
       const list = [...(g.media || [])];
       const fi = list.findIndex((m) => m.key === dragKey);
@@ -597,8 +627,35 @@ export default function GalleryDetailPage() {
       return { ...g, media: list };
     });
     setDragKey(null);
-  }, [dragKey]);
+  }, [dragKey, selectMode, selectedKeys, gallery]);
   const handleDragEnd = useCallback(() => setDragKey(null), []);
+
+  // Persist a new media order right away (used by bulk reorder / move buttons).
+  async function persistOrder(list) {
+    setGallery((g) => ({ ...g, media: list }));
+    invalidateDelivery();
+    try {
+      const token = await auth.currentUser.getIdToken();
+      await fetch(`/api/dashboard/galleries/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ media: list }),
+      });
+    } catch { toast("Couldn't save the new order. Try again.", "error"); }
+  }
+
+  // Jump every selected photo to the front or back of the gallery (keeps order).
+  async function moveSelectedTo(position) {
+    if (selectedKeys.size === 0) return;
+    const sel  = selectedKeys;
+    const full = [...(gallery?.media || [])];
+    const moving = full.filter((m) => sel.has(m.key));
+    const rest   = full.filter((m) => !sel.has(m.key));
+    if (moving.length === 0) return;
+    const newList = position === "front" ? [...moving, ...rest] : [...rest, ...moving];
+    await persistOrder(newList);
+    toast(`Moved ${moving.length} photo${moving.length > 1 ? "s" : ""} to ${position === "front" ? "front" : "back"}.`);
+  }
 
   // Auto-scroll while dragging a thumbnail near the top/bottom edge. Browsers
   // suppress mouse-wheel scrolling during a native HTML5 drag, so without this
@@ -1710,6 +1767,14 @@ export default function GalleryDetailPage() {
                         <button onClick={selectAll} className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2 py-1 rounded hover:bg-[#3486cf]/5">
                           Select all
                         </button>
+                        {/* Bulk reorder */}
+                        <span className="text-xs text-gray-400 hidden sm:inline">· drag a selected photo to reposition, or</span>
+                        <button onClick={() => moveSelectedTo("front")} className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2 py-1 rounded hover:bg-[#3486cf]/5">
+                          Move to front
+                        </button>
+                        <button onClick={() => moveSelectedTo("back")} className="text-xs text-[#3486cf] border border-[#3486cf]/20 px-2 py-1 rounded hover:bg-[#3486cf]/5">
+                          Move to back
+                        </button>
                         <button
                           onClick={() => deleteMedia(Array.from(selectedKeys))}
                           disabled={deleting}
@@ -1772,7 +1837,7 @@ export default function GalleryDetailPage() {
                                   src={m.url} alt={m.fileName || `Photo ${i+1}`}
                                   isFirst={globalIdx === 0}
                                   index={globalIdx}
-                                  isDragging={dragKey === m.key}
+                                  isDragging={dragKey === m.key || (selectMode && !!dragKey && selectedKeys.has(dragKey) && selectedKeys.has(m.key))}
                                   category={getMediaCategory(m.key)}
                                   categories={catNames}
                                   onDragStart={(e) => handleDragStart(e, m.key)}
@@ -1802,7 +1867,7 @@ export default function GalleryDetailPage() {
                         src={m.url} alt={m.fileName || `Photo ${i+1}`}
                         isFirst={i === 0 && activeTab === "all"}
                         index={i}
-                        isDragging={dragKey === m.key}
+                        isDragging={dragKey === m.key || (selectMode && !!dragKey && selectedKeys.has(dragKey) && selectedKeys.has(m.key))}
                         category={getMediaCategory(m.key)}
                         categories={catNames}
                         onDragStart={(e) => handleDragStart(e, m.key)}
